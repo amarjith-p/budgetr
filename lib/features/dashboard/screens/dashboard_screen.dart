@@ -6,12 +6,39 @@ import '../../settings/screens/settings_screen.dart';
 import '../../settlement/screens/settlement_screen.dart';
 import '../widgets/add_record_sheet.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  List<String> _categoryOrder = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategoryOrder();
+  }
+
+  // Fetch the master order from settings
+  Future<void> _fetchCategoryOrder() async {
+    try {
+      final config = await _firestoreService.getPercentageConfig();
+      if (mounted) {
+        setState(() {
+          _categoryOrder = config.categories.map((e) => e.name).toList();
+        });
+      }
+    } catch (e) {
+      // Ignore errors, default order will be used
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final FirestoreService firestoreService = FirestoreService();
     final currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
 
     void _showAddRecordSheet() {
@@ -22,13 +49,13 @@ class DashboardScreen extends StatelessWidget {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         builder: (context) => const AddRecordSheet(),
-      );
+      ).then((_) => _fetchCategoryOrder()); // Refresh order if settings changed
     }
 
     void _navigateToSettings() {
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (context) => const SettingsScreen()));
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (context) => const SettingsScreen()))
+          .then((_) => _fetchCategoryOrder()); // Refresh order on return
     }
 
     void _navigateToSettlement() {
@@ -54,7 +81,7 @@ class DashboardScreen extends StatelessWidget {
         ],
       ),
       body: StreamBuilder<List<FinancialRecord>>(
-        stream: firestoreService.getFinancialRecords(),
+        stream: _firestoreService.getFinancialRecords(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -81,6 +108,23 @@ class DashboardScreen extends StatelessWidget {
               final record = records[index];
               final displayDate = DateTime(record.year, record.month);
               final headerFormat = DateFormat('MMMM yyyy');
+
+              // SORTING LOGIC:
+              // Convert map to list
+              final sortedAllocations = record.allocations.entries.toList();
+
+              // Sort based on the index in _categoryOrder
+              sortedAllocations.sort((a, b) {
+                int indexA = _categoryOrder.indexOf(a.key);
+                int indexB = _categoryOrder.indexOf(b.key);
+
+                // If not found in order (deleted category), put at end
+                if (indexA == -1) indexA = 999;
+                if (indexB == -1) indexB = 999;
+
+                return indexA.compareTo(indexB);
+              });
+
               return Card(
                 margin: const EdgeInsets.only(bottom: 16),
                 child: Padding(
@@ -120,7 +164,9 @@ class DashboardScreen extends StatelessWidget {
                             ),
                       ),
                       const SizedBox(height: 12),
-                      ...record.allocations.entries.map((entry) {
+
+                      // RENDER SORTED LIST
+                      ...sortedAllocations.map((entry) {
                         final percent =
                             record.allocationPercentages[entry.key]
                                 ?.toStringAsFixed(0) ??

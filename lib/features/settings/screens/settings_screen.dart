@@ -12,55 +12,66 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _firestoreService = FirestoreService();
-  late Future<PercentageConfig> _configFuture;
 
-  final _necessitiesController = TextEditingController();
-  final _lifestyleController = TextEditingController();
-  final _investmentController = TextEditingController();
-  final _emergencyController = TextEditingController();
-  final _bufferController = TextEditingController();
+  bool _isLoading = true;
+  List<CategoryConfig> _categories = [];
 
   @override
   void initState() {
     super.initState();
-    _configFuture = _firestoreService.getPercentageConfig();
-    _configFuture.then((config) {
-      _necessitiesController.text = config.necessities.toStringAsFixed(0);
-      _lifestyleController.text = config.lifestyle.toStringAsFixed(0);
-      _investmentController.text = config.investment.toStringAsFixed(0);
-      _emergencyController.text = config.emergency.toStringAsFixed(0);
-      _bufferController.text = config.buffer.toStringAsFixed(0);
+    _loadConfig();
+  }
+
+  Future<void> _loadConfig() async {
+    try {
+      final config = await _firestoreService.getPercentageConfig();
+      setState(() {
+        // Load exactly as saved in DB (User's manual order)
+        _categories = config.categories;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _addCategory() {
+    setState(() {
+      _categories.add(CategoryConfig(name: '', percentage: 0.0));
+    });
+  }
+
+  void _removeCategory(int index) {
+    setState(() {
+      _categories.removeAt(index);
     });
   }
 
   Future<void> _saveSettings() async {
     if (_formKey.currentState!.validate()) {
-      final necessities = double.tryParse(_necessitiesController.text) ?? 0;
-      final lifestyle = double.tryParse(_lifestyleController.text) ?? 0;
-      final investment = double.tryParse(_investmentController.text) ?? 0;
-      final emergency = double.tryParse(_emergencyController.text) ?? 0;
-      final buffer = double.tryParse(_bufferController.text) ?? 0;
+      _formKey.currentState!.save();
 
-      if (necessities + lifestyle + investment + emergency + buffer != 100.0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Percentages must add up to 100!'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      double total = _categories.fold(0, (sum, item) => sum + item.percentage);
+
+      if ((total - 100.0).abs() > 0.1) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Total percentage must be 100% (Current: ${total.toStringAsFixed(1)}%)',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
         return;
       }
 
-      final newConfig = PercentageConfig(
-        necessities: necessities,
-        lifestyle: lifestyle,
-        investment: investment,
-        emergency: emergency,
-        buffer: buffer,
-      );
-
+      // NO AUTO SORTING: Save exactly the order the user arranged
       try {
-        await _firestoreService.setPercentageConfig(newConfig);
+        await _firestoreService.setPercentageConfig(
+          PercentageConfig(categories: _categories),
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -73,10 +84,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error saving settings: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
           );
         }
       }
@@ -84,90 +92,119 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   @override
-  void dispose() {
-    _necessitiesController.dispose();
-    _lifestyleController.dispose();
-    _investmentController.dispose();
-    _emergencyController.dispose();
-    _bufferController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Calculation Settings')),
-      body: FutureBuilder<PercentageConfig>(
-        future: _configFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
+      appBar: AppBar(
+        title: const Text('Allocation Buckets'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _addCategory,
+            tooltip: 'Add Bucket',
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
               key: _formKey,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Set the percentage split for your effective income. The total must be 100%.',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Drag and drop to reorder. This order will be used throughout the app.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  _buildPercentField(_necessitiesController, 'Necessities %'),
-                  _buildPercentField(_lifestyleController, 'Lifestyle %'),
-                  _buildPercentField(_investmentController, 'Investment %'),
-                  _buildPercentField(_emergencyController, 'Emergency %'),
-                  _buildPercentField(_bufferController, 'Buffer %'),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _saveSettings,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.all(16),
+                  Expanded(
+                    child: ReorderableListView.builder(
+                      padding: const EdgeInsets.only(bottom: 80),
+                      itemCount: _categories.length,
+                      onReorder: (oldIndex, newIndex) {
+                        setState(() {
+                          if (oldIndex < newIndex) {
+                            newIndex -= 1;
+                          }
+                          final item = _categories.removeAt(oldIndex);
+                          _categories.insert(newIndex, item);
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        return _buildCategoryRow(index);
+                      },
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _saveSettings,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.all(16),
+                        ),
+                        child: const Text('Save Changes'),
                       ),
-                      child: const Text('Save Settings'),
                     ),
                   ),
                 ],
               ),
             ),
-          );
-        },
-      ),
     );
   }
 
-  Widget _buildPercentField(TextEditingController controller, String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: TextInputType.number,
-        decoration: InputDecoration(
-          labelText: label,
-          filled: true,
-          fillColor: Theme.of(
-            context,
-          ).colorScheme.surfaceVariant.withOpacity(0.5),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
+  Widget _buildCategoryRow(int index) {
+    return Card(
+      key: ValueKey(_categories[index]), // Key MUST be unique object/id
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 18, left: 8, right: 8),
+              child: Icon(Icons.drag_handle, color: Colors.grey),
+            ),
+            Expanded(
+              flex: 2,
+              child: TextFormField(
+                initialValue: _categories[index].name,
+                decoration: const InputDecoration(labelText: 'Bucket Name'),
+                validator: (val) =>
+                    val == null || val.isEmpty ? 'Required' : null,
+                onChanged: (val) => _categories[index].name = val,
+                onSaved: (val) => _categories[index].name = val!,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 1,
+              child: TextFormField(
+                initialValue: _categories[index].percentage.toStringAsFixed(0),
+                decoration: const InputDecoration(labelText: ' %'),
+                keyboardType: TextInputType.number,
+                validator: (val) =>
+                    double.tryParse(val ?? '') == null ? 'Invalid' : null,
+                onChanged: (val) {
+                  if (val.isNotEmpty && double.tryParse(val) != null) {
+                    _categories[index].percentage = double.parse(val);
+                  }
+                },
+                onSaved: (val) =>
+                    _categories[index].percentage = double.parse(val!),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.redAccent),
+              onPressed: () => _removeCategory(index),
+            ),
+          ],
         ),
-        validator: (value) {
-          if (value == null || value.isEmpty) return 'Cannot be empty';
-          if (double.tryParse(value) == null) return 'Must be a number';
-          return null;
-        },
       ),
     );
   }

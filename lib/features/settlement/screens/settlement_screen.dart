@@ -27,11 +27,22 @@ class _SettlementScreenState extends State<SettlementScreen> {
 
   bool _isLoading = false;
   Settlement? _settlementData;
+  List<String> _categoryOrder = [];
 
   @override
   void initState() {
     super.initState();
     _loadDropdownData();
+    _fetchCategoryOrder();
+  }
+
+  Future<void> _fetchCategoryOrder() async {
+    try {
+      final config = await _firestoreService.getPercentageConfig();
+      setState(() {
+        _categoryOrder = config.categories.map((e) => e.name).toList();
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadDropdownData() async {
@@ -89,6 +100,10 @@ class _SettlementScreenState extends State<SettlementScreen> {
     });
     final recordId =
         '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
+
+    // Refresh order just in case
+    await _fetchCategoryOrder();
+
     final settlement = await _firestoreService.getSettlementById(recordId);
     setState(() {
       _settlementData = settlement;
@@ -155,7 +170,9 @@ class _SettlementScreenState extends State<SettlementScreen> {
     return InputDecoration(
       labelText: label,
       filled: true,
-      fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+      fillColor: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -238,72 +255,120 @@ class _SettlementScreenState extends State<SettlementScreen> {
     );
   }
 
+  // Helper to sort keys based on _categoryOrder
+  List<String> _getSortedKeys(Map<String, double> dataMap) {
+    final keys = dataMap.keys.toList();
+    keys.sort((a, b) {
+      int indexA = _categoryOrder.indexOf(a);
+      int indexB = _categoryOrder.indexOf(b);
+      if (indexA == -1) indexA = 999;
+      if (indexB == -1) indexB = 999;
+      return indexA.compareTo(indexB);
+    });
+    return keys;
+  }
+
   Widget _buildSettlementChart(Settlement data) {
-    List<BarChartGroupData> barGroups = [];
-    int i = 0;
+    // USE SORTED KEYS
+    final keys = _getSortedKeys(data.allocations);
 
-    // Sort keys to ensure consistent order (e.g., alphabetical or by predefined logic)
-    // Here we just use the order from the allocations map
-    final keys = data.allocations.keys.toList();
-
-    for (var key in keys) {
-      barGroups.add(
-        BarChartGroupData(
-          x: i,
-          barRods: [
-            BarChartRodData(
-              toY: data.allocations[key] ?? 0,
-              color: Colors.blue,
-              width: 16,
-            ),
-            BarChartRodData(
-              toY: data.expenses[key] ?? 0,
-              color: Colors.red,
-              width: 16,
-            ),
-          ],
-        ),
-      );
-      i++;
-    }
     return BarChart(
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
-        barGroups: barGroups,
+        barGroups: List.generate(keys.length, (index) {
+          final key = keys[index];
+          final allocated = data.allocations[key] ?? 0.0;
+          final spent = data.expenses[key] ?? 0.0;
+
+          return BarChartGroupData(
+            x: index,
+            barRods: [
+              BarChartRodData(toY: allocated, color: Colors.blue, width: 12),
+              BarChartRodData(toY: spent, color: Colors.red, width: 12),
+            ],
+          );
+        }),
         titlesData: FlTitlesData(
-          // ... right/top titles false
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 50,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  NumberFormat.compactCurrency(symbol: '₹').format(value),
+                  style: const TextStyle(fontSize: 10),
+                );
+              },
+            ),
+          ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 if (value.toInt() >= 0 && value.toInt() < keys.length) {
-                  // Show first 3 chars of category name
+                  String text = keys[value.toInt()];
+                  // Show first 3 letters for label
+                  if (text.length > 3) text = text.substring(0, 3);
                   return SideTitleWidget(
                     axisSide: meta.axisSide,
                     child: Text(
-                      keys[value.toInt()].substring(0, 3).toUpperCase(),
+                      text.toUpperCase(),
                       style: const TextStyle(fontSize: 10),
                     ),
                   );
                 }
-                return const Text('');
+                return const SizedBox.shrink();
               },
+              reservedSize: 40,
             ),
           ),
         ),
-        // ... rest same
+        borderData: FlBorderData(show: false),
+        gridData: const FlGridData(show: false),
       ),
     );
   }
 
+  Widget _buildChartLegend() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _legendItem(Colors.blue, 'Allocated'),
+        const SizedBox(width: 24),
+        _legendItem(Colors.red, 'Spent'),
+      ],
+    );
+  }
+
+  Widget _legendItem(Color color, String text) {
+    return Row(
+      children: [
+        Container(width: 16, height: 16, color: color),
+        const SizedBox(width: 8),
+        Text(text),
+      ],
+    );
+  }
+
   Widget _buildSettlementTable(Settlement data) {
+    // USE SORTED KEYS
+    final keys = _getSortedKeys(data.allocations);
+
     List<DataRow> rows = [];
 
-    data.allocations.forEach((key, allocated) {
+    for (var key in keys) {
+      final allocated = data.allocations[key] ?? 0.0;
       final spent = data.expenses[key] ?? 0.0;
       final balance = allocated - spent;
+
       rows.add(_createDataRow(key, allocated, spent, balance));
-    });
+    }
 
     // Add Total Row
     rows.add(
@@ -330,8 +395,11 @@ class _SettlementScreenState extends State<SettlementScreen> {
                 Text(
                   _currencyFormat.format(data.totalBalance),
                   style: TextStyle(
-                    color: data.totalBalance >= 0 ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12,
+                    color: data.totalBalance >= 0
+                        ? Colors.green.shade400
+                        : Colors.red.shade400,
                   ),
                 ),
               ],
@@ -344,75 +412,210 @@ class _SettlementScreenState extends State<SettlementScreen> {
     return DataTable(
       columnSpacing: 20,
       columns: const [
-        DataColumn(label: Text('Category')),
-        DataColumn(label: Text('Allocated'), numeric: true),
-        DataColumn(label: Text('Spent / Bal'), numeric: true),
+        DataColumn(
+          label: Text('Bucket', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        DataColumn(
+          label: Text(
+            'Allocated',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          numeric: true,
+        ),
+        DataColumn(
+          label: Text(
+            'Spent / Bal',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          numeric: true,
+        ),
       ],
       rows: rows,
     );
   }
 
-  // ... rest of class
+  DataRow _createDataRow(
+    String category,
+    double allocated,
+    double spent,
+    double balance,
+  ) {
+    return DataRow(
+      cells: [
+        DataCell(Text(category)),
+        DataCell(Text(_currencyFormat.format(allocated))),
+        DataCell(
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(_currencyFormat.format(spent)),
+              Text(
+                _currencyFormat.format(balance),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: balance >= 0
+                      ? Colors.green.shade400
+                      : Colors.red.shade400,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class SettlementInputSheet extends StatefulWidget {
   const SettlementInputSheet({super.key});
-  @override
-  State<SettlementInputSheet> createState() => _SettlementInputSheetState();
-}
 
-class SettlementInputSheet extends StatefulWidget {
-  const SettlementInputSheet({super.key});
   @override
   State<SettlementInputSheet> createState() => _SettlementInputSheetState();
 }
 
 class _SettlementInputSheetState extends State<SettlementInputSheet> {
-  // ... services variables
+  final _firestoreService = FirestoreService();
+  final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
+
+  List<Map<String, int>> _yearMonthData = [];
+  List<int> _availableYears = [];
+  List<int> _availableMonthsForYear = [];
+  int? _selectedYear;
+  int? _selectedMonth;
 
   FinancialRecord? _budgetRecord;
-  // Dynamic controllers
+  Settlement? _existingSettlement;
+  List<String> _categoryOrder = [];
+
+  // DYNAMIC CONTROLLERS
   final Map<String, TextEditingController> _controllers = {};
   double _totalExpense = 0.0;
 
-  // ...
+  TextEditingController? _activeController;
+  bool _isKeyboardVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDropdownData();
+    _fetchCategoryOrder();
+  }
+
+  Future<void> _fetchCategoryOrder() async {
+    try {
+      final config = await _firestoreService.getPercentageConfig();
+      setState(() {
+        _categoryOrder = config.categories.map((e) => e.name).toList();
+      });
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _loadDropdownData() async {
+    _yearMonthData = await _firestoreService.getAvailableMonthsForSettlement();
+    final years = _yearMonthData.map((e) => e['year']!).toSet().toList();
+    years.sort((a, b) => b.compareTo(a));
+    _availableYears = years;
+
+    final now = DateTime.now();
+    if (_availableYears.contains(now.year)) {
+      _selectedYear = now.year;
+      final months = _yearMonthData
+          .where((data) => data['year'] == now.year)
+          .map((data) => data['month']!)
+          .toSet()
+          .toList();
+      months.sort((a, b) => b.compareTo(a));
+      _availableMonthsForYear = months;
+      if (_availableMonthsForYear.contains(now.month)) {
+        _selectedMonth = now.month;
+      }
+    }
+    setState(() {});
+  }
+
+  void _onYearSelected(int? year) {
+    setState(() {
+      _selectedYear = year;
+      _selectedMonth = null;
+      _budgetRecord = null;
+      _controllers.clear();
+      if (year != null) {
+        final months = _yearMonthData
+            .where((d) => d['year'] == year)
+            .map((d) => d['month']!)
+            .toSet()
+            .toList();
+        months.sort((a, b) => b.compareTo(a));
+        _availableMonthsForYear = months;
+      } else {
+        _availableMonthsForYear = [];
+      }
+    });
+  }
 
   Future<void> _fetchData() async {
-    // ... fetch logic
-    setState(() {
-      _budgetRecord = results[0] as FinancialRecord;
-      _existingSettlement = results[1] as Settlement?;
+    if (_selectedYear == null || _selectedMonth == null) return;
+    final recordId =
+        '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
 
-      // Initialize controllers dynamically based on fetched record
-      _controllers.clear();
-      _budgetRecord!.allocations.keys.forEach((key) {
-        double initialValue = 0.0;
-        if (_existingSettlement != null &&
-            _existingSettlement!.expenses.containsKey(key)) {
-          initialValue = _existingSettlement!.expenses[key]!;
-        }
-        final ctrl = TextEditingController(
-          text: initialValue == 0 ? '' : initialValue.toString(),
-        );
-        ctrl.addListener(_calculateTotalExpense);
-        _controllers[key] = ctrl;
+    // Refresh category order
+    await _fetchCategoryOrder();
+
+    try {
+      final results = await Future.wait([
+        _firestoreService.getRecordById(recordId),
+        _firestoreService.getSettlementById(recordId),
+      ]);
+
+      setState(() {
+        _budgetRecord = results[0] as FinancialRecord;
+        _existingSettlement = results[1] as Settlement?;
+
+        // Initialize controllers for every allocation category found
+        _controllers.clear();
+        _budgetRecord!.allocations.forEach((key, _) {
+          double initialValue = 0.0;
+          if (_existingSettlement != null &&
+              _existingSettlement!.expenses.containsKey(key)) {
+            initialValue = _existingSettlement!.expenses[key]!;
+          }
+          final ctrl = TextEditingController(
+            text: initialValue == 0 ? '' : initialValue.toString(),
+          );
+          ctrl.addListener(_calculateTotalExpense);
+          _controllers[key] = ctrl;
+        });
+
+        _calculateTotalExpense();
       });
-
-      _calculateTotalExpense();
-    });
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error fetching data: $e")));
+    }
   }
 
   void _calculateTotalExpense() {
     double sum = 0.0;
-    _controllers.values.forEach((c) {
-      sum += double.tryParse(c.text) ?? 0.0;
-    });
+    for (var ctrl in _controllers.values) {
+      sum += double.tryParse(ctrl.text) ?? 0.0;
+    }
     setState(() => _totalExpense = sum);
   }
 
   Future<void> _onSettle() async {
     if (_budgetRecord == null) return;
 
+    // Collect expenses from controllers
     Map<String, double> expenses = {};
     _controllers.forEach((key, ctrl) {
       expenses[key] = double.tryParse(ctrl.text) ?? 0.0;
@@ -429,34 +632,286 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
       settledAt: Timestamp.now(),
     );
 
-    // ... save logic
+    try {
+      await _firestoreService.saveSettlement(settlement);
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Settlement saved successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
- Widget _buildSettlementForm() {
-    final totalBalance = _budgetRecord!.effectiveIncome - _totalExpense;
-    
-    return GestureDetector(
-      onTap: () => setState(() => _isKeyboardVisible = false),
-      child: ListView(
+  // --- Keyboard Handling (Same as before) ---
+  void _handleKeyPress(String value) {
+    if (_activeController == null) return;
+    final controller = _activeController!;
+    final text = controller.text;
+    final selection = controller.selection;
+    final newText = text.replaceRange(selection.start, selection.end, value);
+    controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(
+        offset: selection.start + value.length,
+      ),
+    );
+  }
+
+  void _handleBackspace() {
+    if (_activeController == null) return;
+    final controller = _activeController!;
+    final text = controller.text;
+    final selection = controller.selection;
+    if (selection.baseOffset > 0) {
+      final newText = text.replaceRange(
+        selection.start - 1,
+        selection.start,
+        '',
+      );
+      controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: selection.start - 1),
+      );
+    }
+  }
+
+  void _handleClear() {
+    if (_activeController == null) return;
+    _activeController!.clear();
+  }
+
+  void _handleEquals() {
+    if (_activeController == null || _activeController!.text.isEmpty) return;
+
+    String expression = _activeController!.text
+        .replaceAll('×', '*')
+        .replaceAll('÷', '/');
+
+    try {
+      Parser p = Parser();
+      Expression exp = p.parse(expression);
+      ContextModel cm = ContextModel();
+      double result = exp.evaluate(EvaluationType.REAL, cm);
+
+      _activeController!.text = result.toStringAsFixed(2);
+      _activeController!.selection = TextSelection.fromPosition(
+        TextPosition(offset: _activeController!.text.length),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid Expression'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Dynamic List
-          ..._budgetRecord!.allocations.entries.map((entry) {
-             return _buildSettlementRow(
-                title: entry.key,
-                allocated: entry.value,
-                controller: _controllers[entry.key]!,
-             );
-          }),
-          const Divider(),
-          // ... Total Income / Balance Tiles (same as before)
+          Row(
+            children: [
+              Expanded(child: _buildYearDropdown()),
+              const SizedBox(width: 16),
+              Expanded(child: _buildMonthDropdown()),
+              IconButton(
+                icon: const Icon(Icons.downloading),
+                onPressed: _fetchData,
+                tooltip: 'Fetch Budget Data',
+              ),
+            ],
+          ),
+          const Divider(height: 32),
+          Flexible(
+            child: _budgetRecord == null
+                ? const Center(
+                    child: Text('Select a month and fetch data to begin.'),
+                  )
+                : _buildSettlementForm(),
+          ),
+          if (_budgetRecord != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: _onSettle,
+                    child: const Text('Settle'),
+                  ),
+                ],
+              ),
+            ),
+
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child: _isKeyboardVisible
+                ? _CalculatorKeyboard(
+                    onKeyPress: _handleKeyPress,
+                    onBackspace: _handleBackspace,
+                    onClear: _handleClear,
+                    onEquals: _handleEquals,
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );
   }
-  
-  // ... rest of class
 
-}
+  InputDecoration _modernDropdownDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
+
+  Widget _buildYearDropdown() {
+    return DropdownButtonFormField<int>(
+      value: _selectedYear,
+      decoration: _modernDropdownDecoration('Year'),
+      items: _availableYears
+          .map(
+            (year) =>
+                DropdownMenuItem(value: year, child: Text(year.toString())),
+          )
+          .toList(),
+      onChanged: _onYearSelected,
+    );
+  }
+
+  Widget _buildMonthDropdown() {
+    return DropdownButtonFormField<int>(
+      value: _selectedMonth,
+      decoration: _modernDropdownDecoration('Month'),
+      onChanged: _selectedYear == null
+          ? null
+          : (value) => setState(() => _selectedMonth = value),
+      items: _availableMonthsForYear
+          .map(
+            (month) => DropdownMenuItem(
+              value: month,
+              child: Text(DateFormat('MMMM').format(DateTime(0, month))),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _buildSettlementForm() {
+    final totalBalance = _budgetRecord!.effectiveIncome - _totalExpense;
+
+    // SORT KEYS FOR FORM DISPLAY
+    final keys = _budgetRecord!.allocations.keys.toList();
+    keys.sort((a, b) {
+      int indexA = _categoryOrder.indexOf(a);
+      int indexB = _categoryOrder.indexOf(b);
+      if (indexA == -1) indexA = 999;
+      if (indexB == -1) indexB = 999;
+      return indexA.compareTo(indexB);
+    });
+
+    return GestureDetector(
+      onTap: () => setState(() => _isKeyboardVisible = false),
+      child: ListView(
+        children: [
+          // DYNAMIC LIST GENERATION (SORTED)
+          ...keys.map((key) {
+            return _buildSettlementRow(
+              title: key,
+              allocated: _budgetRecord!.allocations[key]!,
+              controller: _controllers[key]!,
+            );
+          }),
+
+          const Divider(),
+          ListTile(
+            title: Text(
+              'Total Income (Effective)',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            subtitle: Text(
+              _currencyFormat.format(_budgetRecord!.effectiveIncome),
+              style: const TextStyle(fontSize: 16),
+            ),
+            trailing: SizedBox(
+              width: 150,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Total Expense',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    _currencyFormat.format(_totalExpense),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(),
+          ListTile(
+            title: Text(
+              'Overall Balance',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            trailing: Text(
+              _currencyFormat.format(totalBalance),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: totalBalance >= 0 ? Colors.green.shade700 : Colors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSettlementRow({
     required String title,
     required double allocated,

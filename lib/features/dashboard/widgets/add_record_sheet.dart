@@ -34,7 +34,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
   Map<String, double> _calculatedValues = {};
   PercentageConfig? _config;
 
-  // --- NEW: State for custom keyboard ---
   TextEditingController? _activeController;
   bool _isKeyboardVisible = false;
 
@@ -45,6 +44,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     _selectedYear = now.year;
     _selectedMonth = now.month;
 
+    // Load config. It will be in the user's defined order.
     _firestoreService.getPercentageConfig().then((config) {
       setState(() {
         _config = config;
@@ -75,6 +75,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       if (_effectiveIncome < 0) _effectiveIncome = 0;
 
       _calculatedValues.clear();
+      // Calculate in the order of categories defined in settings
       for (var category in _config!.categories) {
         _calculatedValues[category.name] =
             _effectiveIncome * (category.percentage / 100.0);
@@ -89,14 +90,22 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     await Future.delayed(const Duration(milliseconds: 100));
 
     if (_formKey.currentState!.validate()) {
-      // ...
+      if (_config == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Percentage settings are still loading."),
+          ),
+        );
+        return;
+      }
+
       final idString =
           '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
 
-      // Create maps for storage
       Map<String, double> allocations = {};
       Map<String, double> percentages = {};
 
+      // Store in the order defined in settings
       for (var category in _config!.categories) {
         allocations[category.name] = _calculatedValues[category.name] ?? 0.0;
         percentages[category.name] = category.percentage;
@@ -110,10 +119,11 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
         year: _selectedYear!,
         month: _selectedMonth!,
         effectiveIncome: _effectiveIncome,
-        allocations: allocations, // New Dynamic Field
-        allocationPercentages: percentages, // New Dynamic Field
+        allocations: allocations,
+        allocationPercentages: percentages,
         createdAt: Timestamp.now(),
       );
+
       try {
         await _firestoreService.setFinancialRecord(record);
         if (mounted) {
@@ -138,6 +148,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     }
   }
 
+  // --- Keyboard Logic ---
   void _handleKeyPress(String value) {
     if (_activeController == null) return;
     final controller = _activeController!;
@@ -382,6 +393,8 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
 
   Widget _buildCalculationsDisplay() {
     final currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
+
+    // Use the natural order from _config!.categories which respects user settings
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -400,23 +413,19 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const Divider(height: 24),
-          // Dynamic List Generation
-          ..._calculatedValues.entries.map((entry) {
-            // Find percentage for display label
-            final percent = _config!.categories
-                .firstWhere(
-                  (c) => c.name == entry.key,
-                  orElse: () => CategoryConfig(name: '', percentage: 0),
-                )
-                .percentage;
+          // Loop directly through the Ordered Categories
+          ..._config!.categories.map((category) {
+            final amount = _calculatedValues[category.name] ?? 0.0;
             return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('${entry.key} (${percent.toStringAsFixed(0)}%)'),
                   Text(
-                    currencyFormat.format(entry.value),
+                    '${category.name} (${category.percentage.toStringAsFixed(0)}%)',
+                  ),
+                  Text(
+                    currencyFormat.format(amount),
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ],
@@ -429,6 +438,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
   }
 }
 
+// ... [Keyboard Class remains same]
 class _CalculatorKeyboard extends StatelessWidget {
   final void Function(String) onKeyPress;
   final VoidCallback onBackspace;
