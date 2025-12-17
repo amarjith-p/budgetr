@@ -8,18 +8,12 @@ class FinancialRecord {
   final int year;
   final int month;
   final double effectiveIncome;
-  final double necessities;
-  final double lifestyle;
-  final double investment;
-  final double emergency;
-  final double buffer;
   final Timestamp createdAt;
 
-  final double necessitiesPercentage;
-  final double lifestylePercentage;
-  final double investmentPercentage;
-  final double emergencyPercentage;
-  final double bufferPercentage;
+  // Dynamic Allocations: Key = Category Name, Value = Amount
+  final Map<String, double> allocations;
+  // Snapshot of percentages used at the time of creation
+  final Map<String, double> allocationPercentages;
 
   FinancialRecord({
     required this.id,
@@ -29,21 +23,49 @@ class FinancialRecord {
     required this.year,
     required this.month,
     required this.effectiveIncome,
-    required this.necessities,
-    required this.lifestyle,
-    required this.investment,
-    required this.emergency,
-    required this.buffer,
     required this.createdAt,
-    required this.necessitiesPercentage,
-    required this.lifestylePercentage,
-    required this.investmentPercentage,
-    required this.emergencyPercentage,
-    required this.bufferPercentage,
+    required this.allocations,
+    required this.allocationPercentages,
   });
 
   factory FinancialRecord.fromFirestore(DocumentSnapshot doc) {
     Map data = doc.data() as Map<String, dynamic>;
+
+    Map<String, double> allocations = {};
+    Map<String, double> percentages = {};
+
+    if (data.containsKey('allocations')) {
+      // Load new dynamic structure
+      allocations = Map<String, double>.from(
+        data['allocations'].map(
+          (key, value) => MapEntry(key, (value as num).toDouble()),
+        ),
+      );
+      if (data.containsKey('allocationPercentages')) {
+        percentages = Map<String, double>.from(
+          data['allocationPercentages'].map(
+            (key, value) => MapEntry(key, (value as num).toDouble()),
+          ),
+        );
+      }
+    } else {
+      // Legacy support: convert old fields to map
+      allocations = {
+        'Necessities': (data['necessities'] ?? 0.0).toDouble(),
+        'Lifestyle': (data['lifestyle'] ?? 0.0).toDouble(),
+        'Investment': (data['investment'] ?? 0.0).toDouble(),
+        'Emergency': (data['emergency'] ?? 0.0).toDouble(),
+        'Buffer': (data['buffer'] ?? 0.0).toDouble(),
+      };
+      percentages = {
+        'Necessities': (data['necessitiesPercentage'] ?? 45.0).toDouble(),
+        'Lifestyle': (data['lifestylePercentage'] ?? 15.0).toDouble(),
+        'Investment': (data['investmentPercentage'] ?? 20.0).toDouble(),
+        'Emergency': (data['emergencyPercentage'] ?? 5.0).toDouble(),
+        'Buffer': (data['bufferPercentage'] ?? 15.0).toDouble(),
+      };
+    }
+
     return FinancialRecord(
       id: doc.id,
       salary: (data['salary'] ?? 0.0).toDouble(),
@@ -52,17 +74,9 @@ class FinancialRecord {
       year: data['year'] ?? 0,
       month: data['month'] ?? 0,
       effectiveIncome: (data['effectiveIncome'] ?? 0.0).toDouble(),
-      necessities: (data['necessities'] ?? 0.0).toDouble(),
-      lifestyle: (data['lifestyle'] ?? 0.0).toDouble(),
-      investment: (data['investment'] ?? 0.0).toDouble(),
-      emergency: (data['emergency'] ?? 0.0).toDouble(),
-      buffer: (data['buffer'] ?? 0.0).toDouble(),
       createdAt: data['createdAt'] ?? Timestamp.now(),
-      necessitiesPercentage: (data['necessitiesPercentage'] ?? 45.0).toDouble(),
-      lifestylePercentage: (data['lifestylePercentage'] ?? 15.0).toDouble(),
-      investmentPercentage: (data['investmentPercentage'] ?? 20.0).toDouble(),
-      emergencyPercentage: (data['emergencyPercentage'] ?? 5.0).toDouble(),
-      bufferPercentage: (data['bufferPercentage'] ?? 15.0).toDouble(),
+      allocations: allocations,
+      allocationPercentages: percentages,
     );
   }
 
@@ -75,17 +89,9 @@ class FinancialRecord {
       'year': year,
       'month': month,
       'effectiveIncome': effectiveIncome,
-      'necessities': necessities,
-      'lifestyle': lifestyle,
-      'investment': investment,
-      'emergency': emergency,
-      'buffer': buffer,
       'createdAt': createdAt,
-      'necessitiesPercentage': necessitiesPercentage,
-      'lifestylePercentage': lifestylePercentage,
-      'investmentPercentage': investmentPercentage,
-      'emergencyPercentage': emergencyPercentage,
-      'bufferPercentage': bufferPercentage,
+      'allocations': allocations,
+      'allocationPercentages': allocationPercentages,
     };
   }
 }

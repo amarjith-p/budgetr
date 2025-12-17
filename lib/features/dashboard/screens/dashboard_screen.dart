@@ -120,31 +120,17 @@ class DashboardScreen extends StatelessWidget {
                             ),
                       ),
                       const SizedBox(height: 12),
-                      _buildRecordDetailRow(
-                        'Necessities (${record.necessitiesPercentage.toStringAsFixed(0)}%):',
-                        currencyFormat.format(record.necessities),
-                        context,
-                      ),
-                      _buildRecordDetailRow(
-                        'Lifestyle (${record.lifestylePercentage.toStringAsFixed(0)}%):',
-                        currencyFormat.format(record.lifestyle),
-                        context,
-                      ),
-                      _buildRecordDetailRow(
-                        'Investment (${record.investmentPercentage.toStringAsFixed(0)}%):',
-                        currencyFormat.format(record.investment),
-                        context,
-                      ),
-                      _buildRecordDetailRow(
-                        'Emergency (${record.emergencyPercentage.toStringAsFixed(0)}%):',
-                        currencyFormat.format(record.emergency),
-                        context,
-                      ),
-                      _buildRecordDetailRow(
-                        'Buffer (${record.bufferPercentage.toStringAsFixed(0)}%):',
-                        currencyFormat.format(record.buffer),
-                        context,
-                      ),
+                      ...record.allocations.entries.map((entry) {
+                        final percent =
+                            record.allocationPercentages[entry.key]
+                                ?.toStringAsFixed(0) ??
+                            '?';
+                        return _buildRecordDetailRow(
+                          '${entry.key} ($percent%):',
+                          currencyFormat.format(entry.value),
+                          context,
+                        );
+                      }),
                     ],
                   ),
                 ),

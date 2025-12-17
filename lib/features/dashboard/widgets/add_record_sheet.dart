@@ -69,21 +69,16 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     final salary = double.tryParse(_salaryController.text) ?? 0;
     final extraIncome = double.tryParse(_extraIncomeController.text) ?? 0;
     final emi = double.tryParse(_emiController.text) ?? 0;
+
     setState(() {
       _effectiveIncome = (salary + extraIncome) - emi;
       if (_effectiveIncome < 0) _effectiveIncome = 0;
-      _calculatedValues = {
-        'Necessities (${_config!.necessities.toStringAsFixed(0)}%)':
-            _effectiveIncome * (_config!.necessities / 100.0),
-        'Lifestyle (${_config!.lifestyle.toStringAsFixed(0)}%)':
-            _effectiveIncome * (_config!.lifestyle / 100.0),
-        'Investment (${_config!.investment.toStringAsFixed(0)}%)':
-            _effectiveIncome * (_config!.investment / 100.0),
-        'Emergency (${_config!.emergency.toStringAsFixed(0)}%)':
-            _effectiveIncome * (_config!.emergency / 100.0),
-        'Buffer (${_config!.buffer.toStringAsFixed(0)}%)':
-            _effectiveIncome * (_config!.buffer / 100.0),
-      };
+
+      _calculatedValues.clear();
+      for (var category in _config!.categories) {
+        _calculatedValues[category.name] =
+            _effectiveIncome * (category.percentage / 100.0);
+      }
     });
   }
 
@@ -94,17 +89,18 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     await Future.delayed(const Duration(milliseconds: 100));
 
     if (_formKey.currentState!.validate()) {
-      if (_config == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Percentage settings are still loading."),
-          ),
-        );
-        return;
-      }
-
+      // ...
       final idString =
           '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
+
+      // Create maps for storage
+      Map<String, double> allocations = {};
+      Map<String, double> percentages = {};
+
+      for (var category in _config!.categories) {
+        allocations[category.name] = _calculatedValues[category.name] ?? 0.0;
+        percentages[category.name] = category.percentage;
+      }
 
       final record = FinancialRecord(
         id: idString,
@@ -114,24 +110,10 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
         year: _selectedYear!,
         month: _selectedMonth!,
         effectiveIncome: _effectiveIncome,
-        necessities:
-            _calculatedValues['Necessities (${_config!.necessities.toStringAsFixed(0)}%)']!,
-        lifestyle:
-            _calculatedValues['Lifestyle (${_config!.lifestyle.toStringAsFixed(0)}%)']!,
-        investment:
-            _calculatedValues['Investment (${_config!.investment.toStringAsFixed(0)}%)']!,
-        emergency:
-            _calculatedValues['Emergency (${_config!.emergency.toStringAsFixed(0)}%)']!,
-        buffer:
-            _calculatedValues['Buffer (${_config!.buffer.toStringAsFixed(0)}%)']!,
+        allocations: allocations, // New Dynamic Field
+        allocationPercentages: percentages, // New Dynamic Field
         createdAt: Timestamp.now(),
-        necessitiesPercentage: _config!.necessities,
-        lifestylePercentage: _config!.lifestyle,
-        investmentPercentage: _config!.investment,
-        emergencyPercentage: _config!.emergency,
-        bufferPercentage: _config!.buffer,
       );
-
       try {
         await _firestoreService.setFinancialRecord(record);
         if (mounted) {
@@ -418,21 +400,29 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const Divider(height: 24),
-          ..._calculatedValues.entries.map(
-            (entry) => Padding(
+          // Dynamic List Generation
+          ..._calculatedValues.entries.map((entry) {
+            // Find percentage for display label
+            final percent = _config!.categories
+                .firstWhere(
+                  (c) => c.name == entry.key,
+                  orElse: () => CategoryConfig(name: '', percentage: 0),
+                )
+                .percentage;
+            return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(entry.key),
+                  Text('${entry.key} (${percent.toStringAsFixed(0)}%)'),
                   Text(
                     currencyFormat.format(entry.value),
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );

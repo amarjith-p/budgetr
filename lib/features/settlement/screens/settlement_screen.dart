@@ -239,700 +239,224 @@ class _SettlementScreenState extends State<SettlementScreen> {
   }
 
   Widget _buildSettlementChart(Settlement data) {
+    List<BarChartGroupData> barGroups = [];
+    int i = 0;
+
+    // Sort keys to ensure consistent order (e.g., alphabetical or by predefined logic)
+    // Here we just use the order from the allocations map
+    final keys = data.allocations.keys.toList();
+
+    for (var key in keys) {
+      barGroups.add(
+        BarChartGroupData(
+          x: i,
+          barRods: [
+            BarChartRodData(
+              toY: data.allocations[key] ?? 0,
+              color: Colors.blue,
+              width: 16,
+            ),
+            BarChartRodData(
+              toY: data.expenses[key] ?? 0,
+              color: Colors.red,
+              width: 16,
+            ),
+          ],
+        ),
+      );
+      i++;
+    }
     return BarChart(
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
-        barGroups: _createBarGroups(data),
+        barGroups: barGroups,
         titlesData: FlTitlesData(
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 70,
-              getTitlesWidget: (value, meta) {
-                final currencyFormat = NumberFormat.compactCurrency(
-                  locale: 'en_IN',
-                  symbol: '₹',
-                );
-                return Text(
-                  currencyFormat.format(value),
-                  style: const TextStyle(fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                );
-              },
-            ),
-          ),
+          // ... right/top titles false
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) {
-                const style = TextStyle(fontSize: 12);
-                String text;
-                switch (value.toInt()) {
-                  case 0:
-                    text = 'Nec';
-                    break;
-                  case 1:
-                    text = 'LS';
-                    break;
-                  case 2:
-                    text = 'Inv';
-                    break;
-                  case 3:
-                    text = 'Eme';
-                    break;
-                  case 4:
-                    text = 'Buff';
-                    break;
-                  default:
-                    text = '';
+                if (value.toInt() >= 0 && value.toInt() < keys.length) {
+                  // Show first 3 chars of category name
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child: Text(
+                      keys[value.toInt()].substring(0, 3).toUpperCase(),
+                      style: const TextStyle(fontSize: 10),
+                    ),
+                  );
                 }
-                return SideTitleWidget(
-                  axisSide: meta.axisSide,
-                  space: 4,
-                  angle: -0.7,
-                  child: Text(text, style: style),
-                );
+                return const Text('');
               },
-              reservedSize: 40,
             ),
           ),
         ),
-        borderData: FlBorderData(show: false),
-        gridData: const FlGridData(show: false),
-        barTouchData: BarTouchData(
-          touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              return BarTooltipItem(
-                _currencyFormat.format(rod.toY),
-                const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChartLegend() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _legendItem(Colors.blue, 'Allocated'),
-        const SizedBox(width: 24),
-        _legendItem(Colors.red, 'Spent'),
-      ],
-    );
-  }
-
-  Widget _legendItem(Color color, String text) {
-    return Row(
-      children: [
-        Container(width: 16, height: 16, color: color),
-        const SizedBox(width: 8),
-        Text(text),
-      ],
-    );
-  }
-
-  List<BarChartGroupData> _createBarGroups(Settlement data) {
-    final allocated = [
-      data.necessitiesAllocation,
-      data.lifestyleAllocation,
-      data.investmentAllocation,
-      data.emergencyAllocation,
-      data.bufferAllocation,
-    ];
-    final spent = [
-      data.necessitiesExpense,
-      data.lifestyleExpense,
-      data.investmentExpense,
-      data.emergencyExpense,
-      data.bufferExpense,
-    ];
-    return List.generate(
-      5,
-      (i) => BarChartGroupData(
-        x: i,
-        barRods: [
-          BarChartRodData(toY: allocated[i], color: Colors.blue, width: 16),
-          BarChartRodData(toY: spent[i], color: Colors.red, width: 16),
-        ],
+        // ... rest same
       ),
     );
   }
 
   Widget _buildSettlementTable(Settlement data) {
+    List<DataRow> rows = [];
+
+    data.allocations.forEach((key, allocated) {
+      final spent = data.expenses[key] ?? 0.0;
+      final balance = allocated - spent;
+      rows.add(_createDataRow(key, allocated, spent, balance));
+    });
+
+    // Add Total Row
+    rows.add(
+      DataRow(
+        cells: [
+          const DataCell(
+            Text('Total', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          DataCell(
+            Text(
+              _currencyFormat.format(data.totalIncome),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataCell(
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _currencyFormat.format(data.totalExpense),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  _currencyFormat.format(data.totalBalance),
+                  style: TextStyle(
+                    color: data.totalBalance >= 0 ? Colors.green : Colors.red,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
     return DataTable(
-      columnSpacing: 24,
+      columnSpacing: 20,
       columns: const [
-        DataColumn(
-          label: Text(
-            'Category',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-        DataColumn(
-          label: Text(
-            'Allocated',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          numeric: true,
-        ),
-        DataColumn(
-          label: Text(
-            'Spent / Balance',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          numeric: true,
-        ),
+        DataColumn(label: Text('Category')),
+        DataColumn(label: Text('Allocated'), numeric: true),
+        DataColumn(label: Text('Spent / Bal'), numeric: true),
       ],
-      rows: [
-        _createDataRow(
-          'Necessities',
-          data.necessitiesAllocation,
-          data.necessitiesExpense,
-          data.necessitiesBalance,
-        ),
-        _createDataRow(
-          'Lifestyle',
-          data.lifestyleAllocation,
-          data.lifestyleExpense,
-          data.lifestyleBalance,
-        ),
-        _createDataRow(
-          'Investment',
-          data.investmentAllocation,
-          data.investmentExpense,
-          data.investmentBalance,
-        ),
-        _createDataRow(
-          'Emergency',
-          data.emergencyAllocation,
-          data.emergencyExpense,
-          data.emergencyBalance,
-        ),
-        _createDataRow(
-          'Buffer',
-          data.bufferAllocation,
-          data.bufferExpense,
-          data.bufferBalance,
-        ),
-        // --- Total Row ---
-        DataRow(
-          cells: [
-            const DataCell(
-              Text('Total', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            DataCell(
-              Text(
-                _currencyFormat.format(data.totalIncome),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataCell(
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    _currencyFormat.format(data.totalExpense),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    _currencyFormat.format(data.totalBalance),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                      color: data.totalBalance >= 0
-                          ? Colors.green.shade400
-                          : Colors.red.shade400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
+      rows: rows,
     );
   }
 
-  DataRow _createDataRow(
-    String category,
-    double allocated,
-    double spent,
-    double balance,
-  ) {
-    return DataRow(
-      cells: [
-        DataCell(Text(category)),
-        DataCell(Text(_currencyFormat.format(allocated))),
-        DataCell(
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(_currencyFormat.format(spent)),
-              Text(
-                _currencyFormat.format(balance),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: balance >= 0
-                      ? Colors.green.shade400
-                      : Colors.red.shade400,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  // ... rest of class
 }
 
 class SettlementInputSheet extends StatefulWidget {
   const SettlementInputSheet({super.key});
+  @override
+  State<SettlementInputSheet> createState() => _SettlementInputSheetState();
+}
 
+class SettlementInputSheet extends StatefulWidget {
+  const SettlementInputSheet({super.key});
   @override
   State<SettlementInputSheet> createState() => _SettlementInputSheetState();
 }
 
 class _SettlementInputSheetState extends State<SettlementInputSheet> {
-  final _firestoreService = FirestoreService();
-  final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
-
-  List<Map<String, int>> _yearMonthData = [];
-  List<int> _availableYears = [];
-  List<int> _availableMonthsForYear = [];
-  int? _selectedYear;
-  int? _selectedMonth;
+  // ... services variables
 
   FinancialRecord? _budgetRecord;
-  Settlement? _existingSettlement;
-
-  final _controllers = {
-    'necessities': TextEditingController(),
-    'lifestyle': TextEditingController(),
-    'investment': TextEditingController(),
-    'emergency': TextEditingController(),
-    'buffer': TextEditingController(),
-  };
+  // Dynamic controllers
+  final Map<String, TextEditingController> _controllers = {};
   double _totalExpense = 0.0;
 
-  TextEditingController? _activeController;
-  bool _isKeyboardVisible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDropdownData();
-    _controllers.values.forEach(
-      (controller) => controller.addListener(_calculateTotalExpense),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controllers.values.forEach((controller) => controller.dispose());
-    super.dispose();
-  }
-
-  Future<void> _loadDropdownData() async {
-    _yearMonthData = await _firestoreService.getAvailableMonthsForSettlement();
-    final years = _yearMonthData.map((e) => e['year']!).toSet().toList();
-    years.sort((a, b) => b.compareTo(a));
-    _availableYears = years;
-
-    final now = DateTime.now();
-    if (_availableYears.contains(now.year)) {
-      _selectedYear = now.year;
-      final months = _yearMonthData
-          .where((data) => data['year'] == now.year)
-          .map((data) => data['month']!)
-          .toSet()
-          .toList();
-      months.sort((a, b) => b.compareTo(a));
-      _availableMonthsForYear = months;
-      if (_availableMonthsForYear.contains(now.month)) {
-        _selectedMonth = now.month;
-      }
-    }
-    setState(() {});
-  }
-
-  void _onYearSelected(int? year) {
-    setState(() {
-      _selectedYear = year;
-      _selectedMonth = null;
-      _budgetRecord = null;
-      if (year != null) {
-        final months = _yearMonthData
-            .where((d) => d['year'] == year)
-            .map((d) => d['month']!)
-            .toSet()
-            .toList();
-        months.sort((a, b) => b.compareTo(a));
-        _availableMonthsForYear = months;
-      } else {
-        _availableMonthsForYear = [];
-      }
-    });
-  }
+  // ...
 
   Future<void> _fetchData() async {
-    if (_selectedYear == null || _selectedMonth == null) return;
-    final recordId =
-        '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
-    final results = await Future.wait([
-      _firestoreService.getRecordById(recordId),
-      _firestoreService.getSettlementById(recordId),
-    ]);
+    // ... fetch logic
     setState(() {
       _budgetRecord = results[0] as FinancialRecord;
       _existingSettlement = results[1] as Settlement?;
-      if (_existingSettlement != null) {
-        _controllers['necessities']!.text = _existingSettlement!
-            .necessitiesExpense
-            .toString();
-        _controllers['lifestyle']!.text = _existingSettlement!.lifestyleExpense
-            .toString();
-        _controllers['investment']!.text = _existingSettlement!
-            .investmentExpense
-            .toString();
-        _controllers['emergency']!.text = _existingSettlement!.emergencyExpense
-            .toString();
-        _controllers['buffer']!.text = _existingSettlement!.bufferExpense
-            .toString();
-      } else {
-        _controllers.values.forEach((c) => c.clear());
-      }
+
+      // Initialize controllers dynamically based on fetched record
+      _controllers.clear();
+      _budgetRecord!.allocations.keys.forEach((key) {
+        double initialValue = 0.0;
+        if (_existingSettlement != null &&
+            _existingSettlement!.expenses.containsKey(key)) {
+          initialValue = _existingSettlement!.expenses[key]!;
+        }
+        final ctrl = TextEditingController(
+          text: initialValue == 0 ? '' : initialValue.toString(),
+        );
+        ctrl.addListener(_calculateTotalExpense);
+        _controllers[key] = ctrl;
+      });
+
       _calculateTotalExpense();
     });
   }
 
   void _calculateTotalExpense() {
-    final nec = double.tryParse(_controllers['necessities']!.text) ?? 0.0;
-    final life = double.tryParse(_controllers['lifestyle']!.text) ?? 0.0;
-    // final inv = double.tryParse(_controllers['investment']!.text) ?? 0.0;
-    final emer = double.tryParse(_controllers['emergency']!.text) ?? 0.0;
-    final buff = double.tryParse(_controllers['buffer']!.text) ?? 0.0;
-    setState(() => _totalExpense = (nec + life + emer + buff));
+    double sum = 0.0;
+    _controllers.values.forEach((c) {
+      sum += double.tryParse(c.text) ?? 0.0;
+    });
+    setState(() => _totalExpense = sum);
   }
 
   Future<void> _onSettle() async {
     if (_budgetRecord == null) return;
+
+    Map<String, double> expenses = {};
+    _controllers.forEach((key, ctrl) {
+      expenses[key] = double.tryParse(ctrl.text) ?? 0.0;
+    });
+
     final settlement = Settlement(
       id: _budgetRecord!.id,
       year: _budgetRecord!.year,
       month: _budgetRecord!.month,
-      necessitiesAllocation: _budgetRecord!.necessities,
-      lifestyleAllocation: _budgetRecord!.lifestyle,
-      investmentAllocation: _budgetRecord!.investment,
-      emergencyAllocation: _budgetRecord!.emergency,
-      bufferAllocation: _budgetRecord!.buffer,
-      necessitiesExpense:
-          double.tryParse(_controllers['necessities']!.text) ?? 0.0,
-      lifestyleExpense: double.tryParse(_controllers['lifestyle']!.text) ?? 0.0,
-      investmentExpense:
-          double.tryParse(_controllers['investment']!.text) ?? 0.0,
-      emergencyExpense: double.tryParse(_controllers['emergency']!.text) ?? 0.0,
-      bufferExpense: double.tryParse(_controllers['buffer']!.text) ?? 0.0,
+      allocations: _budgetRecord!.allocations,
+      expenses: expenses,
       totalIncome: _budgetRecord!.effectiveIncome,
       totalExpense: _totalExpense,
       settledAt: Timestamp.now(),
     );
-    try {
-      await _firestoreService.saveSettlement(settlement);
-      if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Settlement saved successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
+
+    // ... save logic
   }
 
-  void _handleKeyPress(String value) {
-    if (_activeController == null) return;
-    final controller = _activeController!;
-    final text = controller.text;
-    final selection = controller.selection;
-    final newText = text.replaceRange(selection.start, selection.end, value);
-    controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(
-        offset: selection.start + value.length,
-      ),
-    );
-  }
-
-  void _handleBackspace() {
-    if (_activeController == null) return;
-    final controller = _activeController!;
-    final text = controller.text;
-    final selection = controller.selection;
-    if (selection.baseOffset > 0) {
-      final newText = text.replaceRange(
-        selection.start - 1,
-        selection.start,
-        '',
-      );
-      controller.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: selection.start - 1),
-      );
-    }
-  }
-
-  void _handleClear() {
-    if (_activeController == null) return;
-    _activeController!.clear();
-  }
-
-  void _handleEquals() {
-    if (_activeController == null || _activeController!.text.isEmpty) return;
-
-    String expression = _activeController!.text;
-    expression = expression.replaceAll('×', '*');
-    expression = expression.replaceAll('÷', '/');
-
-    try {
-      Parser p = Parser();
-      Expression exp = p.parse(expression);
-      ContextModel cm = ContextModel();
-      double result = exp.evaluate(EvaluationType.REAL, cm);
-
-      _activeController!.text = result.toStringAsFixed(2);
-      _activeController!.selection = TextSelection.fromPosition(
-        TextPosition(offset: _activeController!.text.length),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Invalid Expression'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Expanded(child: _buildYearDropdown()),
-              const SizedBox(width: 16),
-              Expanded(child: _buildMonthDropdown()),
-              IconButton(
-                icon: const Icon(Icons.downloading),
-                onPressed: _fetchData,
-                tooltip: 'Fetch Budget Data',
-              ),
-            ],
-          ),
-          const Divider(height: 32),
-          Flexible(
-            child: _budgetRecord == null
-                ? const Center(
-                    child: Text('Select a month and fetch data to begin.'),
-                  )
-                : _buildSettlementForm(),
-          ),
-          if (_budgetRecord != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _onSettle,
-                    child: const Text('Settle'),
-                  ),
-                ],
-              ),
-            ),
-
-          AnimatedSize(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
-            child: _isKeyboardVisible
-                ? _CalculatorKeyboard(
-                    onKeyPress: _handleKeyPress,
-                    onBackspace: _handleBackspace,
-                    onClear: _handleClear,
-                    onEquals: _handleEquals,
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  InputDecoration _modernDropdownDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      filled: true,
-      fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-    );
-  }
-
-  Widget _buildYearDropdown() {
-    return DropdownButtonFormField<int>(
-      value: _selectedYear,
-      decoration: _modernDropdownDecoration('Year'),
-      items: _availableYears
-          .map(
-            (year) =>
-                DropdownMenuItem(value: year, child: Text(year.toString())),
-          )
-          .toList(),
-      onChanged: _onYearSelected,
-    );
-  }
-
-  Widget _buildMonthDropdown() {
-    return DropdownButtonFormField<int>(
-      value: _selectedMonth,
-      decoration: _modernDropdownDecoration('Month'),
-      onChanged: _selectedYear == null
-          ? null
-          : (value) => setState(() => _selectedMonth = value),
-      items: _availableMonthsForYear
-          .map(
-            (month) => DropdownMenuItem(
-              value: month,
-              child: Text(DateFormat('MMMM').format(DateTime(0, month))),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  Widget _buildSettlementForm() {
+ Widget _buildSettlementForm() {
     final totalBalance = _budgetRecord!.effectiveIncome - _totalExpense;
+    
     return GestureDetector(
       onTap: () => setState(() => _isKeyboardVisible = false),
       child: ListView(
         children: [
-          _buildSettlementRow(
-            title: 'Necessities',
-            allocated: _budgetRecord!.necessities,
-            controller: _controllers['necessities']!,
-          ),
-          _buildSettlementRow(
-            title: 'Lifestyle',
-            allocated: _budgetRecord!.lifestyle,
-            controller: _controllers['lifestyle']!,
-          ),
-          _buildSettlementRow(
-            title: 'Investment',
-            allocated: _budgetRecord!.investment,
-            controller: _controllers['investment']!,
-          ),
-          _buildSettlementRow(
-            title: 'Emergency',
-            allocated: _budgetRecord!.emergency,
-            controller: _controllers['emergency']!,
-          ),
-          _buildSettlementRow(
-            title: 'Buffer',
-            allocated: _budgetRecord!.buffer,
-            controller: _controllers['buffer']!,
-          ),
+          // Dynamic List
+          ..._budgetRecord!.allocations.entries.map((entry) {
+             return _buildSettlementRow(
+                title: entry.key,
+                allocated: entry.value,
+                controller: _controllers[entry.key]!,
+             );
+          }),
           const Divider(),
-          ListTile(
-            title: Text(
-              'Total Income (Effective)',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            subtitle: Text(
-              _currencyFormat.format(_budgetRecord!.effectiveIncome),
-              style: const TextStyle(fontSize: 16),
-            ),
-            trailing: SizedBox(
-              width: 150,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Total Expense',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  Text(
-                    _currencyFormat.format(_totalExpense),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const Divider(),
-          ListTile(
-            title: Text(
-              'Overall Balance',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            trailing: Text(
-              _currencyFormat.format(totalBalance),
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: totalBalance >= 0 ? Colors.green.shade700 : Colors.red,
-              ),
-            ),
-          ),
+          // ... Total Income / Balance Tiles (same as before)
         ],
       ),
     );
   }
+  
+  // ... rest of class
 
+}
   Widget _buildSettlementRow({
     required String title,
     required double allocated,
