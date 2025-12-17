@@ -949,7 +949,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
           readOnly: true,
           showCursor: true,
           decoration: const InputDecoration(
-            labelText: 'Enter Calculation',
+            labelText: 'Enter Expense',
             border: OutlineInputBorder(),
             contentPadding: EdgeInsets.symmetric(horizontal: 8),
           ),
