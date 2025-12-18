@@ -33,6 +33,7 @@ class _CustomDataPageState extends State<CustomDataPage>
     String? xField = widget.template.xAxisField;
     String? yField = widget.template.yAxisField;
 
+    // Only allow appropriate fields
     final validX = widget.template.fields
         .where(
           (f) =>
@@ -105,44 +106,139 @@ class _CustomDataPageState extends State<CustomDataPage>
     );
   }
 
+  Future<void> _deleteSheet() async {
+    bool confirm =
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Delete Sheet?'),
+            content: Text(
+              'Are you sure you want to delete "${widget.template.name}"?\n\nThis will permanently delete the sheet structure AND all its entered data.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'Delete Forever',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (confirm) {
+      await _service.deleteCustomTemplate(widget.template.id);
+    }
+  }
+
+  Future<void> _deleteRecord(String id) async {
+    bool confirm =
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Delete Entry?'),
+            content: const Text('This cannot be undone.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (confirm) {
+      await _service.deleteCustomRecord(id);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddSheet,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Entry'),
+      ),
       body: StreamBuilder<List<CustomRecord>>(
         stream: _service.getCustomRecords(widget.template.id),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
 
           final records = snapshot.data ?? [];
 
+          // Calculate Totals
           Map<String, double> totals = {};
           for (var field in widget.template.fields) {
             if (field.type == CustomFieldType.number && field.isSumRequired) {
               totals[field.name] = records.fold(
                 0.0,
-                (sum, r) => sum + (r.data[field.name] ?? 0.0),
+                (sum, r) =>
+                    sum + ((r.data[field.name] as num?)?.toDouble() ?? 0.0),
               );
             }
           }
 
-          return Column(
+          return ListView(
+            padding: const EdgeInsets.only(bottom: 100),
             children: [
+              // 1. Top Controls (Delete Sheet) - No Big Header
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8, right: 8),
+                  child: IconButton(
+                    onPressed: _deleteSheet,
+                    icon: const Icon(
+                      Icons.delete_forever_outlined,
+                      color: Colors.redAccent,
+                    ),
+                    tooltip: 'Delete this Sheet',
+                  ),
+                ),
+              ),
+
+              // 2. Totals Display
               if (totals.isNotEmpty)
                 Container(
                   width: double.infinity,
-                  margin: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primaryContainer.withOpacity(0.3),
+                    ).colorScheme.primaryContainer.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.3),
+                    ),
                   ),
                   child: Wrap(
-                    spacing: 20,
-                    runSpacing: 10,
+                    spacing: 24,
+                    runSpacing: 16,
                     children: totals.entries
                         .map(
                           (e) => Column(
@@ -158,7 +254,7 @@ class _CustomDataPageState extends State<CustomDataPage>
                               Text(
                                 NumberFormat.compact().format(e.value),
                                 style: const TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -169,34 +265,81 @@ class _CustomDataPageState extends State<CustomDataPage>
                   ),
                 ),
 
+              // 3. Chart Section
               if (widget.template.xAxisField != null &&
                   widget.template.yAxisField != null &&
-                  records.isNotEmpty)
-                _buildChart(
-                  records,
-                  widget.template.xAxisField!,
-                  widget.template.yAxisField!,
+                  records.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Trend Analysis',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: Colors.white54),
+                      ),
+                      InkWell(
+                        onTap: _configureChart,
+                        child: const Icon(
+                          Icons.settings,
+                          size: 16,
+                          color: Colors.white54,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-
-              if (records.isNotEmpty)
+                SizedBox(
+                  height: 250, // Fixed height to prevent blink/crash
+                  child: _buildChart(
+                    records,
+                    widget.template.xAxisField!,
+                    widget.template.yAxisField!,
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ] else if (records.isNotEmpty) ...[
                 Align(
                   alignment: Alignment.centerRight,
                   child: Padding(
-                    padding: const EdgeInsets.only(right: 16),
+                    padding: const EdgeInsets.only(right: 16, bottom: 8),
                     child: TextButton.icon(
                       onPressed: _configureChart,
-                      icon: const Icon(Icons.show_chart),
-                      label: const Text('Configure Chart'),
+                      icon: const Icon(Icons.show_chart, size: 18),
+                      label: const Text('Add Chart'),
                     ),
                   ),
                 ),
+              ],
 
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
+              // 4. Data Table
+              if (records.isNotEmpty)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white24),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: DataTable(
+                      headingRowColor: MaterialStateProperty.all(
+                        Colors.white.withOpacity(0.1),
+                      ),
+                      dataRowColor: MaterialStateProperty.all(
+                        Colors.transparent,
+                      ),
+                      columnSpacing: 24,
+                      border: TableBorder.symmetric(
+                        inside: BorderSide(
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                      ),
                       columns: [
                         ...widget.template.fields.map(
                           (f) => DataColumn(
@@ -208,7 +351,7 @@ class _CustomDataPageState extends State<CustomDataPage>
                             ),
                           ),
                         ),
-                        const DataColumn(label: Text('')),
+                        const DataColumn(label: Text('Action')),
                       ],
                       rows: records
                           .map(
@@ -218,12 +361,14 @@ class _CustomDataPageState extends State<CustomDataPage>
                                   final val = r.data[f.name];
                                   String display = '-';
                                   if (val != null) {
-                                    if (f.type == CustomFieldType.date)
+                                    if (f.type == CustomFieldType.date &&
+                                        val is DateTime) {
                                       display = DateFormat(
                                         'dd MMM',
                                       ).format(val);
-                                    else
+                                    } else {
                                       display = val.toString();
+                                    }
                                   }
                                   return DataCell(Text(display));
                                 }),
@@ -231,11 +376,10 @@ class _CustomDataPageState extends State<CustomDataPage>
                                   IconButton(
                                     icon: const Icon(
                                       Icons.delete,
-                                      size: 16,
-                                      color: Colors.grey,
+                                      size: 18,
+                                      color: Colors.redAccent,
                                     ),
-                                    onPressed: () =>
-                                        _service.deleteCustomRecord(r.id),
+                                    onPressed: () => _deleteRecord(r.id),
                                   ),
                                 ),
                               ],
@@ -244,16 +388,21 @@ class _CustomDataPageState extends State<CustomDataPage>
                           .toList(),
                     ),
                   ),
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.only(top: 80),
+                  child: Center(
+                    child: Text(
+                      "No records yet.\nTap + to add data.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white38),
+                    ),
+                  ),
                 ),
-              ),
             ],
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddSheet,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Entry'),
       ),
     );
   }
@@ -264,13 +413,27 @@ class _CustomDataPageState extends State<CustomDataPage>
 
     List<FlSpot> spots = [];
     for (int i = 0; i < sorted.length; i++) {
-      double val = (sorted[i].data[yKey] ?? 0.0).toDouble();
+      double val = 0.0;
+      var raw = sorted[i].data[yKey];
+      if (raw is num)
+        val = raw.toDouble();
+      else if (raw is String)
+        val = double.tryParse(raw) ?? 0.0;
+
       spots.add(FlSpot(i.toDouble(), val));
     }
 
+    if (spots.isEmpty) return const SizedBox.shrink();
+
     return Container(
-      height: 200,
       margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.only(right: 16, top: 16, bottom: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: LineChart(
         LineChartData(
           gridData: const FlGridData(show: false),
@@ -280,6 +443,16 @@ class _CustomDataPageState extends State<CustomDataPage>
             ),
             topTitles: const AxisTitles(
               sideTitles: SideTitles(showTitles: false),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                getTitlesWidget: (val, _) => Text(
+                  NumberFormat.compact().format(val),
+                  style: const TextStyle(fontSize: 10),
+                ),
+              ),
             ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
@@ -293,20 +466,25 @@ class _CustomDataPageState extends State<CustomDataPage>
                       label = DateFormat('dd/MM').format(d);
                     else if (d is String)
                       label = d.length > 3 ? d.substring(0, 3) : d;
-                    return Text(label, style: const TextStyle(fontSize: 10));
+
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(label, style: const TextStyle(fontSize: 10)),
+                    );
                   }
                   return const Text('');
                 },
               ),
             ),
           ),
+          borderData: FlBorderData(show: false),
           lineBarsData: [
             LineChartBarData(
               spots: spots,
               isCurved: true,
               barWidth: 3,
               color: Theme.of(context).colorScheme.primary,
-              dotData: const FlDotData(show: false),
+              dotData: const FlDotData(show: true),
               belowBarData: BarAreaData(
                 show: true,
                 color: Theme.of(context).colorScheme.primary.withOpacity(0.1),

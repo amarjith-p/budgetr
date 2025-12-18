@@ -217,7 +217,9 @@ class FirestoreService {
     return _db.collection('net_worth_splits').doc(id).delete();
   }
 
-  // --- CUSTOM DATA ENTRY ---
+  // ---------------------------------------------------------------------------
+  // CUSTOM DATA ENTRY (UPDATED)
+  // ---------------------------------------------------------------------------
   Stream<List<CustomTemplate>> getCustomTemplates() {
     return _db
         .collection('custom_templates')
@@ -239,9 +241,21 @@ class FirestoreService {
         .update(template.toMap());
   }
 
+  // UPDATED: Cascade Delete
   Future<void> deleteCustomTemplate(String id) async {
-    // Note: In production, you should also delete all records linked to this template
-    return _db.collection('custom_templates').doc(id).delete();
+    // 1. Fetch all associated records
+    final recordsSnapshot = await _db
+        .collection('custom_records')
+        .where('templateId', isEqualTo: id)
+        .get();
+
+    // 2. Delete each record (Using simple loop to be safe against batch limits)
+    for (var doc in recordsSnapshot.docs) {
+      await doc.reference.delete();
+    }
+
+    // 3. Delete the template itself
+    await _db.collection('custom_templates').doc(id).delete();
   }
 
   Stream<List<CustomRecord>> getCustomRecords(String templateId) {
