@@ -1,9 +1,8 @@
+import 'package:budget/features/dashboard/widgets/calculator_keyboard.dart';
 import 'package:budget/features/dashboard/widgets/modern_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:math_expressions/math_expressions.dart';
-
 import '../../../core/models/financial_record_model.dart';
 import '../../../core/models/percentage_config_model.dart';
 import '../../../core/services/firestore_service.dart';
@@ -25,14 +24,17 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
   late TextEditingController _extraIncomeController;
   late TextEditingController _emiController;
 
+  // Focus Nodes for Cursor Management
+  final FocusNode _salaryFocus = FocusNode();
+  final FocusNode _extraFocus = FocusNode();
+  final FocusNode _emiFocus = FocusNode();
+
   int? _selectedYear;
   int? _selectedMonth;
-
   final List<int> _years = List.generate(
     50,
     (index) => DateTime.now().year - 5 + index,
   );
-
   final List<int> _months = List.generate(12, (index) => index + 1);
 
   double _effectiveIncome = 0;
@@ -40,8 +42,11 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
   PercentageConfig? _config;
 
   TextEditingController? _activeController;
+  FocusNode? _activeFocusNode;
+
   bool _isKeyboardVisible = false;
   bool _isEditing = false;
+  bool _useSystemKeyboard = false; // Toggle state
 
   @override
   void initState() {
@@ -74,9 +79,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       _selectedMonth = now.month;
 
       _firestoreService.getPercentageConfig().then((config) {
-        setState(() {
-          _config = config;
-        });
+        setState(() => _config = config);
       });
     }
 
@@ -90,6 +93,9 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     _salaryController.dispose();
     _extraIncomeController.dispose();
     _emiController.dispose();
+    _salaryFocus.dispose();
+    _extraFocus.dispose();
+    _emiFocus.dispose();
     super.dispose();
   }
 
@@ -111,10 +117,43 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     });
   }
 
-  Future<void> _onRecordPressed() async {
+  // --- Keyboard Logic ---
+  void _setActive(TextEditingController ctrl, FocusNode node) {
     setState(() {
+      _activeController = ctrl;
+      _activeFocusNode = node;
+
+      if (!_useSystemKeyboard) {
+        _isKeyboardVisible = true;
+        // Request focus to show cursor even if readOnly
+        FocusScope.of(context).requestFocus(node);
+      } else {
+        _isKeyboardVisible = false;
+      }
+    });
+  }
+
+  void _switchToSystemKeyboard() {
+    setState(() {
+      _useSystemKeyboard = true;
       _isKeyboardVisible = false;
     });
+    // Re-request focus to trigger system keyboard
+    if (_activeFocusNode != null) {
+      FocusScope.of(context).unfocus();
+      Future.delayed(const Duration(milliseconds: 50), () {
+        FocusScope.of(context).requestFocus(_activeFocusNode);
+      });
+    }
+  }
+
+  void _closeKeyboard() {
+    setState(() => _isKeyboardVisible = false);
+    FocusScope.of(context).unfocus();
+  }
+
+  Future<void> _onRecordPressed() async {
+    _closeKeyboard();
     await Future.delayed(const Duration(milliseconds: 100));
 
     if (_formKey.currentState!.validate()) {
@@ -167,67 +206,13 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     }
   }
 
-  // Keyboard Handlers
-  void _handleKeyPress(String value) {
-    if (_activeController == null) return;
-    final controller = _activeController!;
-    final text = controller.text;
-    final selection = controller.selection;
-    int start = selection.start >= 0 ? selection.start : text.length;
-    int end = selection.end >= 0 ? selection.end : text.length;
-    final newText = text.replaceRange(start, end, value);
-    controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: start + value.length),
-    );
-  }
-
-  void _handleBackspace() {
-    if (_activeController == null) return;
-    final controller = _activeController!;
-    final text = controller.text;
-    final selection = controller.selection;
-    int start = selection.start >= 0 ? selection.start : text.length;
-    if (start > 0) {
-      final newText = text.replaceRange(start - 1, start, '');
-      controller.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: start - 1),
-      );
-    }
-  }
-
-  void _handleClear() {
-    _activeController?.clear();
-  }
-
-  void _handleEquals() {
-    if (_activeController == null || _activeController!.text.isEmpty) return;
-    String expression = _activeController!.text
-        .replaceAll('×', '*')
-        .replaceAll('÷', '/');
-    try {
-      Parser p = Parser();
-      Expression exp = p.parse(expression);
-      ContextModel cm = ContextModel();
-      double result = exp.evaluate(EvaluationType.REAL, cm);
-      _activeController!.text = result.toStringAsFixed(2);
-      _activeController!.selection = TextSelection.fromPosition(
-        TextPosition(offset: _activeController!.text.length),
-      );
-    } catch (e) {
-      /* Ignore */
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_config == null) {
+    if (_config == null)
       return const Padding(
         padding: EdgeInsets.all(48.0),
         child: Center(child: CircularProgressIndicator()),
       );
-    }
 
     return Padding(
       padding: EdgeInsets.only(
@@ -243,7 +228,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
             child: Form(
               key: _formKey,
               child: GestureDetector(
-                onTap: () => setState(() => _isKeyboardVisible = false),
+                onTap: _closeKeyboard,
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -256,6 +241,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                       const SizedBox(height: 24),
                       _buildCalcFormField(
                         controller: _salaryController,
+                        focusNode: _salaryFocus,
                         labelText: 'Salary*',
                         validator: (value) => (value == null || value.isEmpty)
                             ? 'Required'
@@ -264,11 +250,13 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                       const SizedBox(height: 16),
                       _buildCalcFormField(
                         controller: _extraIncomeController,
+                        focusNode: _extraFocus,
                         labelText: 'Extra Income',
                       ),
                       const SizedBox(height: 16),
                       _buildCalcFormField(
                         controller: _emiController,
+                        focusNode: _emiFocus,
                         labelText: 'EMI',
                       ),
                       const SizedBox(height: 24),
@@ -280,7 +268,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                       ),
                       const SizedBox(height: 12),
 
-                      // --- MODERN DROPDOWNS ---
                       Row(
                         children: [
                           Expanded(
@@ -288,7 +275,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                               label: _selectedYear?.toString() ?? 'Year',
                               isActive: _selectedYear != null,
                               icon: Icons.calendar_today_outlined,
-                              isEnabled: !_isEditing, // Disable if editing
+                              isEnabled: !_isEditing,
                               onTap: () => showSelectionSheet<int>(
                                 context: context,
                                 title: 'Select Year',
@@ -310,7 +297,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                                   : 'Month',
                               isActive: _selectedMonth != null,
                               icon: Icons.calendar_view_month_outlined,
-                              isEnabled: !_isEditing, // Disable if editing
+                              isEnabled: !_isEditing,
                               onTap: () => showSelectionSheet<int>(
                                 context: context,
                                 title: 'Select Month',
@@ -325,8 +312,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                           ),
                         ],
                       ),
-
-                      // -----------------------
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
@@ -348,11 +333,18 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
             child: _isKeyboardVisible
-                ? _CalculatorKeyboard(
-                    onKeyPress: _handleKeyPress,
-                    onBackspace: _handleBackspace,
-                    onClear: _handleClear,
-                    onEquals: _handleEquals,
+                ? CalculatorKeyboard(
+                    onKeyPress: (v) => CalculatorKeyboard.handleKeyPress(
+                      _activeController!,
+                      v,
+                    ),
+                    onBackspace: () =>
+                        CalculatorKeyboard.handleBackspace(_activeController!),
+                    onClear: () => _activeController!.clear(),
+                    onEquals: () =>
+                        CalculatorKeyboard.handleEquals(_activeController!),
+                    onClose: _closeKeyboard,
+                    onSwitchToSystem: _switchToSystemKeyboard,
                   )
                 : const SizedBox.shrink(),
           ),
@@ -363,13 +355,17 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
 
   Widget _buildCalcFormField({
     required TextEditingController controller,
+    required FocusNode focusNode,
     required String labelText,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
-      readOnly: true,
-      showCursor: true,
+      focusNode: focusNode,
+      // Key Logic: readOnly is true if using Custom Keyboard. false if System.
+      readOnly: !_useSystemKeyboard,
+      showCursor: true, // Always show cursor
+      keyboardType: TextInputType.number, // System keyboard type
       decoration: InputDecoration(
         labelText: labelText,
         filled: true,
@@ -382,19 +378,27 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
         ),
       ),
       validator: validator,
-      onTap: () {
-        setState(() {
-          _isKeyboardVisible = true;
-          _activeController = controller;
-        });
-      },
+      onTap: () => _setActive(controller, focusNode),
     );
   }
 
   Widget _buildCalculationsDisplay() {
     final currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
-    final sortedEntries = _calculatedValues.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    // Sort logic from previous steps
+    List<MapEntry<String, double>> sortedEntries = [];
+    if (_config != null) {
+      for (var cat in _config!.categories) {
+        if (_calculatedValues.containsKey(cat.name)) {
+          sortedEntries.add(MapEntry(cat.name, _calculatedValues[cat.name]!));
+        }
+      }
+      for (var entry in _calculatedValues.entries) {
+        if (!sortedEntries.any((e) => e.key == entry.key))
+          sortedEntries.add(entry);
+      }
+    } else {
+      sortedEntries = _calculatedValues.entries.toList();
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -436,115 +440,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
             );
           }),
         ],
-      ),
-    );
-  }
-}
-
-class _CalculatorKeyboard extends StatelessWidget {
-  final void Function(String) onKeyPress;
-  final VoidCallback onBackspace;
-  final VoidCallback onClear;
-  final VoidCallback onEquals;
-
-  const _CalculatorKeyboard({
-    required this.onKeyPress,
-    required this.onBackspace,
-    required this.onClear,
-    required this.onEquals,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor.withAlpha(240),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _k('('),
-              _k(')'),
-              _k('C', a: onClear, f: true),
-              _k('⌫', a: onBackspace, f: true, i: Icons.backspace_outlined),
-            ],
-          ),
-          Row(
-            children: [
-              _k('7'),
-              _k('8'),
-              _k('9'),
-              _k('÷', a: () => onKeyPress('/'), f: true),
-            ],
-          ),
-          Row(
-            children: [
-              _k('4'),
-              _k('5'),
-              _k('6'),
-              _k('×', a: () => onKeyPress('*'), f: true),
-            ],
-          ),
-          Row(children: [_k('1'), _k('2'), _k('3'), _k('-', f: true)]),
-          Row(
-            children: [
-              _k('.'),
-              _k('0'),
-              _k('=', a: onEquals, f: true, e: true),
-              _k('+', f: true),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _k(
-    String t, {
-    VoidCallback? a,
-    bool f = false,
-    bool e = false,
-    IconData? i,
-  }) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: e
-            ? FilledButton(
-                onPressed: a,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: Text(
-                  t,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              )
-            : OutlinedButton(
-                onPressed: () => a != null ? a() : onKeyPress(t),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  foregroundColor: f
-                      ? Colors.cyanAccent.shade400
-                      : Colors.white,
-                  side: BorderSide(color: Colors.white.withOpacity(0.2)),
-                ),
-                child: i != null
-                    ? Icon(i, size: 20)
-                    : Text(
-                        t,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
       ),
     );
   }

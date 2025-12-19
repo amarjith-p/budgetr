@@ -1,19 +1,38 @@
 import 'dart:ui';
-import 'package:budget/core/models/custom_data_models.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/financial_record_model.dart';
+import '../../../core/models/percentage_config_model.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../settlement/screens/settlement_screen.dart';
 import '../widgets/add_record_sheet.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  late Future<PercentageConfig> _configFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshConfig();
+  }
+
+  void _refreshConfig() {
+    setState(() {
+      _configFuture = _firestoreService.getPercentageConfig();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final FirestoreService firestoreService = FirestoreService();
     final currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
 
     void showAddRecordSheet([FinancialRecord? recordToEdit]) {
@@ -42,7 +61,7 @@ class DashboardScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
-                firestoreService.deleteFinancialRecord(id);
+                _firestoreService.deleteFinancialRecord(id);
                 Navigator.pop(ctx);
               },
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -136,113 +155,144 @@ class DashboardScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (c) => const SettingsScreen()),
-            ),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (c) => const SettingsScreen()),
+              );
+              _refreshConfig(); // Refresh sort order on return
+            },
           ),
         ],
       ),
-      body: StreamBuilder<List<FinancialRecord>>(
-        stream: firestoreService.getFinancialRecords(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+      body: FutureBuilder<PercentageConfig>(
+        future: _configFuture,
+        builder: (context, configSnapshot) {
+          if (configSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError)
-            return Center(child: Text('Error: ${snapshot.error}'));
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Text(
-                'No records found.\nPress the + button to add one!',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, color: Colors.white70),
-              ),
-            );
           }
 
-          final records = snapshot.data!;
+          final configCategories = configSnapshot.data?.categories ?? [];
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: records.length,
-            itemBuilder: (context, index) {
-              final record = records[index];
-              final sortedAllocations = record.allocations.entries.toList()
-                ..sort((a, b) => b.value.compareTo(a.value));
-
-              return GestureDetector(
-                onLongPress: () => showActionSheet(record),
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+          return StreamBuilder<List<FinancialRecord>>(
+            stream: _firestoreService.getFinancialRecords(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting)
+                return const Center(child: CircularProgressIndicator());
+              if (snapshot.hasError)
+                return Center(child: Text('Error: ${snapshot.error}'));
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No records found.\nPress the + button to add one!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 18, color: Colors.white70),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                );
+              }
+
+              final records = snapshot.data!;
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: records.length,
+                itemBuilder: (context, index) {
+                  final record = records[index];
+
+                  // SORTING LOGIC: Based on Config Order
+                  List<MapEntry<String, double>> sortedAllocations = [];
+                  // 1. Add known categories in order
+                  for (var cat in configCategories) {
+                    if (record.allocations.containsKey(cat.name)) {
+                      sortedAllocations.add(
+                        MapEntry(cat.name, record.allocations[cat.name]!),
+                      );
+                    }
+                  }
+                  // 2. Add any remaining keys (in case of legacy data)
+                  record.allocations.forEach((key, value) {
+                    if (!sortedAllocations.any((e) => e.key == key)) {
+                      sortedAllocations.add(MapEntry(key, value));
+                    }
+                  });
+
+                  return GestureDetector(
+                    onLongPress: () => showActionSheet(record),
+                    child: Card(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  DateFormat(
+                                    'MMMM yyyy',
+                                  ).format(DateTime(record.year, record.month)),
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(color: Colors.white),
+                                ),
+                                const Icon(
+                                  Icons.touch_app_outlined,
+                                  size: 16,
+                                  color: Colors.white24,
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 20, color: Colors.white12),
+                            _buildRecordDetailRow(
+                              'Salary:',
+                              currencyFormat.format(record.salary),
+                              context,
+                            ),
+                            if (record.extraIncome > 0)
+                              _buildRecordDetailRow(
+                                'Extra Income:',
+                                currencyFormat.format(record.extraIncome),
+                                context,
+                              ),
+                            if (record.emi > 0)
+                              _buildRecordDetailRow(
+                                'EMI:',
+                                currencyFormat.format(record.emi),
+                                context,
+                              ),
+                            const SizedBox(height: 12),
                             Text(
-                              DateFormat(
-                                'MMMM yyyy',
-                              ).format(DateTime(record.year, record.month)),
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(color: Colors.white),
+                              'Effective Income: ${currencyFormat.format(record.effectiveIncome)}',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
-                            // Helper hint for interaction
-                            const Icon(
-                              Icons.touch_app_outlined,
-                              size: 16,
-                              color: Colors.white24,
-                            ),
+                            const SizedBox(height: 12),
+                            // Use sorted list
+                            ...sortedAllocations.map((entry) {
+                              final percent =
+                                  record.allocationPercentages[entry.key]
+                                      ?.toStringAsFixed(0) ??
+                                  '?';
+                              return _buildRecordDetailRow(
+                                '${entry.key} ($percent%):',
+                                currencyFormat.format(entry.value),
+                                context,
+                              );
+                            }),
                           ],
                         ),
-                        const Divider(height: 20, color: Colors.white12),
-                        _buildRecordDetailRow(
-                          'Salary:',
-                          currencyFormat.format(record.salary),
-                          context,
-                        ),
-                        if (record.extraIncome > 0)
-                          _buildRecordDetailRow(
-                            'Extra Income:',
-                            currencyFormat.format(record.extraIncome),
-                            context,
-                          ),
-                        if (record.emi > 0)
-                          _buildRecordDetailRow(
-                            'EMI:',
-                            currencyFormat.format(record.emi),
-                            context,
-                          ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Effective Income: ${currencyFormat.format(record.effectiveIncome)}',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 12),
-                        ...sortedAllocations.map((entry) {
-                          final percent =
-                              record.allocationPercentages[entry.key]
-                                  ?.toStringAsFixed(0) ??
-                              '?';
-                          return _buildRecordDetailRow(
-                            '${entry.key} ($percent%):',
-                            currencyFormat.format(entry.value),
-                            context,
-                          );
-                        }),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               );
             },
           );

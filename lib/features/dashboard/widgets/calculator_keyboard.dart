@@ -6,6 +6,8 @@ class CalculatorKeyboard extends StatelessWidget {
   final VoidCallback onBackspace;
   final VoidCallback onClear;
   final VoidCallback onEquals;
+  final VoidCallback? onClose; // NEW
+  final VoidCallback? onSwitchToSystem; // NEW
 
   const CalculatorKeyboard({
     super.key,
@@ -13,9 +15,11 @@ class CalculatorKeyboard extends StatelessWidget {
     required this.onBackspace,
     required this.onClear,
     required this.onEquals,
+    this.onClose,
+    this.onSwitchToSystem,
   });
 
-  // Static helper to attach logic to a controller
+  // Static helpers (Unchanged)
   static void handleKeyPress(TextEditingController ctrl, String value) {
     final text = ctrl.text;
     final selection = ctrl.selection;
@@ -60,10 +64,49 @@ class CalculatorKeyboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8.0),
-      color: Theme.of(context).scaffoldBackgroundColor.withAlpha(240),
+      padding: const EdgeInsets.only(bottom: 8.0, left: 8.0, right: 8.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // NEW: Control Row
+          SizedBox(
+            height: 48,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (onSwitchToSystem != null)
+                  TextButton.icon(
+                    icon: const Icon(Icons.keyboard_outlined, size: 20),
+                    label: const Text("System Keyboard"),
+                    onPressed: onSwitchToSystem,
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                    ),
+                  )
+                else
+                  const SizedBox(),
+                IconButton(
+                  icon: const Icon(Icons.keyboard_hide_outlined),
+                  onPressed: onClose,
+                  tooltip: 'Close',
+                  color: Colors.white70,
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          const SizedBox(height: 4),
           Row(
             children: [
               _k('('),

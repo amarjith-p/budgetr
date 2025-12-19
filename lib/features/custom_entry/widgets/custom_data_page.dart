@@ -225,7 +225,6 @@ class _CustomDataPageState extends State<CustomDataPage>
               totals[field.name] = records.fold(0.0, (sum, r) {
                 final rawVal = r.data[field.name];
                 double val = 0.0;
-                // Handle both numbers and strings safely
                 if (rawVal is num) {
                   val = rawVal.toDouble();
                 } else if (rawVal is String) {
@@ -371,7 +370,6 @@ class _CustomDataPageState extends State<CustomDataPage>
                                     ).format(val);
                                   } else if (f.type ==
                                       CustomFieldType.currency) {
-                                    // Safe parsing for cell display
                                     double numVal = 0.0;
                                     if (val is num)
                                       numVal = val.toDouble();
@@ -523,7 +521,6 @@ class _CustomDataPageState extends State<CustomDataPage>
     if (n > 1) {
       double slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
       double intercept = (sumY - slope * sumX) / n;
-
       for (int i = 0; i < n; i++) {
         trendSpots.add(FlSpot(i.toDouble(), slope * i + intercept));
       }
@@ -548,6 +545,12 @@ class _CustomDataPageState extends State<CustomDataPage>
       gradientStops = [0.0, zeroStop, zeroStop, 1.0];
     }
 
+    // Dynamic Interval
+    double interval = 1.0;
+    if (sorted.length > 5) {
+      interval = (sorted.length / 5).ceilToDouble();
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.only(right: 16, top: 16, bottom: 8),
@@ -559,6 +562,53 @@ class _CustomDataPageState extends State<CustomDataPage>
       ),
       child: LineChart(
         LineChartData(
+          // ... [Keep existing lineTouchData, gridData, titlesData, borderData] ...
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              // tooltipBgColor: const Color(0xFF263238).withOpacity(0.9), // OLD 0.40.0+ syntax
+              getTooltipColor: (spot) =>
+                  const Color(0xFF263238).withOpacity(0.9), // NEW syntax
+              tooltipRoundedRadius: 8,
+              getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                return touchedBarSpots.map((barSpot) {
+                  if (barSpot.barIndex == 0) return null; // Hide Trend Tooltip
+
+                  final index = barSpot.x.toInt();
+                  if (index >= 0 && index < sorted.length) {
+                    final d = sorted[index].data[xKey];
+                    String xLabel = '';
+                    if (d is DateTime) {
+                      xLabel = DateFormat('dd MMM yyyy').format(d);
+                    } else {
+                      xLabel = d.toString();
+                    }
+
+                    return LineTooltipItem(
+                      '$xLabel\n',
+                      const TextStyle(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: NumberFormat.decimalPattern().format(barSpot.y),
+                          style: TextStyle(
+                            color: barSpot.y < 0
+                                ? Colors.redAccent
+                                : Colors.greenAccent, // Dynamic Tooltip Color
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return null;
+                }).toList();
+              },
+            ),
+          ),
           gridData: const FlGridData(show: false),
           titlesData: FlTitlesData(
             rightTitles: const AxisTitles(
@@ -580,7 +630,7 @@ class _CustomDataPageState extends State<CustomDataPage>
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                interval: 1,
+                interval: interval,
                 getTitlesWidget: (val, meta) {
                   int index = val.toInt();
                   if (index >= 0 &&
@@ -625,7 +675,20 @@ class _CustomDataPageState extends State<CustomDataPage>
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
               ),
-              dotData: const FlDotData(show: true),
+              // FIX: Custom Dot Painter to color dots Red/Green based on value
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, percent, barData, index) {
+                  return FlDotCirclePainter(
+                    radius: 4,
+                    color: spot.y < 0
+                        ? Colors.red
+                        : Colors.green, // Logic for Dot Color
+                    strokeWidth: 2,
+                    strokeColor: Colors.white,
+                  );
+                },
+              ),
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(

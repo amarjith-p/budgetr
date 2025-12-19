@@ -23,10 +23,14 @@ class DynamicEntrySheet extends StatefulWidget {
 class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
   final Map<String, dynamic> _formData = {};
   final Map<String, TextEditingController> _controllers = {};
+  // Track Focus Nodes for each field
+  final Map<String, FocusNode> _focusNodes = {};
 
   TextEditingController? _activeCalcController;
+  FocusNode? _activeFocusNode;
   bool _isKeyboardVisible = false;
   bool _isEditing = false;
+  bool _useSystemKeyboard = false;
 
   @override
   void initState() {
@@ -48,17 +52,65 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
         else
           _formData[field.name] = DateTime.now();
       } else if (field.type == CustomFieldType.dropdown) {
-        _formData[field.name] = initialVal; // String or null
+        _formData[field.name] = initialVal;
       } else {
         // String, Number, Currency
         _controllers[field.name] = TextEditingController(
           text: initialVal?.toString() ?? '',
         );
+        _focusNodes[field.name] = FocusNode(); // Initialize Focus Node
       }
     }
   }
 
+  @override
+  void dispose() {
+    _controllers.values.forEach((c) => c.dispose());
+    _focusNodes.values.forEach((f) => f.dispose());
+    super.dispose();
+  }
+
+  // --- Keyboard Logic ---
+  void _setActive(TextEditingController ctrl, FocusNode node, bool isNumber) {
+    setState(() {
+      _activeCalcController = ctrl;
+      _activeFocusNode = node;
+
+      if (isNumber) {
+        if (!_useSystemKeyboard) {
+          _isKeyboardVisible = true;
+          FocusScope.of(context).requestFocus(node);
+        } else {
+          _isKeyboardVisible = false;
+        }
+      } else {
+        // Standard text field -> System keyboard always
+        _isKeyboardVisible = false;
+      }
+    });
+  }
+
+  void _switchToSystemKeyboard() {
+    setState(() {
+      _useSystemKeyboard = true;
+      _isKeyboardVisible = false;
+    });
+    if (_activeFocusNode != null) {
+      FocusScope.of(context).unfocus();
+      Future.delayed(const Duration(milliseconds: 50), () {
+        FocusScope.of(context).requestFocus(_activeFocusNode);
+      });
+    }
+  }
+
+  void _closeKeyboard() {
+    setState(() => _isKeyboardVisible = false);
+    FocusScope.of(context).unfocus();
+  }
+
   Future<void> _save() async {
+    _closeKeyboard();
+    // ... [Same Save Logic as before] ...
     for (var field in widget.template.fields) {
       if (field.type == CustomFieldType.number ||
           field.type == CustomFieldType.currency) {
@@ -67,7 +119,6 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
       } else if (field.type == CustomFieldType.string) {
         _formData[field.name] = _controllers[field.name]!.text;
       }
-      // Date and Dropdown are already in _formData
     }
 
     final record = CustomRecord(
@@ -176,6 +227,8 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
                     onClear: () => _activeCalcController!.clear(),
                     onEquals: () =>
                         CalculatorKeyboard.handleEquals(_activeCalcController!),
+                    onClose: _closeKeyboard,
+                    onSwitchToSystem: _switchToSystemKeyboard,
                   )
                 : const SizedBox.shrink(),
           ),
@@ -185,7 +238,7 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
   }
 
   Widget _buildFieldInput(CustomFieldConfig field) {
-    // 1. DATE
+    // 1. DATE & DROPDOWN (Unchanged)
     if (field.type == CustomFieldType.date) {
       final val = _formData[field.name] as DateTime;
       return Padding(
@@ -224,7 +277,6 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
       );
     }
 
-    // 2. DROPDOWN
     if (field.type == CustomFieldType.dropdown) {
       final val = _formData[field.name];
       return Padding(
@@ -245,7 +297,7 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
       );
     }
 
-    // 3. TEXT / NUMBER / CURRENCY
+    // 2. TEXT / NUMBER / CURRENCY
     final isNum =
         field.type == CustomFieldType.number ||
         field.type == CustomFieldType.currency;
@@ -253,23 +305,23 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextFormField(
         controller: _controllers[field.name],
-        readOnly: isNum,
-        onTap: isNum
-            ? () {
-                setState(() {
-                  _activeCalcController = _controllers[field.name];
-                  _isKeyboardVisible = true;
-                });
-              }
-            : () => setState(() => _isKeyboardVisible = false),
+        focusNode: _focusNodes[field.name],
+        // If it's a number, adhere to _useSystemKeyboard. If text, always false (use system)
+        readOnly: isNum ? !_useSystemKeyboard : false,
+        showCursor: true,
+        keyboardType: isNum ? TextInputType.number : TextInputType.text,
         decoration: InputDecoration(
           labelText: field.name,
           border: const OutlineInputBorder(),
-          // Add Symbol for Currency
           prefixText: field.type == CustomFieldType.currency
               ? '${field.currencySymbol} '
               : null,
           prefixIcon: Icon(isNum ? Icons.onetwothree : Icons.text_fields),
+        ),
+        onTap: () => _setActive(
+          _controllers[field.name]!,
+          _focusNodes[field.name]!,
+          isNum,
         ),
       ),
     );

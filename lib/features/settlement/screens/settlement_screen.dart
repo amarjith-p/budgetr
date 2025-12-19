@@ -1,12 +1,13 @@
+import 'package:budget/features/dashboard/widgets/calculator_keyboard.dart';
 import 'package:budget/features/dashboard/widgets/modern_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:math_expressions/math_expressions.dart';
 
 import '../../../core/models/financial_record_model.dart';
 import '../../../core/models/settlement_model.dart';
+import '../../../core/models/percentage_config_model.dart';
 import '../../../core/services/firestore_service.dart';
 
 class SettlementScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _SettlementScreenState extends State<SettlementScreen> {
 
   bool _isLoading = false;
   Settlement? _settlementData;
+  PercentageConfig? _percentageConfig;
 
   @override
   void initState() {
@@ -40,6 +42,9 @@ class _SettlementScreenState extends State<SettlementScreen> {
     final years = _yearMonthData.map((e) => e['year']!).toSet().toList();
     years.sort((a, b) => b.compareTo(a));
     _availableYears = years;
+
+    // Fetch config for sorting buckets
+    _percentageConfig = await _firestoreService.getPercentageConfig();
 
     final now = DateTime.now();
     if (_availableYears.contains(now.year)) {
@@ -140,7 +145,7 @@ class _SettlementScreenState extends State<SettlementScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: ModernDropdownPill<int>(
                     label: _selectedMonth != null
@@ -230,11 +235,22 @@ class _SettlementScreenState extends State<SettlementScreen> {
   }
 
   Widget _buildSettlementChart(Settlement data) {
-    final keys = data.allocations.keys.toList()
-      ..sort(
+    // Sort keys based on config if available, otherwise by allocation amount
+    final keys = data.allocations.keys.toList();
+    if (_percentageConfig != null) {
+      keys.sort((a, b) {
+        int idxA = _percentageConfig!.categories.indexWhere((c) => c.name == a);
+        int idxB = _percentageConfig!.categories.indexWhere((c) => c.name == b);
+        if (idxA == -1) idxA = 999;
+        if (idxB == -1) idxB = 999;
+        return idxA.compareTo(idxB);
+      });
+    } else {
+      keys.sort(
         (a, b) =>
             (data.allocations[b] ?? 0).compareTo(data.allocations[a] ?? 0),
       );
+    }
 
     return BarChart(
       BarChartData(
@@ -320,12 +336,27 @@ class _SettlementScreenState extends State<SettlementScreen> {
   }
 
   Widget _buildSettlementTable(Settlement data) {
-    final sortedEntries = data.allocations.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final entries = data.allocations.entries.toList();
+    // Sort based on config
+    if (_percentageConfig != null) {
+      entries.sort((a, b) {
+        int idxA = _percentageConfig!.categories.indexWhere(
+          (c) => c.name == a.key,
+        );
+        int idxB = _percentageConfig!.categories.indexWhere(
+          (c) => c.name == b.key,
+        );
+        if (idxA == -1) idxA = 999;
+        if (idxB == -1) idxB = 999;
+        return idxA.compareTo(idxB);
+      });
+    } else {
+      entries.sort((a, b) => b.value.compareTo(a.value));
+    }
 
     List<DataRow> rows = [];
 
-    for (var entry in sortedEntries) {
+    for (var entry in entries) {
       final key = entry.key;
       final allocated = entry.value;
       final spent = data.expenses[key] ?? 0.0;
@@ -429,6 +460,10 @@ class _SettlementScreenState extends State<SettlementScreen> {
   }
 }
 
+// -----------------------------------------------------------------------------
+// INPUT SHEET
+// -----------------------------------------------------------------------------
+
 class SettlementInputSheet extends StatefulWidget {
   const SettlementInputSheet({super.key});
 
@@ -448,12 +483,16 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
 
   FinancialRecord? _budgetRecord;
   Settlement? _existingSettlement;
+  PercentageConfig? _percentageConfig;
 
   final Map<String, TextEditingController> _controllers = {};
-  double _totalExpense = 0.0;
+  // Focus nodes for cursor management
+  final Map<String, FocusNode> _focusNodes = {};
 
+  double _totalExpense = 0.0;
   TextEditingController? _activeController;
   bool _isKeyboardVisible = false;
+  bool _useSystemKeyboard = false;
 
   @override
   void initState() {
@@ -463,9 +502,8 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
 
   @override
   void dispose() {
-    for (var controller in _controllers.values) {
-      controller.dispose();
-    }
+    for (var controller in _controllers.values) controller.dispose();
+    for (var node in _focusNodes.values) node.dispose();
     super.dispose();
   }
 
@@ -474,6 +512,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
     final years = _yearMonthData.map((e) => e['year']!).toSet().toList();
     years.sort((a, b) => b.compareTo(a));
     _availableYears = years;
+    _percentageConfig = await _firestoreService.getPercentageConfig();
 
     final now = DateTime.now();
     if (_availableYears.contains(now.year)) {
@@ -528,6 +567,8 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
         _existingSettlement = results[1] as Settlement?;
 
         _controllers.clear();
+        _focusNodes.clear(); // Reset nodes
+
         _budgetRecord!.allocations.forEach((key, _) {
           double initialValue = 0.0;
           if (_existingSettlement != null &&
@@ -539,6 +580,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
           );
           ctrl.addListener(_calculateTotalExpense);
           _controllers[key] = ctrl;
+          _focusNodes[key] = FocusNode();
         });
 
         _calculateTotalExpense();
@@ -558,7 +600,34 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
     setState(() => _totalExpense = sum);
   }
 
+  // --- Keyboard Logic ---
+  void _setActive(TextEditingController ctrl, FocusNode node) {
+    setState(() {
+      _activeController = ctrl;
+      if (!_useSystemKeyboard) {
+        _isKeyboardVisible = true;
+        FocusScope.of(context).requestFocus(node);
+      } else {
+        _isKeyboardVisible = false;
+      }
+    });
+  }
+
+  void _switchToSystemKeyboard() {
+    setState(() {
+      _useSystemKeyboard = true;
+      _isKeyboardVisible = false;
+    });
+    FocusScope.of(context).unfocus(); // Reset focus to trigger system kb
+  }
+
+  void _closeKeyboard() {
+    setState(() => _isKeyboardVisible = false);
+    FocusScope.of(context).unfocus();
+  }
+
   Future<void> _onSettle() async {
+    _closeKeyboard();
     if (_budgetRecord == null) return;
 
     Map<String, double> expenses = {};
@@ -597,76 +666,12 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
     }
   }
 
-  void _handleKeyPress(String value) {
-    if (_activeController == null) return;
-    final controller = _activeController!;
-    final text = controller.text;
-    final selection = controller.selection;
-    final newText = text.replaceRange(selection.start, selection.end, value);
-    controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(
-        offset: selection.start + value.length,
-      ),
-    );
-  }
-
-  void _handleBackspace() {
-    if (_activeController == null) return;
-    final controller = _activeController!;
-    final text = controller.text;
-    final selection = controller.selection;
-    if (selection.baseOffset > 0) {
-      final newText = text.replaceRange(
-        selection.start - 1,
-        selection.start,
-        '',
-      );
-      controller.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: selection.start - 1),
-      );
-    }
-  }
-
-  void _handleClear() {
-    if (_activeController == null) return;
-    _activeController!.clear();
-  }
-
-  void _handleEquals() {
-    if (_activeController == null || _activeController!.text.isEmpty) return;
-
-    String expression = _activeController!.text
-        .replaceAll('×', '*')
-        .replaceAll('÷', '/');
-
-    try {
-      Parser p = Parser();
-      Expression exp = p.parse(expression);
-      ContextModel cm = ContextModel();
-      double result = exp.evaluate(EvaluationType.REAL, cm);
-
-      _activeController!.text = result.toStringAsFixed(2);
-      _activeController!.selection = TextSelection.fromPosition(
-        TextPosition(offset: _activeController!.text.length),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid Expression'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
+        left: 16, // Fixed padding
+        right: 16,
         top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
@@ -690,7 +695,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: ModernDropdownPill<int>(
                   label: _selectedMonth != null
@@ -748,11 +753,18 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
             child: _isKeyboardVisible
-                ? _CalculatorKeyboard(
-                    onKeyPress: _handleKeyPress,
-                    onBackspace: _handleBackspace,
-                    onClear: _handleClear,
-                    onEquals: _handleEquals,
+                ? CalculatorKeyboard(
+                    onKeyPress: (v) => CalculatorKeyboard.handleKeyPress(
+                      _activeController!,
+                      v,
+                    ),
+                    onBackspace: () =>
+                        CalculatorKeyboard.handleBackspace(_activeController!),
+                    onClear: () => _activeController!.clear(),
+                    onEquals: () =>
+                        CalculatorKeyboard.handleEquals(_activeController!),
+                    onClose: _closeKeyboard,
+                    onSwitchToSystem: _switchToSystemKeyboard,
                   )
                 : const SizedBox.shrink(),
           ),
@@ -764,14 +776,29 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
   Widget _buildSettlementForm() {
     final totalBalance = _budgetRecord!.effectiveIncome - _totalExpense;
 
-    final sortedEntries = _budgetRecord!.allocations.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final entries = _budgetRecord!.allocations.entries.toList();
+    // Sort form items by config
+    if (_percentageConfig != null) {
+      entries.sort((a, b) {
+        int idxA = _percentageConfig!.categories.indexWhere(
+          (c) => c.name == a.key,
+        );
+        int idxB = _percentageConfig!.categories.indexWhere(
+          (c) => c.name == b.key,
+        );
+        if (idxA == -1) idxA = 999;
+        if (idxB == -1) idxB = 999;
+        return idxA.compareTo(idxB);
+      });
+    } else {
+      entries.sort((a, b) => b.value.compareTo(a.value));
+    }
 
     return GestureDetector(
-      onTap: () => setState(() => _isKeyboardVisible = false),
+      onTap: _closeKeyboard,
       child: ListView(
         children: [
-          ...sortedEntries.map((entry) {
+          ...entries.map((entry) {
             return _buildSettlementRow(
               title: entry.key,
               allocated: entry.value,
@@ -839,6 +866,10 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
     required double allocated,
     required TextEditingController controller,
   }) {
+    // Ensure FocusNode exists (lazy creation if key was added after init)
+    if (!_focusNodes.containsKey(title)) _focusNodes[title] = FocusNode();
+    final focusNode = _focusNodes[title]!;
+
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -847,147 +878,17 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
         width: 150,
         child: TextFormField(
           controller: controller,
-          readOnly: true,
+          focusNode: focusNode,
+          readOnly: !_useSystemKeyboard, // True = Custom KB, False = System KB
           showCursor: true,
+          keyboardType: TextInputType.number,
           decoration: const InputDecoration(
             labelText: 'Enter Expense',
             border: OutlineInputBorder(),
             contentPadding: EdgeInsets.symmetric(horizontal: 8),
           ),
-          onTap: () {
-            setState(() {
-              _isKeyboardVisible = true;
-              _activeController = controller;
-            });
-          },
+          onTap: () => _setActive(controller, focusNode),
         ),
-      ),
-    );
-  }
-}
-
-class _CalculatorKeyboard extends StatelessWidget {
-  final void Function(String) onKeyPress;
-  final VoidCallback onBackspace;
-  final VoidCallback onClear;
-  final VoidCallback onEquals;
-
-  const _CalculatorKeyboard({
-    required this.onKeyPress,
-    required this.onBackspace,
-    required this.onClear,
-    required this.onEquals,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor.withAlpha(240),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _buildKey('('),
-              _buildKey(')'),
-              _buildKey('C', onAction: onClear, isFunction: true),
-              _buildKey(
-                '⌫',
-                onAction: onBackspace,
-                isFunction: true,
-                icon: Icons.backspace_outlined,
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              _buildKey('7'),
-              _buildKey('8'),
-              _buildKey('9'),
-              _buildKey('÷', onAction: () => onKeyPress('/'), isFunction: true),
-            ],
-          ),
-          Row(
-            children: [
-              _buildKey('4'),
-              _buildKey('5'),
-              _buildKey('6'),
-              _buildKey('×', onAction: () => onKeyPress('*'), isFunction: true),
-            ],
-          ),
-          Row(
-            children: [
-              _buildKey('1'),
-              _buildKey('2'),
-              _buildKey('3'),
-              _buildKey('-', isFunction: true),
-            ],
-          ),
-          Row(
-            children: [
-              _buildKey('.'),
-              _buildKey('0'),
-              _buildKey(
-                '=',
-                onAction: onEquals,
-                isFunction: true,
-                isEquals: true,
-              ),
-              _buildKey('+', isFunction: true),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildKey(
-    String text, {
-    VoidCallback? onAction,
-    bool isFunction = false,
-    bool isEquals = false,
-    IconData? icon,
-  }) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: isEquals
-            ? FilledButton(
-                onPressed: onAction,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              )
-            : OutlinedButton(
-                onPressed: () =>
-                    onAction != null ? onAction() : onKeyPress(text),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  foregroundColor: isFunction
-                      ? Colors.cyanAccent.shade400
-                      : Colors.white,
-                  side: BorderSide(color: Colors.white.withOpacity(0.2)),
-                ),
-                child: icon != null
-                    ? Icon(icon, size: 20)
-                    : Text(
-                        text,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
       ),
     );
   }

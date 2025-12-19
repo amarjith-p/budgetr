@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart'; // Import local_auth
+import 'package:flutter/services.dart';
 import '../../../core/models/percentage_config_model.dart';
 import '../../../core/services/firestore_service.dart';
 
@@ -12,8 +14,10 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _firestoreService = FirestoreService();
+  final LocalAuthentication auth = LocalAuthentication(); // Auth instance
 
   bool _isLoading = true;
+  bool _isEditing = false; // Track edit mode
   List<CategoryConfig> _categories = [];
 
   @override
@@ -26,7 +30,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final config = await _firestoreService.getPercentageConfig();
       setState(() {
-        // Load exactly as saved in DB (User's manual order)
         _categories = config.categories;
         _isLoading = false;
       });
@@ -35,9 +38,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // Authentication Logic
+  Future<void> _authenticate() async {
+    bool authenticated = false;
+    try {
+      bool canCheckBiometrics = await auth.canCheckBiometrics;
+      bool isDeviceSupported = await auth.isDeviceSupported();
+
+      if (!canCheckBiometrics && !isDeviceSupported) {
+        // Fallback for emulators or devices without security
+        setState(() => _isEditing = true);
+        return;
+      }
+
+      authenticated = await auth.authenticate(
+        localizedReason: 'Authenticate to edit budget configurations',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: false, // Allows PIN/Pattern as fallback
+        ),
+      );
+    } on PlatformException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Auth Error: ${e.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isEditing = authenticated;
+      });
+      if (authenticated) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Edit mode enabled'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
   void _addCategory() {
     setState(() {
-      _categories.add(CategoryConfig(name: '', percentage: 0.0));
+      _categories.add(CategoryConfig(name: '', percentage: 0.0, note: ''));
     });
   }
 
@@ -67,7 +117,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return;
       }
 
-      // NO AUTO SORTING: Save exactly the order the user arranged
       try {
         await _firestoreService.setPercentageConfig(
           PercentageConfig(categories: _categories),
@@ -79,7 +128,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          Navigator.of(context).pop();
+          setState(() {
+            _isEditing = false; // Lock after saving
+          });
         }
       } catch (e) {
         if (mounted) {
@@ -97,11 +148,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         title: const Text('Allocation Buckets'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _addCategory,
-            tooltip: 'Add Bucket',
-          ),
+          // Show Lock icon when locked, Add button when editing
+          if (!_isEditing)
+            IconButton(
+              icon: const Icon(Icons.lock_outline),
+              onPressed: _authenticate,
+              tooltip: 'Unlock to Edit',
+            )
+          else ...[
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: _addCategory,
+              tooltip: 'Add Bucket',
+            ),
+            IconButton(
+              icon: const Icon(Icons.lock_open),
+              onPressed: () => setState(() => _isEditing = false),
+              tooltip: 'Lock Editing',
+            ),
+          ],
         ],
       ),
       body: _isLoading
@@ -113,17 +178,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
-                      'Drag and drop to reorder. This order will be used throughout the app.',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                      _isEditing
+                          ? 'Drag to reorder. Total must equal 100%.'
+                          : 'View Only Mode. Tap the lock icon to edit.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: _isEditing ? Colors.white : Colors.white54,
+                      ),
                     ),
                   ),
                   Expanded(
                     child: ReorderableListView.builder(
                       padding: const EdgeInsets.only(bottom: 80),
                       itemCount: _categories.length,
+                      buildDefaultDragHandles:
+                          _isEditing, // Disable drag when locked
                       onReorder: (oldIndex, newIndex) {
+                        if (!_isEditing) return;
                         setState(() {
                           if (oldIndex < newIndex) {
                             newIndex -= 1;
@@ -137,20 +207,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _saveSettings,
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.all(16),
+                  if (_isEditing) // Only show Save button when editing
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: _saveSettings,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.all(16),
+                          ),
+                          child: const Text('Save Changes'),
                         ),
-                        child: const Text('Save Changes'),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -158,50 +229,88 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildCategoryRow(int index) {
+    // Style for disabled inputs
+    final inputDecoration = InputDecoration(
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      border: _isEditing ? const OutlineInputBorder() : InputBorder.none,
+      filled: !_isEditing,
+      fillColor: Colors.transparent,
+    );
+
     return Card(
-      key: ValueKey(_categories[index]), // Key MUST be unique object/id
+      key: ValueKey(_categories[index]),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: _isEditing
+          ? Theme.of(context).cardColor
+          : Theme.of(context).cardColor.withOpacity(0.6),
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 18, left: 8, right: 8),
-              child: Icon(Icons.drag_handle, color: Colors.grey),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_isEditing)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 14, right: 12),
+                    child: Icon(Icons.drag_handle, color: Colors.grey),
+                  ),
+                Expanded(
+                  flex: 3,
+                  child: TextFormField(
+                    initialValue: _categories[index].name,
+                    enabled: _isEditing,
+                    decoration: inputDecoration.copyWith(labelText: 'Name'),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    validator: (val) =>
+                        val == null || val.isEmpty ? 'Required' : null,
+                    onChanged: (val) => _categories[index].name = val,
+                    onSaved: (val) => _categories[index].name = val!,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    initialValue: _categories[index].percentage.toStringAsFixed(
+                      0,
+                    ),
+                    enabled: _isEditing,
+                    decoration: inputDecoration.copyWith(
+                      labelText: '%',
+                      suffixText: '%',
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (val) =>
+                        double.tryParse(val ?? '') == null ? 'Invalid' : null,
+                    onChanged: (val) {
+                      if (val.isNotEmpty && double.tryParse(val) != null) {
+                        _categories[index].percentage = double.parse(val);
+                      }
+                    },
+                    onSaved: (val) =>
+                        _categories[index].percentage = double.parse(val!),
+                  ),
+                ),
+                if (_isEditing)
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.redAccent),
+                    onPressed: () => _removeCategory(index),
+                  ),
+              ],
             ),
-            Expanded(
-              flex: 2,
-              child: TextFormField(
-                initialValue: _categories[index].name,
-                decoration: const InputDecoration(labelText: 'Bucket Name'),
-                validator: (val) =>
-                    val == null || val.isEmpty ? 'Required' : null,
-                onChanged: (val) => _categories[index].name = val,
-                onSaved: (val) => _categories[index].name = val!,
+            const SizedBox(height: 8),
+            TextFormField(
+              initialValue: _categories[index].note,
+              enabled: _isEditing,
+              decoration: inputDecoration.copyWith(
+                labelText: 'Note',
+                prefixIcon: const Icon(Icons.notes, size: 18),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              flex: 1,
-              child: TextFormField(
-                initialValue: _categories[index].percentage.toStringAsFixed(0),
-                decoration: const InputDecoration(labelText: ' %'),
-                keyboardType: TextInputType.number,
-                validator: (val) =>
-                    double.tryParse(val ?? '') == null ? 'Invalid' : null,
-                onChanged: (val) {
-                  if (val.isNotEmpty && double.tryParse(val) != null) {
-                    _categories[index].percentage = double.parse(val);
-                  }
-                },
-                onSaved: (val) =>
-                    _categories[index].percentage = double.parse(val!),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.redAccent),
-              onPressed: () => _removeCategory(index),
+              style: const TextStyle(fontSize: 13),
+              onChanged: (val) => _categories[index].note = val,
+              onSaved: (val) => _categories[index].note = val ?? '',
             ),
           ],
         ),
