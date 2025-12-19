@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// NEW: Added 'serial'
+// 1. Added 'serial' to enum
 enum CustomFieldType { string, number, date, currency, dropdown, serial }
 
 class CustomFieldConfig {
@@ -11,7 +11,7 @@ class CustomFieldConfig {
   String? currencySymbol;
   List<String>? dropdownOptions;
 
-  // NEW: Serial Config
+  // 2. Added Serial Configs
   String? serialPrefix;
   String? serialSuffix;
 

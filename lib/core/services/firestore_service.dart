@@ -218,7 +218,7 @@ class FirestoreService {
   }
 
   // ---------------------------------------------------------------------------
-  // CUSTOM DATA ENTRY (UPDATED)
+  // CUSTOM DATA ENTRY (UPDATED FOR SERIAL NO BACKFILL)
   // ---------------------------------------------------------------------------
   Stream<List<CustomTemplate>> getCustomTemplates() {
     return _db
@@ -234,27 +234,79 @@ class FirestoreService {
     return _db.collection('custom_templates').add(template.toMap());
   }
 
-  Future<void> updateCustomTemplate(CustomTemplate template) {
-    return _db
+  /// Updates the template and backfills Serial Numbers if a new serial field is detected
+  Future<void> updateCustomTemplate(CustomTemplate template) async {
+    // 1. Update the template definition
+    await _db
         .collection('custom_templates')
         .doc(template.id)
         .update(template.toMap());
+
+    // 2. Check for Serial Number fields and backfill existing data
+    for (var field in template.fields) {
+      if (field.type == CustomFieldType.serial) {
+        await _backfillSerialNumbers(template.id, field.name);
+      }
+    }
   }
 
-  // UPDATED: Cascade Delete
+  /// Generates serial numbers for existing records (1, 2, 3...) based on creation time
+  Future<void> _backfillSerialNumbers(
+    String templateId,
+    String fieldName,
+  ) async {
+    // Get all records sorted by creation date (Oldest first)
+    final recordsSnapshot = await _db
+        .collection('custom_records')
+        .where('templateId', isEqualTo: templateId)
+        .orderBy('createdAt', descending: false)
+        .get();
+
+    final batch = _db.batch();
+    int counter = 1;
+    bool needsCommit = false;
+
+    for (var doc in recordsSnapshot.docs) {
+      final data = doc.data();
+      final recordData = data['data'] as Map<String, dynamic>;
+
+      // Only update if the serial number is MISSING for this specific field
+      if (!recordData.containsKey(fieldName) || recordData[fieldName] == null) {
+        recordData[fieldName] = counter; // Assign simple integer (1, 2, 3)
+        batch.update(doc.reference, {'data': recordData});
+        needsCommit = true;
+      }
+
+      // Increment counter for the next record
+      counter++;
+    }
+
+    if (needsCommit) {
+      await batch.commit();
+    }
+  }
+
+  /// Helper to get current record count (useful for generating next ID)
+  Future<int> getRecordCount(String templateId) async {
+    final snapshot = await _db
+        .collection('custom_records')
+        .where('templateId', isEqualTo: templateId)
+        .count()
+        .get();
+    return snapshot.count ?? 0;
+  }
+
+  // Cascade Delete: Deletes template and all associated records
   Future<void> deleteCustomTemplate(String id) async {
-    // 1. Fetch all associated records
     final recordsSnapshot = await _db
         .collection('custom_records')
         .where('templateId', isEqualTo: id)
         .get();
 
-    // 2. Delete each record (Using simple loop to be safe against batch limits)
     for (var doc in recordsSnapshot.docs) {
       await doc.reference.delete();
     }
 
-    // 3. Delete the template itself
     await _db.collection('custom_templates').doc(id).delete();
   }
 
@@ -271,14 +323,14 @@ class FirestoreService {
     return _db.collection('custom_records').add(record.toMap());
   }
 
-  Future<void> deleteCustomRecord(String id) {
-    return _db.collection('custom_records').doc(id).delete();
-  }
-
   Future<void> updateCustomRecord(CustomRecord record) {
     return _db
         .collection('custom_records')
         .doc(record.id)
         .update(record.toMap());
+  }
+
+  Future<void> deleteCustomRecord(String id) {
+    return _db.collection('custom_records').doc(id).delete();
   }
 }

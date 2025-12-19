@@ -22,7 +22,6 @@ class _CustomDataPageState extends State<CustomDataPage>
   @override
   bool get wantKeepAlive => true;
 
-  // FIX 1: Accept 'existingRecords' so we can calculate the next Serial No.
   void _showEntrySheet(
     List<CustomRecord> existingRecords, [
     CustomRecord? recordToEdit,
@@ -33,7 +32,7 @@ class _CustomDataPageState extends State<CustomDataPage>
       backgroundColor: Colors.transparent,
       builder: (context) => DynamicEntrySheet(
         template: widget.template,
-        existingRecords: existingRecords, // Pass the list here
+        existingRecords: existingRecords,
         recordToEdit: recordToEdit,
       ),
     );
@@ -203,9 +202,6 @@ class _CustomDataPageState extends State<CustomDataPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-
-    // FIX 2: StreamBuilder is now at the top level
-    // This allows us to access 'records' for the FloatingActionButton
     return StreamBuilder<List<CustomRecord>>(
       stream: _service.getCustomRecords(widget.template.id),
       builder: (context, snapshot) {
@@ -213,8 +209,7 @@ class _CustomDataPageState extends State<CustomDataPage>
 
         return Scaffold(
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () =>
-                _showEntrySheet(records), // Pass records for auto-increment
+            onPressed: () => _showEntrySheet(records),
             icon: const Icon(Icons.add),
             label: const Text('Add Entry'),
           ),
@@ -250,6 +245,7 @@ class _CustomDataPageState extends State<CustomDataPage>
               return ListView(
                 padding: const EdgeInsets.only(bottom: 100),
                 children: [
+                  // Top Controls (Edit/Delete)
                   Align(
                     alignment: Alignment.centerRight,
                     child: Padding(
@@ -346,13 +342,14 @@ class _CustomDataPageState extends State<CustomDataPage>
                           dataRowColor: MaterialStateProperty.all(
                             Colors.transparent,
                           ),
-                          columnSpacing: 24,
+                          columnSpacing: 20.0,
                           border: TableBorder.symmetric(
                             inside: BorderSide(
                               color: Colors.white.withOpacity(0.1),
                             ),
                           ),
                           columns: [
+                            // DYNAMIC FIELDS ONLY (No forced Sl. No)
                             ...widget.template.fields.map(
                               (f) => DataColumn(
                                 label: Text(
@@ -370,6 +367,7 @@ class _CustomDataPageState extends State<CustomDataPage>
                             ...records.map(
                               (r) => DataRow(
                                 cells: [
+                                  // Field Values
                                   ...widget.template.fields.map((f) {
                                     final val = r.data[f.name];
                                     String display = '-';
@@ -390,7 +388,7 @@ class _CustomDataPageState extends State<CustomDataPage>
                                             '${f.currencySymbol}${numVal.toStringAsFixed(2)}';
                                       } else if (f.type ==
                                           CustomFieldType.serial) {
-                                        // Serial Formatting
+                                        // SERIAL NUMBER DISPLAY logic
                                         display =
                                             '${f.serialPrefix ?? ''}$val${f.serialSuffix ?? ''}';
                                       } else {
@@ -399,6 +397,8 @@ class _CustomDataPageState extends State<CustomDataPage>
                                     }
                                     return DataCell(Text(display));
                                   }),
+
+                                  // Actions
                                   DataCell(
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -409,7 +409,6 @@ class _CustomDataPageState extends State<CustomDataPage>
                                             size: 18,
                                             color: Colors.blueAccent,
                                           ),
-                                          // FIX 3: Pass existing records when editing too!
                                           onPressed: () =>
                                               _showEntrySheet(records, r),
                                           constraints: const BoxConstraints(),
@@ -506,7 +505,6 @@ class _CustomDataPageState extends State<CustomDataPage>
     double minY = double.infinity;
     double maxY = double.negativeInfinity;
 
-    // Linear Regression Variables
     double sumX = 0;
     double sumY = 0;
     double sumXY = 0;
@@ -516,7 +514,6 @@ class _CustomDataPageState extends State<CustomDataPage>
     for (int i = 0; i < n; i++) {
       double val = 0.0;
       var raw = sorted[i].data[yKey];
-      // Safe parsing for chart data
       if (raw is num)
         val = raw.toDouble();
       else if (raw is String)
@@ -535,7 +532,6 @@ class _CustomDataPageState extends State<CustomDataPage>
 
     if (spots.isEmpty) return const SizedBox.shrink();
 
-    // Calculate Best Fit Line (y = mx + c)
     List<FlSpot> trendSpots = [];
     if (n > 1) {
       double slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
@@ -547,7 +543,11 @@ class _CustomDataPageState extends State<CustomDataPage>
       trendSpots.add(FlSpot(0, spots[0].y));
     }
 
-    // Gradient Logic
+    double interval = 1.0;
+    if (sorted.length > 5) {
+      interval = (sorted.length / 5).ceilToDouble();
+    }
+
     List<Color> gradientColors;
     List<double> gradientStops;
 
@@ -564,12 +564,6 @@ class _CustomDataPageState extends State<CustomDataPage>
       gradientStops = [0.0, zeroStop, zeroStop, 1.0];
     }
 
-    // Dynamic Interval (Count / 4)
-    double interval = 1.0;
-    if (sorted.length > 4) {
-      interval = (sorted.length / 4).ceilToDouble();
-    }
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.only(right: 16, top: 16, bottom: 8),
@@ -581,7 +575,6 @@ class _CustomDataPageState extends State<CustomDataPage>
       ),
       child: LineChart(
         LineChartData(
-          // Uses getTooltipColor (Supported in newer fl_chart)
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
               getTooltipColor: (spot) =>
@@ -589,8 +582,7 @@ class _CustomDataPageState extends State<CustomDataPage>
               tooltipRoundedRadius: 8,
               getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
                 return touchedBarSpots.map((barSpot) {
-                  // Hide Trend Line Tooltip
-                  if (barSpot.barIndex == 0) return null;
+                  if (barSpot.barIndex == 0) return null; // Hide trend line
 
                   final index = barSpot.x.toInt();
                   if (index >= 0 && index < sorted.length) {
@@ -598,8 +590,6 @@ class _CustomDataPageState extends State<CustomDataPage>
                     String xLabel = '';
                     if (d is DateTime) {
                       xLabel = DateFormat('dd MMM yyyy').format(d);
-                    } else if (d is int) {
-                      xLabel = d.toString();
                     } else {
                       xLabel = d.toString();
                     }
@@ -678,7 +668,6 @@ class _CustomDataPageState extends State<CustomDataPage>
           ),
           borderData: FlBorderData(show: false),
           lineBarsData: [
-            // Trend Line
             LineChartBarData(
               spots: trendSpots,
               isCurved: false,
@@ -687,7 +676,6 @@ class _CustomDataPageState extends State<CustomDataPage>
               dashArray: [5, 5],
               dotData: const FlDotData(show: false),
             ),
-            // Data Line
             LineChartBarData(
               spots: spots,
               isCurved: true,

@@ -8,14 +8,14 @@ import '../../../core/services/firestore_service.dart';
 
 class DynamicEntrySheet extends StatefulWidget {
   final CustomTemplate template;
+  final List<CustomRecord> existingRecords; // Used for calculating next serial
   final CustomRecord? recordToEdit;
-  final List<CustomRecord>? existingRecords;
 
   const DynamicEntrySheet({
     super.key,
     required this.template,
+    this.existingRecords = const [], // Default empty
     this.recordToEdit,
-    this.existingRecords,
   });
 
   @override
@@ -34,10 +34,12 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
   void initState() {
     super.initState();
     _isEditing = widget.recordToEdit != null;
+    _initializeFields();
+  }
 
+  void _initializeFields() {
     for (var field in widget.template.fields) {
       dynamic initialVal;
-      // Check if the record actually has data for this field
       if (_isEditing && widget.recordToEdit!.data.containsKey(field.name)) {
         initialVal = widget.recordToEdit!.data[field.name];
       }
@@ -52,22 +54,27 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
       } else if (field.type == CustomFieldType.dropdown) {
         _formData[field.name] = initialVal;
       } else if (field.type == CustomFieldType.serial) {
-        // --- UPDATED LOGIC ---
-        // If we found an existing serial number, use it.
-        if (initialVal != null) {
-          _formData[field.name] = initialVal;
+        // AUTO GENERATE SERIAL (If New)
+        if (_isEditing) {
+          _controllers[field.name] = TextEditingController(
+            text: initialVal?.toString() ?? '',
+          );
+          // For serial, we might store just the number, but display prefix+num+suffix.
+          // Editor displays what is stored. Assuming integer stored.
         } else {
-          // If value is missing (New Record OR Old Record with new Column), Auto-Generate.
-          int maxId = 0;
-          if (widget.existingRecords != null) {
-            for (var r in widget.existingRecords!) {
-              if (r.data.containsKey(field.name)) {
-                var val = r.data[field.name];
-                if (val is int && val > maxId) maxId = val;
-              }
+          // Calculate max serial
+          int maxSerial = 0;
+          for (var r in widget.existingRecords) {
+            var val = r.data[field.name];
+            if (val is int) {
+              if (val > maxSerial) maxSerial = val;
             }
           }
-          _formData[field.name] = maxId + 1;
+          int next = maxSerial + 1;
+          _controllers[field.name] = TextEditingController(
+            text: next.toString(),
+          );
+          _formData[field.name] = next;
         }
       } else {
         _controllers[field.name] = TextEditingController(
@@ -85,8 +92,11 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
             double.tryParse(_controllers[field.name]!.text) ?? 0.0;
       } else if (field.type == CustomFieldType.string) {
         _formData[field.name] = _controllers[field.name]!.text;
+      } else if (field.type == CustomFieldType.serial) {
+        // Ensure serial is stored as INT if possible
+        _formData[field.name] =
+            int.tryParse(_controllers[field.name]!.text) ?? 1;
       }
-      // Date, Dropdown, Serial are already in _formData
     }
 
     final record = CustomRecord(
@@ -109,11 +119,7 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
     _controllers.values.forEach((c) => c.clear());
     setState(() {
       _formData.clear();
-      for (var field in widget.template.fields) {
-        if (field.type == CustomFieldType.date)
-          _formData[field.name] = DateTime.now();
-        // Serial Number is NOT reset to ensure integrity
-      }
+      _initializeFields(); // Re-calc serials and dates
     });
   }
 
@@ -206,7 +212,7 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
 
   Widget _buildFieldInput(CustomFieldConfig field) {
     if (field.type == CustomFieldType.date) {
-      final val = _formData[field.name] as DateTime;
+      final val = _formData[field.name] as DateTime? ?? DateTime.now();
       return Padding(
         padding: const EdgeInsets.only(bottom: 16.0),
         child: InkWell(
@@ -263,25 +269,22 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
       );
     }
 
-    // SERIAL FIELD - READ ONLY
+    // SERIAL NUMBER: Read-Only with Visual Prefix/Suffix
     if (field.type == CustomFieldType.serial) {
-      final val = _formData[field.name];
-      // Format: Prefix + Number + Suffix
-      final display =
-          '${field.serialPrefix ?? ''}$val${field.serialSuffix ?? ''}';
       return Padding(
         padding: const EdgeInsets.only(bottom: 16.0),
         child: TextFormField(
-          key: ValueKey(display), // Force rebuild when ID generates
-          initialValue: display,
+          controller: _controllers[field.name],
           readOnly: true,
+          style: const TextStyle(color: Colors.grey),
           decoration: InputDecoration(
             labelText: field.name,
             border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.tag),
+            prefixText: field.serialPrefix,
+            suffixText: field.serialSuffix,
             filled: true,
-            fillColor: Colors.white10,
-            prefixIcon: const Icon(Icons.numbers),
-            helperText: "Auto-generated ID",
+            fillColor: Colors.black12,
           ),
         ),
       );

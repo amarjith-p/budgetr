@@ -17,7 +17,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   String _screenName = '';
   List<CustomFieldConfig> _fields = [];
   bool _isEditing = false;
-
   final Map<String, CustomFieldType> _originalTypes = {};
 
   @override
@@ -26,7 +25,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     if (widget.templateToEdit != null) {
       _isEditing = true;
       _screenName = widget.templateToEdit!.name;
-
       _fields = widget.templateToEdit!.fields.map((f) {
         _originalTypes[f.name] = f.type;
         return CustomFieldConfig(
@@ -66,16 +64,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         return;
       }
 
-      for (var f in _fields) {
-        if (f.type == CustomFieldType.dropdown &&
-            (f.dropdownOptions == null || f.dropdownOptions!.isEmpty)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Add options for dropdown: ${f.name}")),
-          );
-          return;
-        }
-      }
-
       final template = CustomTemplate(
         id: widget.templateToEdit?.id ?? '',
         name: _screenName,
@@ -86,6 +74,10 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
       if (_isEditing) {
         await FirestoreService().updateCustomTemplate(template);
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Updating & Backfilling data...")),
+          );
       } else {
         await FirestoreService().addCustomTemplate(template);
       }
@@ -179,6 +171,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                                     items: CustomFieldType.values,
                                     labelBuilder: (t) => _getTypeLabel(t),
                                     onSelect: (val) {
+                                      // Block String -> Number conversion
                                       if (_isEditing &&
                                           _originalTypes.containsKey(
                                             _fields[index].name,
@@ -195,7 +188,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                                           ).showSnackBar(
                                             const SnackBar(
                                               content: Text(
-                                                "Cannot change 'Text' to 'Number'. Create a new field instead.",
+                                                "Cannot change Text to Number/Currency.",
                                               ),
                                               backgroundColor: Colors.red,
                                             ),
@@ -203,21 +196,9 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                                           return;
                                         }
                                       }
-
-                                      setState(() {
-                                        _fields[index].type = val!;
-                                        _fields[index].isSumRequired = false;
-                                        _fields[index].currencySymbol =
-                                            val == CustomFieldType.currency
-                                            ? '₹'
-                                            : null;
-                                        _fields[index].dropdownOptions =
-                                            val == CustomFieldType.dropdown
-                                            ? []
-                                            : null;
-                                        _fields[index].serialPrefix = null;
-                                        _fields[index].serialSuffix = null;
-                                      });
+                                      setState(
+                                        () => _fields[index].type = val!,
+                                      );
                                     },
                                     selectedItem: _fields[index].type,
                                   ),
@@ -228,77 +209,13 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
                           if (_fields[index].type == CustomFieldType.number ||
                               _fields[index].type == CustomFieldType.currency)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 36, top: 8),
-                              child: Row(
-                                children: [
-                                  Checkbox(
-                                    value: _fields[index].isSumRequired,
-                                    onChanged: (val) => setState(
-                                      () => _fields[index].isSumRequired = val!,
-                                    ),
-                                  ),
-                                  const Text('Calculate Total?'),
-                                  if (_fields[index].type ==
-                                      CustomFieldType.currency) ...[
-                                    const Spacer(),
-                                    const Text("Symbol: "),
-                                    DropdownButton<String>(
-                                      value:
-                                          _fields[index].currencySymbol ?? '₹',
-                                      underline: Container(),
-                                      items: ['₹', '\$', '€', '£']
-                                          .map(
-                                            (s) => DropdownMenuItem(
-                                              value: s,
-                                              child: Text(s),
-                                            ),
-                                          )
-                                          .toList(),
-                                      onChanged: (val) => setState(
-                                        () =>
-                                            _fields[index].currencySymbol = val,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
+                            _buildNumberConfig(index),
 
                           if (_fields[index].type == CustomFieldType.dropdown)
                             _buildDropdownConfig(index),
 
                           if (_fields[index].type == CustomFieldType.serial)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 36, top: 8),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: TextFormField(
-                                      initialValue: _fields[index].serialPrefix,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Prefix (e.g. INV-)',
-                                        isDense: true,
-                                      ),
-                                      onChanged: (val) =>
-                                          _fields[index].serialPrefix = val,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: TextFormField(
-                                      initialValue: _fields[index].serialSuffix,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Suffix',
-                                        isDense: true,
-                                      ),
-                                      onChanged: (val) =>
-                                          _fields[index].serialSuffix = val,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            _buildSerialConfig(index),
                         ],
                       ),
                     ),
@@ -326,6 +243,112 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     );
   }
 
+  Widget _buildNumberConfig(int index) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 36, top: 8),
+      child: Row(
+        children: [
+          Checkbox(
+            value: _fields[index].isSumRequired,
+            onChanged: (val) =>
+                setState(() => _fields[index].isSumRequired = val!),
+          ),
+          const Text('Total?'),
+          if (_fields[index].type == CustomFieldType.currency) ...[
+            const Spacer(),
+            const Text("Symbol: "),
+            DropdownButton<String>(
+              value: _fields[index].currencySymbol ?? '₹',
+              underline: Container(),
+              items: [
+                '₹',
+                '\$',
+                '€',
+                '£',
+              ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+              onChanged: (val) =>
+                  setState(() => _fields[index].currencySymbol = val),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSerialConfig(int index) {
+    bool hasPrefix =
+        _fields[index].serialPrefix != null &&
+        _fields[index].serialPrefix!.isNotEmpty;
+    bool hasSuffix =
+        _fields[index].serialSuffix != null &&
+        _fields[index].serialSuffix!.isNotEmpty;
+    bool hasConfig = hasPrefix || hasSuffix;
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 36, top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                "Auto-Increment Options: ",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              const Text("Custom Format?"),
+              Switch(
+                value: hasConfig,
+                onChanged: (val) {
+                  setState(() {
+                    if (val) {
+                      _fields[index].serialPrefix = '';
+                      _fields[index].serialSuffix = '';
+                    } else {
+                      _fields[index].serialPrefix = null;
+                      _fields[index].serialSuffix = null;
+                    }
+                  });
+                },
+              ),
+            ],
+          ),
+          if (hasConfig)
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    initialValue: _fields[index].serialPrefix,
+                    decoration: const InputDecoration(
+                      labelText: 'Prefix (e.g. INV-)',
+                      isDense: true,
+                    ),
+                    onChanged: (val) => _fields[index].serialPrefix = val,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: _fields[index].serialSuffix,
+                    decoration: const InputDecoration(
+                      labelText: 'Suffix',
+                      isDense: true,
+                    ),
+                    onChanged: (val) => _fields[index].serialSuffix = val,
+                  ),
+                ),
+              ],
+            ),
+          const SizedBox(height: 4),
+          const Text(
+            "Existing data will be auto-numbered (1, 2, 3...)",
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDropdownConfig(int index) {
     final controller = TextEditingController();
     return Padding(
@@ -333,11 +356,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Options:",
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             children: (_fields[index].dropdownOptions ?? [])
@@ -361,24 +379,22 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                     isDense: true,
                   ),
                   onSubmitted: (val) {
-                    if (val.isNotEmpty) {
-                      setState(() {
-                        _fields[index].dropdownOptions ??= [];
-                        _fields[index].dropdownOptions!.add(val);
-                      });
-                    }
+                    if (val.isNotEmpty)
+                      setState(
+                        () => (_fields[index].dropdownOptions ??= []).add(val),
+                      );
                   },
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.add),
                 onPressed: () {
-                  if (controller.text.isNotEmpty) {
-                    setState(() {
-                      _fields[index].dropdownOptions ??= [];
-                      _fields[index].dropdownOptions!.add(controller.text);
-                    });
-                  }
+                  if (controller.text.isNotEmpty)
+                    setState(
+                      () => (_fields[index].dropdownOptions ??= []).add(
+                        controller.text,
+                      ),
+                    );
                 },
               ),
             ],
@@ -401,7 +417,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       case CustomFieldType.dropdown:
         return 'Dropdown';
       case CustomFieldType.serial:
-        return 'Serial No.';
+        return 'Serial No (Auto)';
     }
   }
 
@@ -418,7 +434,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       case CustomFieldType.dropdown:
         return Icons.list;
       case CustomFieldType.serial:
-        return Icons.numbers;
+        return Icons.tag;
     }
   }
 }
