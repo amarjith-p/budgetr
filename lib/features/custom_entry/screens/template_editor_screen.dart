@@ -72,17 +72,29 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         yAxisField: widget.templateToEdit?.yAxisField,
       );
 
-      if (_isEditing) {
-        await FirestoreService().updateCustomTemplate(template);
-        if (mounted)
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Updating & Backfilling data...")),
-          );
-      } else {
-        await FirestoreService().addCustomTemplate(template);
-      }
+      try {
+        if (_isEditing) {
+          await FirestoreService().updateCustomTemplate(template);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Updating & Backfilling data...")),
+            );
+          }
+        } else {
+          await FirestoreService().addCustomTemplate(template);
+        }
 
-      if (mounted) Navigator.pop(context);
+        if (mounted) Navigator.pop(context);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Error saving form: $e"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -289,27 +301,35 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // FIX: Changed Row layout to prevent overflow on small screens
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                "Auto-Increment Options: ",
-                style: TextStyle(fontWeight: FontWeight.bold),
+              const Flexible(
+                child: Text(
+                  "Auto-Increment Options: ",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
-              const Spacer(),
-              const Text("Custom Format?"),
-              Switch(
-                value: hasConfig,
-                onChanged: (val) {
-                  setState(() {
-                    if (val) {
-                      _fields[index].serialPrefix = '';
-                      _fields[index].serialSuffix = '';
-                    } else {
-                      _fields[index].serialPrefix = null;
-                      _fields[index].serialSuffix = null;
-                    }
-                  });
-                },
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("Custom Format?", style: TextStyle(fontSize: 12)),
+                  Switch(
+                    value: hasConfig,
+                    onChanged: (val) {
+                      setState(() {
+                        if (val) {
+                          _fields[index].serialPrefix = '';
+                          _fields[index].serialSuffix = '';
+                        } else {
+                          _fields[index].serialPrefix = null;
+                          _fields[index].serialSuffix = null;
+                        }
+                      });
+                    },
+                  ),
+                ],
               ),
             ],
           ),
