@@ -27,7 +27,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
   late TextEditingController _extraIncomeController;
   late TextEditingController _emiController;
 
-  // Focus Nodes for Cursor Management
   final FocusNode _salaryFocus = FocusNode();
   final FocusNode _extraFocus = FocusNode();
   final FocusNode _emiFocus = FocusNode();
@@ -120,7 +119,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     });
   }
 
-  // --- Keyboard Logic ---
   void _setActive(TextEditingController ctrl, FocusNode node) {
     setState(() {
       _activeController = ctrl;
@@ -153,14 +151,13 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     FocusScope.of(context).unfocus();
   }
 
-  // NEW: Logic to jump to the next field
   void _handleNext() {
     if (_activeFocusNode == _salaryFocus) {
       _setActive(_extraIncomeController, _extraFocus);
     } else if (_activeFocusNode == _extraFocus) {
       _setActive(_emiController, _emiFocus);
     } else {
-      _closeKeyboard(); // Close if we are at the last field
+      _closeKeyboard();
     }
   }
 
@@ -227,12 +224,10 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       );
     }
 
-    return Padding(
+    return Container(
+      // Ensure the sheet respects the keyboard if system keyboard is used
       padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -243,6 +238,8 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
               child: GestureDetector(
                 onTap: _closeKeyboard,
                 child: SingleChildScrollView(
+                  // FIX: Padding is applied ONLY to the scrollable content
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,6 +339,8 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
               ),
             ),
           ),
+
+          // FIX: Keyboard is outside padding, so it touches the edges
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
@@ -356,9 +355,9 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                     onClear: () => _activeController!.clear(),
                     onEquals: () =>
                         CalculatorKeyboard.handleEquals(_activeController!),
-                    onClose: _closeKeyboard, // WIRED
-                    onSwitchToSystem: _switchToSystemKeyboard, // WIRED
-                    onNext: _handleNext, // WIRED
+                    onClose: _closeKeyboard,
+                    onSwitchToSystem: _switchToSystemKeyboard,
+                    onNext: _handleNext,
                   )
                 : const SizedBox.shrink(),
           ),
@@ -376,8 +375,8 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     return TextFormField(
       controller: controller,
       focusNode: focusNode,
-      readOnly: !_useSystemKeyboard, // Uses the state variable
-      showCursor: true,
+      readOnly: !_useSystemKeyboard,
+      showCursor: true, // Fix: Ensure cursor is visible
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
         labelText: labelText,
