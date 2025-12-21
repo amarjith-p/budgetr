@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:budget/core/widgets/modern_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -100,7 +101,7 @@ class _NetWorthTabState extends State<_NetWorthTab> {
         stream: _netWorthService.getNetWorthRecords(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting)
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: ModernLoader());
           if (snapshot.hasError)
             return Center(child: Text('Error: ${snapshot.error}'));
           var records = snapshot.data ?? [];
@@ -149,6 +150,7 @@ class _NetWorthTabState extends State<_NetWorthTab> {
         onPressed: () => showModalBottomSheet(
           context: context,
           isScrollControlled: true,
+          useSafeArea: true,
           backgroundColor: Colors.transparent,
           builder: (context) => const _AddNetWorthSheet(),
         ),
@@ -375,7 +377,7 @@ class _NetWorthSplitsTabState extends State<_NetWorthSplitsTab> {
         stream: _netWorthService.getNetWorthSplits(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting)
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: ModernLoader());
           if (snapshot.hasError)
             return Center(child: Text('Error: ${snapshot.error}'));
           var records = snapshot.data ?? [];
@@ -522,6 +524,7 @@ class _NetWorthSplitsTabState extends State<_NetWorthSplitsTab> {
         onPressed: () => showModalBottomSheet(
           context: context,
           isScrollControlled: true,
+          useSafeArea: true,
           backgroundColor: Colors.transparent,
           builder: (context) => const _AddNetWorthSplitSheet(),
         ),

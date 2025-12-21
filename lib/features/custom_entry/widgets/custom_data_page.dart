@@ -1,3 +1,4 @@
+import 'package:budget/core/widgets/modern_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -30,6 +31,7 @@ class _CustomDataPageState extends State<CustomDataPage>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => DynamicEntrySheet(
         template: widget.template,
@@ -218,7 +220,7 @@ class _CustomDataPageState extends State<CustomDataPage>
           body: Builder(
             builder: (context) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: ModernLoader());
               }
 
               if (snapshot.hasError) {

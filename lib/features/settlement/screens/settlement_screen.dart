@@ -1,3 +1,4 @@
+import 'package:budget/core/widgets/modern_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -109,6 +110,7 @@ class _SettlementScreenState extends State<SettlementScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -165,7 +167,7 @@ class _SettlementScreenState extends State<SettlementScreen> {
 
   Widget _buildContentArea() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: ModernLoader());
     }
     if (_settlementData == null) {
       return const Center(

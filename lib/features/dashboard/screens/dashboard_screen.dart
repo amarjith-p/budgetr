@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/models/financial_record_model.dart';
 import '../../../core/models/percentage_config_model.dart';
 import '../../../core/services/firestore_service.dart';
+import '../../../core/widgets/modern_loader.dart'; // <--- Import the new widget
 import '../../settings/screens/settings_screen.dart';
 import '../../settlement/screens/settlement_screen.dart';
 import '../widgets/add_record_sheet.dart';
@@ -43,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
+        useSafeArea: true,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
@@ -79,6 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       showModalBottomSheet(
         context: context,
         backgroundColor: Colors.transparent,
+        useSafeArea: true,
         builder: (context) => BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
           child: Container(
@@ -173,7 +176,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         future: _configFuture,
         builder: (context, configSnapshot) {
           if (configSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            // REPLACED: ModernLoader used here
+            return const ModernLoader();
           }
 
           final configCategories = configSnapshot.data?.categories ?? [];
@@ -181,8 +185,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return StreamBuilder<List<FinancialRecord>>(
             stream: _dashboardService.getFinancialRecords(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting)
-                return const Center(child: CircularProgressIndicator());
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                // REPLACED: ModernLoader used here
+                return const ModernLoader();
+              }
               if (snapshot.hasError)
                 return Center(child: Text('Error: ${snapshot.error}'));
               if (!snapshot.hasData || snapshot.data!.isEmpty) {

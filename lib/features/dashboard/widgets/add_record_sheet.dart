@@ -1,3 +1,4 @@
+import 'package:budget/core/widgets/modern_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -222,7 +223,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     if (_config == null) {
       return const Padding(
         padding: EdgeInsets.all(48.0),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: ModernLoader()),
       );
     }
 

@@ -1,3 +1,4 @@
+import 'package:budget/core/widgets/modern_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart'; // Import local_auth
 import 'package:flutter/services.dart';
@@ -171,7 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: ModernLoader())
           : Form(
               key: _formKey,
               child: Column(

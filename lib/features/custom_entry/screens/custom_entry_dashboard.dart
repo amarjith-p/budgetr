@@ -1,3 +1,4 @@
+import 'package:budget/core/widgets/modern_loader.dart';
 import 'package:budget/features/custom_entry/services/custom_entry_service.dart';
 import 'package:flutter/material.dart';
 import '../../../core/models/custom_data_models.dart';
@@ -14,9 +15,7 @@ class CustomEntryDashboard extends StatelessWidget {
       stream: CustomEntryService().getCustomTemplates(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: ModernLoader()));
         }
 
         final templates = snapshot.data ?? [];
