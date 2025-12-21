@@ -19,10 +19,16 @@ class AddRecordSheet extends StatefulWidget {
 }
 
 class _AddRecordSheetState extends State<AddRecordSheet> {
-  final _formKey = GlobalKey<FormState>();
   final _dashboardService = DashboardService();
   final _settingsService = SettingsService();
+  final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
+  final ScrollController _scrollController = ScrollController();
 
+  // Theme
+  final Color _bgColor = const Color(0xff0D1B2A);
+  final Color _accentColor = const Color(0xFF3A86FF);
+
+  // Controllers
   late TextEditingController _salaryController;
   late TextEditingController _extraIncomeController;
   late TextEditingController _emiController;
@@ -34,21 +40,19 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
   int? _selectedYear;
   int? _selectedMonth;
   final List<int> _years = List.generate(
-    50,
-    (index) => DateTime.now().year - 5 + index,
+    10,
+    (index) => DateTime.now().year - 2 + index,
   );
   final List<int> _months = List.generate(12, (index) => index + 1);
 
   double _effectiveIncome = 0;
-  Map<String, double> _calculatedValues = {};
   PercentageConfig? _config;
 
+  // Keyboard
   TextEditingController? _activeController;
-  FocusNode? _activeFocusNode;
-
   bool _isKeyboardVisible = false;
-  bool _isEditing = false;
   bool _useSystemKeyboard = false;
+  bool _isEditing = false;
 
   @override
   void initState() {
@@ -65,29 +69,57 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       text: widget.recordToEdit?.emi.toString() ?? '',
     );
 
-    if (_isEditing) {
-      _selectedYear = widget.recordToEdit!.year;
-      _selectedMonth = widget.recordToEdit!.month;
-
-      List<CategoryConfig> historicalCats = [];
-      widget.recordToEdit!.allocationPercentages.forEach((key, value) {
-        historicalCats.add(CategoryConfig(name: key, percentage: value));
-      });
-      _config = PercentageConfig(categories: historicalCats);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _calculate());
-    } else {
-      final now = DateTime.now();
-      _selectedYear = now.year;
-      _selectedMonth = now.month;
-
-      _settingsService.getPercentageConfig().then((config) {
-        setState(() => _config = config);
-      });
-    }
+    _initializeConfig();
 
     _salaryController.addListener(_calculate);
     _extraIncomeController.addListener(_calculate);
     _emiController.addListener(_calculate);
+  }
+
+  Future<void> _initializeConfig() async {
+    final masterConfig = await _settingsService.getPercentageConfig();
+
+    if (_isEditing) {
+      _selectedYear = widget.recordToEdit!.year;
+      _selectedMonth = widget.recordToEdit!.month;
+
+      // MERGE LOGIC: Respect Master Order, preserve historic values
+      List<CategoryConfig> mergedCategories = [];
+
+      // 1. Add categories from Master Config that exist in Record
+      for (var masterCat in masterConfig.categories) {
+        if (widget.recordToEdit!.allocationPercentages.containsKey(
+          masterCat.name,
+        )) {
+          mergedCategories.add(
+            CategoryConfig(
+              name: masterCat.name,
+              percentage:
+                  widget.recordToEdit!.allocationPercentages[masterCat.name]!,
+            ),
+          );
+        }
+      }
+
+      // 2. Add remaining categories from Record that weren't in Master Config (Legacy buckets)
+      widget.recordToEdit!.allocationPercentages.forEach((key, val) {
+        if (!mergedCategories.any((c) => c.name == key)) {
+          mergedCategories.add(CategoryConfig(name: key, percentage: val));
+        }
+      });
+
+      setState(() {
+        _config = PercentageConfig(categories: mergedCategories);
+        _calculate();
+      });
+    } else {
+      final now = DateTime.now();
+      _selectedYear = now.year;
+      _selectedMonth = now.month;
+      setState(() {
+        _config = masterConfig;
+      });
+    }
   }
 
   @override
@@ -98,23 +130,32 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     _salaryFocus.dispose();
     _extraFocus.dispose();
     _emiFocus.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   void _calculate() {
     if (_config == null) return;
     final salary = double.tryParse(_salaryController.text) ?? 0;
-    final extraIncome = double.tryParse(_extraIncomeController.text) ?? 0;
+    final extra = double.tryParse(_extraIncomeController.text) ?? 0;
     final emi = double.tryParse(_emiController.text) ?? 0;
 
     setState(() {
-      _effectiveIncome = (salary + extraIncome) - emi;
+      _effectiveIncome = (salary + extra) - emi;
       if (_effectiveIncome < 0) _effectiveIncome = 0;
+    });
+  }
 
-      _calculatedValues.clear();
-      for (var category in _config!.categories) {
-        _calculatedValues[category.name] =
-            _effectiveIncome * (category.percentage / 100.0);
+  // --- Keyboard Handling ---
+  void _scrollToInput(FocusNode node) {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (node.context != null && mounted) {
+        Scrollable.ensureVisible(
+          node.context!,
+          alignment: 0.5,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
       }
     });
   }
@@ -122,8 +163,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
   void _setActive(TextEditingController ctrl, FocusNode node) {
     setState(() {
       _activeController = ctrl;
-      _activeFocusNode = node;
-
       if (!_useSystemKeyboard) {
         _isKeyboardVisible = true;
         FocusScope.of(context).requestFocus(node);
@@ -131,19 +170,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
         _isKeyboardVisible = false;
       }
     });
-  }
-
-  void _switchToSystemKeyboard() {
-    setState(() {
-      _useSystemKeyboard = true;
-      _isKeyboardVisible = false;
-    });
-    if (_activeFocusNode != null) {
-      FocusScope.of(context).unfocus();
-      Future.delayed(const Duration(milliseconds: 50), () {
-        FocusScope.of(context).requestFocus(_activeFocusNode);
-      });
-    }
+    _scrollToInput(node);
   }
 
   void _closeKeyboard() {
@@ -151,199 +178,337 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     FocusScope.of(context).unfocus();
   }
 
-  void _handleNext() {
-    if (_activeFocusNode == _salaryFocus) {
-      _setActive(_extraIncomeController, _extraFocus);
-    } else if (_activeFocusNode == _extraFocus) {
-      _setActive(_emiController, _emiFocus);
-    } else {
-      _closeKeyboard();
-    }
+  void _switchToSystemKeyboard() {
+    setState(() {
+      _useSystemKeyboard = true;
+      _isKeyboardVisible = false;
+    });
+    FocusScope.of(context).unfocus();
   }
 
-  Future<void> _onRecordPressed() async {
+  void _handleNext() {
+    if (_activeController == _salaryController)
+      _setActive(_extraIncomeController, _extraFocus);
+    else if (_activeController == _extraIncomeController)
+      _setActive(_emiController, _emiFocus);
+    else
+      _closeKeyboard();
+  }
+
+  Future<void> _save() async {
     _closeKeyboard();
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    if (_formKey.currentState!.validate()) {
-      if (_config == null) return;
-
-      final idString =
-          '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
-
-      Map<String, double> allocations = {};
-      Map<String, double> percentages = {};
-
-      for (var category in _config!.categories) {
-        allocations[category.name] = _calculatedValues[category.name] ?? 0.0;
-        percentages[category.name] = category.percentage;
-      }
-
-      final record = FinancialRecord(
-        id: idString,
-        salary: double.tryParse(_salaryController.text) ?? 0,
-        extraIncome: double.tryParse(_extraIncomeController.text) ?? 0,
-        emi: double.tryParse(_emiController.text) ?? 0,
-        year: _selectedYear!,
-        month: _selectedMonth!,
-        effectiveIncome: _effectiveIncome,
-        allocations: allocations,
-        allocationPercentages: percentages,
-        createdAt: widget.recordToEdit?.createdAt ?? Timestamp.now(),
+    if (_config == null) return;
+    if (_salaryController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Salary is required"),
+          backgroundColor: Colors.red,
+        ),
       );
-
-      try {
-        await _dashboardService.setFinancialRecord(record);
-        if (mounted) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                _isEditing ? 'Record updated!' : 'Record saved successfully!',
-              ),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-          );
-        }
-      }
+      return;
     }
+
+    final idString =
+        '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
+
+    // Calculate Allocations using the ORDERED config
+    Map<String, double> allocations = {};
+    Map<String, double> percentages = {};
+    for (var cat in _config!.categories) {
+      allocations[cat.name] = _effectiveIncome * (cat.percentage / 100.0);
+      percentages[cat.name] = cat.percentage;
+    }
+
+    final record = FinancialRecord(
+      id: idString,
+      salary: double.tryParse(_salaryController.text) ?? 0,
+      extraIncome: double.tryParse(_extraIncomeController.text) ?? 0,
+      emi: double.tryParse(_emiController.text) ?? 0,
+      year: _selectedYear!,
+      month: _selectedMonth!,
+      effectiveIncome: _effectiveIncome,
+      allocations: allocations,
+      allocationPercentages: percentages,
+      createdAt: widget.recordToEdit?.createdAt ?? Timestamp.now(),
+    );
+
+    await _dashboardService.setFinancialRecord(record);
+    if (mounted) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_config == null) {
-      return const Padding(
-        padding: EdgeInsets.all(48.0),
-        child: Center(child: ModernLoader()),
-      );
-    }
+    if (_config == null) return const Center(child: ModernLoader());
 
     return Container(
-      // Ensure the sheet respects the keyboard if system keyboard is used
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
+      color: _bgColor,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           Expanded(
-            child: Form(
-              key: _formKey,
-              child: GestureDetector(
-                onTap: _closeKeyboard,
-                child: SingleChildScrollView(
-                  // FIX: Padding is applied ONLY to the scrollable content
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Column(
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Header with Date Pickers
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        _isEditing ? 'Edit Record' : 'New Monthly Record',
-                        style: Theme.of(context).textTheme.headlineSmall,
+                        _isEditing ? 'Edit Budget' : 'New Budget',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      const SizedBox(height: 24),
-                      _buildCalcFormField(
-                        controller: _salaryController,
-                        focusNode: _salaryFocus,
-                        labelText: 'Salary*',
-                        validator: (value) => (value == null || value.isEmpty)
-                            ? 'Required'
-                            : null,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildCalcFormField(
-                        controller: _extraIncomeController,
-                        focusNode: _extraFocus,
-                        labelText: 'Extra Income',
-                      ),
-                      const SizedBox(height: 16),
-                      _buildCalcFormField(
-                        controller: _emiController,
-                        focusNode: _emiFocus,
-                        labelText: 'EMI',
-                      ),
-                      const SizedBox(height: 24),
-                      if (_effectiveIncome > 0) _buildCalculationsDisplay(),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Record for Month & Year',
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
-                      const SizedBox(height: 12),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ModernDropdownPill<int>(
-                              label: _selectedYear?.toString() ?? 'Year',
-                              isActive: _selectedYear != null,
-                              icon: Icons.calendar_today_outlined,
-                              isEnabled: !_isEditing,
+                      if (!_isEditing)
+                        Row(
+                          children: [
+                            // Year Pill
+                            GestureDetector(
                               onTap: () => showSelectionSheet<int>(
                                 context: context,
                                 title: 'Select Year',
                                 items: _years,
                                 labelBuilder: (y) => y.toString(),
-                                onSelect: (val) =>
-                                    setState(() => _selectedYear = val),
+                                onSelect: (v) =>
+                                    setState(() => _selectedYear = v),
                                 selectedItem: _selectedYear,
                               ),
+                              child: _datePill(_selectedYear.toString()),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ModernDropdownPill<int>(
-                              label: _selectedMonth != null
-                                  ? DateFormat(
-                                      'MMMM',
-                                    ).format(DateTime(0, _selectedMonth!))
-                                  : 'Month',
-                              isActive: _selectedMonth != null,
-                              icon: Icons.calendar_view_month_outlined,
-                              isEnabled: !_isEditing,
+                            const SizedBox(width: 8),
+                            // Month Pill
+                            GestureDetector(
                               onTap: () => showSelectionSheet<int>(
                                 context: context,
                                 title: 'Select Month',
                                 items: _months,
                                 labelBuilder: (m) =>
-                                    DateFormat('MMMM').format(DateTime(0, m)),
-                                onSelect: (val) =>
-                                    setState(() => _selectedMonth = val),
+                                    DateFormat('MMM').format(DateTime(0, m)),
+                                onSelect: (v) =>
+                                    setState(() => _selectedMonth = v),
                                 selectedItem: _selectedMonth,
                               ),
+                              child: _datePill(
+                                DateFormat(
+                                  'MMM',
+                                ).format(DateTime(0, _selectedMonth!)),
+                              ),
                             ),
+                          ],
+                        )
+                      else
+                        Text(
+                          "${DateFormat('MMM yyyy').format(DateTime(_selectedYear!, _selectedMonth!))}",
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: _onRecordPressed,
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.all(16),
-                          ),
-                          child: Text(_isEditing ? 'Update Record' : 'Record'),
                         ),
-                      ),
                     ],
                   ),
-                ),
+
+                  const SizedBox(height: 32),
+                  _buildInput(
+                    "Base Salary",
+                    _salaryController,
+                    _salaryFocus,
+                    const Color(0xFF00E676),
+                  ), // Green
+                  const SizedBox(height: 16),
+                  _buildInput(
+                    "Extra Income",
+                    _extraIncomeController,
+                    _extraFocus,
+                    const Color(0xFF00E676),
+                  ), // Green
+                  const SizedBox(height: 16),
+                  _buildInput(
+                    "EMI / Deductions",
+                    _emiController,
+                    _emiFocus,
+                    const Color(0xFFFF5252),
+                  ), // Red
+
+                  const SizedBox(height: 32),
+                  // --- Projected Splits Preview ---
+                  if (_effectiveIncome > 0)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "PROJECTED ALLOCATIONS",
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ..._config!.categories.map((cat) {
+                          final amount =
+                              _effectiveIncome * (cat.percentage / 100);
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    // Percentage Pill
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _accentColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: _accentColor.withOpacity(0.2),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        "${cat.percentage.toStringAsFixed(0)}%",
+                                        style: TextStyle(
+                                          color: _accentColor,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      cat.name,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  _currencyFormat.format(amount),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  const SizedBox(height: 40),
+                ],
               ),
             ),
           ),
 
-          // FIX: Keyboard is outside padding, so it touches the edges
+          // --- STICKY BOTTOM BAR (Calculator) ---
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: _bgColor,
+              border: Border(
+                top: BorderSide(color: Colors.white.withOpacity(0.1)),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.4),
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Net Effective Income:",
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    Text(
+                      _currencyFormat.format(_effectiveIncome),
+                      style: TextStyle(
+                        color: _accentColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(
+                            color: Colors.white.withOpacity(0.2),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          "Cancel",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _save,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: _accentColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          "Save Budget",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // --- KEYBOARD ---
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
             child: _isKeyboardVisible
                 ? CalculatorKeyboard(
                     onKeyPress: (v) => CalculatorKeyboard.handleKeyPress(
@@ -366,93 +531,78 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     );
   }
 
-  Widget _buildCalcFormField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required String labelText,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      focusNode: focusNode,
-      readOnly: !_useSystemKeyboard,
-      showCursor: true, // Fix: Ensure cursor is visible
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(
-        labelText: labelText,
-        filled: true,
-        fillColor: Theme.of(
-          context,
-        ).colorScheme.surfaceVariant.withOpacity(0.5),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+  Widget _datePill(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
         ),
       ),
-      validator: validator,
-      onTap: () => _setActive(controller, focusNode),
     );
   }
 
-  Widget _buildCalculationsDisplay() {
-    final currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
-    List<MapEntry<String, double>> sortedEntries = [];
-    if (_config != null) {
-      for (var cat in _config!.categories) {
-        if (_calculatedValues.containsKey(cat.name)) {
-          sortedEntries.add(MapEntry(cat.name, _calculatedValues[cat.name]!));
-        }
-      }
-      for (var entry in _calculatedValues.entries) {
-        if (!sortedEntries.any((e) => e.key == entry.key)) {
-          sortedEntries.add(entry);
-        }
-      }
-    } else {
-      sortedEntries = _calculatedValues.entries.toList();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(
-          context,
-        ).colorScheme.secondaryContainer.withOpacity(0.4),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Effective Income: ${currencyFormat.format(_effectiveIncome)}',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+  Widget _buildInput(
+    String label,
+    TextEditingController ctrl,
+    FocusNode node,
+    Color accent,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: accent,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
           ),
-          const Divider(height: 24),
-          ...sortedEntries.map((entry) {
-            final percent = _config!.categories
-                .firstWhere(
-                  (c) => c.name == entry.key,
-                  orElse: () => CategoryConfig(name: '', percentage: 0),
-                )
-                .percentage;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('${entry.key} (${percent.toStringAsFixed(0)}%)'),
-                  Text(
-                    currencyFormat.format(entry.value),
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: ctrl,
+          focusNode: node,
+          readOnly: !_useSystemKeyboard,
+          showCursor: true,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          decoration: InputDecoration(
+            prefixText: '₹ ',
+            prefixStyle: TextStyle(
+              color: Colors.white.withOpacity(0.5),
+              fontSize: 20,
+            ),
+            hintText: '0',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.1)),
+            filled: true,
+            fillColor: Colors.white.withOpacity(0.05),
+            isDense: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
+          onTap: () => _setActive(ctrl, node),
+        ),
+      ],
     );
   }
 }
