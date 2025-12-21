@@ -101,6 +101,11 @@ flutter_icons:
   android: true
   ios: true
   image_path: "assets/icon/budgetr.png"
+  adaptive_icon_background: "#0D1B2A" 
+  adaptive_icon_foreground: "assets/icon/budgetr.png"
+
+  # FIX FOR IOS: Removes transparency (iOS icons must be opaque)
+  remove_alpha_ios: true
 
 # Add this new section at the end of the file
 flutter_native_splash:
@@ -109,6 +114,7 @@ flutter_native_splash:
 
   # The image to show on the splash screen
   image: assets/icon/budgetr.png
+  
 
   # Special configuration for Android 12+
   android_12:

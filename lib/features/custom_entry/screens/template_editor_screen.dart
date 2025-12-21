@@ -1,7 +1,8 @@
-import 'package:budget/features/dashboard/widgets/modern_dropdown.dart';
 import 'package:flutter/material.dart';
+import '../../../core/widgets/modern_dropdown.dart'; // Updated
 import '../../../core/models/custom_data_models.dart';
 import '../../../core/services/firestore_service.dart';
+import '../services/custom_entry_service.dart';
 
 class TemplateEditorScreen extends StatefulWidget {
   final CustomTemplate? templateToEdit;
@@ -74,14 +75,14 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
       try {
         if (_isEditing) {
-          await FirestoreService().updateCustomTemplate(template);
+          await CustomEntryService().updateCustomTemplate(template);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text("Updating & Backfilling data...")),
             );
           }
         } else {
-          await FirestoreService().addCustomTemplate(template);
+          await CustomEntryService().addCustomTemplate(template);
         }
 
         if (mounted) Navigator.pop(context);
@@ -239,6 +240,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'template_editor_fab',
         onPressed: _addField,
         label: const Text('Add Field'),
         icon: const Icon(Icons.add_circle_outline),

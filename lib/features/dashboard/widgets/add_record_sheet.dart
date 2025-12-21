@@ -1,11 +1,14 @@
-import 'package:budget/features/dashboard/widgets/calculator_keyboard.dart';
-import 'package:budget/features/dashboard/widgets/modern_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+// Updated Imports
+import '../../../core/widgets/calculator_keyboard.dart';
+import '../../../core/widgets/modern_dropdown.dart';
 import '../../../core/models/financial_record_model.dart';
 import '../../../core/models/percentage_config_model.dart';
-import '../../../core/services/firestore_service.dart';
+// import '../../../core/services/firestore_service.dart';
+import '../services/dashboard_service.dart';
+import '../../settings/services/settings_service.dart';
 
 class AddRecordSheet extends StatefulWidget {
   final FinancialRecord? recordToEdit;
@@ -18,7 +21,9 @@ class AddRecordSheet extends StatefulWidget {
 
 class _AddRecordSheetState extends State<AddRecordSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _firestoreService = FirestoreService();
+  // final _firestoreService = FirestoreService();
+  final _dashboardService = DashboardService();
+  final _settingsService = SettingsService();
 
   late TextEditingController _salaryController;
   late TextEditingController _extraIncomeController;
@@ -78,7 +83,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       _selectedYear = now.year;
       _selectedMonth = now.month;
 
-      _firestoreService.getPercentageConfig().then((config) {
+      _settingsService.getPercentageConfig().then((config) {
         setState(() => _config = config);
       });
     }
@@ -184,7 +189,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       );
 
       try {
-        await _firestoreService.setFinancialRecord(record);
+        await _dashboardService.setFinancialRecord(record);
         if (mounted) {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
@@ -208,11 +213,12 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
 
   @override
   Widget build(BuildContext context) {
-    if (_config == null)
+    if (_config == null) {
       return const Padding(
         padding: EdgeInsets.all(48.0),
         child: Center(child: CircularProgressIndicator()),
       );
+    }
 
     return Padding(
       padding: EdgeInsets.only(
@@ -362,10 +368,9 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     return TextFormField(
       controller: controller,
       focusNode: focusNode,
-      // Key Logic: readOnly is true if using Custom Keyboard. false if System.
       readOnly: !_useSystemKeyboard,
-      showCursor: true, // Always show cursor
-      keyboardType: TextInputType.number, // System keyboard type
+      showCursor: true,
+      keyboardType: TextInputType.number,
       decoration: InputDecoration(
         labelText: labelText,
         filled: true,
@@ -384,7 +389,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
 
   Widget _buildCalculationsDisplay() {
     final currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
-    // Sort logic from previous steps
     List<MapEntry<String, double>> sortedEntries = [];
     if (_config != null) {
       for (var cat in _config!.categories) {
@@ -393,8 +397,9 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
         }
       }
       for (var entry in _calculatedValues.entries) {
-        if (!sortedEntries.any((e) => e.key == entry.key))
+        if (!sortedEntries.any((e) => e.key == entry.key)) {
           sortedEntries.add(entry);
+        }
       }
     } else {
       sortedEntries = _calculatedValues.entries.toList();

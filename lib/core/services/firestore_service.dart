@@ -1,336 +1,353 @@
-import 'package:budget/core/models/custom_data_models.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/financial_record_model.dart';
-import '../models/percentage_config_model.dart';
-import '../models/settlement_model.dart';
-import '../models/mf_transaction_model.dart';
-import '../models/mf_portfolio_snapshot_model.dart';
-import '../models/net_worth_model.dart';
-import '../models/net_worth_split_model.dart'; // Import the new split model
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import '../constants/firebase_constants.dart'; // Import Constants
+// import '../models/custom_data_models.dart';
+// import '../models/financial_record_model.dart';
+// import '../models/percentage_config_model.dart';
+// import '../models/settlement_model.dart';
+// import '../models/mf_transaction_model.dart';
+// import '../models/mf_portfolio_snapshot_model.dart';
+// import '../models/net_worth_model.dart';
+// import '../models/net_worth_split_model.dart';
 
-class FirestoreService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+// class FirestoreService {
+//   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // ---------------------------------------------------------------------------
-  // FINANCIAL RECORDS (DASHBOARD)
-  // ---------------------------------------------------------------------------
-  Stream<List<FinancialRecord>> getFinancialRecords() {
-    return _db
-        .collection('financial_records')
-        .orderBy('id', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => FinancialRecord.fromFirestore(doc))
-              .toList(),
-        );
-  }
+//   // ---------------------------------------------------------------------------
+//   // FINANCIAL RECORDS (DASHBOARD)
+//   // ---------------------------------------------------------------------------
+//   Stream<List<FinancialRecord>> getFinancialRecords() {
+//     return _db
+//         .collection(FirebaseConstants.financialRecords)
+//         .orderBy('id', descending: true)
+//         .snapshots()
+//         .map(
+//           (snapshot) => snapshot.docs
+//               .map((doc) => FinancialRecord.fromFirestore(doc))
+//               .toList(),
+//         );
+//   }
 
-  Future<void> setFinancialRecord(FinancialRecord record) {
-    return _db
-        .collection('financial_records')
-        .doc(record.id)
-        .set(record.toMap());
-  }
+//   Future<void> setFinancialRecord(FinancialRecord record) {
+//     return _db
+//         .collection(FirebaseConstants.financialRecords)
+//         .doc(record.id)
+//         .set(record.toMap());
+//   }
 
-  Future<FinancialRecord> getRecordById(String id) async {
-    final doc = await _db.collection('financial_records').doc(id).get();
-    return FinancialRecord.fromFirestore(doc);
-  }
+//   Future<FinancialRecord> getRecordById(String id) async {
+//     final doc = await _db
+//         .collection(FirebaseConstants.financialRecords)
+//         .doc(id)
+//         .get();
+//     return FinancialRecord.fromFirestore(doc);
+//   }
 
-  Future<void> deleteFinancialRecord(String id) async {
-    final batch = _db.batch();
+//   Future<void> deleteFinancialRecord(String id) async {
+//     final batch = _db.batch();
 
-    // 1. Delete the Budget Record
-    final financeRef = _db.collection('financial_records').doc(id);
-    batch.delete(financeRef);
+//     // 1. Delete the Budget Record
+//     final financeRef = _db
+//         .collection(FirebaseConstants.financialRecords)
+//         .doc(id);
+//     batch.delete(financeRef);
 
-    // 2. Delete the Settlement Record for that same month (if exists)
-    final settlementRef = _db.collection('settlements').doc(id);
-    batch.delete(settlementRef);
+//     // 2. Delete the Settlement Record for that same month (if exists)
+//     final settlementRef = _db.collection(FirebaseConstants.settlements).doc(id);
+//     batch.delete(settlementRef);
 
-    await batch.commit();
-  }
+//     await batch.commit();
+//   }
 
-  // ---------------------------------------------------------------------------
-  // SETTINGS & CONFIGURATION
-  // ---------------------------------------------------------------------------
-  Future<PercentageConfig> getPercentageConfig() async {
-    final doc = await _db.collection('settings').doc('percentages').get();
-    if (doc.exists) {
-      return PercentageConfig.fromFirestore(doc);
-    } else {
-      return PercentageConfig.defaultConfig();
-    }
-  }
+//   // ---------------------------------------------------------------------------
+//   // SETTINGS & CONFIGURATION
+//   // ---------------------------------------------------------------------------
+//   Future<PercentageConfig> getPercentageConfig() async {
+//     final doc = await _db
+//         .collection(FirebaseConstants.settings)
+//         .doc('percentages')
+//         .get();
+//     if (doc.exists) {
+//       return PercentageConfig.fromFirestore(doc);
+//     } else {
+//       return PercentageConfig.defaultConfig();
+//     }
+//   }
 
-  Future<void> setPercentageConfig(PercentageConfig config) {
-    return _db.collection('settings').doc('percentages').set(config.toMap());
-  }
+//   Future<void> setPercentageConfig(PercentageConfig config) {
+//     return _db
+//         .collection(FirebaseConstants.settings)
+//         .doc('percentages')
+//         .set(config.toMap());
+//   }
 
-  // ---------------------------------------------------------------------------
-  // SETTLEMENTS
-  // ---------------------------------------------------------------------------
-  Future<List<Map<String, int>>> getAvailableMonthsForSettlement() async {
-    final snapshot = await _db.collection('financial_records').get();
-    final uniqueMonths = <String, Map<String, int>>{};
+//   // ---------------------------------------------------------------------------
+//   // SETTLEMENTS
+//   // ---------------------------------------------------------------------------
+//   Future<List<Map<String, int>>> getAvailableMonthsForSettlement() async {
+//     final snapshot = await _db
+//         .collection(FirebaseConstants.financialRecords)
+//         .get();
+//     final uniqueMonths = <String, Map<String, int>>{};
 
-    for (var doc in snapshot.docs) {
-      final record = FinancialRecord.fromFirestore(doc);
-      uniqueMonths[record.id] = {'year': record.year, 'month': record.month};
-    }
+//     for (var doc in snapshot.docs) {
+//       final record = FinancialRecord.fromFirestore(doc);
+//       uniqueMonths[record.id] = {'year': record.year, 'month': record.month};
+//     }
 
-    var sortedList = uniqueMonths.values.toList();
-    sortedList.sort((a, b) {
-      final yearA = a['year']!;
-      final monthA = a['month']!;
-      final yearB = b['year']!;
-      final monthB = b['month']!;
-      if (yearB.compareTo(yearA) != 0) {
-        return yearB.compareTo(yearA);
-      }
-      return monthB.compareTo(monthA);
-    });
+//     var sortedList = uniqueMonths.values.toList();
+//     sortedList.sort((a, b) {
+//       final yearA = a['year']!;
+//       final monthA = a['month']!;
+//       final yearB = b['year']!;
+//       final monthB = b['month']!;
+//       if (yearB.compareTo(yearA) != 0) {
+//         return yearB.compareTo(yearA);
+//       }
+//       return monthB.compareTo(monthA);
+//     });
 
-    return sortedList;
-  }
+//     return sortedList;
+//   }
 
-  Future<Settlement?> getSettlementById(String id) async {
-    final doc = await _db.collection('settlements').doc(id).get();
-    if (doc.exists) {
-      return Settlement.fromFirestore(doc);
-    }
-    return null;
-  }
+//   Future<Settlement?> getSettlementById(String id) async {
+//     final doc = await _db
+//         .collection(FirebaseConstants.settlements)
+//         .doc(id)
+//         .get();
+//     if (doc.exists) {
+//       return Settlement.fromFirestore(doc);
+//     }
+//     return null;
+//   }
 
-  Future<void> saveSettlement(Settlement settlement) {
-    return _db
-        .collection('settlements')
-        .doc(settlement.id)
-        .set(settlement.toMap());
-  }
+//   Future<void> saveSettlement(Settlement settlement) {
+//     return _db
+//         .collection(FirebaseConstants.settlements)
+//         .doc(settlement.id)
+//         .set(settlement.toMap());
+//   }
 
-  // ---------------------------------------------------------------------------
-  // MUTUAL FUNDS
-  // ---------------------------------------------------------------------------
-  Stream<List<MfTransaction>> getMfTransactions() {
-    return _db
-        .collection('mf_transactions')
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => MfTransaction.fromFirestore(doc))
-              .toList(),
-        );
-  }
+//   // ---------------------------------------------------------------------------
+//   // MUTUAL FUNDS
+//   // ---------------------------------------------------------------------------
+//   Stream<List<MfTransaction>> getMfTransactions() {
+//     return _db
+//         .collection(FirebaseConstants.mfTransactions)
+//         .orderBy('date', descending: true)
+//         .snapshots()
+//         .map(
+//           (snapshot) => snapshot.docs
+//               .map((doc) => MfTransaction.fromFirestore(doc))
+//               .toList(),
+//         );
+//   }
 
-  Future<void> addMfTransaction(MfTransaction transaction) {
-    return _db.collection('mf_transactions').add(transaction.toMap());
-  }
+//   Future<void> addMfTransaction(MfTransaction transaction) {
+//     return _db
+//         .collection(FirebaseConstants.mfTransactions)
+//         .add(transaction.toMap());
+//   }
 
-  Stream<List<MfPortfolioSnapshot>> getMfPortfolioSnapshots() {
-    return _db
-        .collection('mf_portfolio_snapshots')
-        .orderBy('date', descending: false)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => MfPortfolioSnapshot.fromFirestore(doc))
-              .toList(),
-        );
-  }
+//   Stream<List<MfPortfolioSnapshot>> getMfPortfolioSnapshots() {
+//     return _db
+//         .collection(FirebaseConstants.mfPortfolioSnapshots)
+//         .orderBy('date', descending: false)
+//         .snapshots()
+//         .map(
+//           (snapshot) => snapshot.docs
+//               .map((doc) => MfPortfolioSnapshot.fromFirestore(doc))
+//               .toList(),
+//         );
+//   }
 
-  Future<void> addMfPortfolioSnapshot(MfPortfolioSnapshot snapshot) {
-    return _db.collection('mf_portfolio_snapshots').add(snapshot.toMap());
-  }
+//   Future<void> addMfPortfolioSnapshot(MfPortfolioSnapshot snapshot) {
+//     return _db
+//         .collection(FirebaseConstants.mfPortfolioSnapshots)
+//         .add(snapshot.toMap());
+//   }
 
-  Future<List<String>> getFundNames() async {
-    final doc = await _db.collection('mf_fund_names').doc('user_funds').get();
-    if (doc.exists && doc.data()!.containsKey('names')) {
-      return List<String>.from(doc.data()!['names']);
-    }
-    return [];
-  }
+//   Future<List<String>> getFundNames() async {
+//     final doc = await _db
+//         .collection(FirebaseConstants.mfFundNames)
+//         .doc('user_funds')
+//         .get();
+//     if (doc.exists && doc.data()!.containsKey('names')) {
+//       return List<String>.from(doc.data()!['names']);
+//     }
+//     return [];
+//   }
 
-  Future<void> addFundName(String newFundName) {
-    return _db.collection('mf_fund_names').doc('user_funds').set({
-      'names': FieldValue.arrayUnion([newFundName]),
-    }, SetOptions(merge: true));
-  }
+//   Future<void> addFundName(String newFundName) {
+//     return _db.collection(FirebaseConstants.mfFundNames).doc('user_funds').set({
+//       'names': FieldValue.arrayUnion([newFundName]),
+//     }, SetOptions(merge: true));
+//   }
 
-  Future<void> updateMfTransaction(String id, MfTransaction transaction) {
-    return _db
-        .collection('mf_transactions')
-        .doc(id)
-        .update(transaction.toMap());
-  }
+//   Future<void> updateMfTransaction(String id, MfTransaction transaction) {
+//     return _db
+//         .collection(FirebaseConstants.mfTransactions)
+//         .doc(id)
+//         .update(transaction.toMap());
+//   }
 
-  Future<void> deleteMfTransaction(String id) {
-    return _db.collection('mf_transactions').doc(id).delete();
-  }
+//   Future<void> deleteMfTransaction(String id) {
+//     return _db.collection(FirebaseConstants.mfTransactions).doc(id).delete();
+//   }
 
-  // ---------------------------------------------------------------------------
-  // NET WORTH (TOTAL)
-  // ---------------------------------------------------------------------------
-  Stream<List<NetWorthRecord>> getNetWorthRecords() {
-    return _db
-        .collection('net_worth')
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => NetWorthRecord.fromFirestore(doc))
-              .toList(),
-        );
-  }
+//   // ---------------------------------------------------------------------------
+//   // NET WORTH (TOTAL)
+//   // ---------------------------------------------------------------------------
+//   Stream<List<NetWorthRecord>> getNetWorthRecords() {
+//     return _db
+//         .collection(FirebaseConstants.netWorth)
+//         .orderBy('date', descending: true)
+//         .snapshots()
+//         .map(
+//           (snapshot) => snapshot.docs
+//               .map((doc) => NetWorthRecord.fromFirestore(doc))
+//               .toList(),
+//         );
+//   }
 
-  Future<void> addNetWorthRecord(NetWorthRecord record) {
-    return _db.collection('net_worth').add(record.toMap());
-  }
+//   Future<void> addNetWorthRecord(NetWorthRecord record) {
+//     return _db.collection(FirebaseConstants.netWorth).add(record.toMap());
+//   }
 
-  // NEW: Delete Net Worth Record
-  Future<void> deleteNetWorthRecord(String id) {
-    return _db.collection('net_worth').doc(id).delete();
-  }
+//   Future<void> deleteNetWorthRecord(String id) {
+//     return _db.collection(FirebaseConstants.netWorth).doc(id).delete();
+//   }
 
-  // ---------------------------------------------------------------------------
-  // NET WORTH SPLITS (NEW)
-  // ---------------------------------------------------------------------------
-  Stream<List<NetWorthSplit>> getNetWorthSplits() {
-    return _db
-        .collection('net_worth_splits')
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => NetWorthSplit.fromFirestore(doc))
-              .toList(),
-        );
-  }
+//   // ---------------------------------------------------------------------------
+//   // NET WORTH SPLITS (NEW)
+//   // ---------------------------------------------------------------------------
+//   Stream<List<NetWorthSplit>> getNetWorthSplits() {
+//     return _db
+//         .collection(FirebaseConstants.netWorthSplits)
+//         .orderBy('date', descending: true)
+//         .snapshots()
+//         .map(
+//           (snapshot) => snapshot.docs
+//               .map((doc) => NetWorthSplit.fromFirestore(doc))
+//               .toList(),
+//         );
+//   }
 
-  Future<void> addNetWorthSplit(NetWorthSplit split) {
-    return _db.collection('net_worth_splits').add(split.toMap());
-  }
+//   Future<void> addNetWorthSplit(NetWorthSplit split) {
+//     return _db.collection(FirebaseConstants.netWorthSplits).add(split.toMap());
+//   }
 
-  Future<void> deleteNetWorthSplit(String id) {
-    return _db.collection('net_worth_splits').doc(id).delete();
-  }
+//   Future<void> deleteNetWorthSplit(String id) {
+//     return _db.collection(FirebaseConstants.netWorthSplits).doc(id).delete();
+//   }
 
-  // ---------------------------------------------------------------------------
-  // CUSTOM DATA ENTRY (UPDATED FOR SERIAL NO BACKFILL)
-  // ---------------------------------------------------------------------------
-  Stream<List<CustomTemplate>> getCustomTemplates() {
-    return _db
-        .collection('custom_templates')
-        .orderBy('createdAt', descending: false)
-        .snapshots()
-        .map(
-          (s) => s.docs.map((d) => CustomTemplate.fromFirestore(d)).toList(),
-        );
-  }
+//   // ---------------------------------------------------------------------------
+//   // CUSTOM DATA ENTRY
+//   // ---------------------------------------------------------------------------
+//   Stream<List<CustomTemplate>> getCustomTemplates() {
+//     return _db
+//         .collection(FirebaseConstants.customTemplates)
+//         .orderBy('createdAt', descending: false)
+//         .snapshots()
+//         .map(
+//           (s) => s.docs.map((d) => CustomTemplate.fromFirestore(d)).toList(),
+//         );
+//   }
 
-  Future<void> addCustomTemplate(CustomTemplate template) {
-    return _db.collection('custom_templates').add(template.toMap());
-  }
+//   Future<void> addCustomTemplate(CustomTemplate template) {
+//     return _db
+//         .collection(FirebaseConstants.customTemplates)
+//         .add(template.toMap());
+//   }
 
-  /// Updates the template and backfills Serial Numbers if a new serial field is detected
-  Future<void> updateCustomTemplate(CustomTemplate template) async {
-    // 1. Update the template definition
-    await _db
-        .collection('custom_templates')
-        .doc(template.id)
-        .update(template.toMap());
+//   Future<void> updateCustomTemplate(CustomTemplate template) async {
+//     // 1. Update the template definition
+//     await _db
+//         .collection(FirebaseConstants.customTemplates)
+//         .doc(template.id)
+//         .update(template.toMap());
 
-    // 2. Check for Serial Number fields and backfill existing data
-    for (var field in template.fields) {
-      if (field.type == CustomFieldType.serial) {
-        await _backfillSerialNumbers(template.id, field.name);
-      }
-    }
-  }
+//     // 2. Check for Serial Number fields and backfill existing data
+//     for (var field in template.fields) {
+//       if (field.type == CustomFieldType.serial) {
+//         await _backfillSerialNumbers(template.id, field.name);
+//       }
+//     }
+//   }
 
-  /// Generates serial numbers for existing records (1, 2, 3...) based on creation time
-  Future<void> _backfillSerialNumbers(
-    String templateId,
-    String fieldName,
-  ) async {
-    // Get all records sorted by creation date (Oldest first)
-    final recordsSnapshot = await _db
-        .collection('custom_records')
-        .where('templateId', isEqualTo: templateId)
-        .orderBy('createdAt', descending: false)
-        .get();
+//   Future<void> _backfillSerialNumbers(
+//     String templateId,
+//     String fieldName,
+//   ) async {
+//     final recordsSnapshot = await _db
+//         .collection(FirebaseConstants.customRecords)
+//         .where('templateId', isEqualTo: templateId)
+//         .orderBy('createdAt', descending: false)
+//         .get();
 
-    final batch = _db.batch();
-    int counter = 1;
-    bool needsCommit = false;
+//     final batch = _db.batch();
+//     int counter = 1;
+//     bool needsCommit = false;
 
-    for (var doc in recordsSnapshot.docs) {
-      final data = doc.data();
-      final recordData = data['data'] as Map<String, dynamic>;
+//     for (var doc in recordsSnapshot.docs) {
+//       final data = doc.data();
+//       final recordData = data['data'] as Map<String, dynamic>;
 
-      // Only update if the serial number is MISSING for this specific field
-      if (!recordData.containsKey(fieldName) || recordData[fieldName] == null) {
-        recordData[fieldName] = counter; // Assign simple integer (1, 2, 3)
-        batch.update(doc.reference, {'data': recordData});
-        needsCommit = true;
-      }
+//       if (!recordData.containsKey(fieldName) || recordData[fieldName] == null) {
+//         recordData[fieldName] = counter;
+//         batch.update(doc.reference, {'data': recordData});
+//         needsCommit = true;
+//       }
+//       counter++;
+//     }
 
-      // Increment counter for the next record
-      counter++;
-    }
+//     if (needsCommit) {
+//       await batch.commit();
+//     }
+//   }
 
-    if (needsCommit) {
-      await batch.commit();
-    }
-  }
+//   Future<int> getRecordCount(String templateId) async {
+//     final snapshot = await _db
+//         .collection(FirebaseConstants.customRecords)
+//         .where('templateId', isEqualTo: templateId)
+//         .count()
+//         .get();
+//     return snapshot.count ?? 0;
+//   }
 
-  /// Helper to get current record count (useful for generating next ID)
-  Future<int> getRecordCount(String templateId) async {
-    final snapshot = await _db
-        .collection('custom_records')
-        .where('templateId', isEqualTo: templateId)
-        .count()
-        .get();
-    return snapshot.count ?? 0;
-  }
+//   Future<void> deleteCustomTemplate(String id) async {
+//     final recordsSnapshot = await _db
+//         .collection(FirebaseConstants.customRecords)
+//         .where('templateId', isEqualTo: id)
+//         .get();
 
-  // Cascade Delete: Deletes template and all associated records
-  Future<void> deleteCustomTemplate(String id) async {
-    final recordsSnapshot = await _db
-        .collection('custom_records')
-        .where('templateId', isEqualTo: id)
-        .get();
+//     for (var doc in recordsSnapshot.docs) {
+//       await doc.reference.delete();
+//     }
 
-    for (var doc in recordsSnapshot.docs) {
-      await doc.reference.delete();
-    }
+//     await _db.collection(FirebaseConstants.customTemplates).doc(id).delete();
+//   }
 
-    await _db.collection('custom_templates').doc(id).delete();
-  }
+//   Stream<List<CustomRecord>> getCustomRecords(String templateId) {
+//     return _db
+//         .collection(FirebaseConstants.customRecords)
+//         .where('templateId', isEqualTo: templateId)
+//         .orderBy('createdAt', descending: false)
+//         .snapshots()
+//         .map((s) => s.docs.map((d) => CustomRecord.fromFirestore(d)).toList());
+//   }
 
-  Stream<List<CustomRecord>> getCustomRecords(String templateId) {
-    return _db
-        .collection('custom_records')
-        .where('templateId', isEqualTo: templateId)
-        .orderBy('createdAt', descending: false)
-        .snapshots()
-        .map((s) => s.docs.map((d) => CustomRecord.fromFirestore(d)).toList());
-  }
+//   Future<void> addCustomRecord(CustomRecord record) {
+//     return _db.collection(FirebaseConstants.customRecords).add(record.toMap());
+//   }
 
-  Future<void> addCustomRecord(CustomRecord record) {
-    return _db.collection('custom_records').add(record.toMap());
-  }
+//   Future<void> updateCustomRecord(CustomRecord record) {
+//     return _db
+//         .collection(FirebaseConstants.customRecords)
+//         .doc(record.id)
+//         .update(record.toMap());
+//   }
 
-  Future<void> updateCustomRecord(CustomRecord record) {
-    return _db
-        .collection('custom_records')
-        .doc(record.id)
-        .update(record.toMap());
-  }
-
-  Future<void> deleteCustomRecord(String id) {
-    return _db.collection('custom_records').doc(id).delete();
-  }
-}
+//   Future<void> deleteCustomRecord(String id) {
+//     return _db.collection(FirebaseConstants.customRecords).doc(id).delete();
+//   }
+// }
