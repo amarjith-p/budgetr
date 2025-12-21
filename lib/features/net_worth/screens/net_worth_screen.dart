@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:math_expressions/math_expressions.dart';
+import '../../../core/widgets/date_filter_row.dart';
 import '../../../core/models/net_worth_model.dart';
 import '../../../core/models/net_worth_split_model.dart';
 import '../../../core/services/firestore_service.dart';
+import '../../../core/widgets/calculator_keyboard.dart';
+import '../../../core/widgets/modern_dropdown.dart';
+import '../services/net_worth_service.dart';
 
 class NetWorthScreen extends StatefulWidget {
   const NetWorthScreen({super.key});
@@ -48,7 +52,8 @@ class _NetWorthTab extends StatefulWidget {
 }
 
 class _NetWorthTabState extends State<_NetWorthTab> {
-  final FirestoreService _firestoreService = FirestoreService();
+  // final FirestoreService _firestoreService = FirestoreService();
+  final _netWorthService = NetWorthService();
   final NumberFormat _currencyFormat = NumberFormat.currency(
     locale: 'en_IN',
     symbol: '₹',
@@ -85,7 +90,7 @@ class _NetWorthTabState extends State<_NetWorthTab> {
         false;
 
     if (confirm) {
-      await _firestoreService.deleteNetWorthRecord(id);
+      await _netWorthService.deleteNetWorthRecord(id);
     }
   }
 
@@ -93,7 +98,7 @@ class _NetWorthTabState extends State<_NetWorthTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: StreamBuilder<List<NetWorthRecord>>(
-        stream: _firestoreService.getNetWorthRecords(),
+        stream: _netWorthService.getNetWorthRecords(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -145,6 +150,7 @@ class _NetWorthTabState extends State<_NetWorthTab> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'net_worth_fab', // FIXED: Unique Tag
         onPressed: () => showModalBottomSheet(
           context: context,
           isScrollControlled: true,
@@ -157,149 +163,23 @@ class _NetWorthTabState extends State<_NetWorthTab> {
     );
   }
 
-  // --- MODERN FILTER IMPLEMENTATION ---
+  // --- MODERN FILTER IMPLEMENTATION (Refactored) ---
   Widget _buildModernFilters(List<NetWorthRecord> allRecords) {
     final years = allRecords.map((e) => e.date.year).toSet().toList();
     years.sort((a, b) => b.compareTo(a));
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Row(
-        children: [
-          // Year Pill
-          Expanded(
-            child: _ModernFilterPill<int>(
-              label: _filterYear?.toString() ?? 'All Years',
-              isActive: _filterYear != null,
-              icon: Icons.calendar_today_outlined,
-              onTap: () => _showSelectionSheet<int>(
-                title: 'Select Year',
-                items: years,
-                labelBuilder: (y) => y.toString(),
-                onSelect: (val) => setState(() {
-                  _filterYear = val;
-                  if (val == null) _filterMonth = null;
-                }),
-                selectedItem: _filterYear,
-                showReset: true,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Month Pill
-          Expanded(
-            child: _ModernFilterPill<int>(
-              label: _filterMonth != null
-                  ? DateFormat('MMMM').format(DateTime(0, _filterMonth!))
-                  : 'All Months',
-              isActive: _filterMonth != null,
-              icon: Icons.calendar_view_month_outlined,
-              isEnabled: _filterYear != null, // Only enable if year is selected
-              onTap: () => _showSelectionSheet<int>(
-                title: 'Select Month',
-                items: List.generate(12, (i) => i + 1),
-                labelBuilder: (m) => DateFormat('MMMM').format(DateTime(0, m)),
-                onSelect: (val) => setState(() => _filterMonth = val),
-                selectedItem: _filterMonth,
-                showReset: true,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSelectionSheet<T>({
-    required String title,
-    required List<T> items,
-    required String Function(T) labelBuilder,
-    required Function(T?) onSelect,
-    T? selectedItem,
-    bool showReset = false,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xff0D1B2A).withOpacity(0.95),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(
-              top: BorderSide(color: Colors.white.withOpacity(0.1)),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleLarge),
-                    if (showReset)
-                      TextButton(
-                        onPressed: () {
-                          onSelect(null);
-                          Navigator.pop(context);
-                        },
-                        child: const Text(
-                          'Reset',
-                          style: TextStyle(color: Colors.redAccent),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              SizedBox(
-                height: 300,
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final isSelected = item == selectedItem;
-                    return ListTile(
-                      title: Text(
-                        labelBuilder(item),
-                        style: TextStyle(
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.white70,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                      trailing: isSelected
-                          ? Icon(
-                              Icons.check,
-                              color: Theme.of(context).colorScheme.primary,
-                            )
-                          : null,
-                      onTap: () {
-                        onSelect(item);
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+      child: DateFilterRow(
+        selectedYear: _filterYear,
+        selectedMonth: _filterMonth,
+        availableYears: years,
+        availableMonths: List.generate(12, (i) => i + 1),
+        onYearSelected: (val) => setState(() {
+          _filterYear = val;
+          if (val == null) _filterMonth = null;
+        }),
+        onMonthSelected: (val) => setState(() => _filterMonth = val),
       ),
     );
   }
@@ -460,7 +340,7 @@ class _NetWorthSplitsTab extends StatefulWidget {
 }
 
 class _NetWorthSplitsTabState extends State<_NetWorthSplitsTab> {
-  final FirestoreService _firestoreService = FirestoreService();
+  final NetWorthService _netWorthService = NetWorthService();
   final NumberFormat _currencyFormat = NumberFormat.currency(
     locale: 'en_IN',
     symbol: '₹',
@@ -497,7 +377,7 @@ class _NetWorthSplitsTabState extends State<_NetWorthSplitsTab> {
         false;
 
     if (confirm) {
-      await _firestoreService.deleteNetWorthSplit(id);
+      await _netWorthService.deleteNetWorthSplit(id);
     }
   }
 
@@ -505,7 +385,7 @@ class _NetWorthSplitsTabState extends State<_NetWorthSplitsTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: StreamBuilder<List<NetWorthSplit>>(
-        stream: _firestoreService.getNetWorthSplits(),
+        stream: _netWorthService.getNetWorthSplits(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -654,6 +534,7 @@ class _NetWorthSplitsTabState extends State<_NetWorthSplitsTab> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'net_worth_split_fab', // FIXED: Unique Tag
         onPressed: () => showModalBottomSheet(
           context: context,
           isScrollControlled: true,
@@ -668,7 +549,7 @@ class _NetWorthSplitsTabState extends State<_NetWorthSplitsTab> {
     );
   }
 
-  // Reuse the modern filter logic here
+  // Reuse the shared modern filter logic here
   Widget _buildModernFilters(List<NetWorthSplit> allRecords) {
     final years = allRecords.map((e) => e.date.year).toSet().toList();
     years.sort((a, b) => b.compareTo(a));
@@ -678,11 +559,12 @@ class _NetWorthSplitsTabState extends State<_NetWorthSplitsTab> {
       child: Row(
         children: [
           Expanded(
-            child: _ModernFilterPill<int>(
+            child: ModernDropdownPill<int>(
               label: _filterYear?.toString() ?? 'All Years',
               isActive: _filterYear != null,
               icon: Icons.calendar_today_outlined,
-              onTap: () => _showSelectionSheet<int>(
+              onTap: () => showSelectionSheet<int>(
+                context: context,
                 title: 'Select Year',
                 items: years,
                 labelBuilder: (y) => y.toString(),
@@ -697,14 +579,15 @@ class _NetWorthSplitsTabState extends State<_NetWorthSplitsTab> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: _ModernFilterPill<int>(
+            child: ModernDropdownPill<int>(
               label: _filterMonth != null
                   ? DateFormat('MMMM').format(DateTime(0, _filterMonth!))
                   : 'All Months',
               isActive: _filterMonth != null,
               icon: Icons.calendar_view_month_outlined,
               isEnabled: _filterYear != null,
-              onTap: () => _showSelectionSheet<int>(
+              onTap: () => showSelectionSheet<int>(
+                context: context,
                 title: 'Select Month',
                 items: List.generate(12, (i) => i + 1),
                 labelBuilder: (m) => DateFormat('MMMM').format(DateTime(0, m)),
@@ -715,101 +598,6 @@ class _NetWorthSplitsTabState extends State<_NetWorthSplitsTab> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // Duplicate _showSelectionSheet because it's in a different State class (or move to common file, but here keeping isolated)
-  void _showSelectionSheet<T>({
-    required String title,
-    required List<T> items,
-    required String Function(T) labelBuilder,
-    required Function(T?) onSelect,
-    T? selectedItem,
-    bool showReset = false,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xff0D1B2A).withOpacity(0.95),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(
-              top: BorderSide(color: Colors.white.withOpacity(0.1)),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleLarge),
-                    if (showReset)
-                      TextButton(
-                        onPressed: () {
-                          onSelect(null);
-                          Navigator.pop(context);
-                        },
-                        child: const Text(
-                          'Reset',
-                          style: TextStyle(color: Colors.redAccent),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              SizedBox(
-                height: 300,
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final isSelected = item == selectedItem;
-                    return ListTile(
-                      title: Text(
-                        labelBuilder(item),
-                        style: TextStyle(
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.white70,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                      trailing: isSelected
-                          ? Icon(
-                              Icons.check,
-                              color: Theme.of(context).colorScheme.primary,
-                            )
-                          : null,
-                      onTap: () {
-                        onSelect(item);
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -852,84 +640,7 @@ class _NetWorthSplitsTabState extends State<_NetWorthSplitsTab> {
 }
 
 // -----------------------------------------------------------------------------
-// MODERN FILTER PILL WIDGET
-// -----------------------------------------------------------------------------
-class _ModernFilterPill<T> extends StatelessWidget {
-  final String label;
-  final bool isActive;
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool isEnabled;
-
-  const _ModernFilterPill({
-    required this.label,
-    required this.isActive,
-    required this.icon,
-    required this.onTap,
-    this.isEnabled = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: isEnabled ? onTap : null,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          color: isActive
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-              : Theme.of(context).colorScheme.surfaceContainerHighest
-                    .withOpacity(isEnabled ? 0.3 : 0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isActive
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
-                : Colors.white.withOpacity(isEnabled ? 0.1 : 0.05),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isEnabled
-                  ? (isActive
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.white70)
-                  : Colors.white24,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: isEnabled
-                    ? (isActive
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.white)
-                    : Colors.white24,
-              ),
-            ),
-            const SizedBox(width: 4),
-            if (isEnabled)
-              Icon(
-                Icons.keyboard_arrow_down,
-                size: 16,
-                color: isActive
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.white54,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// ADD SHEET: TOTAL NET WORTH (Unchanged)
+// ADD SHEET: TOTAL NET WORTH
 // -----------------------------------------------------------------------------
 class _AddNetWorthSheet extends StatefulWidget {
   const _AddNetWorthSheet();
@@ -938,7 +649,7 @@ class _AddNetWorthSheet extends StatefulWidget {
 }
 
 class _AddNetWorthSheetState extends State<_AddNetWorthSheet> {
-  final _firestoreService = FirestoreService();
+  final _netWorthService = NetWorthService();
   final _amountController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   bool _isKeyboardVisible = false;
@@ -946,16 +657,17 @@ class _AddNetWorthSheetState extends State<_AddNetWorthSheet> {
   Future<void> _save() async {
     final amount = double.tryParse(_amountController.text);
     if (amount == null) return;
-    await _firestoreService.addNetWorthRecord(
+    await _netWorthService.addNetWorthRecord(
       NetWorthRecord(id: '', date: _selectedDate, amount: amount),
     );
     if (mounted) Navigator.pop(context);
   }
 
-  void _onKey(String val) => _handleKeyPress(_amountController, val);
-  void _onBack() => _handleBackspace(_amountController);
+  void _onKey(String val) =>
+      CalculatorKeyboard.handleKeyPress(_amountController, val);
+  void _onBack() => CalculatorKeyboard.handleBackspace(_amountController);
   void _onClear() => _amountController.clear();
-  void _onEq() => _handleEquals(_amountController);
+  void _onEq() => CalculatorKeyboard.handleEquals(_amountController);
 
   @override
   Widget build(BuildContext context) {
@@ -979,7 +691,7 @@ class _AddNetWorthSheetState extends State<_AddNetWorthSheet> {
 }
 
 // -----------------------------------------------------------------------------
-// ADD SHEET: NET WORTH SPLITS (Unchanged)
+// ADD SHEET: NET WORTH SPLITS
 // -----------------------------------------------------------------------------
 class _AddNetWorthSplitSheet extends StatefulWidget {
   const _AddNetWorthSplitSheet();
@@ -988,7 +700,7 @@ class _AddNetWorthSplitSheet extends StatefulWidget {
 }
 
 class _AddNetWorthSplitSheetState extends State<_AddNetWorthSplitSheet> {
-  final _firestoreService = FirestoreService();
+  final _firestoreService = NetWorthService();
   final _netIncomeCtrl = TextEditingController();
   final _netExpenseCtrl = TextEditingController();
   final _capGainCtrl = TextEditingController();
@@ -1024,11 +736,12 @@ class _AddNetWorthSplitSheetState extends State<_AddNetWorthSplitSheet> {
   }
 
   void _onKey(String val) {
-    if (_activeCtrl != null) _handleKeyPress(_activeCtrl!, val);
+    if (_activeCtrl != null)
+      CalculatorKeyboard.handleKeyPress(_activeCtrl!, val);
   }
 
   void _onBack() {
-    if (_activeCtrl != null) _handleBackspace(_activeCtrl!);
+    if (_activeCtrl != null) CalculatorKeyboard.handleBackspace(_activeCtrl!);
   }
 
   void _onClear() {
@@ -1036,7 +749,7 @@ class _AddNetWorthSplitSheetState extends State<_AddNetWorthSplitSheet> {
   }
 
   void _onEq() {
-    if (_activeCtrl != null) _handleEquals(_activeCtrl!);
+    if (_activeCtrl != null) CalculatorKeyboard.handleEquals(_activeCtrl!);
   }
 
   @override
@@ -1175,59 +888,69 @@ class _BaseInputSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.headlineSmall),
-                const SizedBox(height: 24),
-                InkWell(
-                  onTap: () async {
-                    final d = await showDatePicker(
-                      context: context,
-                      initialDate: date,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now(),
-                    );
-                    if (d != null) onDatePick(d);
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white24),
+          // FIXED: Wrapped content in Flexible + ScrollView to prevent overflow
+          Flexible(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 24),
+                    InkWell(
+                      onTap: () async {
+                        final d = await showDatePicker(
+                          context: context,
+                          initialDate: date,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                        );
+                        if (d != null) onDatePick(d);
+                      },
                       borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white24),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_today),
+                            const SizedBox(width: 12),
+                            Text(DateFormat('dd MMMM yyyy').format(date)),
+                          ],
+                        ),
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_today),
-                        const SizedBox(width: 12),
-                        Text(DateFormat('dd MMMM yyyy').format(date)),
-                      ],
+                    const SizedBox(height: 16),
+                    ...children,
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: onSave,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.all(16),
+                        ),
+                        child: const Text('Record'),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                ...children,
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: onSave,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.all(16),
-                    ),
-                    child: const Text('Record'),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
+          // Keyboard stays fixed at the bottom
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             child: isKeyboardVisible
-                ? _CalculatorKeyboard(
+                ? CalculatorKeyboard(
                     onKeyPress: keyboardCallbacks.$1,
                     onBackspace: keyboardCallbacks.$2,
                     onClear: keyboardCallbacks.$3,
@@ -1236,153 +959,6 @@ class _BaseInputSheet extends StatelessWidget {
                 : const SizedBox.shrink(),
           ),
         ],
-      ),
-    );
-  }
-}
-
-void _handleKeyPress(TextEditingController ctrl, String value) {
-  final text = ctrl.text;
-  final selection = ctrl.selection;
-  int start = selection.start >= 0 ? selection.start : text.length;
-  int end = selection.end >= 0 ? selection.end : text.length;
-  final newText = text.replaceRange(start, end, value);
-  ctrl.value = TextEditingValue(
-    text: newText,
-    selection: TextSelection.collapsed(offset: start + value.length),
-  );
-}
-
-void _handleBackspace(TextEditingController ctrl) {
-  final text = ctrl.text;
-  final selection = ctrl.selection;
-  int start = selection.start >= 0 ? selection.start : text.length;
-  if (start > 0) {
-    final newText = text.replaceRange(start - 1, start, '');
-    ctrl.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: start - 1),
-    );
-  }
-}
-
-void _handleEquals(TextEditingController ctrl) {
-  String expression = ctrl.text.replaceAll('×', '*').replaceAll('÷', '/');
-  try {
-    Parser p = Parser();
-    Expression exp = p.parse(expression);
-    ContextModel cm = ContextModel();
-    double result = exp.evaluate(EvaluationType.REAL, cm);
-    ctrl.text = result.toStringAsFixed(2);
-    ctrl.selection = TextSelection.fromPosition(
-      TextPosition(offset: ctrl.text.length),
-    );
-  } catch (e) {
-    /* ignore */
-  }
-}
-
-class _CalculatorKeyboard extends StatelessWidget {
-  final void Function(String) onKeyPress;
-  final VoidCallback onBackspace;
-  final VoidCallback onClear;
-  final VoidCallback onEquals;
-
-  const _CalculatorKeyboard({
-    required this.onKeyPress,
-    required this.onBackspace,
-    required this.onClear,
-    required this.onEquals,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      color: Theme.of(context).scaffoldBackgroundColor.withAlpha(240),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _k('('),
-              _k(')'),
-              _k('C', a: onClear, f: true),
-              _k('⌫', a: onBackspace, f: true, i: Icons.backspace_outlined),
-            ],
-          ),
-          Row(
-            children: [
-              _k('7'),
-              _k('8'),
-              _k('9'),
-              _k('÷', a: () => onKeyPress('/'), f: true),
-            ],
-          ),
-          Row(
-            children: [
-              _k('4'),
-              _k('5'),
-              _k('6'),
-              _k('×', a: () => onKeyPress('*'), f: true),
-            ],
-          ),
-          Row(children: [_k('1'), _k('2'), _k('3'), _k('-', f: true)]),
-          Row(
-            children: [
-              _k('.'),
-              _k('0'),
-              _k('=', a: onEquals, f: true, e: true),
-              _k('+', f: true),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _k(
-    String t, {
-    VoidCallback? a,
-    bool f = false,
-    bool e = false,
-    IconData? i,
-  }) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: e
-            ? FilledButton(
-                onPressed: a,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: Text(
-                  t,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              )
-            : OutlinedButton(
-                onPressed: () => a != null ? a() : onKeyPress(t),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  foregroundColor: f
-                      ? Colors.cyanAccent.shade400
-                      : Colors.white,
-                  side: BorderSide(color: Colors.white.withOpacity(0.2)),
-                ),
-                child: i != null
-                    ? Icon(i, size: 20)
-                    : Text(
-                        t,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
       ),
     );
   }

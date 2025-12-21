@@ -1,14 +1,17 @@
-import 'package:budget/features/dashboard/widgets/calculator_keyboard.dart';
-import 'package:budget/features/dashboard/widgets/modern_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../core/widgets/calculator_keyboard.dart';
+import '../../../core/widgets/modern_dropdown.dart';
 import '../../../core/models/financial_record_model.dart';
 import '../../../core/models/settlement_model.dart';
 import '../../../core/models/percentage_config_model.dart';
-import '../../../core/services/firestore_service.dart';
+import '../../../core/widgets/date_filter_row.dart';
+import '../services/settlement_service.dart';
+import '../../dashboard/services/dashboard_service.dart'; // Needs this for RecordById
+import '../../settings/services/settings_service.dart';
 
 class SettlementScreen extends StatefulWidget {
   const SettlementScreen({super.key});
@@ -18,7 +21,9 @@ class SettlementScreen extends StatefulWidget {
 }
 
 class _SettlementScreenState extends State<SettlementScreen> {
-  final _firestoreService = FirestoreService();
+  // final _firestoreService = FirestoreService();
+  final _settlementService = SettlementService();
+  final _settingsService = SettingsService();
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
 
   List<Map<String, int>> _yearMonthData = [];
@@ -38,13 +43,12 @@ class _SettlementScreenState extends State<SettlementScreen> {
   }
 
   Future<void> _loadDropdownData() async {
-    _yearMonthData = await _firestoreService.getAvailableMonthsForSettlement();
+    _yearMonthData = await _settlementService.getAvailableMonthsForSettlement();
     final years = _yearMonthData.map((e) => e['year']!).toSet().toList();
     years.sort((a, b) => b.compareTo(a));
     _availableYears = years;
 
-    // Fetch config for sorting buckets
-    _percentageConfig = await _firestoreService.getPercentageConfig();
+    _percentageConfig = await _settingsService.getPercentageConfig();
 
     final now = DateTime.now();
     if (_availableYears.contains(now.year)) {
@@ -95,7 +99,7 @@ class _SettlementScreenState extends State<SettlementScreen> {
     });
     final recordId =
         '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
-    final settlement = await _firestoreService.getSettlementById(recordId);
+    final settlement = await _settlementService.getSettlementById(recordId);
     setState(() {
       _settlementData = settlement;
       _isLoading = false;
@@ -128,46 +132,15 @@ class _SettlementScreenState extends State<SettlementScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: ModernDropdownPill<int>(
-                    label: _selectedYear?.toString() ?? 'Year',
-                    isActive: _selectedYear != null,
-                    icon: Icons.calendar_today_outlined,
-                    onTap: () => showSelectionSheet<int>(
-                      context: context,
-                      title: 'Select Year',
-                      items: _availableYears,
-                      labelBuilder: (y) => y.toString(),
-                      onSelect: _onYearSelected,
-                      selectedItem: _selectedYear,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ModernDropdownPill<int>(
-                    label: _selectedMonth != null
-                        ? DateFormat(
-                            'MMMM',
-                          ).format(DateTime(0, _selectedMonth!))
-                        : 'Month',
-                    isActive: _selectedMonth != null,
-                    icon: Icons.calendar_view_month_outlined,
-                    isEnabled: _selectedYear != null,
-                    onTap: () => showSelectionSheet<int>(
-                      context: context,
-                      title: 'Select Month',
-                      items: _availableMonthsForYear,
-                      labelBuilder: (m) =>
-                          DateFormat('MMMM').format(DateTime(0, m)),
-                      onSelect: (val) => setState(() => _selectedMonth = val),
-                      selectedItem: _selectedMonth,
-                    ),
-                  ),
-                ),
-              ],
+            DateFilterRow(
+              selectedYear: _selectedYear,
+              selectedMonth: _selectedMonth,
+              availableYears: _availableYears,
+              availableMonths: _availableMonthsForYear,
+              onYearSelected: _onYearSelected,
+              onMonthSelected: (val) => setState(() => _selectedMonth = val),
+              showRefresh:
+                  false, // Or true if you want the download icon inside the row
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -184,6 +157,7 @@ class _SettlementScreenState extends State<SettlementScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'settlement_fab', // FIXED: Unique Tag
         onPressed: _showSettlementInputSheet,
         icon: const Icon(Icons.edit_document),
         label: const Text('Enter/Edit Settlement'),
@@ -228,14 +202,17 @@ class _SettlementScreenState extends State<SettlementScreen> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
-          _buildSettlementTable(_settlementData!),
+          // FIXED: Wrapped in horizontal scroll view
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: _buildSettlementTable(_settlementData!),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildSettlementChart(Settlement data) {
-    // Sort keys based on config if available, otherwise by allocation amount
     final keys = data.allocations.keys.toList();
     if (_percentageConfig != null) {
       keys.sort((a, b) {
@@ -337,7 +314,6 @@ class _SettlementScreenState extends State<SettlementScreen> {
 
   Widget _buildSettlementTable(Settlement data) {
     final entries = data.allocations.entries.toList();
-    // Sort based on config
     if (_percentageConfig != null) {
       entries.sort((a, b) {
         int idxA = _percentageConfig!.categories.indexWhere(
@@ -460,10 +436,6 @@ class _SettlementScreenState extends State<SettlementScreen> {
   }
 }
 
-// -----------------------------------------------------------------------------
-// INPUT SHEET
-// -----------------------------------------------------------------------------
-
 class SettlementInputSheet extends StatefulWidget {
   const SettlementInputSheet({super.key});
 
@@ -472,7 +444,10 @@ class SettlementInputSheet extends StatefulWidget {
 }
 
 class _SettlementInputSheetState extends State<SettlementInputSheet> {
-  final _firestoreService = FirestoreService();
+  // final _firestoreService = FirestoreService();
+  final _settlementService = SettlementService();
+  final _dashboardService = DashboardService(); // Add this
+  final _settingsService = SettingsService();
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
 
   List<Map<String, int>> _yearMonthData = [];
@@ -486,7 +461,6 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
   PercentageConfig? _percentageConfig;
 
   final Map<String, TextEditingController> _controllers = {};
-  // Focus nodes for cursor management
   final Map<String, FocusNode> _focusNodes = {};
 
   double _totalExpense = 0.0;
@@ -508,11 +482,11 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
   }
 
   Future<void> _loadDropdownData() async {
-    _yearMonthData = await _firestoreService.getAvailableMonthsForSettlement();
+    _yearMonthData = await _settlementService.getAvailableMonthsForSettlement();
     final years = _yearMonthData.map((e) => e['year']!).toSet().toList();
     years.sort((a, b) => b.compareTo(a));
     _availableYears = years;
-    _percentageConfig = await _firestoreService.getPercentageConfig();
+    _percentageConfig = await _settingsService.getPercentageConfig();
 
     final now = DateTime.now();
     if (_availableYears.contains(now.year)) {
@@ -558,8 +532,8 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
 
     try {
       final results = await Future.wait([
-        _firestoreService.getRecordById(recordId),
-        _firestoreService.getSettlementById(recordId),
+        _dashboardService.getRecordById(recordId),
+        _settlementService.getSettlementById(recordId),
       ]);
 
       setState(() {
@@ -567,7 +541,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
         _existingSettlement = results[1] as Settlement?;
 
         _controllers.clear();
-        _focusNodes.clear(); // Reset nodes
+        _focusNodes.clear();
 
         _budgetRecord!.allocations.forEach((key, _) {
           double initialValue = 0.0;
@@ -600,7 +574,6 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
     setState(() => _totalExpense = sum);
   }
 
-  // --- Keyboard Logic ---
   void _setActive(TextEditingController ctrl, FocusNode node) {
     setState(() {
       _activeController = ctrl;
@@ -618,7 +591,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
       _useSystemKeyboard = true;
       _isKeyboardVisible = false;
     });
-    FocusScope.of(context).unfocus(); // Reset focus to trigger system kb
+    FocusScope.of(context).unfocus();
   }
 
   void _closeKeyboard() {
@@ -647,7 +620,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
     );
 
     try {
-      await _firestoreService.saveSettlement(settlement);
+      await _settlementService.saveSettlement(settlement);
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -670,7 +643,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        left: 16, // Fixed padding
+        left: 16,
         right: 16,
         top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
@@ -775,9 +748,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
 
   Widget _buildSettlementForm() {
     final totalBalance = _budgetRecord!.effectiveIncome - _totalExpense;
-
     final entries = _budgetRecord!.allocations.entries.toList();
-    // Sort form items by config
     if (_percentageConfig != null) {
       entries.sort((a, b) {
         int idxA = _percentageConfig!.categories.indexWhere(
@@ -866,7 +837,6 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
     required double allocated,
     required TextEditingController controller,
   }) {
-    // Ensure FocusNode exists (lazy creation if key was added after init)
     if (!_focusNodes.containsKey(title)) _focusNodes[title] = FocusNode();
     final focusNode = _focusNodes[title]!;
 
@@ -879,7 +849,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
         child: TextFormField(
           controller: controller,
           focusNode: focusNode,
-          readOnly: !_useSystemKeyboard, // True = Custom KB, False = System KB
+          readOnly: !_useSystemKeyboard,
           showCursor: true,
           keyboardType: TextInputType.number,
           decoration: const InputDecoration(

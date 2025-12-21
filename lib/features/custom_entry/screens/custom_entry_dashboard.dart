@@ -1,3 +1,4 @@
+import 'package:budget/features/custom_entry/services/custom_entry_service.dart';
 import 'package:flutter/material.dart';
 import '../../../core/models/custom_data_models.dart';
 import '../../../core/services/firestore_service.dart';
@@ -10,7 +11,7 @@ class CustomEntryDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<CustomTemplate>>(
-      stream: FirestoreService().getCustomTemplates(),
+      stream: CustomEntryService().getCustomTemplates(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(

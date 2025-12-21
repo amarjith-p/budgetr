@@ -3,6 +3,7 @@ import 'package:local_auth/local_auth.dart'; // Import local_auth
 import 'package:flutter/services.dart';
 import '../../../core/models/percentage_config_model.dart';
 import '../../../core/services/firestore_service.dart';
+import '../services/settings_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -13,7 +14,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _firestoreService = FirestoreService();
+  final _settingsService = SettingsService();
   final LocalAuthentication auth = LocalAuthentication(); // Auth instance
 
   bool _isLoading = true;
@@ -28,7 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadConfig() async {
     try {
-      final config = await _firestoreService.getPercentageConfig();
+      final config = await _settingsService.getPercentageConfig();
       setState(() {
         _categories = config.categories;
         _isLoading = false;
@@ -118,7 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
 
       try {
-        await _firestoreService.setPercentageConfig(
+        await _settingsService.setPercentageConfig(
           PercentageConfig(categories: _categories),
         );
         if (mounted) {

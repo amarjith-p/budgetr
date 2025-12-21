@@ -1,11 +1,10 @@
-import 'dart:ui';
-import 'package:budget/features/custom_entry/screens/custom_entry_dashboard.dart';
 import 'package:flutter/material.dart';
+import '../../../core/widgets/glass_card.dart'; // Import New Widget
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../../settlement/screens/settlement_screen.dart';
 import '../../settings/screens/settings_screen.dart';
-import '../../mutual_funds/screens/mf_tracker_screen.dart';
-import '../../net_worth/screens/net_worth_screen.dart'; // Import New Screen
+import '../../net_worth/screens/net_worth_screen.dart';
+import '../../custom_entry/screens/custom_entry_dashboard.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -16,6 +15,7 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: const Color(0xff0D1B2A),
       body: Stack(
         children: [
+          // Background Gradients
           Positioned(
             top: -100,
             left: -100,
@@ -72,73 +72,40 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 40),
-                _GlassMenuCard(
-                  icon: Icons.account_balance_wallet_outlined,
-                  title: 'Budgets',
-                  subtitle: 'View & manage monthly Budgets',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const DashboardScreen(),
-                    ),
-                  ),
+                _buildMenuCard(
+                  context,
+                  Icons.account_balance_wallet_outlined,
+                  'Budgets',
+                  'View & manage monthly Budgets',
+                  const DashboardScreen(),
                 ),
-                _GlassMenuCard(
-                  icon: Icons.analytics_outlined,
-                  title: 'Settlement Analysis',
-                  subtitle: 'View spending habits',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SettlementScreen(),
-                    ),
-                  ),
+                _buildMenuCard(
+                  context,
+                  Icons.analytics_outlined,
+                  'Settlement Analysis',
+                  'View spending habits',
+                  const SettlementScreen(),
                 ),
-                // --- NEW MENU ITEM ---
-                _GlassMenuCard(
-                  icon: Icons.currency_rupee,
-                  title: 'Net Worth',
-                  subtitle: 'Track your total wealth',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NetWorthScreen(),
-                    ),
-                  ),
+                _buildMenuCard(
+                  context,
+                  Icons.currency_rupee,
+                  'Net Worth',
+                  'Track your total wealth',
+                  const NetWorthScreen(),
                 ),
-                // ---------------------
-                // _GlassMenuCard(
-                //   icon: Icons.ssid_chart_outlined,
-                //   title: 'Mutual Funds',
-                //   subtitle: 'Track investments',
-                //   onTap: () => Navigator.push(
-                //     context,
-                //     MaterialPageRoute(
-                //       builder: (context) => const MfTrackerScreen(),
-                //     ),
-                //   ),
-                // ),
-                _GlassMenuCard(
-                  icon: Icons.dashboard_customize_outlined,
-                  title: 'Custom Data Entry',
-                  subtitle: 'Your personalized data trackers',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const CustomEntryDashboard(),
-                    ),
-                  ),
+                _buildMenuCard(
+                  context,
+                  Icons.dashboard_customize_outlined,
+                  'Custom Data Entry',
+                  'Your personalized data trackers',
+                  const CustomEntryDashboard(),
                 ),
-                _GlassMenuCard(
-                  icon: Icons.settings_suggest_outlined,
-                  title: 'Budget Settings',
-                  subtitle: 'Adjust Budget Buckets',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SettingsScreen(),
-                    ),
-                  ),
+                _buildMenuCard(
+                  context,
+                  Icons.settings_suggest_outlined,
+                  'Budget Settings',
+                  'Adjust Budget Buckets',
+                  const SettingsScreen(),
                 ),
               ],
             ),
@@ -147,86 +114,46 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-class _GlassMenuCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _GlassMenuCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const Color accentColor = Color(0xFF3A86FF);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(20),
-            highlightColor: accentColor.withOpacity(0.1),
-            splashColor: accentColor.withOpacity(0.2),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1,
+  Widget _buildMenuCard(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String subtitle,
+    Widget screen,
+  ) {
+    // Uses the new reusable GlassCard
+    return GlassCard(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => screen),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF3A86FF), size: 36),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: accentColor.withOpacity(0.15),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Icon(icon, color: accentColor, size: 36),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        Text(
-                          subtitle,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: Colors.white70),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: Colors.white54,
-                  ),
-                ],
-              ),
+                Text(
+                  subtitle,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                ),
+              ],
             ),
           ),
-        ),
+          const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54),
+        ],
       ),
     );
   }

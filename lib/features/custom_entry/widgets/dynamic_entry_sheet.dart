@@ -1,10 +1,11 @@
-import 'package:budget/features/dashboard/widgets/calculator_keyboard.dart';
-import 'package:budget/features/dashboard/widgets/modern_dropdown.dart';
+import 'package:budget/core/widgets/calculator_keyboard.dart';
+import 'package:budget/core/widgets/modern_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/models/custom_data_models.dart';
 import '../../../core/services/firestore_service.dart';
+import '../services/custom_entry_service.dart';
 
 class DynamicEntrySheet extends StatefulWidget {
   final CustomTemplate template;
@@ -107,9 +108,9 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
     );
 
     if (_isEditing) {
-      await FirestoreService().updateCustomRecord(record);
+      await CustomEntryService().updateCustomRecord(record);
     } else {
-      await FirestoreService().addCustomRecord(record);
+      await CustomEntryService().addCustomRecord(record);
     }
 
     if (mounted) Navigator.pop(context);

@@ -7,6 +7,8 @@ import '../../../core/services/firestore_service.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../settlement/screens/settlement_screen.dart';
 import '../widgets/add_record_sheet.dart';
+import '../services/dashboard_service.dart';
+import '../../settings/services/settings_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,7 +18,9 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final FirestoreService _firestoreService = FirestoreService();
+  final _dashboardService = DashboardService();
+  final _settingsService = SettingsService();
+  // final FirestoreService _firestoreService = FirestoreService();
   late Future<PercentageConfig> _configFuture;
 
   @override
@@ -27,7 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _refreshConfig() {
     setState(() {
-      _configFuture = _firestoreService.getPercentageConfig();
+      _configFuture = _settingsService.getPercentageConfig();
     });
   }
 
@@ -61,7 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             TextButton(
               onPressed: () {
-                _firestoreService.deleteFinancialRecord(id);
+                _dashboardService.deleteFinancialRecord(id);
                 Navigator.pop(ctx);
               },
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -175,7 +179,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final configCategories = configSnapshot.data?.categories ?? [];
 
           return StreamBuilder<List<FinancialRecord>>(
-            stream: _firestoreService.getFinancialRecords(),
+            stream: _dashboardService.getFinancialRecords(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting)
                 return const Center(child: CircularProgressIndicator());
