@@ -1,6 +1,6 @@
 import 'package:budget/core/widgets/modern_loader.dart';
 import 'package:flutter/material.dart';
-import 'package:local_auth/local_auth.dart'; // Import local_auth
+import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 import '../../../core/models/percentage_config_model.dart';
 import '../../../core/services/firestore_service.dart';
@@ -16,16 +16,31 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _settingsService = SettingsService();
-  final LocalAuthentication auth = LocalAuthentication(); // Auth instance
+  final LocalAuthentication auth = LocalAuthentication();
 
   bool _isLoading = true;
-  bool _isEditing = false; // Track edit mode
+  bool _isEditing = false;
   List<CategoryConfig> _categories = [];
+
+  // Track total for real-time feedback
+  double _currentTotal = 0.0;
+
+  // Colors matching your Home Screen
+  final Color _bgColor = const Color(0xff0D1B2A);
+  final Color _cardColor = const Color(0xFF1B263B).withOpacity(0.9);
+  final Color _accentColor = const Color(0xFF3A86FF);
 
   @override
   void initState() {
     super.initState();
     _loadConfig();
+  }
+
+  void _calculateTotal() {
+    double total = _categories.fold(0, (sum, item) => sum + item.percentage);
+    setState(() {
+      _currentTotal = total;
+    });
   }
 
   Future<void> _loadConfig() async {
@@ -34,21 +49,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _categories = config.categories;
         _isLoading = false;
+        _calculateTotal();
       });
     } catch (e) {
       setState(() => _isLoading = false);
     }
   }
 
-  // Authentication Logic
   Future<void> _authenticate() async {
     bool authenticated = false;
     try {
-      bool canCheckBiometrics = await auth.canCheckBiometrics;
-      bool isDeviceSupported = await auth.isDeviceSupported();
+      bool canCheck = await auth.canCheckBiometrics;
+      bool isSupported = await auth.isDeviceSupported();
 
-      if (!canCheckBiometrics && !isDeviceSupported) {
-        // Fallback for emulators or devices without security
+      if (!canCheck && !isSupported) {
         setState(() => _isEditing = true);
         return;
       }
@@ -57,7 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         localizedReason: 'Authenticate to edit budget configurations',
         options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: false, // Allows PIN/Pattern as fallback
+          biometricOnly: false,
         ),
       );
     } on PlatformException catch (e) {
@@ -76,43 +90,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _isEditing = authenticated;
       });
-      if (authenticated) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Edit mode enabled'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 
   void _addCategory() {
     setState(() {
       _categories.add(CategoryConfig(name: '', percentage: 0.0, note: ''));
+      _calculateTotal();
     });
   }
 
   void _removeCategory(int index) {
     setState(() {
       _categories.removeAt(index);
+      _calculateTotal();
     });
   }
 
   Future<void> _saveSettings() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      _calculateTotal(); // Ensure total is fresh
 
-      double total = _categories.fold(0, (sum, item) => sum + item.percentage);
-
-      if ((total - 100.0).abs() > 0.1) {
+      if ((_currentTotal - 100.0).abs() > 0.1) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Total percentage must be 100% (Current: ${total.toStringAsFixed(1)}%)',
+                'Total must be exactly 100% (Current: ${_currentTotal.toStringAsFixed(1)}%)',
+                style: const TextStyle(color: Colors.white),
               ),
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
             ),
           );
         }
@@ -131,7 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           );
           setState(() {
-            _isEditing = false; // Lock after saving
+            _isEditing = false;
           });
         }
       } catch (e) {
@@ -146,11 +155,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Determine status color for total
+    Color statusColor = Colors.redAccent;
+    if ((_currentTotal - 100.0).abs() < 0.1)
+      statusColor = Colors.greenAccent;
+    else if (_currentTotal < 100)
+      statusColor = Colors.orangeAccent;
+
     return Scaffold(
+      backgroundColor: _bgColor,
       appBar: AppBar(
-        title: const Text('Allocation Buckets'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Configurations',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          // Show Lock icon when locked, Add button when editing
           if (!_isEditing)
             IconButton(
               icon: const Icon(Icons.lock_outline),
@@ -159,12 +181,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             )
           else ...[
             IconButton(
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add_circle_outline),
               onPressed: _addCategory,
               tooltip: 'Add Bucket',
             ),
             IconButton(
-              icon: const Icon(Icons.lock_open),
+              icon: const Icon(Icons.lock_open, color: Colors.orangeAccent),
               onPressed: () => setState(() => _isEditing = false),
               tooltip: 'Lock Editing',
             ),
@@ -173,149 +195,341 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: _isLoading
           ? const Center(child: ModernLoader())
-          : Form(
-              key: _formKey,
-              child: Column(
-                children: [
+          : Column(
+              children: [
+                // --- Status Header (View Mode) ---
+                if (!_isEditing)
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      _isEditing
-                          ? 'Drag to reorder. Total must equal 100%.'
-                          : 'View Only Mode. Tap the lock icon to edit.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: _isEditing ? Colors.white : Colors.white54,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            color: Colors.white54,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              "View Only Mode. Tap the lock to edit allocations.",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  Expanded(
+
+                // --- List Area ---
+                Expanded(
+                  child: Form(
+                    key: _formKey,
                     child: ReorderableListView.builder(
-                      padding: const EdgeInsets.only(bottom: 80),
+                      padding: const EdgeInsets.fromLTRB(
+                        16,
+                        8,
+                        16,
+                        100,
+                      ), // Space for bottom bar
                       itemCount: _categories.length,
-                      buildDefaultDragHandles:
-                          _isEditing, // Disable drag when locked
+                      buildDefaultDragHandles: _isEditing,
                       onReorder: (oldIndex, newIndex) {
                         if (!_isEditing) return;
                         setState(() {
-                          if (oldIndex < newIndex) {
-                            newIndex -= 1;
-                          }
+                          if (oldIndex < newIndex) newIndex -= 1;
                           final item = _categories.removeAt(oldIndex);
                           _categories.insert(newIndex, item);
                         });
                       },
                       itemBuilder: (context, index) {
-                        return _buildCategoryRow(index);
+                        return _buildProfessionalRow(index);
                       },
                     ),
                   ),
-                  if (_isEditing) // Only show Save button when editing
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: _saveSettings,
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.all(16),
-                          ),
-                          child: const Text('Save Changes'),
+                ),
+              ],
+            ),
+
+      // --- Sticky Bottom Action Bar (Edit Mode) ---
+      bottomNavigationBar: _isEditing
+          ? Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: _bgColor,
+                border: Border(
+                  top: BorderSide(color: Colors.white.withOpacity(0.1)),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: 10,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Total Allocation:",
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+                      Text(
+                        "${_currentTotal.toStringAsFixed(1)}%",
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: (_currentTotal / 100).clamp(0.0, 1.0),
+                      backgroundColor: Colors.white10,
+                      valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                      minHeight: 6,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _saveSettings,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _accentColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Save Configuration',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
-            ),
+            )
+          : null,
     );
   }
 
-  Widget _buildCategoryRow(int index) {
-    // Style for disabled inputs
-    final inputDecoration = InputDecoration(
-      isDense: true,
-      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      border: _isEditing ? const OutlineInputBorder() : InputBorder.none,
-      filled: !_isEditing,
-      fillColor: Colors.transparent,
-    );
-
-    return Card(
+  Widget _buildProfessionalRow(int index) {
+    return Container(
       key: ValueKey(_categories[index]),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: _isEditing
-          ? Theme.of(context).cardColor
-          : Theme.of(context).cardColor.withOpacity(0.6),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // --- ROW 1: Name and Controls ---
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 8, 4),
+            child: Row(
               children: [
-                if (_isEditing)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 14, right: 12),
-                    child: Icon(Icons.drag_handle, color: Colors.grey),
-                  ),
+                // Icon based on editing state
+                Icon(
+                  _isEditing ? Icons.drag_indicator : Icons.label_outline,
+                  color: Colors.white30,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+
+                // NAME INPUT (Expanded)
                 Expanded(
-                  flex: 3,
                   child: TextFormField(
                     initialValue: _categories[index].name,
                     enabled: _isEditing,
-                    decoration: inputDecoration.copyWith(labelText: 'Name'),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      border: InputBorder.none,
+                      hintText: 'Enter Bucket Name',
+                      hintStyle: TextStyle(
+                        color: Colors.white.withOpacity(0.3),
+                      ),
+                    ),
                     validator: (val) =>
                         val == null || val.isEmpty ? 'Required' : null,
                     onChanged: (val) => _categories[index].name = val,
                     onSaved: (val) => _categories[index].name = val!,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: TextFormField(
-                    initialValue: _categories[index].percentage.toStringAsFixed(
-                      0,
-                    ),
-                    enabled: _isEditing,
-                    decoration: inputDecoration.copyWith(
-                      labelText: '%',
-                      suffixText: '%',
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (val) =>
-                        double.tryParse(val ?? '') == null ? 'Invalid' : null,
-                    onChanged: (val) {
-                      if (val.isNotEmpty && double.tryParse(val) != null) {
-                        _categories[index].percentage = double.parse(val);
-                      }
-                    },
-                    onSaved: (val) =>
-                        _categories[index].percentage = double.parse(val!),
-                  ),
-                ),
+
+                // Delete Button
                 if (_isEditing)
                   IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.redAccent),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.redAccent,
+                      size: 20,
+                    ),
                     onPressed: () => _removeCategory(index),
+                    visualDensity: VisualDensity.compact,
                   ),
               ],
             ),
-            const SizedBox(height: 8),
-            TextFormField(
-              initialValue: _categories[index].note,
-              enabled: _isEditing,
-              decoration: inputDecoration.copyWith(
-                labelText: 'Note',
-                prefixIcon: const Icon(Icons.notes, size: 18),
-              ),
-              style: const TextStyle(fontSize: 13),
-              onChanged: (val) => _categories[index].note = val,
-              onSaved: (val) => _categories[index].note = val ?? '',
+          ),
+
+          // Divider
+          Divider(color: Colors.white.withOpacity(0.05), height: 1),
+
+          // --- ROW 2: Percentage and Note ---
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // PERCENTAGE BOX
+                Container(
+                  width: 90,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _accentColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _accentColor.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "ALLOCATION",
+                        style: TextStyle(
+                          color: _accentColor,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: _categories[index].percentage
+                                  .toStringAsFixed(0),
+                              enabled: _isEditing,
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              onChanged: (val) {
+                                if (val.isNotEmpty &&
+                                    double.tryParse(val) != null) {
+                                  _categories[index].percentage = double.parse(
+                                    val,
+                                  );
+                                  _calculateTotal(); // Update bottom bar instantly
+                                }
+                              },
+                              onSaved: (val) => _categories[index].percentage =
+                                  double.parse(val!),
+                            ),
+                          ),
+                          const Text(
+                            "%",
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 16),
+
+                // NOTE INPUT
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.03),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: TextFormField(
+                      initialValue: _categories[index].note,
+                      enabled: _isEditing,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Add a description...',
+                        hintStyle: TextStyle(
+                          color: Colors.white.withOpacity(0.2),
+                        ),
+                        icon: Icon(
+                          Icons.notes,
+                          color: Colors.white24,
+                          size: 18,
+                        ),
+                      ),
+                      onChanged: (val) => _categories[index].note = val,
+                      onSaved: (val) => _categories[index].note = val ?? '',
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
