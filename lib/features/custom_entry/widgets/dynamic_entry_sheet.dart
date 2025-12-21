@@ -204,6 +204,7 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Handle
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 12),
@@ -215,6 +216,8 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
               ),
             ),
           ),
+
+          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
             child: Row(
@@ -239,6 +242,8 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
               ],
             ),
           ),
+
+          // Form Fields (Scrollable)
           Flexible(
             child: ListView(
               shrinkWrap: true,
@@ -248,6 +253,8 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
                   .toList(),
             ),
           ),
+
+          // Action Buttons (Pinned to bottom of list)
           Padding(
             padding: const EdgeInsets.all(24),
             child: Row(
@@ -288,6 +295,8 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
               ],
             ),
           ),
+
+          // Custom Keyboard (No Padding -> Full Width & Flush)
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             child: _isKeyboardVisible
@@ -400,20 +409,23 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
         field.type == CustomFieldType.currency;
     final isSerial = field.type == CustomFieldType.serial;
 
-    // --- ICON LOGIC ---
     IconData inputIcon = Icons.text_fields;
     if (isSerial)
       inputIcon = Icons.tag;
     else if (field.type == CustomFieldType.currency)
-      inputIcon = Icons.currency_rupee; // FIXED
+      inputIcon = Icons.currency_rupee;
     else if (field.type == CustomFieldType.number)
-      inputIcon = Icons.dialpad; // FIXED
+      inputIcon = Icons.dialpad;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextFormField(
         controller: _controllers[field.name],
         focusNode: _focusNodes[field.name],
+
+        // --- FIX: Show Cursor even if custom keyboard is used ---
+        showCursor: true,
+
         readOnly: isSerial ? true : (isNum ? !_useSystemKeyboard : false),
         keyboardType: isNum ? TextInputType.number : TextInputType.text,
         style: TextStyle(color: isSerial ? Colors.white38 : Colors.white),
@@ -426,12 +438,9 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
         decoration: InputDecoration(
           labelText: field.name,
           labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-
-          // --- NULL CURRENCY FIX ---
           prefixText: field.type == CustomFieldType.currency
               ? '${field.currencySymbol ?? '₹'} '
               : (isSerial ? field.serialPrefix : null),
-
           suffixText: isSerial ? field.serialSuffix : null,
           prefixIcon: Icon(
             inputIcon,
@@ -452,4 +461,3 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
     );
   }
 }
-// 

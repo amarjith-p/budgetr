@@ -251,7 +251,7 @@ class _CustomDataPageState extends State<CustomDataPage>
     );
   }
 
-  // ... (Delete methods same as before) ...
+  // ... (Delete methods remain same) ...
   Future<void> _deleteSheet() async {
     bool confirm =
         await showDialog(
@@ -384,7 +384,6 @@ class _CustomDataPageState extends State<CustomDataPage>
               }
 
               return ListView(
-                // FIX: Removed large top padding (was 180) to fix gap/scrolling feel
                 padding: const EdgeInsets.fromLTRB(0, 16, 0, 100),
                 children: [
                   Container(
@@ -697,7 +696,6 @@ class _CustomDataPageState extends State<CustomDataPage>
     );
   }
 
-  // ... (Chart logic unchanged) ...
   Widget _buildChart(List<CustomRecord> records, String xKey, String yKey) {
     var sorted = List<CustomRecord>.from(records)
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
@@ -705,7 +703,11 @@ class _CustomDataPageState extends State<CustomDataPage>
     double minY = double.infinity;
     double maxY = double.negativeInfinity;
 
-    for (int i = 0; i < sorted.length; i++) {
+    // 1. Collect spots
+    double sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    int n = sorted.length;
+
+    for (int i = 0; i < n; i++) {
       double val = 0.0;
       var raw = sorted[i].data[yKey];
       if (raw is num)
@@ -716,10 +718,29 @@ class _CustomDataPageState extends State<CustomDataPage>
       spots.add(FlSpot(i.toDouble(), val));
       if (val < minY) minY = val;
       if (val > maxY) maxY = val;
+
+      // Stats for Trend Line
+      double x = i.toDouble();
+      sumX += x;
+      sumY += val;
+      sumXY += (x * val);
+      sumXX += (x * x);
     }
 
     if (spots.isEmpty) return const SizedBox.shrink();
 
+    // 2. Calculate Trend Line (Least Squares)
+    List<FlSpot> trendSpots = [];
+    if (n > 1) {
+      double slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+      double intercept = (sumY - slope * sumX) / n;
+      trendSpots.add(FlSpot(0, intercept));
+      trendSpots.add(FlSpot((n - 1).toDouble(), slope * (n - 1) + intercept));
+    } else {
+      trendSpots.add(FlSpot(0, spots[0].y));
+    }
+
+    // 3. Colors
     List<Color> gradientColors = [_positiveColor, _positiveColor];
     List<double> stops = [0.0, 1.0];
 
@@ -748,11 +769,15 @@ class _CustomDataPageState extends State<CustomDataPage>
             tooltipRoundedRadius: 8,
             getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
               return touchedBarSpots.map((barSpot) {
+                if (barSpot.barIndex == 0)
+                  return null; // Ignore Trend Line tooltip
+
                 final index = barSpot.x.toInt();
                 if (index >= 0 && index < sorted.length) {
                   final d = sorted[index].data[xKey];
+                  // --- DATE FIX: Full Year ---
                   String xLabel = (d is DateTime)
-                      ? DateFormat('dd MMM').format(d)
+                      ? DateFormat('dd MMM yyyy').format(d)
                       : d.toString();
                   Color valColor = barSpot.y > 0
                       ? _positiveColor
@@ -828,6 +853,16 @@ class _CustomDataPageState extends State<CustomDataPage>
         ),
         borderData: FlBorderData(show: false),
         lineBarsData: [
+          // Trend Line (Index 0)
+          LineChartBarData(
+            spots: trendSpots,
+            isCurved: false,
+            barWidth: 1,
+            color: Colors.white.withOpacity(0.3),
+            dashArray: [5, 5],
+            dotData: const FlDotData(show: false),
+          ),
+          // Main Data (Index 1)
           LineChartBarData(
             spots: spots,
             isCurved: true,
