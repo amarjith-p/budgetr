@@ -5,9 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/models/financial_record_model.dart';
-import '../../../core/widgets/modern_dropdown.dart';
 import '../services/dashboard_service.dart';
 import '../widgets/add_record_sheet.dart';
+import '../widgets/dashboard_summary_card.dart'; // Import
+import '../widgets/budget_allocations_list.dart'; // Import
+import '../widgets/jump_to_date_sheet.dart'; // Import
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -19,16 +21,12 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final DashboardService _dashboardService = DashboardService();
 
-  // Center the page controller at a large index to allow infinite-like scrolling
+  // Infinite Scroll Logic
   final int _initialIndex = 12 * 50;
   late final PageController _pageController;
 
-  // Theme Constants
   final Color _bgColor = const Color(0xff0D1B2A);
   final Color _accentColor = const Color(0xFF3A86FF);
-  final Color _cardColor = const Color(0xFF1B263B).withOpacity(0.6);
-  final Color _greenColor = const Color(0xFF00E676);
-  final Color _redColor = const Color(0xFFFF5252);
 
   DateTime _currentDate = DateTime.now();
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
@@ -53,159 +51,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  // --- JUMP TO DATE LOGIC ---
+  void _handleDateJump(int selectedYear, int selectedMonth) {
+    final now = DateTime.now();
+    final monthDiff =
+        (selectedYear - now.year) * 12 + (selectedMonth - now.month);
+    final targetIndex = _initialIndex + monthDiff;
+
+    _pageController.animateToPage(
+      targetIndex,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
   void _showJumpToDateSheet() {
     HapticFeedback.lightImpact();
-
-    // Lists for Dropdowns
-    final years = List.generate(
-      20,
-      (index) => DateTime.now().year - 10 + index,
-    );
-    final months = List.generate(12, (index) => index + 1);
-
-    int selectedYear = _currentDate.year;
-    int selectedMonth = _currentDate.month;
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: _bgColor,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
-              ),
-              border: Border(
-                top: BorderSide(color: Colors.white.withOpacity(0.1)),
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                const Text(
-                  "Jump to Date",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Selectors
-                Row(
-                  children: [
-                    // Year
-                    Expanded(
-                      child: ModernDropdownPill<int>(
-                        label: selectedYear.toString(),
-                        isActive: true,
-                        icon: Icons.calendar_today,
-                        onTap: () => showSelectionSheet<int>(
-                          context: context,
-                          title: 'Select Year',
-                          items: years,
-                          labelBuilder: (y) => y.toString(),
-                          // FIX: Handle nullable value from selection
-                          onSelect: (val) {
-                            if (val != null) {
-                              setModalState(() => selectedYear = val);
-                            }
-                          },
-                          selectedItem: selectedYear,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Month
-                    Expanded(
-                      child: ModernDropdownPill<int>(
-                        label: DateFormat(
-                          'MMM',
-                        ).format(DateTime(0, selectedMonth)),
-                        isActive: true,
-                        icon: Icons.calendar_view_month,
-                        onTap: () => showSelectionSheet<int>(
-                          context: context,
-                          title: 'Select Month',
-                          items: months,
-                          labelBuilder: (m) =>
-                              DateFormat('MMMM').format(DateTime(0, m)),
-                          // FIX: Handle nullable value from selection
-                          onSelect: (val) {
-                            if (val != null) {
-                              setModalState(() => selectedMonth = val);
-                            }
-                          },
-                          selectedItem: selectedMonth,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 32),
-
-                // Go Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      final now = DateTime.now();
-                      final monthDiff =
-                          (selectedYear - now.year) * 12 +
-                          (selectedMonth - now.month);
-                      final targetIndex = _initialIndex + monthDiff;
-
-                      Navigator.pop(context);
-
-                      _pageController.animateToPage(
-                        targetIndex,
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.easeInOutCubic,
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _accentColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      "Go to Month",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          );
-        },
+      builder: (ctx) => JumpToDateSheet(
+        currentDate: _currentDate,
+        onDateSelected: _handleDateJump,
       ),
     );
   }
@@ -313,6 +180,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 }
 
                 final records = snapshot.data ?? [];
+                // Find record for current date view or create empty one
                 final currentRecord = records.firstWhere(
                   (r) =>
                       r.year == _currentDate.year &&
@@ -340,7 +208,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Column(
                         children: [
                           if (hasData) ...[
-                            _buildSummaryCard(currentRecord),
+                            // --- Refactored Widget: Summary Card ---
+                            DashboardSummaryCard(
+                              record: currentRecord,
+                              currencyFormat: _currencyFormat,
+                            ),
+
                             const SizedBox(height: 24),
                             Align(
                               alignment: Alignment.centerLeft,
@@ -354,14 +227,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            _buildAllocationsList(currentRecord),
+
+                            // --- Refactored Widget: Allocations List ---
+                            BudgetAllocationsList(
+                              record: currentRecord,
+                              currencyFormat: _currencyFormat,
+                            ),
                           ] else
                             _buildEmptyState(),
                         ],
                       ),
                     ),
 
-                    // --- Floating Glass Capsule ---
+                    // --- Floating Action Button (Edit/Create) ---
                     Positioned(
                       bottom: 20,
                       left: 0,
@@ -430,162 +308,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildSummaryCard(FinancialRecord record) {
-    final totalIncome = record.salary + record.extraIncome;
-    final totalDeductions = record.emi;
-    final balance = record.effectiveIncome;
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_cardColor, _cardColor.withOpacity(0.8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Text(
-            "NET EFFECTIVE INCOME",
-            style: TextStyle(
-              color: Colors.white54,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _currencyFormat.format(balance),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _summaryItem(
-                  "Gross Income",
-                  totalIncome,
-                  _greenColor,
-                  Icons.arrow_downward,
-                ),
-              ),
-              Container(width: 1, height: 40, color: Colors.white10),
-              Expanded(
-                child: _summaryItem(
-                  "Deductions",
-                  totalDeductions,
-                  _redColor,
-                  Icons.arrow_upward,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryItem(String label, double amount, Color color, IconData icon) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 14),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color.withOpacity(0.8),
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          _currencyFormat.format(amount),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAllocationsList(FinancialRecord record) {
-    final entries = record.allocations.entries.toList();
-    entries.sort((a, b) => b.value.compareTo(a.value));
-
-    return Column(
-      children: entries.map((entry) {
-        final percent = record.allocationPercentages[entry.key] ?? 0;
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: _cardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 8,
-            ),
-            leading: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: _accentColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                "${percent.toInt()}%",
-                style: TextStyle(
-                  color: _accentColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            title: Text(
-              entry.key,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            trailing: Text(
-              _currencyFormat.format(entry.value),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
+  // Keeping this here as it's specific to the screen's empty state state
+  // (though it could also be extracted if desired)
   Widget _buildEmptyState() {
     return Padding(
       padding: const EdgeInsets.only(top: 60),
