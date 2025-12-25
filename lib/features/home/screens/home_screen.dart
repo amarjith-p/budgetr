@@ -166,7 +166,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                         _buildFeatureCard(
                           context,
-                          title: "Custom Datam Entry",
+                          title: "Custom Data Entry",
                           subtitle: "Personal Data Trackers",
                           icon: Icons.dashboard_customize_outlined,
                           color: const Color(0xFFF72585),

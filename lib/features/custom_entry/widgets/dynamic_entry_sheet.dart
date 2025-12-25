@@ -27,7 +27,6 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, FocusNode> _focusNodes = {};
 
-  // --- SCROLL CONTROLLER ---
   final ScrollController _scrollController = ScrollController();
 
   TextEditingController? _activeCalcController;
@@ -36,7 +35,6 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
   bool _useSystemKeyboard = false;
   bool _isEditing = false;
 
-  // Theme
   final Color _bgColor = const Color(0xff0D1B2A);
   final Color _inputColor = const Color(0xFF1B263B);
   final Color _accentColor = const Color(0xFF3A86FF);
@@ -98,10 +96,142 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
           text: initialVal?.toString() ?? '',
         );
       }
+
+      if (field.type == CustomFieldType.number ||
+          field.type == CustomFieldType.currency) {
+        _controllers[field.name]?.addListener(_recalculateFormulas);
+      }
+    }
+    // Initial Calc
+    WidgetsBinding.instance.addPostFrameCallback((_) => _recalculateFormulas());
+  }
+
+  // --- FORMULA ENGINE (BODMAS, No %) ---
+  void _recalculateFormulas() {
+    final formulaFields = widget.template.fields
+        .where(
+          (f) =>
+              f.type == CustomFieldType.formula && f.formulaExpression != null,
+        )
+        .toList();
+
+    if (formulaFields.isEmpty) return;
+
+    for (var field in formulaFields) {
+      String expr = field.formulaExpression!;
+
+      for (var inputField in widget.template.fields) {
+        String placeholder = '[${inputField.name}]';
+        if (expr.contains(placeholder)) {
+          if (_controllers.containsKey(inputField.name)) {
+            double val =
+                double.tryParse(_controllers[inputField.name]!.text) ?? 0.0;
+            String replacement = val < 0 ? "($val)" : val.toString();
+            expr = expr.replaceAll(placeholder, replacement);
+          } else {
+            expr = expr.replaceAll(placeholder, '0');
+          }
+        }
+      }
+
+      try {
+        final result = _evaluateRPN(expr);
+        final formatted = result
+            .toStringAsFixed(2)
+            .replaceAll(RegExp(r'\.00$'), '');
+
+        if (_controllers[field.name]!.text != formatted) {
+          _controllers[field.name]!.text = formatted;
+        }
+      } catch (e) {
+        // debugPrint('Calc Error: $e');
+      }
     }
   }
 
-  // --- AUTO SCROLL LOGIC ---
+  double _evaluateRPN(String expr) {
+    expr = expr.replaceAll(' ', '');
+    final tokens = _tokenize(expr);
+    if (tokens.isEmpty) return 0.0;
+
+    final outputQueue = <String>[];
+    final operatorStack = <String>[];
+    final precedence = {'+': 1, '-': 1, '*': 2, '/': 2};
+
+    for (var token in tokens) {
+      if (double.tryParse(token) != null) {
+        outputQueue.add(token);
+      } else if (token == '(') {
+        operatorStack.add(token);
+      } else if (token == ')') {
+        while (operatorStack.isNotEmpty && operatorStack.last != '(') {
+          outputQueue.add(operatorStack.removeLast());
+        }
+        if (operatorStack.isNotEmpty) operatorStack.removeLast();
+      } else if (precedence.containsKey(token)) {
+        while (operatorStack.isNotEmpty &&
+            operatorStack.last != '(' &&
+            precedence[operatorStack.last]! >= precedence[token]!) {
+          outputQueue.add(operatorStack.removeLast());
+        }
+        operatorStack.add(token);
+      }
+    }
+    while (operatorStack.isNotEmpty) {
+      outputQueue.add(operatorStack.removeLast());
+    }
+
+    final evalStack = <double>[];
+    for (var token in outputQueue) {
+      if (double.tryParse(token) != null) {
+        evalStack.add(double.parse(token));
+      } else {
+        if (evalStack.length < 2) return 0.0;
+        final b = evalStack.removeLast();
+        final a = evalStack.removeLast();
+        switch (token) {
+          case '+':
+            evalStack.add(a + b);
+            break;
+          case '-':
+            evalStack.add(a - b);
+            break;
+          case '*':
+            evalStack.add(a * b);
+            break;
+          case '/':
+            evalStack.add(b == 0 ? 0 : a / b);
+            break;
+        }
+      }
+    }
+    return evalStack.isNotEmpty ? evalStack.last : 0.0;
+  }
+
+  List<String> _tokenize(String expr) {
+    List<String> tokens = [];
+    String buffer = '';
+
+    for (int i = 0; i < expr.length; i++) {
+      String char = expr[i];
+      if ('+-*/()'.contains(char)) {
+        if (buffer.isNotEmpty) {
+          tokens.add(buffer);
+          buffer = '';
+        }
+        if (char == '-' && (tokens.isEmpty || '+-*/('.contains(tokens.last))) {
+          buffer += char;
+        } else {
+          tokens.add(char);
+        }
+      } else {
+        buffer += char;
+      }
+    }
+    if (buffer.isNotEmpty) tokens.add(buffer);
+    return tokens;
+  }
+
   void _scrollToInput(FocusNode node) {
     Future.delayed(const Duration(milliseconds: 300), () {
       if (node.context != null && mounted) {
@@ -126,7 +256,6 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
         _isKeyboardVisible = false;
       }
     });
-    // Trigger scroll
     _scrollToInput(node);
   }
 
@@ -175,9 +304,97 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
   }
 
   Future<void> _save() async {
+    // --- VALIDATION FOR EMPTY DEPENDENCIES ---
+    List<String> warnings = [];
+    final formulas = widget.template.fields.where(
+      (f) => f.type == CustomFieldType.formula && f.formulaExpression != null,
+    );
+
+    for (var f in formulas) {
+      String expr = f.formulaExpression!;
+      for (var inputField in widget.template.fields) {
+        if (expr.contains('[${inputField.name}]')) {
+          if (_controllers.containsKey(inputField.name) &&
+              _controllers[inputField.name]!.text.trim().isEmpty) {
+            warnings.add("'${inputField.name}' is empty (used in '${f.name}')");
+          }
+        }
+      }
+    }
+
+    if (warnings.isNotEmpty) {
+      warnings = warnings.toSet().toList();
+      final shouldProceed =
+          await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xff0D1B2A),
+              title: const Text(
+                "Missing Values",
+                style: TextStyle(color: Colors.white),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "These fields are empty but used in formulas. They will count as 0:",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 12),
+                  ...warnings.map(
+                    (w) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.amber,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              w,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _accentColor,
+                  ),
+                  child: const Text("Save Anyway"),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+
+      if (!shouldProceed) return;
+    }
+
     for (var field in widget.template.fields) {
       if (field.type == CustomFieldType.number ||
-          field.type == CustomFieldType.currency) {
+          field.type == CustomFieldType.currency ||
+          field.type == CustomFieldType.formula) {
         _formData[field.name] =
             double.tryParse(_controllers[field.name]!.text) ?? 0.0;
       } else if (field.type == CustomFieldType.string) {
@@ -224,7 +441,6 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
       child: Column(
         mainAxisSize: MainAxisSize.max,
         children: [
-          // Handle
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 12),
@@ -236,8 +452,6 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
               ),
             ),
           ),
-
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
             child: Row(
@@ -262,11 +476,8 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
               ],
             ),
           ),
-
-          // Form Fields (Scrollable)
           Flexible(
             child: ListView(
-              // ATTACH SCROLL CONTROLLER
               controller: _scrollController,
               shrinkWrap: true,
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -275,8 +486,6 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
                   .toList(),
             ),
           ),
-
-          // Action Buttons (Pinned to bottom of list)
           Padding(
             padding: const EdgeInsets.all(24),
             child: Row(
@@ -317,8 +526,6 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
               ],
             ),
           ),
-
-          // Custom Keyboard (No Padding -> Full Width & Flush)
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             child: _isKeyboardVisible
@@ -430,6 +637,7 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
         field.type == CustomFieldType.number ||
         field.type == CustomFieldType.currency;
     final isSerial = field.type == CustomFieldType.serial;
+    final isFormula = field.type == CustomFieldType.formula;
 
     IconData inputIcon = Icons.text_fields;
     if (isSerial)
@@ -438,25 +646,33 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
       inputIcon = Icons.currency_rupee;
     else if (field.type == CustomFieldType.number)
       inputIcon = Icons.dialpad;
+    else if (isFormula)
+      inputIcon = Icons.functions;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextFormField(
         controller: _controllers[field.name],
         focusNode: _focusNodes[field.name],
+        showCursor: !isFormula,
 
-        // --- FIX: Show Cursor even if custom keyboard is used ---
-        showCursor: true,
+        readOnly: isSerial || isFormula
+            ? true
+            : (isNum ? !_useSystemKeyboard : false),
 
-        readOnly: isSerial ? true : (isNum ? !_useSystemKeyboard : false),
         keyboardType: isNum ? TextInputType.number : TextInputType.text,
-        style: TextStyle(color: isSerial ? Colors.white38 : Colors.white),
-        onTap: (isNum && !isSerial)
+        style: TextStyle(
+          color: (isSerial || isFormula) ? Colors.white70 : Colors.white,
+          fontWeight: isFormula ? FontWeight.bold : FontWeight.normal,
+        ),
+
+        onTap: (isNum && !isSerial && !isFormula)
             ? () => _setActive(
                 _controllers[field.name]!,
                 _focusNodes[field.name]!,
               )
             : () => setState(() => _isKeyboardVisible = false),
+
         decoration: InputDecoration(
           labelText: field.name,
           labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
@@ -466,13 +682,17 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
           suffixText: isSerial ? field.serialSuffix : null,
           prefixIcon: Icon(
             inputIcon,
-            color: isSerial ? Colors.white24 : _accentColor,
+            color: (isSerial || isFormula)
+                ? _accentColor.withOpacity(0.5)
+                : _accentColor,
           ),
           filled: true,
-          fillColor: _inputColor,
+          fillColor: isFormula ? _accentColor.withOpacity(0.1) : _inputColor,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
+            borderSide: isFormula
+                ? BorderSide(color: _accentColor.withOpacity(0.3))
+                : BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),

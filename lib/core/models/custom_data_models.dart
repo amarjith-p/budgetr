@@ -1,7 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// 1. Added 'serial' to enum
-enum CustomFieldType { string, number, date, currency, dropdown, serial }
+enum CustomFieldType {
+  string,
+  number,
+  date,
+  currency,
+  dropdown,
+  serial,
+  formula,
+}
 
 class CustomFieldConfig {
   String name;
@@ -11,9 +18,11 @@ class CustomFieldConfig {
   String? currencySymbol;
   List<String>? dropdownOptions;
 
-  // 2. Added Serial Configs
   String? serialPrefix;
   String? serialSuffix;
+
+  // Formula Configuration
+  String? formulaExpression;
 
   CustomFieldConfig({
     required this.name,
@@ -23,6 +32,7 @@ class CustomFieldConfig {
     this.dropdownOptions,
     this.serialPrefix,
     this.serialSuffix,
+    this.formulaExpression,
   });
 
   Map<String, dynamic> toMap() => {
@@ -33,6 +43,7 @@ class CustomFieldConfig {
     'dropdownOptions': dropdownOptions,
     'serialPrefix': serialPrefix,
     'serialSuffix': serialSuffix,
+    'formulaExpression': formulaExpression,
   };
 
   factory CustomFieldConfig.fromMap(Map<String, dynamic> map) =>
@@ -46,6 +57,7 @@ class CustomFieldConfig {
             : null,
         serialPrefix: map['serialPrefix'],
         serialSuffix: map['serialSuffix'],
+        formulaExpression: map['formulaExpression'],
       );
 }
 

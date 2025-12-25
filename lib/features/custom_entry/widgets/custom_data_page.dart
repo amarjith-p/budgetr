@@ -33,6 +33,104 @@ class _CustomDataPageState extends State<CustomDataPage>
   @override
   bool get wantKeepAlive => true;
 
+  // --- STALE DATA LOGIC START ---
+  bool _isRowStale(CustomRecord record) {
+    for (var field in widget.template.fields) {
+      if (field.type == CustomFieldType.formula &&
+          field.formulaExpression != null) {
+        String expr = field.formulaExpression!;
+        for (var inputField in widget.template.fields) {
+          String placeholder = '[${inputField.name}]';
+          if (expr.contains(placeholder)) {
+            var val = record.data[inputField.name];
+            double numVal = 0.0;
+            if (val is num)
+              numVal = val.toDouble();
+            else if (val is String)
+              numVal = double.tryParse(val) ?? 0.0;
+            String replacement = numVal < 0 ? "($numVal)" : numVal.toString();
+            expr = expr.replaceAll(placeholder, replacement);
+          }
+        }
+        try {
+          double calculated = _evaluateRPN(expr);
+          double stored = (record.data[field.name] is num)
+              ? (record.data[field.name] as num).toDouble()
+              : 0.0;
+          if ((calculated - stored).abs() > 0.01) return true;
+        } catch (e) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  double _evaluateRPN(String expr) {
+    expr = expr.replaceAll(' ', '');
+    List<String> tokens = [];
+    String buffer = '';
+    for (int i = 0; i < expr.length; i++) {
+      String char = expr[i];
+      if ('+-*/()'.contains(char)) {
+        if (buffer.isNotEmpty) {
+          tokens.add(buffer);
+          buffer = '';
+        }
+        if (char == '-' && (tokens.isEmpty || '+-*/('.contains(tokens.last))) {
+          buffer += char;
+        } else {
+          tokens.add(char);
+        }
+      } else {
+        buffer += char;
+      }
+    }
+    if (buffer.isNotEmpty) tokens.add(buffer);
+    if (tokens.isEmpty) return 0.0;
+
+    final output = <String>[];
+    final ops = <String>[];
+    final prec = {'+': 1, '-': 1, '*': 2, '/': 2};
+
+    for (var t in tokens) {
+      if (double.tryParse(t) != null)
+        output.add(t);
+      else if (t == '(')
+        ops.add(t);
+      else if (t == ')') {
+        while (ops.isNotEmpty && ops.last != '(') output.add(ops.removeLast());
+        if (ops.isNotEmpty) ops.removeLast();
+      } else if (prec.containsKey(t)) {
+        while (ops.isNotEmpty && ops.last != '(' && prec[ops.last]! >= prec[t]!)
+          output.add(ops.removeLast());
+        ops.add(t);
+      }
+    }
+    while (ops.isNotEmpty) output.add(ops.removeLast());
+
+    final stack = <double>[];
+    for (var t in output) {
+      if (double.tryParse(t) != null)
+        stack.add(double.parse(t));
+      else {
+        if (stack.length < 2) return 0.0;
+        final b = stack.removeLast();
+        final a = stack.removeLast();
+        if (t == '+')
+          stack.add(a + b);
+        else if (t == '-')
+          stack.add(a - b);
+        else if (t == '*')
+          stack.add(a * b);
+        else if (t == '/')
+          stack.add(b == 0 ? 0 : a / b);
+      }
+    }
+    return stack.isNotEmpty ? stack.last : 0.0;
+  }
+  // --- STALE DATA LOGIC END ---
+
   void _showEntrySheet(
     List<CustomRecord> existingRecords, [
     CustomRecord? recordToEdit,
@@ -75,7 +173,8 @@ class _CustomDataPageState extends State<CustomDataPage>
         .where(
           (f) =>
               f.type == CustomFieldType.number ||
-              f.type == CustomFieldType.currency,
+              f.type == CustomFieldType.currency ||
+              f.type == CustomFieldType.formula,
         )
         .toList();
 
@@ -251,7 +350,6 @@ class _CustomDataPageState extends State<CustomDataPage>
     );
   }
 
-  // ... (Delete methods remain same) ...
   Future<void> _deleteSheet() async {
     bool confirm =
         await showDialog(
@@ -368,7 +466,8 @@ class _CustomDataPageState extends State<CustomDataPage>
               Map<String, double> totals = {};
               for (var field in widget.template.fields) {
                 if ((field.type == CustomFieldType.number ||
-                        field.type == CustomFieldType.currency) &&
+                        field.type == CustomFieldType.currency ||
+                        field.type == CustomFieldType.formula) &&
                     field.isSumRequired) {
                   totals[field.name] = records.fold(0.0, (sum, r) {
                     final rawVal = r.data[field.name];
@@ -437,33 +536,6 @@ class _CustomDataPageState extends State<CustomDataPage>
                   if (widget.template.xAxisField != null &&
                       widget.template.yAxisField != null &&
                       records.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Trend Analysis',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          InkWell(
-                            onTap: _configureChart,
-                            child: const Icon(
-                              Icons.tune,
-                              size: 16,
-                              color: Colors.white54,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                     Container(
                       height: 250,
                       margin: const EdgeInsets.symmetric(
@@ -550,8 +622,17 @@ class _CustomDataPageState extends State<CustomDataPage>
                             const DataColumn(label: Text('')),
                           ],
                           rows: [
-                            ...records.map(
-                              (r) => DataRow(
+                            ...records.map((r) {
+                              // --- CHECK STALE ---
+                              bool isStale = _isRowStale(r);
+
+                              return DataRow(
+                                // Highlight Row if Stale
+                                color: isStale
+                                    ? MaterialStateProperty.all(
+                                        Colors.amber.withOpacity(0.1),
+                                      )
+                                    : null,
                                 cells: [
                                   ...widget.template.fields.map((f) {
                                     final val = r.data[f.name];
@@ -565,10 +646,11 @@ class _CustomDataPageState extends State<CustomDataPage>
                                       } else if (f.type ==
                                           CustomFieldType.currency) {
                                         double numVal = 0.0;
-                                        if (val is num)
+                                        if (val is num) {
                                           numVal = val.toDouble();
-                                        else if (val is String)
+                                        } else if (val is String) {
                                           numVal = double.tryParse(val) ?? 0.0;
+                                        }
                                         display =
                                             '${f.currencySymbol ?? '₹'}${numVal.toStringAsFixed(2)}';
                                       } else if (f.type ==
@@ -579,12 +661,33 @@ class _CustomDataPageState extends State<CustomDataPage>
                                         display = val.toString();
                                       }
                                     }
+
+                                    // Visual Cue for Stale Cell
+                                    bool highlightCell =
+                                        isStale &&
+                                        f.type == CustomFieldType.formula;
+
                                     return DataCell(
-                                      Text(
-                                        display,
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                        ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            display,
+                                            style: TextStyle(
+                                              color: highlightCell
+                                                  ? Colors.amberAccent
+                                                  : Colors.white70,
+                                            ),
+                                          ),
+                                          if (highlightCell) ...[
+                                            const SizedBox(width: 4),
+                                            const Icon(
+                                              Icons.warning_amber_rounded,
+                                              size: 14,
+                                              color: Colors.amber,
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     );
                                   }),
@@ -618,13 +721,10 @@ class _CustomDataPageState extends State<CustomDataPage>
                                     ),
                                   ),
                                 ],
-                              ),
-                            ),
+                              );
+                            }),
                             if (totals.isNotEmpty)
                               DataRow(
-                                color: MaterialStateProperty.all(
-                                  _accentColor.withOpacity(0.1),
-                                ),
                                 cells: [
                                   ...widget.template.fields.map((f) {
                                     if (totals.containsKey(f.name)) {
