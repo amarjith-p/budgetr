@@ -1,7 +1,11 @@
 import 'package:budget/core/widgets/modern_loader.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For PlatformException
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:local_auth/local_auth.dart'; // Local Auth
+
+import '../../../core/constants/firebase_constants.dart'; // Firebase Constants
 import '../../../core/widgets/calculator_keyboard.dart';
 import '../../../core/widgets/modern_dropdown.dart';
 import '../../../core/models/financial_record_model.dart';
@@ -11,8 +15,9 @@ import '../../settings/services/settings_service.dart';
 
 class AddRecordSheet extends StatefulWidget {
   final FinancialRecord? recordToEdit;
+  final DateTime? initialDate;
 
-  const AddRecordSheet({super.key, this.recordToEdit});
+  const AddRecordSheet({super.key, this.recordToEdit, this.initialDate});
 
   @override
   State<AddRecordSheet> createState() => _AddRecordSheetState();
@@ -23,6 +28,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
   final _settingsService = SettingsService();
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
   final ScrollController _scrollController = ScrollController();
+  final LocalAuthentication _auth = LocalAuthentication(); // Auth Instance
 
   // Theme
   final Color _bgColor = const Color(0xff0D1B2A);
@@ -113,9 +119,10 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
         _calculate();
       });
     } else {
-      final now = DateTime.now();
-      _selectedYear = now.year;
-      _selectedMonth = now.month;
+      // Use the passed initialDate (from Dashboard) or fallback to Now
+      final date = widget.initialDate ?? DateTime.now();
+      _selectedYear = date.year;
+      _selectedMonth = date.month;
       setState(() {
         _config = masterConfig;
       });
@@ -199,17 +206,107 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     _closeKeyboard();
     if (_config == null) return;
     if (_salaryController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Salary is required"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // Use Dialog here too, just in case
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: _bgColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.white.withOpacity(0.1)),
+            ),
+            title: const Text(
+              "Validation Error",
+              style: TextStyle(color: Colors.white),
+            ),
+            content: const Text(
+              "Salary is required.",
+              style: TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text("OK", style: TextStyle(color: _accentColor)),
+              ),
+            ],
+          ),
+        );
+      }
       return;
     }
 
     final idString =
         '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
+
+    // --- SECURITY CHECK START ---
+    try {
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection(FirebaseConstants.financialRecords)
+          .doc(idString)
+          .get();
+
+      if (docSnapshot.exists) {
+        // If we are overwriting a record...
+        // Check if it's the SAME record we are currently editing.
+        bool isSameRecord =
+            widget.recordToEdit != null && widget.recordToEdit!.id == idString;
+
+        // If it's NOT the same record (meaning we changed the date to an existing one)
+        // OR we started in Create mode (recordToEdit is null) but found a conflict...
+        if (!isSameRecord) {
+          bool authenticated = false;
+          try {
+            authenticated = await _auth.authenticate(
+              localizedReason:
+                  'Record already exists for this month. Authenticate to overwrite.',
+              options: const AuthenticationOptions(stickyAuth: true),
+            );
+          } on PlatformException catch (_) {
+            // Ignore error, authenticated remains false
+          }
+
+          if (!authenticated) {
+            if (mounted) {
+              // FIX: Use showDialog instead of SnackBar to ensure visibility over BottomSheet
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  backgroundColor: _bgColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  title: const Text(
+                    "Authentication Failed",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  content: const Text(
+                    "Authentication is required to overwrite an existing budget record.",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text("OK", style: TextStyle(color: _accentColor)),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return; // Abort Save
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error checking record: $e")));
+      }
+      return;
+    }
+    // --- SECURITY CHECK END ---
 
     // Calculate Allocations using the ORDERED config
     Map<String, double> allocations = {};
@@ -278,51 +375,43 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (!_isEditing)
-                        Row(
-                          children: [
-                            // Year Pill
-                            GestureDetector(
-                              onTap: () => showSelectionSheet<int>(
-                                context: context,
-                                title: 'Select Year',
-                                items: _years,
-                                labelBuilder: (y) => y.toString(),
-                                onSelect: (v) =>
-                                    setState(() => _selectedYear = v),
-                                selectedItem: _selectedYear,
-                              ),
-                              child: _datePill(_selectedYear.toString()),
+                      // Always allow date change (even in edit mode)
+                      Row(
+                        children: [
+                          // Year Pill
+                          GestureDetector(
+                            onTap: () => showSelectionSheet<int>(
+                              context: context,
+                              title: 'Select Year',
+                              items: _years,
+                              labelBuilder: (y) => y.toString(),
+                              onSelect: (v) =>
+                                  setState(() => _selectedYear = v),
+                              selectedItem: _selectedYear,
                             ),
-                            const SizedBox(width: 8),
-                            // Month Pill
-                            GestureDetector(
-                              onTap: () => showSelectionSheet<int>(
-                                context: context,
-                                title: 'Select Month',
-                                items: _months,
-                                labelBuilder: (m) =>
-                                    DateFormat('MMM').format(DateTime(0, m)),
-                                onSelect: (v) =>
-                                    setState(() => _selectedMonth = v),
-                                selectedItem: _selectedMonth,
-                              ),
-                              child: _datePill(
-                                DateFormat(
-                                  'MMM',
-                                ).format(DateTime(0, _selectedMonth!)),
-                              ),
-                            ),
-                          ],
-                        )
-                      else
-                        Text(
-                          "${DateFormat('MMM yyyy').format(DateTime(_selectedYear!, _selectedMonth!))}",
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontWeight: FontWeight.bold,
+                            child: _datePill(_selectedYear.toString()),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          // Month Pill
+                          GestureDetector(
+                            onTap: () => showSelectionSheet<int>(
+                              context: context,
+                              title: 'Select Month',
+                              items: _months,
+                              labelBuilder: (m) =>
+                                  DateFormat('MMM').format(DateTime(0, m)),
+                              onSelect: (v) =>
+                                  setState(() => _selectedMonth = v),
+                              selectedItem: _selectedMonth,
+                            ),
+                            child: _datePill(
+                              DateFormat(
+                                'MMM',
+                              ).format(DateTime(0, _selectedMonth!)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
 

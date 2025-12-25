@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:local_auth/local_auth.dart';
 
 import '../../../core/models/financial_record_model.dart';
 import '../services/dashboard_service.dart';
 import '../widgets/add_record_sheet.dart';
-import '../widgets/dashboard_summary_card.dart'; // Import
-import '../widgets/budget_allocations_list.dart'; // Import
-import '../widgets/jump_to_date_sheet.dart'; // Import
+import '../widgets/dashboard_summary_card.dart';
+import '../widgets/budget_allocations_list.dart';
+import '../widgets/jump_to_date_sheet.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -20,6 +21,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final DashboardService _dashboardService = DashboardService();
+  final LocalAuthentication auth = LocalAuthentication();
 
   // Infinite Scroll Logic
   final int _initialIndex = 12 * 50;
@@ -84,8 +86,159 @@ class _DashboardScreenState extends State<DashboardScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       useSafeArea: true,
-      builder: (context) => AddRecordSheet(recordToEdit: record),
+      builder: (context) =>
+          AddRecordSheet(recordToEdit: record, initialDate: _currentDate),
     );
+  }
+
+  // --- NEW: Modern Options Sheet ---
+  void _showRecordOptions(FinancialRecord record) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: _bgColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "Budget Options",
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.5),
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Delete Action
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ListTile(
+                onTap: () {
+                  Navigator.pop(context); // Close options
+                  _handleDeleteRecord(record); // Trigger Delete Flow
+                },
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.redAccent,
+                    size: 20,
+                  ),
+                ),
+                title: const Text(
+                  "Delete Record",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text(
+                  "Permanently remove budget & settlement",
+                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleDeleteRecord(FinancialRecord record) async {
+    // 1. Confirm Delete
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _bgColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+        ),
+        title: const Text(
+          "Delete Budget?",
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          "Are you sure you want to delete the budget for ${DateFormat('MMMM yyyy').format(DateTime(record.year, record.month))}? This cannot be undone.",
+          style: TextStyle(color: Colors.white.withOpacity(0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              "Delete",
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // 2. Secure Auth
+    bool authenticated = false;
+    try {
+      authenticated = await auth.authenticate(
+        localizedReason: 'Authenticate to confirm deletion',
+        options: const AuthenticationOptions(stickyAuth: true),
+      );
+    } on PlatformException catch (_) {
+      return;
+    }
+
+    if (authenticated) {
+      // 3. Delete (Service handles cascading delete of Settlement)
+      await _dashboardService.deleteFinancialRecord(record.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Budget & Settlement data deleted."),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -209,9 +362,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           if (hasData) ...[
                             // --- Refactored Widget: Summary Card ---
+                            // PASSED THE NEW CALLBACK
                             DashboardSummaryCard(
                               record: currentRecord,
                               currencyFormat: _currencyFormat,
+                              onOptionsTap: () =>
+                                  _showRecordOptions(currentRecord),
                             ),
 
                             const SizedBox(height: 24),
@@ -246,9 +402,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       right: 0,
                       child: Center(
                         child: GestureDetector(
-                          onTap: () => _showAddRecordSheet(
-                            hasData ? currentRecord : null,
-                          ),
+                          onTap: () async {
+                            if (hasData) {
+                              // PROTECT EXISTING DATA
+                              bool authenticated = false;
+                              try {
+                                authenticated = await auth.authenticate(
+                                  localizedReason:
+                                      'Authenticate to edit this budget',
+                                  options: const AuthenticationOptions(
+                                    stickyAuth: true,
+                                  ),
+                                );
+                              } on PlatformException catch (_) {
+                                return;
+                              }
+
+                              if (authenticated) {
+                                _showAddRecordSheet(currentRecord);
+                              }
+                            } else {
+                              // CREATE NEW (Use passed date)
+                              _showAddRecordSheet(null);
+                            }
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 24,
@@ -308,8 +485,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Keeping this here as it's specific to the screen's empty state state
-  // (though it could also be extracted if desired)
   Widget _buildEmptyState() {
     return Padding(
       padding: const EdgeInsets.only(top: 60),
