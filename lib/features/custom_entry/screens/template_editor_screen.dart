@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/widgets/modern_dropdown.dart';
 import '../../../core/models/custom_data_models.dart';
 import '../../../core/services/firestore_service.dart';
@@ -18,7 +19,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   String _screenName = '';
   List<CustomFieldConfig> _fields = [];
   bool _isEditing = false;
-  final Map<String, CustomFieldType> _originalTypes = {};
 
   // Theme Colors
   final Color _bgColor = const Color(0xff0D1B2A);
@@ -32,7 +32,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       _isEditing = true;
       _screenName = widget.templateToEdit!.name;
       _fields = widget.templateToEdit!.fields.map((f) {
-        _originalTypes[f.name] = f.type;
         return CustomFieldConfig(
           name: f.name,
           type: f.type,
@@ -43,6 +42,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
               : null,
           serialPrefix: f.serialPrefix,
           serialSuffix: f.serialSuffix,
+          formulaExpression: f.formulaExpression,
         );
       }).toList();
     }
@@ -215,7 +215,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.drag_indicator, color: Colors.white24),
+              const Icon(Icons.drag_indicator, color: Colors.white24),
               const SizedBox(width: 12),
               Expanded(
                 child: TextFormField(
@@ -226,7 +226,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Field Name (e.g. Amount, Date)',
+                    hintText: 'Field Name (e.g. Price)',
                     hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
                     isDense: true,
                     border: InputBorder.none,
@@ -260,23 +260,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                     items: CustomFieldType.values,
                     labelBuilder: (t) => _getTypeLabel(t),
                     onSelect: (val) {
-                      if (_isEditing &&
-                          _originalTypes.containsKey(_fields[index].name)) {
-                        final oldType = _originalTypes[_fields[index].name]!;
-                        if (oldType == CustomFieldType.string &&
-                            (val == CustomFieldType.number ||
-                                val == CustomFieldType.currency)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                "Cannot change Text to Number/Currency.",
-                              ),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
-                      }
                       setState(() => _fields[index].type = val!);
                     },
                     selectedItem: _fields[index].type,
@@ -289,9 +272,18 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
               _fields[index].type == CustomFieldType.currency)
             _buildNumberConfig(index),
           if (_fields[index].type == CustomFieldType.dropdown)
-            _buildDropdownConfig(index),
+            _DropdownInputBlock(
+              field: _fields[index],
+              accentColor: _accentColor,
+            ),
           if (_fields[index].type == CustomFieldType.serial)
             _buildSerialConfig(index),
+          if (_fields[index].type == CustomFieldType.formula)
+            _FormulaInputBlock(
+              field: _fields[index],
+              allFields: _fields,
+              accentColor: _accentColor,
+            ),
         ],
       ),
     );
@@ -342,7 +334,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     bool hasConfig =
         _fields[index].serialPrefix != null ||
         _fields[index].serialSuffix != null;
-
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: Container(
@@ -403,78 +394,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     );
   }
 
-  Widget _buildDropdownConfig(int index) {
-    final controller = TextEditingController();
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: (_fields[index].dropdownOptions ?? [])
-                .map(
-                  (opt) => Chip(
-                    label: Text(
-                      opt,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    backgroundColor: _accentColor.withOpacity(0.2),
-                    deleteIconColor: Colors.white70,
-                    onDeleted: () => setState(
-                      () => _fields[index].dropdownOptions!.remove(opt),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Add option...',
-                    hintStyle: TextStyle(color: Colors.white38),
-                    filled: true,
-                    fillColor: Colors.black12,
-                    isDense: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  onSubmitted: (val) {
-                    if (val.isNotEmpty)
-                      setState(
-                        () => (_fields[index].dropdownOptions ??= []).add(val),
-                      );
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: Icon(Icons.add_circle, color: _accentColor),
-                onPressed: () {
-                  if (controller.text.isNotEmpty)
-                    setState(
-                      () => (_fields[index].dropdownOptions ??= []).add(
-                        controller.text,
-                      ),
-                    );
-                  controller.clear();
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStyledTextField({
     required String initialValue,
     required String label,
@@ -491,10 +410,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         filled: true,
         fillColor: Colors.white.withOpacity(0.05),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
@@ -541,6 +456,8 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         return 'Dropdown';
       case CustomFieldType.serial:
         return 'Serial No';
+      case CustomFieldType.formula:
+        return 'Formula (Math)';
     }
   }
 
@@ -549,16 +466,423 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       case CustomFieldType.string:
         return Icons.text_fields;
       case CustomFieldType.number:
-        return Icons.dialpad; // CHANGED TO DIALPAD
+        return Icons.dialpad;
       case CustomFieldType.date:
         return Icons.calendar_month;
       case CustomFieldType.currency:
-        return Icons.currency_rupee; // CHANGED TO RUPEE
+        return Icons.currency_rupee;
       case CustomFieldType.dropdown:
         return Icons.list_alt;
       case CustomFieldType.serial:
         return Icons.tag;
+      case CustomFieldType.formula:
+        return Icons.functions;
     }
   }
 }
-// 
+
+// --- DROPDOWN INPUT BLOCK (Extracted to fix clearing issue) ---
+class _DropdownInputBlock extends StatefulWidget {
+  final CustomFieldConfig field;
+  final Color accentColor;
+
+  const _DropdownInputBlock({required this.field, required this.accentColor});
+
+  @override
+  State<_DropdownInputBlock> createState() => _DropdownInputBlockState();
+}
+
+class _DropdownInputBlockState extends State<_DropdownInputBlock> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _addOption() {
+    final val = _controller.text.trim();
+    if (val.isNotEmpty) {
+      setState(() {
+        (widget.field.dropdownOptions ??= []).add(val);
+        _controller.clear();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: (widget.field.dropdownOptions ?? [])
+                .map(
+                  (opt) => Chip(
+                    label: Text(
+                      opt,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    backgroundColor: widget.accentColor.withOpacity(0.2),
+                    deleteIconColor: Colors.white70,
+                    onDeleted: () => setState(
+                      () => widget.field.dropdownOptions!.remove(opt),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _controller,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Add option...',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: Colors.black12,
+                    isDense: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onFieldSubmitted: (_) => _addOption(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: Icon(Icons.add_circle, color: widget.accentColor),
+                onPressed: _addOption,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- FORMULA BUILDER (Reordered Numbers) ---
+class _FormulaInputBlock extends StatefulWidget {
+  final CustomFieldConfig field;
+  final List<CustomFieldConfig> allFields;
+  final Color accentColor;
+
+  const _FormulaInputBlock({
+    required this.field,
+    required this.allFields,
+    required this.accentColor,
+  });
+
+  @override
+  State<_FormulaInputBlock> createState() => _FormulaInputBlockState();
+}
+
+class _FormulaInputBlockState extends State<_FormulaInputBlock> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.field.formulaExpression);
+    _controller.addListener(() {
+      widget.field.formulaExpression = _controller.text;
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _addToken(String token) {
+    final text = _controller.text;
+    String newText;
+
+    bool isDigit = RegExp(r'[0-9.]').hasMatch(token);
+    bool lastWasDigit = text.isNotEmpty && RegExp(r'[0-9.]$').hasMatch(text);
+    bool isOp = ['+', '-', '*', '/'].contains(token);
+
+    if (isDigit && lastWasDigit) {
+      newText = text + token;
+    } else if (isOp) {
+      newText = text.trimRight() + ' $token ';
+    } else {
+      if (text.isNotEmpty && !text.endsWith(' '))
+        newText = text + ' ' + token;
+      else
+        newText = text + token;
+    }
+
+    _controller.text = newText;
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: _controller.text.length),
+    );
+  }
+
+  void _backspace() {
+    final text = _controller.text;
+    if (text.isEmpty) return;
+    _controller.text = text.substring(0, text.length - 1);
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: _controller.text.length),
+    );
+  }
+
+  void _clear() => _controller.clear();
+
+  @override
+  Widget build(BuildContext context) {
+    final availableFields = widget.allFields
+        .where(
+          (f) =>
+              f != widget.field &&
+              f.name.isNotEmpty &&
+              (f.type == CustomFieldType.number ||
+                  f.type == CustomFieldType.currency),
+        )
+        .map((f) => f.name)
+        .toList();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.black12,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: widget.accentColor.withOpacity(0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Visual Formula Builder",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _controller,
+              readOnly: true,
+              style: const TextStyle(
+                color: Colors.white,
+                fontFamily: 'monospace',
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 2,
+              minLines: 1,
+              decoration: InputDecoration(
+                hintText: 'Tap below to build formula',
+                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.backspace, size: 18),
+                  color: Colors.white54,
+                  onPressed: _backspace,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // --- FIELDS ---
+            if (availableFields.isNotEmpty) ...[
+              const Text(
+                "Fields:",
+                style: TextStyle(color: Colors.white54, fontSize: 11),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: availableFields.map((fname) {
+                  return InkWell(
+                    onTap: () => _addToken('[$fname]'),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: widget.accentColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: widget.accentColor.withOpacity(0.5),
+                        ),
+                      ),
+                      child: Text(
+                        fname,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // --- OPERATORS ---
+            const Text(
+              "Operators:",
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _buildOpBtn('+'),
+                _buildOpBtn('-'),
+                _buildOpBtn('*'),
+                _buildOpBtn('/'),
+                _buildOpBtn('('),
+                _buildOpBtn(')'),
+                _buildActionBtn('CLR', Colors.redAccent, _clear),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // --- NUMBERS (Sequential Order) ---
+            const Text(
+              "Numbers:",
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _buildBtn('1'),
+                _buildBtn('2'),
+                _buildBtn('3'),
+                _buildBtn('4'),
+                _buildBtn('5'),
+                _buildBtn('6'),
+                _buildBtn('7'),
+                _buildBtn('8'),
+                _buildBtn('9'),
+                _buildBtn('0'),
+                _buildBtn('.'),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Checkbox(
+                  value: widget.field.isSumRequired,
+                  activeColor: widget.accentColor,
+                  onChanged: (val) =>
+                      setState(() => widget.field.isSumRequired = val!),
+                ),
+                const Text(
+                  'Calculate Total',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBtn(String label) {
+    return InkWell(
+      onTap: () => _addToken(label),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOpBtn(String label) {
+    return InkWell(
+      onTap: () => _addToken(label),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: widget.accentColor.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionBtn(String label, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.5)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+}
