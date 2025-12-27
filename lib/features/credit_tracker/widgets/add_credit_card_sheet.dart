@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/bank_list.dart';
 import '../../../core/widgets/modern_dropdown.dart';
-import '../../../core/widgets/modern_loader.dart'; // Import ModernLoader
+import '../../../core/widgets/modern_loader.dart';
+import '../../../core/widgets/calculator_keyboard.dart'; // Import Custom Keyboard
 import '../models/credit_models.dart';
 import '../services/credit_service.dart';
 
@@ -20,10 +21,19 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
   final _nameCtrl = TextEditingController();
   final _limitCtrl = TextEditingController();
 
+  // Focus Nodes
+  final FocusNode _nameNode = FocusNode();
+  final FocusNode _limitNode = FocusNode();
+
+  // Keys for Auto-Scroll
+  final GlobalKey _nameFieldKey = GlobalKey();
+  final GlobalKey _limitFieldKey = GlobalKey();
+
   String? _selectedBank;
   int _billDate = 1;
   int _dueDate = 5;
   bool _isLoading = false;
+  bool _showCustomKeyboard = false;
 
   final Color _bgColor = const Color(0xff0D1B2A);
   final Color _accentColor = const Color(0xFF3A86FF);
@@ -34,6 +44,44 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
     if (widget.cardToEdit != null) {
       _loadExistingData();
     }
+
+    // Listeners for Focus Logic
+    _nameNode.addListener(() {
+      if (_nameNode.hasFocus) {
+        setState(() => _showCustomKeyboard = false);
+        _scrollToField(_nameFieldKey);
+      }
+    });
+
+    _limitNode.addListener(() {
+      if (_limitNode.hasFocus) {
+        setState(() => _showCustomKeyboard = true);
+        _scrollToField(_limitFieldKey);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameNode.dispose();
+    _limitNode.dispose();
+    _nameCtrl.dispose();
+    _limitCtrl.dispose();
+    super.dispose();
+  }
+
+  void _scrollToField(GlobalKey key) {
+    // Small delay to allow keyboard animation to start
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (key.currentContext != null) {
+        Scrollable.ensureVisible(
+          key.currentContext!,
+          alignment: 0.5, // Center the field
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   void _loadExistingData() {
@@ -83,130 +131,186 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Adjust bottom padding: If custom keyboard is showing, use 0 (keyboard is part of column)
+    // If system keyboard is showing, use viewInsets
+    final bottomPadding = _showCustomKeyboard
+        ? 0.0
+        : MediaQuery.of(context).viewInsets.bottom;
+
     return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
+      padding: EdgeInsets.only(bottom: bottomPadding),
       decoration: BoxDecoration(
         color: _bgColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                widget.cardToEdit != null
-                    ? "Edit Credit Card"
-                    : "New Credit Card",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              TextFormField(
-                controller: _nameCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: _inputDeco('Card Name (e.g. Regalia Gold)'),
-                validator: (v) => v!.trim().isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-
-              _buildSelectField<String>(
-                label: "Bank Name",
-                value: _selectedBank,
-                items: BankConstants.indianBanks,
-                labelBuilder: (v) => v,
-                onSelect: (v) => setState(() => _selectedBank = v),
-                validator: (v) => v == null ? 'Please select a bank' : null,
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _limitCtrl,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: _inputDeco('Credit Limit'),
-                validator: (v) => v!.trim().isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSelectField<int>(
-                      label: "Bill Date",
-                      value: _billDate,
-                      items: List.generate(31, (i) => i + 1),
-                      labelBuilder: (v) => v.toString(),
-                      onSelect: (v) => setState(() => _billDate = v),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // SCROLLABLE FORM CONTENT
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildSelectField<int>(
-                      label: "Due Date",
-                      value: _dueDate,
-                      items: List.generate(31, (i) => i + 1),
-                      labelBuilder: (v) => v.toString(),
-                      onSelect: (v) => setState(() => _dueDate = v),
+                    const SizedBox(height: 24),
+                    Text(
+                      widget.cardToEdit != null
+                          ? "Edit Credit Card"
+                          : "New Credit Card",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _save,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _accentColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    // Card Name (System Keyboard)
+                    TextFormField(
+                      key: _nameFieldKey,
+                      focusNode: _nameNode,
+                      controller: _nameCtrl,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _inputDeco('Card Name (e.g. Regalia Gold)'),
+                      textInputAction: TextInputAction.next,
+                      // SYSTEM KEYBOARD: Enter -> Next Field (Limit)
+                      onFieldSubmitted: (_) {
+                        FocusScope.of(context).requestFocus(_limitNode);
+                      },
+                      validator: (v) => v!.trim().isEmpty ? 'Required' : null,
                     ),
-                  ),
-                  child: _isLoading
-                      // UPDATED: Use ModernLoader instead of CircularProgressIndicator
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: ModernLoader(size: 24),
-                        )
-                      : Text(
-                          widget.cardToEdit != null
-                              ? "Update Account"
-                              : "Create Account",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                    const SizedBox(height: 16),
+
+                    _buildSelectField<String>(
+                      label: "Bank Name",
+                      value: _selectedBank,
+                      items: BankConstants.indianBanks,
+                      labelBuilder: (v) => v,
+                      onSelect: (v) => setState(() => _selectedBank = v),
+                      validator: (v) =>
+                          v == null ? 'Please select a bank' : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Credit Limit (Custom Keyboard)
+                    TextFormField(
+                      key: _limitFieldKey,
+                      focusNode: _limitNode,
+                      controller: _limitCtrl,
+                      keyboardType: TextInputType.none, // Disable system kb
+                      showCursor: true,
+                      readOnly: true, // Prevent system actions
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _inputDeco('Credit Limit'),
+                      validator: (v) => v!.trim().isEmpty ? 'Required' : null,
+                      onTap: () {
+                        // Ensure custom keyboard shows on tap
+                        if (!_limitNode.hasFocus) {
+                          FocusScope.of(context).requestFocus(_limitNode);
+                        }
+                        setState(() => _showCustomKeyboard = true);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildSelectField<int>(
+                            label: "Bill Date",
+                            value: _billDate,
+                            items: List.generate(31, (i) => i + 1),
+                            labelBuilder: (v) => v.toString(),
+                            onSelect: (v) => setState(() => _billDate = v),
                           ),
                         ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildSelectField<int>(
+                            label: "Due Date",
+                            value: _dueDate,
+                            items: List.generate(31, (i) => i + 1),
+                            labelBuilder: (v) => v.toString(),
+                            onSelect: (v) => setState(() => _dueDate = v),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _save,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _accentColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: ModernLoader(size: 24),
+                              )
+                            : Text(
+                                widget.cardToEdit != null
+                                    ? "Update Account"
+                                    : "Create Account",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+
+          // CUSTOM KEYBOARD AREA
+          if (_showCustomKeyboard)
+            CalculatorKeyboard(
+              onKeyPress: (val) =>
+                  CalculatorKeyboard.handleKeyPress(_limitCtrl, val),
+              onBackspace: () => CalculatorKeyboard.handleBackspace(_limitCtrl),
+              onClear: () => _limitCtrl.clear(),
+              onEquals: () => CalculatorKeyboard.handleEquals(_limitCtrl),
+              onClose: () {
+                setState(() => _showCustomKeyboard = false);
+                _limitNode.unfocus();
+              },
+              // Previous: Go back to Name Field
+              onPrevious: () {
+                setState(() => _showCustomKeyboard = false);
+                FocusScope.of(context).requestFocus(_nameNode);
+              },
+              // Next: No next field, maybe Close or Save? Let's just Close for now
+              onNext: () {
+                setState(() => _showCustomKeyboard = false);
+                _limitNode.unfocus();
+              },
+            ),
+        ],
       ),
     );
   }

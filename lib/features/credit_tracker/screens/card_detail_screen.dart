@@ -197,8 +197,10 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
               try {
                 await CreditService().deleteTransaction(txn);
                 if (context.mounted) {
-                  // FIX: Use rootNavigator: true to ensure we pop the Dialog, not the Screen
-                  Navigator.of(context, rootNavigator: true).pop();
+                  Navigator.of(
+                    context,
+                    rootNavigator: true,
+                  ).pop(); // Close loader
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text("Transaction deleted"),
@@ -236,7 +238,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      useRootNavigator: true, // Explicitly push to root
+      useRootNavigator: true,
       builder: (_) => const Center(child: ModernLoader(size: 60)),
     );
   }
@@ -794,7 +796,10 @@ class _TransactionItemState extends State<TransactionItem> {
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
     final isExpense = widget.txn.type == 'Expense';
-    final amountColor = isExpense ? Colors.white : Colors.greenAccent;
+
+    // UPDATED: Red for Expense, Green for Income
+    final amountColor = isExpense ? Colors.redAccent : Colors.greenAccent;
+
     final iconData = _getCategoryIcon(widget.txn.category);
     final iconColor = isExpense ? const Color(0xFF3A86FF) : Colors.green;
 
