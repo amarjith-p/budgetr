@@ -13,4 +13,8 @@ class FirebaseConstants {
   // Custom Data Entry
   static const String customTemplates = 'custom_templates';
   static const String customRecords = 'custom_records';
+
+  // Credit Tracker
+  static const String creditCards = 'credit_cards';
+  static const String creditTransactions = 'credit_transactions';
 }

@@ -4,7 +4,7 @@ import '../../custom_entry/screens/custom_entry_dashboard.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../../net_worth/screens/net_worth_screen.dart';
 import '../../settlement/screens/settlement_screen.dart';
-// --- 1. Add this Import ---
+import '../../credit_tracker/screens/credit_tracker_screen.dart';
 import '../../investment/screens/investment_screen.dart';
 
 import '../widgets/home_app_bar.dart';
@@ -118,6 +118,14 @@ class HomeScreen extends StatelessWidget {
                           icon: Icons.handshake_outlined,
                           color: const Color(0xFF7209B7),
                           destination: const SettlementScreen(),
+                        ),
+                        // --- 2. NEW CREDIT TRACKER CARD ---
+                        HomeFeatureCard(
+                          title: "Credit Tracker",
+                          subtitle: "Cards & Repayments",
+                          icon: Icons.credit_card_outlined,
+                          color: const Color(0xFFE63946), // Crimson Red
+                          destination: const CreditTrackerScreen(),
                         ),
                         HomeFeatureCard(
                           title: "Custom Data Entry",
