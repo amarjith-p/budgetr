@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../../core/widgets/modern_dropdown.dart';
-import '../../../core/widgets/modern_loader.dart'; // Import ModernLoader
+import '../../../core/widgets/modern_loader.dart';
+import '../../../core/widgets/calculator_keyboard.dart'; // Import Custom Keyboard
 import '../../../core/models/percentage_config_model.dart';
 import '../../settings/services/settings_service.dart';
 import '../models/credit_models.dart';
@@ -23,6 +24,14 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
   final _amountCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
 
+  // Focus Nodes
+  final FocusNode _amountNode = FocusNode();
+  final FocusNode _notesNode = FocusNode();
+
+  // Keys for Auto-Scroll
+  final GlobalKey _amountFieldKey = GlobalKey();
+  final GlobalKey _notesFieldKey = GlobalKey();
+
   CreditCardModel? _selectedCard;
   List<CreditCardModel> _cards = [];
   List<String> _buckets = [];
@@ -34,6 +43,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
   String? _subCategory;
 
   bool _isLoading = false;
+  bool _showCustomKeyboard = false;
 
   final Map<String, List<String>> _expenseCategories = {
     'Shopping': ['Clothing', 'Electronics', 'Groceries', 'Home'],
@@ -54,6 +64,43 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
   void initState() {
     super.initState();
     _loadData();
+
+    // Focus Listeners
+    _amountNode.addListener(() {
+      if (_amountNode.hasFocus) {
+        setState(() => _showCustomKeyboard = true);
+        _scrollToField(_amountFieldKey);
+      }
+    });
+
+    _notesNode.addListener(() {
+      if (_notesNode.hasFocus) {
+        setState(() => _showCustomKeyboard = false);
+        _scrollToField(_notesFieldKey);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _amountNode.dispose();
+    _notesNode.dispose();
+    _amountCtrl.dispose();
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  void _scrollToField(GlobalKey key) {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (key.currentContext != null) {
+        Scrollable.ensureVisible(
+          key.currentContext!,
+          alignment: 0.5,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   Future<void> _loadData() async {
@@ -141,224 +188,284 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
         ? categories[_category]!
         : <String>[];
 
+    final bottomPadding = _showCustomKeyboard
+        ? 0.0
+        : MediaQuery.of(context).viewInsets.bottom;
+
     return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
+      padding: EdgeInsets.only(bottom: bottomPadding),
       decoration: const BoxDecoration(
         color: Color(0xff0D1B2A),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                isEditing ? "Edit Transaction" : "Add Transaction",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              AbsorbPointer(
-                absorbing: isEditing,
-                child: Opacity(
-                  opacity: isEditing ? 0.5 : 1.0,
-                  child: _buildSelectField<CreditCardModel>(
-                    label: "Credit Card",
-                    value: _selectedCard,
-                    items: _cards,
-                    labelBuilder: (c) => "${c.bankName} - ${c.name}",
-                    onSelect: (v) => setState(() => _selectedCard = v),
-                    validator: (v) => v == null ? 'Please select a card' : null,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _typeButton(
-                      "Expense",
-                      Colors.redAccent,
-                      _type == 'Expense',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _typeButton(
-                      "Payment/Income",
-                      Colors.greenAccent,
-                      _type == 'Income',
+                    const SizedBox(height: 24),
+                    Text(
+                      isEditing ? "Edit Transaction" : "Add Transaction",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
-              InkWell(
-                onTap: () async {
-                  final pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: _date,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2030),
-                    builder: (context, child) =>
-                        Theme(data: ThemeData.dark(), child: child!),
-                  );
+                    AbsorbPointer(
+                      absorbing: isEditing,
+                      child: Opacity(
+                        opacity: isEditing ? 0.5 : 1.0,
+                        child: _buildSelectField<CreditCardModel>(
+                          label: "Credit Card",
+                          value: _selectedCard,
+                          items: _cards,
+                          labelBuilder: (c) => "${c.bankName} - ${c.name}",
+                          onSelect: (v) => setState(() => _selectedCard = v),
+                          validator: (v) =>
+                              v == null ? 'Please select a card' : null,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
-                  if (pickedDate != null) {
-                    if (!mounted) return;
-                    final pickedTime = await showTimePicker(
-                      context: context,
-                      initialTime: TimeOfDay.fromDateTime(_date),
-                      builder: (context, child) =>
-                          Theme(data: ThemeData.dark(), child: child!),
-                    );
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _typeButton(
+                            "Expense",
+                            Colors.redAccent,
+                            _type == 'Expense',
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _typeButton(
+                            "Payment/Income",
+                            Colors.greenAccent,
+                            _type == 'Income',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
 
-                    if (pickedTime != null) {
-                      setState(() {
-                        _date = DateTime(
-                          pickedDate.year,
-                          pickedDate.month,
-                          pickedDate.day,
-                          pickedTime.hour,
-                          pickedTime.minute,
+                    InkWell(
+                      onTap: () async {
+                        // Dismiss keyboards when picking date
+                        _amountNode.unfocus();
+                        _notesNode.unfocus();
+                        setState(() => _showCustomKeyboard = false);
+
+                        final pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: _date,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                          builder: (context, child) =>
+                              Theme(data: ThemeData.dark(), child: child!),
                         );
-                      });
-                    }
-                  }
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: InputDecorator(
-                  decoration: _inputDeco('Date & Time').copyWith(
-                    suffixIcon: const Icon(
-                      Icons.calendar_today,
-                      color: Colors.white54,
-                      size: 18,
+
+                        if (pickedDate != null) {
+                          if (!mounted) return;
+                          final pickedTime = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.fromDateTime(_date),
+                            builder: (context, child) =>
+                                Theme(data: ThemeData.dark(), child: child!),
+                          );
+
+                          if (pickedTime != null) {
+                            setState(() {
+                              _date = DateTime(
+                                pickedDate.year,
+                                pickedDate.month,
+                                pickedDate.day,
+                                pickedTime.hour,
+                                pickedTime.minute,
+                              );
+                            });
+                          }
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: InputDecorator(
+                        decoration: _inputDeco('Date & Time').copyWith(
+                          suffixIcon: const Icon(
+                            Icons.calendar_today,
+                            color: Colors.white54,
+                            size: 18,
+                          ),
+                        ),
+                        child: Text(
+                          DateFormat('dd MMM yyyy, hh:mm a').format(_date),
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    DateFormat('dd MMM yyyy, hh:mm a').format(_date),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-              TextFormField(
-                controller: _amountCtrl,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                decoration: _inputDeco('Amount').copyWith(prefixText: '₹ '),
-                validator: (v) => v!.trim().isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-
-              if (_type == 'Expense') ...[
-                _buildSelectField<String>(
-                  label: "Budget Bucket",
-                  value: _selectedBucket,
-                  items: _buckets,
-                  labelBuilder: (v) => v,
-                  onSelect: (v) => setState(() => _selectedBucket = v),
-                  validator: (v) => v == null ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSelectField<String>(
-                      label: "Category",
-                      value: _category,
-                      items: categoryKeys,
-                      labelBuilder: (v) => v,
-                      onSelect: (v) => setState(() {
-                        _category = v;
-                        _subCategory = null;
-                      }),
-                      validator: (v) => v == null ? 'Required' : null,
+                    // Amount Field (Custom Keyboard)
+                    TextFormField(
+                      key: _amountFieldKey,
+                      focusNode: _amountNode,
+                      controller: _amountCtrl,
+                      keyboardType: TextInputType.none,
+                      showCursor: true,
+                      readOnly: true,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      decoration: _inputDeco(
+                        'Amount',
+                      ).copyWith(prefixText: '₹ '),
+                      validator: (v) => v!.trim().isEmpty ? 'Required' : null,
+                      onTap: () {
+                        if (!_amountNode.hasFocus) {
+                          FocusScope.of(context).requestFocus(_amountNode);
+                        }
+                        setState(() => _showCustomKeyboard = true);
+                      },
                     ),
-                  ),
-                  if (_category != null) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildSelectField<String>(
-                        label: "Sub-Category",
-                        value: _subCategory,
-                        items: subCategories,
+                    const SizedBox(height: 16),
+
+                    if (_type == 'Expense') ...[
+                      _buildSelectField<String>(
+                        label: "Budget Bucket",
+                        value: _selectedBucket,
+                        items: _buckets,
                         labelBuilder: (v) => v,
-                        onSelect: (v) => setState(() => _subCategory = v),
+                        onSelect: (v) => setState(() => _selectedBucket = v),
+                        validator: (v) => v == null ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildSelectField<String>(
+                            label: "Category",
+                            value: _category,
+                            items: categoryKeys,
+                            labelBuilder: (v) => v,
+                            onSelect: (v) => setState(() {
+                              _category = v;
+                              _subCategory = null;
+                            }),
+                            validator: (v) => v == null ? 'Required' : null,
+                          ),
+                        ),
+                        if (_category != null) ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildSelectField<String>(
+                              label: "Sub-Category",
+                              value: _subCategory,
+                              items: subCategories,
+                              labelBuilder: (v) => v,
+                              onSelect: (v) => setState(() => _subCategory = v),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Notes Field (System Keyboard)
+                    TextFormField(
+                      key: _notesFieldKey,
+                      focusNode: _notesNode,
+                      controller: _notesCtrl,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _inputDeco('Notes (Optional)'),
+                      textInputAction: TextInputAction.done,
+                      // Hide KB on Done
+                      onFieldSubmitted: (_) => _notesNode.unfocus(),
+                    ),
+                    const SizedBox(height: 32),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _save,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF3A86FF),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: ModernLoader(size: 24),
+                              )
+                            : Text(
+                                isEditing
+                                    ? "Update Transaction"
+                                    : "Add Transaction",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                       ),
                     ),
                   ],
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _notesCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: _inputDeco('Notes (Optional)'),
-              ),
-              const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _save,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3A86FF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isLoading
-                      // UPDATED: ModernLoader used here
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: ModernLoader(size: 24),
-                        )
-                      : Text(
-                          isEditing ? "Update Transaction" : "Add Transaction",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+
+          // CUSTOM KEYBOARD
+          if (_showCustomKeyboard)
+            CalculatorKeyboard(
+              onKeyPress: (val) =>
+                  CalculatorKeyboard.handleKeyPress(_amountCtrl, val),
+              onBackspace: () =>
+                  CalculatorKeyboard.handleBackspace(_amountCtrl),
+              onClear: () => _amountCtrl.clear(),
+              onEquals: () => CalculatorKeyboard.handleEquals(_amountCtrl),
+              onClose: () {
+                setState(() => _showCustomKeyboard = false);
+                _amountNode.unfocus();
+              },
+              onPrevious: () {
+                // No previous field really suitable (Date is popup), so close/unfocus
+                setState(() => _showCustomKeyboard = false);
+                _amountNode.unfocus();
+              },
+              onNext: () {
+                // Next -> Focus Notes (System Keyboard)
+                setState(() => _showCustomKeyboard = false);
+                FocusScope.of(context).requestFocus(_notesNode);
+              },
+            ),
+        ],
       ),
     );
   }
@@ -393,19 +500,26 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             InkWell(
-              onTap: () => showSelectionSheet<T>(
-                context: context,
-                title: "Select $label",
-                items: items,
-                selectedItem: value,
-                labelBuilder: labelBuilder,
-                onSelect: (v) {
-                  if (v != null) {
-                    onSelect(v);
-                    state.didChange(v);
-                  }
-                },
-              ),
+              onTap: () {
+                // Dismiss keyboard if open
+                _amountNode.unfocus();
+                _notesNode.unfocus();
+                setState(() => _showCustomKeyboard = false);
+
+                showSelectionSheet<T>(
+                  context: context,
+                  title: "Select $label",
+                  items: items,
+                  selectedItem: value,
+                  labelBuilder: labelBuilder,
+                  onSelect: (v) {
+                    if (v != null) {
+                      onSelect(v);
+                      state.didChange(v);
+                    }
+                  },
+                );
+              },
               borderRadius: BorderRadius.circular(12),
               child: InputDecorator(
                 decoration: _inputDeco(label).copyWith(
