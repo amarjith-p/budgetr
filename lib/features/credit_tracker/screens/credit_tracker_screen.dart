@@ -1,12 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../core/constants/bank_list.dart';
-import '../../../core/widgets/modern_loader.dart';
+import '../../../core/widgets/async_stream_builder.dart';
+import '../../../core/widgets/loading_overlay.dart';
 import '../models/credit_models.dart';
 import '../services/credit_service.dart';
 import '../widgets/add_credit_card_sheet.dart';
 import '../widgets/add_credit_txn_sheet.dart';
+import '../widgets/credit_card_tile.dart';
 import 'card_detail_screen.dart';
 
 class CreditTrackerScreen extends StatefulWidget {
@@ -24,7 +25,7 @@ class _CreditTrackerScreenState extends State<CreditTrackerScreen> {
   );
   final Color _accentColor = const Color(0xFF3A86FF);
 
-  // State to manage loading overlay instead of Dialogs
+  // State to manage loading overlay
   bool _isLoading = false;
 
   late Stream<List<CreditCardModel>> _cardsStream;
@@ -37,168 +38,157 @@ class _CreditTrackerScreenState extends State<CreditTrackerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xff0D1B2A),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          "Credit Tracker",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            onPressed: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (ctx) => const AddCreditCardSheet(),
-            ),
-            icon: const Icon(Icons.add_card),
-            tooltip: "Add New Card",
+    // Use Theme background instead of hardcoded color
+    return LoadingOverlay(
+      isLoading: _isLoading,
+      child: Scaffold(
+        backgroundColor: const Color(
+          0xff0D1B2A,
+        ), // Keep as is or use Theme.of(context).scaffoldBackgroundColor
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: true,
+          title: const Text(
+            "Credit Tracker",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // Main Content
-          StreamBuilder<List<CreditCardModel>>(
-            stream: _cardsStream,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: ModernLoader());
-              }
+          iconTheme: const IconThemeData(color: Colors.white),
+          actions: [
+            IconButton(
+              onPressed: () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (ctx) => const AddCreditCardSheet(),
+              ),
+              icon: const Icon(Icons.add_card),
+              tooltip: "Add New Card",
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: AsyncStreamBuilder<List<CreditCardModel>>(
+          stream: _cardsStream,
+          emptyBuilder: (context) => _buildEmptyState(context),
+          builder: (context, cards) {
+            // Calculate totals
+            final double totalDebt = cards
+                .where((c) => c.currentBalance > 0)
+                .fold(0.0, (sum, c) => sum + c.currentBalance);
+            final double totalSurplus = cards
+                .where((c) => c.currentBalance < 0)
+                .fold(0.0, (sum, c) => sum + c.currentBalance);
 
-              if (snapshot.hasError) {
-                return Center(
-                  child: Text(
-                    "Error: ${snapshot.error}",
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                );
-              }
+            double displayAmount = 0;
+            String label = "STATUS";
+            Color valueColor = const Color(0xFF00B4D8);
 
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return _buildEmptyState(context);
-              }
+            if (totalDebt > 0.01) {
+              label = "TOTAL PAYABLE";
+              displayAmount = -totalDebt;
+              valueColor = Colors.white;
+            } else if (totalSurplus.abs() > 0.01) {
+              label = "TOTAL SURPLUS";
+              displayAmount = -totalSurplus;
+              valueColor = const Color(0xFF4CC9F0);
+            }
 
-              final cards = snapshot.data!;
-              final double totalDebt = cards
-                  .where((c) => c.currentBalance > 0)
-                  .fold(0.0, (sum, c) => sum + c.currentBalance);
-              final double totalSurplus = cards
-                  .where((c) => c.currentBalance < 0)
-                  .fold(0.0, (sum, c) => sum + c.currentBalance);
-
-              double displayAmount = 0;
-              String label = "STATUS";
-              Color valueColor = const Color(0xFF00B4D8);
-
-              if (totalDebt > 0.01) {
-                label = "TOTAL PAYABLE";
-                displayAmount = -totalDebt;
-                valueColor = Colors.white;
-              } else if (totalSurplus.abs() > 0.01) {
-                label = "TOTAL SURPLUS";
-                displayAmount = -totalSurplus;
-                valueColor = const Color(0xFF4CC9F0);
-              }
-
-              return Stack(
-                children: [
-                  Column(
-                    children: [
-                      _buildTotalHeader(
-                        label,
-                        displayAmount,
-                        valueColor,
-                        _currency,
-                      ),
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                          itemCount: cards.length,
-                          itemBuilder: (context, index) => _buildCreditCard(
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    _buildTotalHeader(
+                      label,
+                      displayAmount,
+                      valueColor,
+                      _currency,
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                        itemCount: cards.length,
+                        itemBuilder: (context, index) => CreditCardTile(
+                          card: cards[index],
+                          currency: _currency,
+                          accentColor: _accentColor,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  CreditCardDetailScreen(card: cards[index]),
+                            ),
+                          ),
+                          onMoreTap: () => _showCardDetails(
                             context,
                             cards[index],
-                            _accentColor,
                             _currency,
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                  Positioned(
-                    bottom: 20,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: GestureDetector(
-                        onTap: () => showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (ctx) => const AddCreditTransactionSheet(),
+                    ),
+                  ],
+                ),
+                Positioned(
+                  bottom: 20,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () => showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (ctx) => const AddCreditTransactionSheet(),
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
                         ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 16,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [_accentColor, const Color(0xFF2563EB)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [_accentColor, const Color(0xFF2563EB)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _accentColor.withOpacity(0.4),
+                              blurRadius: 20,
+                              spreadRadius: -5,
+                              offset: const Offset(0, 10),
                             ),
-                            borderRadius: BorderRadius.circular(30),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _accentColor.withOpacity(0.4),
-                                blurRadius: 20,
-                                spreadRadius: -5,
-                                offset: const Offset(0, 10),
+                          ],
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.add_rounded, color: Colors.white),
+                            SizedBox(width: 12),
+                            Text(
+                              "Add Transaction",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
                               ),
-                            ],
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.2),
-                              width: 1,
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(Icons.add_rounded, color: Colors.white),
-                              SizedBox(width: 12),
-                              Text(
-                                "Add Transaction",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                ],
-              );
-            },
-          ),
-
-          // Loading Overlay
-          if (_isLoading)
-            Container(
-              color: Colors.black54,
-              child: const Center(child: ModernLoader(size: 60)),
-            ),
-        ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -261,176 +251,6 @@ class _CreditTrackerScreenState extends State<CreditTrackerScreen> {
       ],
     ),
   );
-
-  Widget _buildCreditCard(
-    BuildContext context,
-    CreditCardModel card,
-    Color accent,
-    NumberFormat currency,
-  ) {
-    double displayBalance = -card.currentBalance;
-    if (displayBalance.abs() < 0.01) displayBalance = 0.0;
-    final bool isSurplus = displayBalance > 0;
-
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => CreditCardDetailScreen(card: card)),
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        height: 160,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF1B263B),
-              const Color(0xff0D1B2A).withOpacity(0.95),
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -40,
-              top: -40,
-              child: CircleAvatar(
-                radius: 90,
-                backgroundColor: accent.withOpacity(0.05),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                BankConstants.getBankLogoPath(card.bankName),
-                                fit: BoxFit.contain,
-                                errorBuilder: (c, e, s) => Center(
-                                  child: Text(
-                                    BankConstants.getBankInitials(
-                                      card.bankName,
-                                    ),
-                                    style: TextStyle(
-                                      color: accent,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            card.bankName.toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ],
-                      ),
-                      InkWell(
-                        onTap: () => _showCardDetails(context, card, currency),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.1),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.more_horiz,
-                            color: Colors.white70,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Text(
-                    card.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            "CREDIT BALANCE",
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.5),
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            currency.format(displayBalance),
-                            style: TextStyle(
-                              color: isSurplus
-                                  ? const Color(0xFF4CC9F0)
-                                  : Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showCardDetails(
     BuildContext context,
@@ -600,9 +420,9 @@ class _CreditTrackerScreenState extends State<CreditTrackerScreen> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(ctx); // Pop confirmation dialog
+              Navigator.pop(ctx);
 
-              // State-based loading: Safe against navigation popping issues
+              // Use state-based loading overlay
               setState(() {
                 _isLoading = true;
               });
