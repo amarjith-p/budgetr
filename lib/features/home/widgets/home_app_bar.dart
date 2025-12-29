@@ -13,49 +13,61 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Colors.transparent,
       elevation: 0,
       systemOverlayStyle: SystemUiOverlayStyle.light,
+      centerTitle: false,
+      titleSpacing: 20,
       title: Row(
         children: [
-          // Avatar
+          // Elegant Avatar Ring
           Container(
-            width: 42,
-            height: 42,
+            padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
                 color: Colors.white.withOpacity(0.2),
-                width: 1.5,
+                width: 1,
               ),
-              image: const DecorationImage(
-                image: AssetImage('assets/images/avatar.png'),
-                fit: BoxFit.cover,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+            ),
+            child: const CircleAvatar(
+              radius: 16,
+              backgroundImage: AssetImage('assets/images/avatar.png'),
             ),
           ),
           const SizedBox(width: 12),
-          // App Title
-          const Text(
-            'BudGetR',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-              fontSize: 22,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'BudGetR',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Text(
+                'Pro',
+                style: TextStyle(
+                  color: const Color(0xFF4361EE).withOpacity(0.8),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
           ),
         ],
       ),
       actions: [
         IconButton(
           onPressed: () {},
-          icon: const Icon(Icons.notifications_outlined, color: Colors.white70),
+          icon: Icon(
+            Icons.notifications_none_rounded,
+            color: Colors.white.withOpacity(0.8),
+          ),
+          splashRadius: 24,
         ),
+        const SizedBox(width: 8),
       ],
     );
   }

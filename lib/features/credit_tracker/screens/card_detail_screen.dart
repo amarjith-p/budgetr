@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:budget/features/credit_tracker/models/credit_models.dart';
+import 'package:budget/features/credit_tracker/services/credit_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
@@ -6,8 +8,6 @@ import '../../../core/widgets/modern_loader.dart';
 import '../../../core/models/transaction_category_model.dart';
 import '../../../core/services/category_service.dart';
 import '../../../core/constants/icon_constants.dart';
-import '../models/credit_models.dart';
-import '../services/credit_service.dart';
 import '../widgets/add_credit_txn_sheet.dart';
 
 class CreditCardDetailScreen extends StatefulWidget {
@@ -25,8 +25,9 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
   final Set<String> _selectedCategories = {};
   final Set<String> _selectedBuckets = {};
 
-  final Color _bgColor = const Color(0xff0D1B2A);
-  final Color _accentColor = const Color(0xFF3A86FF);
+  final Color _bgColor = const Color(0xff050505);
+  final Color _accentBlue = const Color(0xFF4361EE);
+  final Color _accentPink = const Color(0xFFF72585);
 
   bool _isLoading = false;
 
@@ -58,60 +59,121 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
 
         return Scaffold(
           backgroundColor: _bgColor,
+          extendBodyBehindAppBar: true,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            titleSpacing: 0,
+            leading: IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+              ),
+              color: Colors.white,
+              onPressed: () => Navigator.pop(context),
+            ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   widget.card.name,
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   widget.card.bankName,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.5),
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
-            iconTheme: const IconThemeData(color: Colors.white),
             actions: [
               StreamBuilder<List<CreditTransactionModel>>(
                 stream: _transactionStream,
                 builder: (context, snapshot) {
                   final hasData = snapshot.hasData && snapshot.data!.isNotEmpty;
-                  return Stack(
-                    alignment: Alignment.topRight,
-                    children: [
-                      IconButton(
-                        onPressed: hasData
-                            ? () => _openFilterSheet(context, snapshot.data!)
-                            : null,
-                        icon: const Icon(Icons.filter_list_rounded),
-                        tooltip: "Filter Transactions",
-                      ),
-                      if (_hasActiveFilters)
-                        Container(
-                          margin: const EdgeInsets.all(10),
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.redAccent,
-                            shape: BoxShape.circle,
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: GestureDetector(
+                      onTap: hasData
+                          ? () => _openFilterSheet(context, snapshot.data!)
+                          : null,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _hasActiveFilters
+                              ? _accentBlue.withOpacity(0.2)
+                              : Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: _hasActiveFilters
+                                ? _accentBlue.withOpacity(0.5)
+                                : Colors.white.withOpacity(0.1),
                           ),
                         ),
-                    ],
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.filter_list_rounded,
+                              size: 16,
+                              color: _hasActiveFilters
+                                  ? _accentBlue
+                                  : Colors.white70,
+                            ),
+                            if (_hasActiveFilters) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: _accentPink,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
                   );
                 },
               ),
-              const SizedBox(width: 8),
             ],
           ),
           body: Stack(
             children: [
+              // --- Aurora Background ---
+              Positioned(
+                top: -100,
+                right: -50,
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _accentBlue.withOpacity(0.1),
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+                    child: Container(color: Colors.transparent),
+                  ),
+                ),
+              ),
+
               Column(
                 children: [
+                  SizedBox(height: MediaQuery.of(context).padding.top + 60),
                   if (_hasActiveFilters) _buildActiveFiltersList(),
                   Expanded(
                     child: StreamBuilder<List<CreditTransactionModel>>(
@@ -121,7 +183,6 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                             ConnectionState.waiting) {
                           return const Center(child: ModernLoader());
                         }
-
                         if (snapshot.hasError) {
                           return Center(
                             child: Text(
@@ -130,16 +191,14 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                             ),
                           );
                         }
-
                         if (!snapshot.hasData || snapshot.data!.isEmpty) {
                           return _buildEmptyState("No transactions found.");
                         }
 
                         final filteredList = _applyFilters(snapshot.data!);
-
                         if (filteredList.isEmpty) {
                           return _buildEmptyState(
-                            "No transactions match your filters.",
+                            "No transactions match filters.",
                           );
                         }
 
@@ -152,7 +211,10 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                         });
 
                         return ListView.builder(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 0,
+                          ),
                           itemCount: grouped.length,
                           itemBuilder: (context, index) {
                             final month = grouped.keys.elementAt(index);
@@ -163,15 +225,16 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
+                                    vertical: 16,
+                                    horizontal: 4,
                                   ),
                                   child: Text(
-                                    month,
-                                    style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 13,
+                                    month.toUpperCase(),
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.4),
+                                      fontSize: 12,
                                       fontWeight: FontWeight.bold,
-                                      letterSpacing: 1,
+                                      letterSpacing: 1.5,
                                     ),
                                   ),
                                 ),
@@ -191,6 +254,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                                       ),
                                     )
                                     .toList(),
+                                const SizedBox(height: 10),
                               ],
                             );
                           },
@@ -200,10 +264,10 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                   ),
                 ],
               ),
-              // Loading Overlay
+
               if (_isLoading)
                 Container(
-                  color: Colors.black54,
+                  color: Colors.black.withOpacity(0.7),
                   child: const Center(child: ModernLoader(size: 60)),
                 ),
             ],
@@ -213,90 +277,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
     );
   }
 
-  void _handleEdit(BuildContext context, CreditTransactionModel txn) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (c) => AddCreditTransactionSheet(transactionToEdit: txn),
-    );
-  }
-
-  void _handleDeleteTransaction(
-    BuildContext context,
-    CreditTransactionModel txn,
-  ) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0D1B2A),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withOpacity(0.1)),
-        ),
-        title: const Text(
-          "Delete Transaction?",
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Text(
-          "This will permanently remove the transaction and revert the balance impact on your card.",
-          style: TextStyle(color: Colors.white.withOpacity(0.7)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(color: Colors.white54),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-
-              // State-based loading
-              setState(() {
-                _isLoading = true;
-              });
-
-              try {
-                await CreditService().deleteTransaction(txn);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Transaction deleted"),
-                      backgroundColor: Colors.redAccent,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text("Error: $e")));
-                }
-              } finally {
-                if (mounted) {
-                  setState(() {
-                    _isLoading = false;
-                  });
-                }
-              }
-            },
-            child: const Text(
-              "Delete",
-              style: TextStyle(
-                color: Colors.redAccent,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ... (Remaining methods: _applyFilters, _buildActiveFiltersList, etc. unchanged)
+  // ... (Filter Logic - Unchanged) ...
   List<CreditTransactionModel> _applyFilters(
     List<CreditTransactionModel> data,
   ) {
@@ -342,6 +323,76 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
       _selectedCategories.isNotEmpty ||
       _selectedBuckets.isNotEmpty ||
       _sortOption != 'Newest';
+
+  void _handleEdit(BuildContext context, CreditTransactionModel txn) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (c) => AddCreditTransactionSheet(transactionToEdit: txn),
+    );
+  }
+
+  void _handleDeleteTransaction(
+    BuildContext context,
+    CreditTransactionModel txn,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xff0D1B2A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          "Delete Transaction?",
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          "This will permanently remove the transaction and revert the balance impact on your card.",
+          style: TextStyle(color: Colors.white.withOpacity(0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _isLoading = true);
+              try {
+                await CreditService().deleteTransaction(txn);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Transaction deleted"),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted)
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("Error: $e")));
+              } finally {
+                if (mounted) setState(() => _isLoading = false);
+              }
+            },
+            child: const Text(
+              "Delete",
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildActiveFiltersList() {
     return Container(
@@ -390,14 +441,16 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
               () => setState(() => _dateRange = null),
             ),
           ..._selectedCategories.map(
-            (c) => _buildFilterChip(c, () {
-              setState(() => _selectedCategories.remove(c));
-            }),
+            (c) => _buildFilterChip(
+              c,
+              () => setState(() => _selectedCategories.remove(c)),
+            ),
           ),
           ..._selectedBuckets.map(
-            (b) => _buildFilterChip("Bucket: $b", () {
-              setState(() => _selectedBuckets.remove(b));
-            }),
+            (b) => _buildFilterChip(
+              "Bucket: $b",
+              () => setState(() => _selectedBuckets.remove(b)),
+            ),
           ),
           if (_sortOption != 'Newest')
             _buildFilterChip(
@@ -412,18 +465,18 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
   Widget _buildFilterChip(String label, VoidCallback onRemove) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.only(left: 12, right: 4, top: 6, bottom: 6),
+      padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
       decoration: BoxDecoration(
-        color: _accentColor.withOpacity(0.1),
+        color: _accentBlue.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _accentColor.withOpacity(0.3)),
+        border: Border.all(color: _accentBlue.withOpacity(0.3)),
       ),
       child: Row(
         children: [
           Text(
             label,
             style: TextStyle(
-              color: _accentColor,
+              color: _accentBlue,
               fontWeight: FontWeight.w600,
               fontSize: 11,
             ),
@@ -431,8 +484,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
           const SizedBox(width: 4),
           InkWell(
             onTap: onRemove,
-            borderRadius: BorderRadius.circular(10),
-            child: Icon(Icons.close, size: 16, color: _accentColor),
+            child: Icon(Icons.close, size: 14, color: _accentBlue),
           ),
         ],
       ),
@@ -459,13 +511,13 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           decoration: BoxDecoration(
-            color: _bgColor,
+            color: _bgColor.withOpacity(0.9),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
@@ -496,7 +548,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                             "Filter & Sort",
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 20,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -518,7 +570,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       _buildSectionTitle("Sort By"),
                       const SizedBox(height: 12),
                       SingleChildScrollView(
@@ -532,7 +584,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       _buildSectionTitle("Type"),
                       const SizedBox(height: 12),
                       Row(
@@ -546,7 +598,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                           Expanded(child: _typeButton("Income", setModalState)),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       _buildSectionTitle("Date Range"),
                       const SizedBox(height: 12),
                       InkWell(
@@ -558,7 +610,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                             builder: (context, child) => Theme(
                               data: ThemeData.dark().copyWith(
                                 colorScheme: ColorScheme.dark(
-                                  primary: _accentColor,
+                                  primary: _accentBlue,
                                   onPrimary: Colors.white,
                                   surface: const Color(0xFF1B263B),
                                   onSurface: Colors.white,
@@ -596,35 +648,22 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                               Text(
                                 _dateRange == null
                                     ? "All Time"
-                                    : "${DateFormat('dd MMM yyyy').format(_dateRange!.start)} - ${DateFormat('dd MMM yyyy').format(_dateRange!.end)}",
+                                    : "${DateFormat('dd MMM').format(_dateRange!.start)} - ${DateFormat('dd MMM').format(_dateRange!.end)}",
                                 style: const TextStyle(color: Colors.white),
                               ),
                               const Spacer(),
-                              if (_dateRange != null)
-                                GestureDetector(
-                                  onTap: () {
-                                    setModalState(() => _dateRange = null);
-                                    setState(() => _dateRange = null);
-                                  },
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white54,
-                                    size: 18,
-                                  ),
-                                )
-                              else
-                                const Icon(
-                                  Icons.arrow_forward_ios,
-                                  color: Colors.white24,
-                                  size: 14,
-                                ),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                color: Colors.white24,
+                                size: 14,
+                              ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       if (uniqueBuckets.isNotEmpty) ...[
-                        _buildSectionTitle("Budget Bucket"),
+                        _buildSectionTitle("Buckets"),
                         const SizedBox(height: 12),
                         Wrap(
                           spacing: 8,
@@ -633,7 +672,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                               .map((b) => _bucketChip(b, setModalState))
                               .toList(),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
                       ],
                       if (uniqueCategories.isNotEmpty) ...[
                         _buildSectionTitle("Categories"),
@@ -645,14 +684,14 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                               .map((c) => _categoryChip(c, setModalState))
                               .toList(),
                         ),
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 30),
                       ],
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () => Navigator.pop(ctx),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _accentColor,
+                            backgroundColor: _accentBlue,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -683,11 +722,12 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
     title.toUpperCase(),
     style: TextStyle(
       color: Colors.white.withOpacity(0.5),
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: FontWeight.bold,
       letterSpacing: 1.2,
     ),
   );
+
   Widget _sortChip(String label, StateSetter setModalState) {
     final isSelected = _sortOption == label;
     return GestureDetector(
@@ -699,17 +739,17 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? _accentColor : Colors.transparent,
+          color: isSelected ? _accentBlue : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? _accentColor : Colors.white.withOpacity(0.1),
+            color: isSelected ? _accentBlue : Colors.white.withOpacity(0.1),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
             color: isSelected ? Colors.white : Colors.white70,
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -727,19 +767,17 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? _accentColor.withOpacity(0.2)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? _accentBlue.withOpacity(0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? _accentColor : Colors.white.withOpacity(0.1),
+            color: isSelected ? _accentBlue : Colors.white.withOpacity(0.1),
           ),
         ),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? _accentColor : Colors.white54,
+              color: isSelected ? _accentBlue : Colors.white54,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -818,7 +856,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.search_off, size: 48, color: Colors.white.withOpacity(0.2)),
+        Icon(Icons.search_off, size: 48, color: Colors.white.withOpacity(0.1)),
         const SizedBox(height: 16),
         Text(msg, style: TextStyle(color: Colors.white.withOpacity(0.5))),
       ],
@@ -851,44 +889,47 @@ class _TransactionItemState extends State<TransactionItem> {
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
     final isExpense = widget.txn.type == 'Expense';
-    final amountColor = isExpense ? Colors.redAccent : Colors.greenAccent;
-    final iconColor = isExpense ? const Color(0xFF3A86FF) : Colors.green;
+
+    // UPDATED COLOR LOGIC
+    // Expense = Red | Payment = Green
+    final color = isExpense ? const Color(0xFFFF4D6D) : const Color(0xFF00E676);
 
     return GestureDetector(
       onTap: () => setState(() => _isExpanded = !_isExpanded),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1B263B).withOpacity(0.5),
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.white.withOpacity(_isExpanded ? 0.08 : 0.03),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: _isExpanded
-                ? Colors.white.withOpacity(0.2)
-                : Colors.white.withOpacity(0.05),
+            color: Colors.white.withOpacity(_isExpanded ? 0.1 : 0.05),
           ),
-          boxShadow: _isExpanded
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [],
         ),
         child: Column(
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  backgroundColor: iconColor.withOpacity(0.1),
-                  child: Icon(widget.iconData, color: iconColor, size: 20),
+                // Icon Container
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1), // Glows with red or green
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: color.withOpacity(0.2), // Subtle colored border
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(widget.iconData, color: color, size: 20),
                 ),
                 const SizedBox(width: 16),
+
+                // Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -897,10 +938,11 @@ class _TransactionItemState extends State<TransactionItem> {
                         widget.txn.category,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                           fontSize: 15,
                         ),
                       ),
+
                       if (widget.txn.subCategory.isNotEmpty &&
                           widget.txn.subCategory != 'General')
                         Padding(
@@ -913,47 +955,72 @@ class _TransactionItemState extends State<TransactionItem> {
                             ),
                           ),
                         ),
-                      const SizedBox(height: 6),
+
                       if (!_isExpanded)
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            if (isExpense && widget.txn.bucket.isNotEmpty)
-                              _buildTag(widget.txn.bucket),
-                            if (widget.txn.notes.isNotEmpty)
-                              Text(
-                                widget.txn.notes,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.4),
-                                  fontSize: 11,
-                                  fontStyle: FontStyle.italic,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              if (isExpense && widget.txn.bucket.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.1),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    widget.txn.bucket,
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 10,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                          ],
+
+                              if (widget.txn.notes.isNotEmpty)
+                                Text(
+                                  widget.txn.notes,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.4),
+                                    fontSize: 11,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                     ],
                   ),
                 ),
+
+                // Amount
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       "${isExpense ? '-' : '+'} ${currency.format(widget.txn.amount)}",
                       style: TextStyle(
-                        color: amountColor,
+                        color: color, // RED for Expense, GREEN for Payment
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       DateFormat('dd MMM').format(widget.txn.date.toDate()),
-                      style: const TextStyle(
-                        color: Colors.white38,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.3),
                         fontSize: 11,
                       ),
                     ),
@@ -961,14 +1028,17 @@ class _TransactionItemState extends State<TransactionItem> {
                 ),
               ],
             ),
+
+            // Expanded details
             AnimatedCrossFade(
               firstChild: const SizedBox.shrink(),
               secondChild: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
-                  const Divider(color: Colors.white10),
-                  const SizedBox(height: 8),
+                  Divider(color: Colors.white.withOpacity(0.05), height: 1),
+                  const SizedBox(height: 16),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -981,11 +1051,31 @@ class _TransactionItemState extends State<TransactionItem> {
                           fontSize: 12,
                         ),
                       ),
-                      if (isExpense && widget.txn.bucket.isNotEmpty)
-                        _buildTag("Bucket: ${widget.txn.bucket}"),
+
+                      if (widget.txn.bucket.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.1),
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            widget.txn.bucket,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 12),
+
                   if (widget.txn.notes.isNotEmpty) ...[
                     Text(
                       "Notes:",
@@ -1003,25 +1093,26 @@ class _TransactionItemState extends State<TransactionItem> {
                         fontSize: 13,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                   ],
+
                   Row(
                     children: [
                       Expanded(
-                        child: _buildActionButton(
-                          icon: Icons.edit_outlined,
-                          label: "Edit",
-                          color: Colors.white,
-                          onTap: widget.onEdit,
+                        child: _actionButton(
+                          "Edit",
+                          Icons.edit_outlined,
+                          Colors.white,
+                          widget.onEdit,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _buildActionButton(
-                          icon: Icons.delete_outline,
-                          label: "Delete",
-                          color: Colors.redAccent,
-                          onTap: widget.onDelete,
+                        child: _actionButton(
+                          "Delete",
+                          Icons.delete_outline,
+                          const Color(0xFFE63946),
+                          widget.onDelete,
                         ),
                       ),
                     ],
@@ -1031,7 +1122,7 @@ class _TransactionItemState extends State<TransactionItem> {
               crossFadeState: _isExpanded
                   ? CrossFadeState.showSecond
                   : CrossFadeState.showFirst,
-              duration: const Duration(milliseconds: 300),
+              duration: const Duration(milliseconds: 200),
             ),
           ],
         ),
@@ -1039,52 +1130,38 @@ class _TransactionItemState extends State<TransactionItem> {
     );
   }
 
-  Widget _buildTag(String text) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(
-      color: Colors.white10,
-      borderRadius: BorderRadius.circular(4),
-      border: Border.all(color: Colors.white12),
-    ),
-    child: Text(
-      text,
-      style: const TextStyle(
-        color: Colors.white70,
-        fontSize: 10,
-        fontWeight: FontWeight.w500,
-      ),
-    ),
-  );
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(12),
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
+  Widget _actionButton(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.1)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
