@@ -45,15 +45,15 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                   letterSpacing: 0.5,
                 ),
               ),
-              Text(
-                'Pro',
-                style: TextStyle(
-                  color: const Color(0xFF4361EE).withOpacity(0.8),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1,
-                ),
-              ),
+              // Text(
+              //   'Pro',
+              //   style: TextStyle(
+              //     color: const Color(0xFF4361EE).withOpacity(0.8),
+              //     fontSize: 10,
+              //     fontWeight: FontWeight.w600,
+              //     letterSpacing: 1,
+              //   ),
+              // ),
             ],
           ),
         ],

@@ -58,25 +58,25 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   const SizedBox(height: 10),
                   // Professional Greeting
-                  Text(
-                    "Overview",
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    "Financial Suite",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
+                  // Text(
+                  //   "Overview",
+                  //   style: TextStyle(
+                  //     color: Colors.white.withOpacity(0.5),
+                  //     fontSize: 14,
+                  //     fontWeight: FontWeight.w500,
+                  //     letterSpacing: 0.5,
+                  //   ),
+                  // ),
+                  // const SizedBox(height: 4),
+                  // const Text(
+                  //   "Financial Suite",
+                  //   style: TextStyle(
+                  //     color: Colors.white,
+                  //     fontSize: 28,
+                  //     fontWeight: FontWeight.bold,
+                  //     letterSpacing: -0.5,
+                  //   ),
+                  // ),
                   const SizedBox(height: 24),
 
                   // --- Dashboard Grid ---
