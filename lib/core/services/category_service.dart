@@ -172,6 +172,10 @@ class CategoryService {
       'subs': ['Second-hand Sales', 'Property Sale', 'Scrap'],
       'icon': Icons.sell.codePoint,
     },
+    'Repayments': {
+      'subs': ['EMI', 'Credit Card Payment', 'Overdue Payments'],
+      'icon': Icons.sell.codePoint,
+    },
     'Other': {
       'subs': ['Miscellaneous', 'Uncategorized'],
       'icon': Icons.add_circle_outline.codePoint,

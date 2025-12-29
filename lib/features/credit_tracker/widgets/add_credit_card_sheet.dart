@@ -1,9 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/bank_list.dart';
 import '../../../core/widgets/modern_dropdown.dart';
 import '../../../core/widgets/modern_loader.dart';
-import '../../../core/widgets/calculator_keyboard.dart'; // Import Custom Keyboard
+import '../../../core/widgets/calculator_keyboard.dart';
 import '../models/credit_models.dart';
 import '../services/credit_service.dart';
 
@@ -21,11 +22,9 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
   final _nameCtrl = TextEditingController();
   final _limitCtrl = TextEditingController();
 
-  // Focus Nodes
   final FocusNode _nameNode = FocusNode();
   final FocusNode _limitNode = FocusNode();
 
-  // Keys for Auto-Scroll
   final GlobalKey _nameFieldKey = GlobalKey();
   final GlobalKey _limitFieldKey = GlobalKey();
 
@@ -34,11 +33,13 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
   int _dueDate = 5;
   bool _isLoading = false;
   bool _showCustomKeyboard = false;
-  // ADDED: State to track keyboard type
-  bool _systemKeyboardActive = false;
 
-  final Color _bgColor = const Color(0xff0D1B2A);
-  final Color _accentColor = const Color(0xFF3A86FF);
+  // RESTORED: System Keyboard Logic
+  bool _isSystemKeyboard = false;
+
+  // Design Constants
+  final Color _bgColor = const Color(0xff050505);
+  final Color _accentColor = const Color(0xFF4361EE);
 
   @override
   void initState() {
@@ -47,7 +48,6 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
       _loadExistingData();
     }
 
-    // Listeners for Focus Logic
     _nameNode.addListener(() {
       if (_nameNode.hasFocus) {
         setState(() => _showCustomKeyboard = false);
@@ -56,10 +56,8 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
     });
 
     _limitNode.addListener(() {
-      if (_limitNode.hasFocus) {
-        if (!_systemKeyboardActive) {
-          setState(() => _showCustomKeyboard = true);
-        }
+      if (_limitNode.hasFocus && !_isSystemKeyboard) {
+        setState(() => _showCustomKeyboard = true);
         _scrollToField(_limitFieldKey);
       }
     });
@@ -75,12 +73,11 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
   }
 
   void _scrollToField(GlobalKey key) {
-    // Small delay to allow keyboard animation to start
     Future.delayed(const Duration(milliseconds: 300), () {
       if (key.currentContext != null) {
         Scrollable.ensureVisible(
           key.currentContext!,
-          alignment: 0.5, // Center the field
+          alignment: 0.5,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
@@ -135,7 +132,6 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // Adjust bottom padding
     final bottomPadding = _showCustomKeyboard
         ? 0.0
         : MediaQuery.of(context).viewInsets.bottom;
@@ -146,10 +142,10 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
         color: _bgColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      // Use Column with min size for "Wrap Content" behavior
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // SCROLLABLE FORM CONTENT
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -182,20 +178,23 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Card Name (System Keyboard)
+                    // Card Name
                     TextFormField(
                       key: _nameFieldKey,
                       focusNode: _nameNode,
                       controller: _nameCtrl,
                       style: const TextStyle(color: Colors.white),
-                      decoration: _inputDeco('Card Name (e.g. Regalia Gold)'),
+                      decoration: _inputDeco(
+                        'Card Name (e.g. Regalia)',
+                        icon: Icons.credit_card,
+                      ),
                       textInputAction: TextInputAction.next,
                       onFieldSubmitted: (_) {
                         FocusScope.of(context).requestFocus(_limitNode);
                       },
                       validator: (v) => v!.trim().isEmpty ? 'Required' : null,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     _buildSelectField<String>(
                       label: "Bank Name",
@@ -206,33 +205,36 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
                       validator: (v) =>
                           v == null ? 'Please select a bank' : null,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Credit Limit (Custom Keyboard)
+                    // Credit Limit (RESTORED: Toggle System/Custom Keyboard)
                     TextFormField(
                       key: _limitFieldKey,
                       focusNode: _limitNode,
                       controller: _limitCtrl,
-                      // FIXED: Toggle based on system keyboard activity
-                      keyboardType: _systemKeyboardActive
-                          ? const TextInputType.numberWithOptions(decimal: true)
+                      keyboardType: _isSystemKeyboard
+                          ? TextInputType.number
                           : TextInputType.none,
                       showCursor: true,
-                      readOnly: !_systemKeyboardActive,
+                      readOnly: !_isSystemKeyboard,
                       style: const TextStyle(color: Colors.white),
-                      decoration: _inputDeco('Credit Limit'),
+                      decoration: _inputDeco(
+                        'Credit Limit',
+                        icon: Icons.currency_rupee,
+                      ),
                       validator: (v) => v!.trim().isEmpty ? 'Required' : null,
                       onTap: () {
                         if (!_limitNode.hasFocus) {
                           FocusScope.of(context).requestFocus(_limitNode);
                         }
+                        // Revert to custom keyboard on tap
                         setState(() {
+                          _isSystemKeyboard = false;
                           _showCustomKeyboard = true;
-                          _systemKeyboardActive = false;
                         });
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     Row(
                       children: [
@@ -268,8 +270,10 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                           ),
+                          elevation: 8,
+                          shadowColor: _accentColor.withOpacity(0.5),
                         ),
                         child: _isLoading
                             ? const SizedBox(
@@ -296,52 +300,69 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
 
           // CUSTOM KEYBOARD AREA
           if (_showCustomKeyboard)
-            CalculatorKeyboard(
-              onKeyPress: (val) =>
-                  CalculatorKeyboard.handleKeyPress(_limitCtrl, val),
-              onBackspace: () => CalculatorKeyboard.handleBackspace(_limitCtrl),
-              onClear: () => _limitCtrl.clear(),
-              onEquals: () => CalculatorKeyboard.handleEquals(_limitCtrl),
-              onClose: () {
-                setState(() => _showCustomKeyboard = false);
-                _limitNode.unfocus();
-              },
-              onPrevious: () {
-                setState(() => _showCustomKeyboard = false);
-                FocusScope.of(context).requestFocus(_nameNode);
-              },
-              onNext: () {
-                setState(() => _showCustomKeyboard = false);
-                _limitNode.unfocus();
-              },
-              // ADDED: System Keyboard Logic
-              onSwitchToSystem: () {
-                setState(() {
-                  _showCustomKeyboard = false;
-                  _systemKeyboardActive = true;
-                });
-                _limitNode.unfocus();
-                Future.delayed(const Duration(milliseconds: 100), () {
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xff0A0A0A),
+                border: Border(
+                  top: BorderSide(color: Colors.white.withOpacity(0.1)),
+                ),
+              ),
+              child: CalculatorKeyboard(
+                onKeyPress: (val) =>
+                    CalculatorKeyboard.handleKeyPress(_limitCtrl, val),
+                onBackspace: () =>
+                    CalculatorKeyboard.handleBackspace(_limitCtrl),
+                onClear: () => _limitCtrl.clear(),
+                onEquals: () => CalculatorKeyboard.handleEquals(_limitCtrl),
+                onClose: () {
+                  setState(() => _showCustomKeyboard = false);
+                  _limitNode.unfocus();
+                },
+                // FEATURE RESTORED: Switch to System Keyboard
+                onSwitchToSystem: () {
+                  setState(() {
+                    _showCustomKeyboard = false;
+                    _isSystemKeyboard = true;
+                  });
                   FocusScope.of(context).requestFocus(_limitNode);
-                });
-              },
+                },
+                onPrevious: () {
+                  setState(() => _showCustomKeyboard = false);
+                  FocusScope.of(context).requestFocus(_nameNode);
+                },
+                onNext: () {
+                  setState(() => _showCustomKeyboard = false);
+                  _limitNode.unfocus();
+                },
+              ),
             ),
         ],
       ),
     );
   }
 
-  InputDecoration _inputDeco(String label) {
+  InputDecoration _inputDeco(String label, {IconData? icon}) {
     return InputDecoration(
       labelText: label,
       labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
+      fillColor: Colors.white.withOpacity(0.03),
+      prefixIcon: icon != null
+          ? Icon(icon, color: Colors.white24, size: 20)
+          : null,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: _accentColor, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 
@@ -374,7 +395,7 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
                   }
                 },
               ),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               child: InputDecorator(
                 decoration: _inputDeco(label).copyWith(
                   errorText: state.errorText,

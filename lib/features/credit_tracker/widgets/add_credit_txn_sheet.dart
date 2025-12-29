@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -45,8 +46,15 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
 
   bool _isLoading = false;
   bool _showCustomKeyboard = false;
-  // ADDED: State to track if system keyboard is preferred for amount
-  bool _systemKeyboardActive = false;
+
+  // RESTORED: System Keyboard Logic
+  bool _isSystemKeyboard = false;
+
+  // DESIGN CONSTANTS
+  final Color _bgColor = const Color(0xff050505);
+  final Color _accentGreen = const Color(0xFF00E676);
+  final Color _accentRed = const Color(0xFFFF4D6D);
+  final Color _accentBlue = const Color(0xFF4361EE);
 
   @override
   void initState() {
@@ -54,11 +62,8 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
     _loadData();
 
     _amountNode.addListener(() {
-      if (_amountNode.hasFocus) {
-        // If we previously switched to system, keep it unless reset
-        if (!_systemKeyboardActive) {
-          setState(() => _showCustomKeyboard = true);
-        }
+      if (_amountNode.hasFocus && !_isSystemKeyboard) {
+        setState(() => _showCustomKeyboard = true);
         _scrollToField(_amountFieldKey);
       }
     });
@@ -108,8 +113,9 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
       setState(() {
         _cards = results[0] as List<CreditCardModel>;
         final config = results[1] as PercentageConfig;
-
         _buckets = config.categories.map((e) => e.name).toList();
+
+        // RESTORED: Append "Out of Bucket" explicitly
         _buckets.add('Out of Bucket');
 
         _allCategories = results[2] as List<TransactionCategoryModel>;
@@ -178,6 +184,8 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.transactionToEdit != null;
+    final isExpense = _type == 'Expense';
+    final activeColor = isExpense ? _accentRed : _accentGreen;
 
     final relevantCategories = _allCategories
         .where((c) => c.type == _type)
@@ -207,12 +215,12 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
 
     return Container(
       padding: EdgeInsets.only(bottom: bottomPadding),
-      decoration: const BoxDecoration(
-        color: Color(0xff0D1B2A),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: _bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.min, // Wrap Content
         children: [
           Flexible(
             child: SingleChildScrollView(
@@ -259,14 +267,14 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     Row(
                       children: [
                         Expanded(
                           child: _typeButton(
                             "Expense",
-                            Colors.redAccent,
+                            _accentRed,
                             _type == 'Expense',
                           ),
                         ),
@@ -274,13 +282,13 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                         Expanded(
                           child: _typeButton(
                             "Payment/Income",
-                            Colors.greenAccent,
+                            _accentGreen,
                             _type == 'Income',
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     InkWell(
                       onTap: () async {
@@ -293,8 +301,15 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                           initialDate: _date,
                           firstDate: DateTime(2020),
                           lastDate: DateTime(2030),
-                          builder: (context, child) =>
-                              Theme(data: ThemeData.dark(), child: child!),
+                          builder: (context, child) => Theme(
+                            data: ThemeData.dark().copyWith(
+                              colorScheme: ColorScheme.dark(
+                                primary: activeColor,
+                                surface: const Color(0xFF1B263B),
+                              ),
+                            ),
+                            child: child!,
+                          ),
                         );
 
                         if (pickedDate != null) {
@@ -302,8 +317,15 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                           final pickedTime = await showTimePicker(
                             context: context,
                             initialTime: TimeOfDay.fromDateTime(_date),
-                            builder: (context, child) =>
-                                Theme(data: ThemeData.dark(), child: child!),
+                            builder: (context, child) => Theme(
+                              data: ThemeData.dark().copyWith(
+                                colorScheme: ColorScheme.dark(
+                                  primary: activeColor,
+                                  surface: const Color(0xFF1B263B),
+                                ),
+                              ),
+                              child: child!,
+                            ),
                           );
 
                           if (pickedTime != null) {
@@ -319,7 +341,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                           }
                         }
                       },
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       child: InputDecorator(
                         decoration: _inputDeco('Date & Time').copyWith(
                           suffixIcon: const Icon(
@@ -334,38 +356,48 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     TextFormField(
                       key: _amountFieldKey,
                       focusNode: _amountNode,
                       controller: _amountCtrl,
-                      // FIXED: Only disable system keyboard if using custom
-                      keyboardType: _systemKeyboardActive
-                          ? const TextInputType.numberWithOptions(decimal: true)
+                      // LOGIC RESTORATION: Toggle System/Custom Keyboard
+                      keyboardType: _isSystemKeyboard
+                          ? TextInputType.numberWithOptions(decimal: true)
                           : TextInputType.none,
                       showCursor: true,
-                      readOnly: !_systemKeyboardActive,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
+                      readOnly: !_isSystemKeyboard,
+                      style: TextStyle(
+                        color: activeColor,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
-                      decoration: _inputDeco(
-                        'Amount',
-                      ).copyWith(prefixText: '₹ '),
+                      decoration: _inputDeco('Amount').copyWith(
+                        prefixIcon: Icon(
+                          Icons.currency_rupee,
+                          color: activeColor,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: activeColor,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
                       validator: (v) => v!.trim().isEmpty ? 'Required' : null,
                       onTap: () {
                         if (!_amountNode.hasFocus) {
                           FocusScope.of(context).requestFocus(_amountNode);
                         }
                         setState(() {
+                          _isSystemKeyboard = false;
                           _showCustomKeyboard = true;
-                          _systemKeyboardActive = false; // Reset on tap
                         });
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     if (_type == 'Expense') ...[
                       _buildSelectField<String>(
@@ -376,7 +408,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                         onSelect: (v) => setState(() => _selectedBucket = v),
                         validator: (v) => v == null ? 'Required' : null,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
                     ],
 
                     Row(
@@ -408,7 +440,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     TextFormField(
                       key: _notesFieldKey,
@@ -426,12 +458,14 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _save,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3A86FF),
-                          foregroundColor: Colors.white,
+                          backgroundColor: activeColor,
+                          foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                           ),
+                          elevation: 8,
+                          shadowColor: activeColor.withOpacity(0.5),
                         ),
                         child: _isLoading
                             ? const SizedBox(
@@ -450,6 +484,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                               ),
                       ),
                     ),
+                    const SizedBox(height: 50),
                   ],
                 ),
               ),
@@ -457,55 +492,66 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
           ),
 
           if (_showCustomKeyboard)
-            CalculatorKeyboard(
-              onKeyPress: (val) =>
-                  CalculatorKeyboard.handleKeyPress(_amountCtrl, val),
-              onBackspace: () =>
-                  CalculatorKeyboard.handleBackspace(_amountCtrl),
-              onClear: () => _amountCtrl.clear(),
-              onEquals: () => CalculatorKeyboard.handleEquals(_amountCtrl),
-              onClose: () {
-                setState(() => _showCustomKeyboard = false);
-                _amountNode.unfocus();
-              },
-              onPrevious: () {
-                setState(() => _showCustomKeyboard = false);
-                _amountNode.unfocus();
-              },
-              onNext: () {
-                setState(() => _showCustomKeyboard = false);
-                FocusScope.of(context).requestFocus(_notesNode);
-              },
-              // ADDED: Switch to System Keyboard
-              onSwitchToSystem: () {
-                setState(() {
-                  _showCustomKeyboard = false;
-                  _systemKeyboardActive = true;
-                });
-                // Re-request focus to trigger system keyboard
-                // Must lose focus first if it was readOnly
-                _amountNode.unfocus();
-                Future.delayed(const Duration(milliseconds: 100), () {
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xff0A0A0A),
+                border: Border(
+                  top: BorderSide(color: Colors.white.withOpacity(0.1)),
+                ),
+              ),
+              child: CalculatorKeyboard(
+                onKeyPress: (val) =>
+                    CalculatorKeyboard.handleKeyPress(_amountCtrl, val),
+                onBackspace: () =>
+                    CalculatorKeyboard.handleBackspace(_amountCtrl),
+                onClear: () => _amountCtrl.clear(),
+                onEquals: () => CalculatorKeyboard.handleEquals(_amountCtrl),
+                onClose: () {
+                  setState(() => _showCustomKeyboard = false);
+                  _amountNode.unfocus();
+                },
+                // RESTORED: Switch to System Keyboard
+                onSwitchToSystem: () {
+                  setState(() {
+                    _showCustomKeyboard = false;
+                    _isSystemKeyboard = true;
+                  });
                   FocusScope.of(context).requestFocus(_amountNode);
-                });
-              },
+                },
+                onPrevious: () {
+                  setState(() => _showCustomKeyboard = false);
+                  _amountNode.unfocus();
+                },
+                onNext: () {
+                  setState(() => _showCustomKeyboard = false);
+                  FocusScope.of(context).requestFocus(_notesNode);
+                },
+              ),
             ),
         ],
       ),
     );
   }
 
-  InputDecoration _inputDeco(String label) {
+  InputDecoration _inputDeco(String label, {IconData? icon}) {
     return InputDecoration(
       labelText: label,
       labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
+      fillColor: Colors.white.withOpacity(0.03),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: _accentBlue, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 
@@ -544,7 +590,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                   },
                 );
               },
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               child: InputDecorator(
                 decoration: _inputDeco(label).copyWith(
                   errorText: state.errorText,
@@ -576,12 +622,15 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
           _selectedBucket = null;
         }
       }),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: isSelected ? color.withOpacity(0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isSelected ? color : Colors.white12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : Colors.white.withOpacity(0.1),
+          ),
         ),
         child: Center(
           child: Text(
