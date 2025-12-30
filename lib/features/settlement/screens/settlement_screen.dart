@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'dart:ui';
-
-import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/aurora_scaffold.dart';
-import '../../../core/widgets/glass_card.dart';
-import '../../../core/widgets/modern_loader.dart';
 
 import '../../../core/models/percentage_config_model.dart';
 import '../../../core/models/settlement_model.dart';
 import '../../../core/widgets/date_filter_row.dart';
+import '../../../core/widgets/modern_loader.dart';
 import '../../settings/services/settings_service.dart';
 import '../services/settlement_service.dart';
 import '../widgets/settlement_chart.dart';
@@ -28,6 +23,10 @@ class _SettlementScreenState extends State<SettlementScreen> {
   final _settlementService = SettlementService();
   final _settingsService = SettingsService();
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
+
+  // Theme Constants
+  final Color _accentColor = const Color(0xFF3A86FF);
+  final Color _cardColor = const Color(0xFF1B263B).withOpacity(0.6);
 
   List<Map<String, int>> _yearMonthData = [];
   List<int> _availableYears = [];
@@ -51,7 +50,6 @@ class _SettlementScreenState extends State<SettlementScreen> {
     years.sort((a, b) => b.compareTo(a));
     _availableYears = years;
 
-    // We load config here initially, but we will also reload it on fetch
     _percentageConfig = await _settingsService.getPercentageConfig();
 
     final now = DateTime.now();
@@ -94,38 +92,21 @@ class _SettlementScreenState extends State<SettlementScreen> {
     HapticFeedback.lightImpact();
     if (_selectedYear == null || _selectedMonth == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select a year and month.'),
-          backgroundColor: AppColors.dangerRed,
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('Please select a year and month.')),
       );
       return;
     }
-
     setState(() {
       _isLoading = true;
       _settlementData = null;
     });
-
-    try {
-      // FIX: Always fetch the latest config here to ensure Sort Order is correct
-      // This handles the case where user changed settings and came back
-      final latestConfig = await _settingsService.getPercentageConfig();
-
-      final recordId =
-          '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
-      final settlement = await _settlementService.getSettlementById(recordId);
-
-      setState(() {
-        _percentageConfig = latestConfig; // Update with fresh config
-        _settlementData = settlement;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-      // Optional: Handle error
-    }
+    final recordId =
+        '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
+    final settlement = await _settlementService.getSettlementById(recordId);
+    setState(() {
+      _settlementData = settlement;
+      _isLoading = false;
+    });
   }
 
   void _showSettlementInputSheet() {
@@ -144,50 +125,29 @@ class _SettlementScreenState extends State<SettlementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AuroraScaffold(
-      accentColor1: AppColors.royalBlue,
-      accentColor2: AppColors.vibrantOrange,
+    return Scaffold(
+      backgroundColor: const Color(0xff0D1B2A),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          ),
-          color: Colors.white,
-          onPressed: () => Navigator.pop(context),
-        ),
         title: const Text(
           'Settlement Analysis',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showSettlementInputSheet,
-        backgroundColor: AppColors.royalBlue,
-        elevation: 0,
-        label: const Text(
-          "Update Settlement",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        icon: const Icon(Icons.edit_note_rounded, color: Colors.white),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            const SizedBox(height: 10),
-            GlassCard(
+            // Date Filter
+            Container(
               padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _cardColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.05)),
+              ),
               child: DateFilterRow(
                 selectedYear: _selectedYear,
                 selectedMonth: _selectedMonth,
@@ -201,38 +161,39 @@ class _SettlementScreenState extends State<SettlementScreen> {
 
             const SizedBox(height: 24),
 
+            // Fetch Button
             Center(
               child: GestureDetector(
                 onTap: _fetchSettlementData,
                 child: Container(
                   width: MediaQuery.of(context).size.width * 0.7,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.royalBlue, AppColors.deepPurple],
+                    gradient: LinearGradient(
+                      colors: [_accentColor, const Color(0xFF2563EB)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.white.withOpacity(0.2)),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.royalBlue.withOpacity(0.3),
-                        blurRadius: 12,
+                        color: _accentColor.withOpacity(0.3),
+                        blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(
+                    children: [
+                      const Icon(
                         Icons.analytics_outlined,
                         color: Colors.white,
                         size: 20,
                       ),
-                      SizedBox(width: 10),
-                      Text(
+                      const SizedBox(width: 10),
+                      const Text(
                         'FETCH DATA',
                         style: TextStyle(
                           color: Colors.white,
@@ -248,8 +209,51 @@ class _SettlementScreenState extends State<SettlementScreen> {
             ),
 
             const SizedBox(height: 24),
+
+            // Content Area
             Expanded(child: _buildContentArea()),
           ],
+        ),
+      ),
+
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: GestureDetector(
+        onTap: _showSettlementInputSheet,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [_accentColor, const Color(0xFF2563EB)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: _accentColor.withOpacity(0.4),
+                blurRadius: 20,
+                spreadRadius: -5,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.edit_note_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              const Text(
+                "Update Settlement",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -259,86 +263,66 @@ class _SettlementScreenState extends State<SettlementScreen> {
     if (_isLoading) {
       return const Center(child: ModernLoader());
     }
-
     if (_settlementData == null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.glassFill,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.glassBorder),
-              ),
-              child: Icon(
-                Icons.bar_chart_rounded,
-                size: 48,
-                color: Colors.white.withOpacity(0.2),
-              ),
+            Icon(
+              Icons.bar_chart_rounded,
+              size: 60,
+              color: Colors.white.withOpacity(0.1),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             Text(
-              'Select a month to view analysis',
+              'Select a month & fetch data\nto view analysis',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.4),
+                fontSize: 16,
+              ),
             ),
           ],
         ),
       );
     }
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 120.0),
+      padding: const EdgeInsets.only(bottom: 100.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Center(
-            child: Text(
-              'Allocation vs. Expense',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
+          Text(
+            'Allocation vs. Expense',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 12),
-
-          GlassCard(
-            padding: const EdgeInsets.all(16),
-            borderRadius: 24,
-            child: SettlementChart(
-              settlement: _settlementData!,
-              percentageConfig: _percentageConfig, // Now guaranteed to be fresh
-            ),
+          const SizedBox(height: 16),
+          // Refactored Widget: Settlement Chart
+          SettlementChart(
+            settlement: _settlementData!,
+            percentageConfig: _percentageConfig,
           ),
 
           const SizedBox(height: 32),
 
-          Center(
-            child: Text(
-              'Settlement Details',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
+          Text(
+            'Settlement Details',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 12),
-
-          GlassCard(
-            padding: const EdgeInsets.all(8),
-            borderRadius: 24,
-            child: SettlementTable(
-              settlement: _settlementData!,
-              percentageConfig: _percentageConfig, // Now guaranteed to be fresh
-              currencyFormat: _currencyFormat,
-            ),
+          const SizedBox(height: 16),
+          // Refactored Widget: Settlement Table
+          SettlementTable(
+            settlement: _settlementData!,
+            percentageConfig: _percentageConfig,
+            currencyFormat: _currencyFormat,
           ),
         ],
       ),
