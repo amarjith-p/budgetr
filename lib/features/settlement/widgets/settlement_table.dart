@@ -9,7 +9,8 @@ import '../../../core/design/budgetr_styles.dart';
 
 class SettlementTable extends StatelessWidget {
   final Settlement settlement;
-  final PercentageConfig? percentageConfig;
+  final PercentageConfig?
+  percentageConfig; // Deprecated for sorting, kept for API compat
   final NumberFormat currencyFormat;
 
   const SettlementTable({
@@ -24,8 +25,18 @@ class SettlementTable extends StatelessWidget {
     // 1. Prepare Data
     final entries = settlement.allocations.entries.toList();
 
-    // Sorting Logic (Preserved)
-    if (percentageConfig != null) {
+    // 2. Sort Logic
+    if (settlement.bucketOrder.isNotEmpty) {
+      // Priority: Sort by persisted bucket order
+      entries.sort((a, b) {
+        int idxA = settlement.bucketOrder.indexOf(a.key);
+        int idxB = settlement.bucketOrder.indexOf(b.key);
+        if (idxA == -1) idxA = 999;
+        if (idxB == -1) idxB = 999;
+        return idxA.compareTo(idxB);
+      });
+    } else if (percentageConfig != null) {
+      // Fallback: Settings order
       entries.sort((a, b) {
         int idxA = percentageConfig!.categories.indexWhere(
           (c) => c.name == a.key,
@@ -38,10 +49,11 @@ class SettlementTable extends StatelessWidget {
         return idxA.compareTo(idxB);
       });
     } else {
+      // Fallback: Value
       entries.sort((a, b) => b.value.compareTo(a.value));
     }
 
-    // 2. Build Table Rows
+    // 3. Build Table Rows
     List<TableRow> tableRows = [];
 
     // --- Header Row ---
@@ -92,9 +104,7 @@ class SettlementTable extends StatelessWidget {
     tableRows.add(
       TableRow(
         decoration: BoxDecoration(
-          color: BudgetrColors.accent.withOpacity(
-            0.15,
-          ), // Highlighted Total Row
+          color: BudgetrColors.accent.withOpacity(0.15),
         ),
         children: [
           _buildCell(
@@ -134,11 +144,10 @@ class SettlementTable extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BudgetrStyles.radiusM,
         child: Table(
-          // Use FlexColumnWidth to proportionally fill the width
           columnWidths: const {
-            0: FlexColumnWidth(1.4), // Bucket column gets slightly more space
-            1: FlexColumnWidth(1.0), // Allocated
-            2: FlexColumnWidth(1.0), // Spent/Bal
+            0: FlexColumnWidth(1.4),
+            1: FlexColumnWidth(1.0),
+            2: FlexColumnWidth(1.0),
           },
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
           children: tableRows,

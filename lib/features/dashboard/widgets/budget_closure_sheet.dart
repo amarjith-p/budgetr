@@ -30,19 +30,16 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
   );
   bool _isSaving = false;
 
-  /// Returns the expenses map WITHOUT 'Out of Bucket' items
   Map<String, double> get _budgetedExpenses {
     final Map<String, double> filtered = Map.from(widget.spendingMap);
     filtered.remove('Out of Bucket');
     return filtered;
   }
 
-  /// Calculates total expense excluding 'Out of Bucket'
   double get _totalBudgetedExpense {
     return _budgetedExpenses.values.fold(0.0, (sum, item) => sum + item);
   }
 
-  /// Calculates ONLY 'Out of Bucket' expense
   double get _outOfBucketTotal {
     return widget.spendingMap['Out of Bucket'] ?? 0.0;
   }
@@ -51,23 +48,23 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
     setState(() => _isSaving = true);
 
     try {
-      // 1. Create Settlement Object using only BUDGETED expenses
       final settlement = Settlement(
         id: widget.record.id,
         year: widget.record.year,
         month: widget.record.month,
         allocations: widget.record.allocations,
-        expenses: _budgetedExpenses, // 'Out of Bucket' is removed here
+        expenses: _budgetedExpenses,
         totalIncome: widget.record.effectiveIncome,
         totalExpense: _totalBudgetedExpense,
         settledAt: Timestamp.now(),
+        // Pass the Dashboard's bucket order to the settlement
+        bucketOrder: widget.record.bucketOrder,
       );
 
-      // 2. Save to Firestore
       await _settlementService.saveSettlement(settlement);
 
       if (mounted) {
-        Navigator.pop(context); // Close Sheet
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Budget Closed & Locked Successfully!"),
@@ -95,10 +92,29 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
     final balance = effectiveIncome - totalSpent;
     final isSurplus = balance >= 0;
 
-    // Current Timestamp for "As on" display
     final String asOnDate = DateFormat(
       'dd MMM yyyy, hh:mm a',
     ).format(DateTime.now());
+
+    // Prepare sorted list of entries based on bucketOrder
+    List<MapEntry<String, double>> sortedEntries = [];
+    if (widget.record.bucketOrder.isNotEmpty) {
+      // 1. Add ordered buckets
+      for (var name in widget.record.bucketOrder) {
+        if (widget.record.allocations.containsKey(name)) {
+          sortedEntries.add(MapEntry(name, widget.record.allocations[name]!));
+        }
+      }
+      // 2. Add leftovers (robustness)
+      for (var entry in widget.record.allocations.entries) {
+        if (!widget.record.bucketOrder.contains(entry.key)) {
+          sortedEntries.add(entry);
+        }
+      }
+    } else {
+      // Fallback
+      sortedEntries = widget.record.allocations.entries.toList();
+    }
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -111,7 +127,6 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Handle
           Center(
             child: Container(
               width: 40,
@@ -123,8 +138,6 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Header
           Row(
             children: [
               Container(
@@ -164,8 +177,6 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
             ],
           ),
           const SizedBox(height: 32),
-
-          // Summary Card
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -203,8 +214,6 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
               ],
             ),
           ),
-
-          // --- NEW: Out of Bucket Info ---
           if (_outOfBucketTotal > 0) ...[
             const SizedBox(height: 16),
             Container(
@@ -255,52 +264,11 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: Colors.white38,
-                        size: 12,
-                      ),
-                      const SizedBox(width: 4),
-                      const Text(
-                        "Will not be recorded on Settlement",
-                        style: TextStyle(
-                          color: Colors.white38,
-                          fontSize: 11,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: Colors.white38,
-                        size: 12,
-                      ),
-                      const SizedBox(width: 4),
-                      const Text(
-                        "You may record them in Networth Split Analysis",
-                        style: TextStyle(
-                          color: Colors.white38,
-                          fontSize: 11,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
           ],
-
-          // -------------------------------
           const SizedBox(height: 24),
-
-          // Bucket Breakdown Preview
           Text(
             "BUDGET BREAKDOWN",
             style: BudgetrStyles.caption.copyWith(letterSpacing: 1.2),
@@ -308,10 +276,9 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
           const SizedBox(height: 12),
           Container(
             constraints: const BoxConstraints(maxHeight: 200),
-            // We iterate over allocations, so 'Out of Bucket' naturally doesn't appear here
             child: ListView(
               shrinkWrap: true,
-              children: widget.record.allocations.entries.map((entry) {
+              children: sortedEntries.map((entry) {
                 final spent = widget.spendingMap[entry.key] ?? 0.0;
                 final isOver = spent > entry.value;
                 return Padding(
@@ -351,10 +318,7 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
               }).toList(),
             ),
           ),
-
           const SizedBox(height: 32),
-
-          // Action Button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(

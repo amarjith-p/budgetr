@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/financial_record_model.dart';
 import '../../../core/design/budgetr_colors.dart';
-import '../screens/bucket_details_screen.dart'; // Import new screen
+import '../screens/bucket_details_screen.dart';
 
 class BudgetAllocationsList extends StatelessWidget {
   final FinancialRecord record;
@@ -18,9 +18,26 @@ class BudgetAllocationsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entries = record.allocations.entries.toList();
-    // Sort by value descending
-    entries.sort((a, b) => b.value.compareTo(a.value));
+    List<MapEntry<String, double>> entries = [];
+
+    if (record.bucketOrder.isNotEmpty) {
+      // 1. Use the persisted order (Immutable workflow)
+      for (var bucketName in record.bucketOrder) {
+        if (record.allocations.containsKey(bucketName)) {
+          entries.add(MapEntry(bucketName, record.allocations[bucketName]!));
+        }
+      }
+      // Robustness: Append any buckets that might exist but were missed in order
+      for (var entry in record.allocations.entries) {
+        if (!record.bucketOrder.contains(entry.key)) {
+          entries.add(entry);
+        }
+      }
+    } else {
+      // 2. Legacy Fallback: Sort by value descending (Old behavior)
+      entries = record.allocations.entries.toList();
+      entries.sort((a, b) => b.value.compareTo(a.value));
+    }
 
     return Column(
       children: entries.map((entry) {
@@ -28,7 +45,6 @@ class BudgetAllocationsList extends StatelessWidget {
         final allocated = entry.value;
         final percent = record.allocationPercentages[bucketName] ?? 0;
 
-        // Spending Calculations
         final spent = spendingMap[bucketName] ?? 0.0;
         final remaining = allocated - spent;
         final double progress = allocated > 0
@@ -38,7 +54,6 @@ class BudgetAllocationsList extends StatelessWidget {
         final bool isOverBudget = spent > allocated;
 
         return GestureDetector(
-          // NEW: Navigation Logic on Tap
           onTap: () {
             Navigator.push(
               context,
@@ -61,7 +76,6 @@ class BudgetAllocationsList extends StatelessWidget {
             ),
             child: Column(
               children: [
-                // Top Row: Percentage | Name | Allocation
                 Row(
                   children: [
                     Container(
@@ -90,7 +104,6 @@ class BudgetAllocationsList extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Optional: Chevron to indicate clickability
                     const Icon(
                       Icons.chevron_right,
                       color: Colors.white24,
@@ -108,8 +121,6 @@ class BudgetAllocationsList extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-
-                // Progress Bar (Sticky Bar)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
@@ -122,8 +133,6 @@ class BudgetAllocationsList extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-
-                // Bottom Row: Spent vs Remaining/Over
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
