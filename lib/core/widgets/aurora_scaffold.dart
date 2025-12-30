@@ -2,11 +2,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-class AuroraScaffold extends StatefulWidget {
+class AuroraScaffold extends StatelessWidget {
   final Widget body;
   final PreferredSizeWidget? appBar;
   final Widget? floatingActionButton;
-  final FloatingActionButtonLocation? floatingActionButtonLocation;
+  final FloatingActionButtonLocation?
+  floatingActionButtonLocation; // <--- Added this
   final Widget? bottomNavigationBar;
   final Color accentColor1;
   final Color accentColor2;
@@ -16,91 +17,45 @@ class AuroraScaffold extends StatefulWidget {
     required this.body,
     this.appBar,
     this.floatingActionButton,
-    this.floatingActionButtonLocation,
+    this.floatingActionButtonLocation, // <--- Added to constructor
     this.bottomNavigationBar,
     this.accentColor1 = AppColors.royalBlue,
-    this.accentColor2 = AppColors.deepPurple,
+    this.accentColor2 = AppColors.electricPink,
   });
-
-  @override
-  State<AuroraScaffold> createState() => _AuroraScaffoldState();
-}
-
-class _AuroraScaffoldState extends State<AuroraScaffold>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    // Ultra-slow, barely perceptible breathing (15 seconds)
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 15),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.deepVoid, // Pure dark foundation
+      backgroundColor: AppColors.deepVoid,
       extendBodyBehindAppBar: true,
-      appBar: widget.appBar,
-      floatingActionButton: widget.floatingActionButton,
-      floatingActionButtonLocation: widget.floatingActionButtonLocation,
-      bottomNavigationBar: widget.bottomNavigationBar,
+      appBar: appBar,
+      floatingActionButton: floatingActionButton,
+      floatingActionButtonLocation:
+          floatingActionButtonLocation, // <--- Pass to Scaffold
+      bottomNavigationBar: bottomNavigationBar,
       body: Stack(
         children: [
-          // --- AMBIENT LIGHTING LAYER ---
-          // Reduced opacity significantly for a "Dark Mode First" look
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return Stack(
-                children: [
-                  // Light Source 1: Top Left (Subtle glow for header)
-                  Positioned(
-                    top: -150,
-                    left: -100,
-                    child: _buildOrb(widget.accentColor1, 400),
-                  ),
+          // --- ORB 1 (Top Left) ---
+          Positioned(top: -100, left: -50, child: _buildOrb(accentColor1, 350)),
 
-                  // Light Source 2: Bottom Right (Subtle glow for balance)
-                  Positioned(
-                    bottom: -150,
-                    right: -100,
-                    child: _buildOrb(widget.accentColor2, 350),
-                  ),
-                ],
-              );
-            },
-          ),
-
-          // --- MATTE FINISH LAYER ---
-          // High-sigma blur meshes the colors into a seamless gradient
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-              child: Container(color: Colors.transparent),
-            ),
+          // --- ORB 2 (Bottom Right) ---
+          Positioned(
+            bottom: -50,
+            right: -50,
+            child: _buildOrb(accentColor2, 300),
           ),
 
           // --- MAIN CONTENT ---
           SafeArea(
             top: false,
             child: Padding(
+              // Add StatusBar Height + AppBar Height so content doesn't hide behind header
               padding: EdgeInsets.only(
                 top:
-                    (widget.appBar?.preferredSize.height ?? 0) +
+                    (appBar?.preferredSize.height ?? 0) +
                     MediaQuery.of(context).padding.top,
               ),
-              child: widget.body,
+              child: body,
             ),
           ),
         ],
@@ -114,9 +69,11 @@ class _AuroraScaffoldState extends State<AuroraScaffold>
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        // Drastically reduced opacity (0.07) for professional minimalism.
-        // It provides "Ambience" rather than "Color".
-        color: color.withOpacity(0.07),
+        color: color.withOpacity(0.15),
+      ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+        child: Container(color: Colors.transparent),
       ),
     );
   }
