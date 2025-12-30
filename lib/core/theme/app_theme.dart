@@ -1,54 +1,35 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
 
 class AppTheme {
   static final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: AppColors.deepVoid,
-    fontFamily:
-        'SF Pro Display', // Assuming you might use a custom font, otherwise system default
-
+    scaffoldBackgroundColor: const Color(0xff0D1B2A),
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.royalBlue,
+      seedColor: const Color(0xFF3A86FF),
       brightness: Brightness.dark,
-      primary: AppColors.royalBlue,
-      secondary: AppColors.tealGreen,
-      surface: AppColors.deepVoid,
-      error: AppColors.dangerRed,
+      primary: const Color(0xFF3A86FF),
+      secondary: const Color(0xFF90E0EF),
     ),
-
     useMaterial3: true,
-
-    // Global AppBar Theme
     appBarTheme: AppBarTheme(
-      backgroundColor:
-          Colors.transparent, // Transparent by default for Glass effect
+      backgroundColor: const Color(0xff0D1B2A),
       elevation: 0,
-      centerTitle: true,
+      shape: Border(
+        bottom: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+      ),
       titleTextStyle: const TextStyle(
         fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: AppColors.textPrimary,
-        letterSpacing: 0.5,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
       ),
-      iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      iconTheme: IconThemeData(color: Colors.white.withOpacity(0.8)),
     ),
-
-    // Global Card Theme (Fallback for standard Cards)
     cardTheme: CardThemeData(
       elevation: 0,
-      color: AppColors.glassFill,
+      color: const Color(0xFF1B263B).withOpacity(0.5),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: AppColors.glassBorder),
-      ),
-    ),
-
-    // Text Button Theme (Used in your dialogs)
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: AppColors.royalBlue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.white.withOpacity(0.1)),
       ),
     ),
   );
