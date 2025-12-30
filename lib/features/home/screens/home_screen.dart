@@ -71,15 +71,15 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 10),
-                  Text(
-                    "Welcome Back",
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1,
-                    ),
-                  ),
+                  // Text(
+                  //   "Welcome Back",
+                  //   style: TextStyle(
+                  //     color: Colors.white.withOpacity(0.6),
+                  //     fontSize: 14,
+                  //     fontWeight: FontWeight.w600,
+                  //     letterSpacing: 1,
+                  //   ),
+                  // ),
                   const SizedBox(height: 20),
 
                   // --- Dashboard Grid ---
