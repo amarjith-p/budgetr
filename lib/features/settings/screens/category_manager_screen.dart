@@ -7,7 +7,9 @@ import '../../../core/constants/icon_constants.dart';
 // --- New Design System Imports ---
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/aurora_scaffold.dart';
-import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/glass_app_bar.dart';
+import '../../../core/widgets/glass_fab.dart';
+import '../../../core/widgets/glass_bottom_sheet.dart';
 
 class CategoryManagerScreen extends StatefulWidget {
   const CategoryManagerScreen({super.key});
@@ -43,23 +45,13 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
     super.dispose();
   }
 
-  // --- Logic to Restore Defaults (Factory Reset) ---
   Future<void> _handleRestoreDefaults() async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.darkCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: AppColors.glassBorder),
-        ),
-        title: const Text(
-          "Reset to Defaults?",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: Text(
+        title: const Text("Reset to Defaults?"),
+        content: const Text(
           "This will DELETE all your custom categories and revert any changes made to default ones.\n\nAre you sure you want to start fresh?",
-          style: TextStyle(color: Colors.white.withOpacity(0.7)),
         ),
         actions: [
           TextButton(
@@ -74,13 +66,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
-              "Reset All",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: const Text("Reset All"),
           ),
         ],
       ),
@@ -122,39 +108,16 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
 
   @override
   Widget build(BuildContext context) {
-    // 1. Use AuroraScaffold
     return AuroraScaffold(
       accentColor1: AppColors.electricPink,
       accentColor2: AppColors.royalBlue,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.glassFill,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          "Categories",
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
-        ),
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(color: Colors.transparent),
-          ),
-        ),
+
+      appBar: GlassAppBar(
+        title: "Categories",
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            color: AppColors.darkCard,
+            icon: const Icon(Icons.more_vert, color: AppColors.textPrimary),
+            color: AppColors.deepVoid,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: AppColors.glassBorder),
@@ -180,6 +143,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
           ),
         ],
       ),
+
       body: Stack(
         children: [
           Column(
@@ -220,61 +184,16 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
             ],
           ),
 
-          // Floating Action Button
-          Positioned(
-            bottom: 30,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: GestureDetector(
-                onTap: () => _showAddEditSheet(context, null),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.royalBlue, AppColors.deepPurple],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.royalBlue.withOpacity(0.4),
-                        blurRadius: 20,
-                        spreadRadius: -5,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                    border: Border.all(color: AppColors.glassBorder, width: 1),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.add_rounded, color: Colors.white),
-                      SizedBox(width: 12),
-                      Text(
-                        "Add Category",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          GlassFAB(
+            label: "Add Category",
+            icon: Icons.add_rounded,
+            onTap: () => _showAddEditSheet(context, null),
+            accentColor: AppColors.royalBlue,
           ),
         ],
       ),
     );
   }
-
-  // --- METHODS ---
 
   void _showAddEditSheet(
     BuildContext context,
@@ -283,11 +202,9 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
     final initialType =
         category?.type ?? (_tabController.index == 0 ? 'Expense' : 'Income');
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _ModernAddEditCategorySheet(
+    GlassBottomSheet.show(
+      context,
+      child: _ModernAddEditCategorySheet(
         category: category,
         initialType: initialType,
         service: _service,
@@ -299,26 +216,14 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.darkCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: AppColors.glassBorder),
-        ),
-        title: const Text(
-          "Delete Category?",
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Text(
+        title: const Text("Delete Category?"),
+        content: const Text(
           "This will remove the category from selection. Existing transactions will remain unaffected.",
-          style: TextStyle(color: Colors.white.withOpacity(0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text("Cancel"),
           ),
           TextButton(
             onPressed: () {
@@ -337,8 +242,6 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
       ),
     );
   }
-
-  // --- WIDGETS ---
 
   Widget _buildSyncedSlidingToggle() {
     return Container(
@@ -496,8 +399,6 @@ class _ModernAddEditCategorySheetState
 
   final FocusNode _nameNode = FocusNode();
   final FocusNode _subNode = FocusNode();
-  final GlobalKey _nameFieldKey = GlobalKey();
-  final GlobalKey _subFieldKey = GlobalKey();
 
   late List<String> _currentSubs;
   late int _selectedIconCode;
@@ -517,13 +418,6 @@ class _ModernAddEditCategorySheetState
 
     _selectedIconCode = widget.category?.iconCode ?? Icons.category.codePoint;
     _type = widget.initialType;
-
-    _nameNode.addListener(() {
-      if (_nameNode.hasFocus) _scrollToField(_nameFieldKey);
-    });
-    _subNode.addListener(() {
-      if (_subNode.hasFocus) _scrollToField(_subFieldKey);
-    });
   }
 
   @override
@@ -535,228 +429,160 @@ class _ModernAddEditCategorySheetState
     super.dispose();
   }
 
-  void _scrollToField(GlobalKey key) {
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (key.currentContext != null) {
-        Scrollable.ensureVisible(
-          key.currentContext!,
-          alignment: 0.5,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    // We keep accent for small details, but NOT for the main button
     final accentColor = _type == 'Income'
         ? AppColors.successGreen
         : AppColors.electricPink;
 
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.deepVoid,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.9,
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(2),
+    // WRAP CONTENT FIX: No Expanded here, just Padding + Column(min)
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min, // Hug content height
+          children: [
+            const SizedBox(height: 12),
+            Text(
+              widget.category == null ? "Create New Category" : "Edit Category",
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
-          ),
+            const SizedBox(height: 24),
 
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    Text(
-                      widget.category == null
-                          ? "Create New Category"
-                          : "Edit Category",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-
-                    GestureDetector(
-                      onTap: () async {
-                        _nameNode.unfocus();
-                        _subNode.unfocus();
-                        final code = await showModalBottomSheet<int>(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (c) => const _IconPickerSheet(),
-                        );
-                        if (code != null)
-                          setState(() => _selectedIconCode = code);
-                      },
-                      child: Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          color: AppColors.glassFill,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: accentColor.withOpacity(0.5),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: accentColor.withOpacity(0.2),
-                              blurRadius: 20,
-                              spreadRadius: 2,
-                            ),
-                          ],
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      _nameNode.unfocus();
+                      _subNode.unfocus();
+                      final code = await GlassBottomSheet.show<int>(
+                        context,
+                        child: const _IconPickerSheet(),
+                      );
+                      if (code != null)
+                        setState(() => _selectedIconCode = code);
+                    },
+                    child: Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        color: AppColors.glassFill,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: accentColor.withOpacity(0.5),
+                          width: 1.5,
                         ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Icon(
-                              IconConstants.getIconByCode(_selectedIconCode),
-                              color: Colors.white,
-                              size: 40,
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: accentColor,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.edit,
-                                  color: Colors.white,
-                                  size: 14,
-                                ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: accentColor.withOpacity(0.2),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            IconConstants.getIconByCode(_selectedIconCode),
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: accentColor,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.edit,
+                                color: Colors.white,
+                                size: 14,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+
+                  TextFormField(
+                    focusNode: _nameNode,
+                    controller: _nameCtrl,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: "Category Name",
+                    ),
+                    textInputAction: TextInputAction.next,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Name is required';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  if (widget.category == null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.glassFill,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          _buildTypeOption("Expense", AppColors.electricPink),
+                          _buildTypeOption("Income", AppColors.successGreen),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 30),
+                  ],
 
-                    TextFormField(
-                      key: _nameFieldKey,
-                      focusNode: _nameNode,
-                      controller: _nameCtrl,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "SUB-CATEGORIES",
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: "Category Name",
-                        hintStyle: TextStyle(
-                          color: Colors.white.withOpacity(0.2),
-                        ),
-                        filled: true,
-                        fillColor: AppColors.glassFill,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: AppColors.glassBorder),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
-                        ),
-                      ),
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) {
-                        FocusScope.of(context).requestFocus(_subNode);
-                      },
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Name is required';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    if (widget.category == null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: AppColors.glassFill,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            _buildTypeOption("Expense", AppColors.electricPink),
-                            _buildTypeOption("Income", AppColors.successGreen),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                    ],
-
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "SUB-CATEGORIES",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.4),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.5,
-                        ),
+                        letterSpacing: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                  ),
+                  const SizedBox(height: 12),
 
-                    TextFormField(
-                      key: _subFieldKey,
-                      focusNode: _subNode,
-                      controller: _subCtrl,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: "Add sub-category (e.g. Uber, Groceries)",
-                        hintStyle: TextStyle(
-                          color: Colors.white.withOpacity(0.3),
-                        ),
-                        filled: true,
-                        fillColor: AppColors.glassFill,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.glassBorder),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(Icons.add_circle, color: accentColor),
-                          onPressed: _addSubCategory,
-                        ),
+                  TextFormField(
+                    focusNode: _subNode,
+                    controller: _subCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: "Add sub-category (e.g. Uber, Groceries)",
+                      suffixIcon: IconButton(
+                        icon: Icon(Icons.add_circle, color: accentColor),
+                        onPressed: _addSubCategory,
                       ),
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _addSubCategory(),
                     ),
-                    const SizedBox(height: 16),
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _addSubCategory(),
+                  ),
+                  const SizedBox(height: 16),
 
+                  if (_currentSubs.isNotEmpty)
                     SizedBox(
                       width: double.infinity,
                       child: Wrap(
@@ -785,64 +611,64 @@ class _ModernAddEditCategorySheetState
                                     MaterialTapTargetSize.shrinkWrap,
                                 padding: const EdgeInsets.all(4),
                                 side: BorderSide(color: AppColors.glassBorder),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  side: BorderSide.none,
+                                ),
                               ),
                             )
                             .toList(),
                       ),
                     ),
 
-                    const SizedBox(height: 100),
-                  ],
-                ),
-              ),
-            ),
-          ),
+                  const SizedBox(height: 30),
 
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Colors.white.withOpacity(0.05)),
-              ),
-              color: AppColors.deepVoid,
-            ),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  disabledBackgroundColor: accentColor.withOpacity(0.5),
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 8,
-                  shadowColor: accentColor.withOpacity(0.4),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        widget.category == null
-                            ? "Create Category"
-                            : "Save Changes",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 16,
+                  // PROFESSIONAL BUTTON DESIGN
+                  // No Gradient, no neon. Solid Royal Blue.
+                  // Radius 12 for professional look (less rounded).
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _save,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            AppColors.royalBlue, // Standard Primary
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: AppColors.glassBorder),
                         ),
                       ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              widget.category == null
+                                  ? "Create Category"
+                                  : "Save Changes",
+                              style: const TextStyle(
+                                color: Colors.white, // High Contrast
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20), // Bottom padding
+                ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -850,7 +676,6 @@ class _ModernAddEditCategorySheetState
   void _addSubCategory() {
     final val = _subCtrl.text.trim();
     if (val.isEmpty) return;
-
     if (_currentSubs.any((s) => s.toLowerCase() == val.toLowerCase())) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -858,38 +683,30 @@ class _ModernAddEditCategorySheetState
           backgroundColor: AppColors.vibrantOrange,
         ),
       );
-      _subNode.requestFocus();
       return;
     }
-
     setState(() {
       _currentSubs.add(val);
       _currentSubs.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
       _subCtrl.clear();
     });
-
-    _subNode.requestFocus();
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
     try {
       final name = _nameCtrl.text.trim();
-
       final isDuplicate = await widget.service.checkDuplicate(
         name,
         _type,
         excludeId: widget.category?.id,
       );
-
       if (isDuplicate) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text("Category '$name' already exists in $_type."),
+              content: Text("Category '$name' already exists."),
               backgroundColor: AppColors.dangerRed,
             ),
           );
@@ -897,7 +714,6 @@ class _ModernAddEditCategorySheetState
         setState(() => _isLoading = false);
         return;
       }
-
       if (widget.category == null) {
         await widget.service.addCategory(
           name,
@@ -916,14 +732,12 @@ class _ModernAddEditCategorySheetState
           ),
         );
       }
-
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
-        );
-      }
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
       setState(() => _isLoading = false);
     }
   }
@@ -983,7 +797,6 @@ class _CategoryCardState extends State<_CategoryCard> {
       icon = IconConstants.getIconByCode(widget.category.iconCode!);
     }
 
-    // We manually style this to handle the animation, using AppColors keys
     return GestureDetector(
       onTap: () => setState(() => _isExpanded = !_isExpanded),
       child: AnimatedContainer(
@@ -1033,19 +846,14 @@ class _CategoryCardState extends State<_CategoryCard> {
                     children: [
                       Text(
                         widget.category.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         "${widget.category.subCategories.length} sub-categories",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
-                          fontSize: 12,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
@@ -1055,12 +863,11 @@ class _CategoryCardState extends State<_CategoryCard> {
                   duration: const Duration(milliseconds: 300),
                   child: Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: Colors.white.withOpacity(0.3),
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
             ),
-
             AnimatedSize(
               duration: const Duration(milliseconds: 300),
               curve: Curves.fastOutSlowIn,
@@ -1075,12 +882,11 @@ class _CategoryCardState extends State<_CategoryCard> {
                           const SizedBox(height: 20),
                           const Divider(color: Colors.white10, height: 1),
                           const SizedBox(height: 16),
-
                           if (widget.category.subCategories.isEmpty)
                             Text(
                               "No sub-categories defined.",
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.3),
+                                color: AppColors.textSecondary,
                                 fontStyle: FontStyle.italic,
                                 fontSize: 13,
                               ),
@@ -1105,8 +911,8 @@ class _CategoryCardState extends State<_CategoryCard> {
                                       ),
                                       child: Text(
                                         sub,
-                                        style: const TextStyle(
-                                          color: Colors.white70,
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -1115,7 +921,6 @@ class _CategoryCardState extends State<_CategoryCard> {
                                   )
                                   .toList(),
                             ),
-
                           const SizedBox(height: 24),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
@@ -1205,104 +1010,72 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    List<IconGroup> filteredGroups = [];
-    List<IconMetadata> flatSearchResults = [];
+    // WRAP CONTENT: We rely on GlassBottomSheet's Flexible behavior.
+    // For a picker with GridView, we might WANT it to expand, but for now we follow the rule.
+    // We give it a fixed height for usability, or let it wrap if content is small.
+    // However, a GridView typically needs bounded height.
+    // We will use a Container with a max height constraint here just for the picker.
 
-    if (_searchQuery.isEmpty) {
-      filteredGroups = IconConstants.iconGroups;
-    } else {
-      for (var group in IconConstants.iconGroups) {
-        for (var meta in group.icons) {
-          if (meta.tags.any((t) => t.contains(_searchQuery.toLowerCase()))) {
-            flatSearchResults.add(meta);
-          }
-        }
-      }
-    }
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
-      padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: AppColors.deepVoid,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: SizedBox(
+        height:
+            MediaQuery.of(context).size.height *
+            0.7, // Picker needs height to scroll
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 24),
+            Text(
+              "Select Icon",
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _searchCtrl,
+              onChanged: (val) => setState(() => _searchQuery = val),
+              decoration: InputDecoration(
+                hintText: "Search icons...",
+                prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.white54),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            "Select Icon",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 24),
+            Expanded(
+              child: _searchQuery.isEmpty
+                  ? _buildGroupedList(IconConstants.iconGroups)
+                  : _buildSearchResults(IconConstants.iconGroups),
             ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _searchCtrl,
-            style: const TextStyle(color: Colors.white),
-            onChanged: (val) => setState(() => _searchQuery = val),
-            decoration: InputDecoration(
-              hintText: "Search icons (e.g. food, car, bank)",
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-              prefixIcon: const Icon(Icons.search, color: Colors.white54),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, color: Colors.white54),
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: AppColors.glassFill,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: _searchQuery.isEmpty
-                ? _buildGroupedList(filteredGroups)
-                : _buildSearchResults(flatSearchResults),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildGroupedList(List<IconGroup> groups) {
+    List<IconGroup> filtered = groups;
     return ListView.separated(
-      itemCount: groups.length,
+      itemCount: filtered.length,
       separatorBuilder: (_, __) => const SizedBox(height: 24),
       itemBuilder: (context, index) {
-        final group = groups[index];
+        final group = filtered[index];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               group.title.toUpperCase(),
               style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
+                color: AppColors.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
               ),
             ),
             const SizedBox(height: 12),
@@ -1323,22 +1096,31 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
     );
   }
 
-  Widget _buildSearchResults(List<IconMetadata> results) {
-    if (results.isEmpty)
+  Widget _buildSearchResults(List<IconGroup> groups) {
+    List<IconMetadata> flatSearchResults = [];
+    for (var group in groups) {
+      for (var meta in group.icons) {
+        if (meta.tags.any((t) => t.contains(_searchQuery.toLowerCase()))) {
+          flatSearchResults.add(meta);
+        }
+      }
+    }
+    if (flatSearchResults.isEmpty)
       return Center(
         child: Text(
-          "No icons found for '$_searchQuery'",
-          style: TextStyle(color: Colors.white.withOpacity(0.5)),
+          "No icons found",
+          style: TextStyle(color: AppColors.textSecondary),
         ),
       );
+
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 6,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: results.length,
-      itemBuilder: (context, index) => _buildIconTile(results[index]),
+      itemCount: flatSearchResults.length,
+      itemBuilder: (context, index) => _buildIconTile(flatSearchResults[index]),
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../core/theme/app_colors.dart';
 
 class HomeFeatureCard extends StatelessWidget {
   final String title;
@@ -32,14 +33,14 @@ class HomeFeatureCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          // Subtle Gradient Background
+          // Subtle Gradient Background using the feature-specific colors passed in
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: gradientColors,
           ),
-          // Modern Thin Border
-          border: Border.all(color: Colors.white.withOpacity(0.08), width: 1),
+          // Centralized Glass Border
+          border: Border.all(color: AppColors.glassBorder, width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.2),
@@ -76,7 +77,7 @@ class HomeFeatureCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: Colors.white.withOpacity(0.05),
@@ -91,23 +92,21 @@ class HomeFeatureCard extends StatelessWidget {
                       children: [
                         Text(
                           title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.3,
-                          ),
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                                fontSize: 17,
+                                letterSpacing: 0.3,
+                              ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           subtitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
                         ),
                       ],
                     ),
