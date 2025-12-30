@@ -14,6 +14,9 @@ class Settlement {
   final double totalBalance;
   final Timestamp settledAt;
 
+  // NEW: Persisted order to match Dashboard/FinancialRecord
+  final List<String> bucketOrder;
+
   Settlement({
     required this.id,
     required this.year,
@@ -23,6 +26,7 @@ class Settlement {
     required this.totalIncome,
     required this.totalExpense,
     required this.settledAt,
+    required this.bucketOrder, // Required field
   }) : totalBalance = totalIncome - totalExpense;
 
   double getBalanceFor(String category) {
@@ -69,6 +73,12 @@ class Settlement {
       totalIncome: (data['totalIncome'] ?? 0.0).toDouble(),
       totalExpense: (data['totalExpense'] ?? 0.0).toDouble(),
       settledAt: data['settledAt'] ?? Timestamp.now(),
+      // Load bucketOrder or empty list for legacy
+      bucketOrder:
+          (data['bucketOrder'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 
@@ -83,6 +93,7 @@ class Settlement {
       'totalExpense': totalExpense,
       'totalBalance': totalBalance,
       'settledAt': settledAt,
+      'bucketOrder': bucketOrder, // Persist order
     };
   }
 }

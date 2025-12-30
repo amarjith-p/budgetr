@@ -84,44 +84,57 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
   }
 
   Future<void> _initializeConfig() async {
-    final masterConfig = await _settingsService.getPercentageConfig();
+    // LOGIC:
+    // 1. If Editing: LOAD FROM RECORD. Do not touch SettingsService.
+    //    This preserves the exact bucket order and percentages from when
+    //    the record was originally saved.
+    // 2. If Creating: LOAD FROM SETTINGS. This picks up the latest configuration.
 
     if (_isEditing) {
-      _selectedYear = widget.recordToEdit!.year;
-      _selectedMonth = widget.recordToEdit!.month;
+      final record = widget.recordToEdit!;
+      _selectedYear = record.year;
+      _selectedMonth = record.month;
 
-      List<CategoryConfig> mergedCategories = [];
+      List<CategoryConfig> preservedCategories = [];
 
-      for (var masterCat in masterConfig.categories) {
-        if (widget.recordToEdit!.allocationPercentages.containsKey(
-          masterCat.name,
-        )) {
-          mergedCategories.add(
+      if (record.bucketOrder.isNotEmpty) {
+        // STRICT MODE: Use the saved order
+        for (var name in record.bucketOrder) {
+          // Retrieve the percentage used at the time of creation
+          final double percentage = record.allocationPercentages[name] ?? 0.0;
+
+          preservedCategories.add(
             CategoryConfig(
-              name: masterCat.name,
-              percentage:
-                  widget.recordToEdit!.allocationPercentages[masterCat.name]!,
+              name: name,
+              percentage: percentage,
+              // Note is not stored in FinancialRecord, so we leave it empty.
+              // This is purely for calculation display.
             ),
           );
         }
+      } else {
+        // LEGACY FALLBACK:
+        // For old records created before bucketOrder existed,
+        // we map the percentages map directly.
+        record.allocationPercentages.forEach((key, value) {
+          preservedCategories.add(CategoryConfig(name: key, percentage: value));
+        });
       }
 
-      widget.recordToEdit!.allocationPercentages.forEach((key, val) {
-        if (!mergedCategories.any((c) => c.name == key)) {
-          mergedCategories.add(CategoryConfig(name: key, percentage: val));
-        }
-      });
-
       setState(() {
-        _config = PercentageConfig(categories: mergedCategories);
+        _config = PercentageConfig(categories: preservedCategories);
         _calculate();
       });
     } else {
+      // FRESH ENTRY: Fetch latest settings
+      final masterConfig = await _settingsService.getPercentageConfig();
       final date = widget.initialDate ?? DateTime.now();
-      _selectedYear = date.year;
-      _selectedMonth = date.month;
+
       setState(() {
+        _selectedYear = date.year;
+        _selectedMonth = date.month;
         _config = masterConfig;
+        // _calculate() will be called via listeners when user types
       });
     }
   }
@@ -292,9 +305,16 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
 
     Map<String, double> allocations = {};
     Map<String, double> percentages = {};
+    List<String> bucketOrder = [];
+
+    // Because _config is loaded based on the mode (Edit vs New),
+    // iterating through it automatically preserves the correct order.
+    // If Editing: It iterates the PRESERVED order.
+    // If New: It iterates the SETTINGS order.
     for (var cat in _config!.categories) {
       allocations[cat.name] = _effectiveIncome * (cat.percentage / 100.0);
       percentages[cat.name] = cat.percentage;
+      bucketOrder.add(cat.name);
     }
 
     final record = FinancialRecord(
@@ -307,6 +327,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       effectiveIncome: _effectiveIncome,
       allocations: allocations,
       allocationPercentages: percentages,
+      bucketOrder: bucketOrder, // Persist the determined order
       createdAt: widget.recordToEdit?.createdAt ?? Timestamp.now(),
       updatedAt: Timestamp.now(),
     );

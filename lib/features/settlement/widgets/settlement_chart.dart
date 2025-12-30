@@ -21,7 +21,12 @@ class SettlementChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        24,
+        16,
+        16,
+      ), // Added top padding for labels
       width: double.infinity,
       decoration: BoxDecoration(
         color: BudgetrColors.cardSurface.withOpacity(0.6),
@@ -40,93 +45,79 @@ class SettlementChart extends StatelessWidget {
 
   Widget _buildChart(Settlement data) {
     final keys = data.allocations.keys.toList();
-    // Sort logic
-    keys.sort((a, b) {
-      final pA =
-          percentageConfig?.categories
-              .firstWhere(
-                (c) => c.name == a,
-                orElse: () => CategoryConfig(name: '', percentage: 0),
-              )
-              .percentage ??
-          0;
-      final pB =
-          percentageConfig?.categories
-              .firstWhere(
-                (c) => c.name == b,
-                orElse: () => CategoryConfig(name: '', percentage: 0),
-              )
-              .percentage ??
-          0;
-      return pB.compareTo(pA); // Descending
-    });
 
-    List<BarChartGroupData> barGroups = [];
+    // --- SORTING LOGIC (Preserved) ---
+    if (data.bucketOrder.isNotEmpty) {
+      keys.sort((a, b) {
+        int idxA = data.bucketOrder.indexOf(a);
+        int idxB = data.bucketOrder.indexOf(b);
+        if (idxA == -1) idxA = 999;
+        if (idxB == -1) idxB = 999;
+        return idxA.compareTo(idxB);
+      });
+    } else if (percentageConfig != null) {
+      keys.sort((a, b) {
+        int idxA = percentageConfig!.categories.indexWhere((c) => c.name == a);
+        int idxB = percentageConfig!.categories.indexWhere((c) => c.name == b);
+        if (idxA == -1) idxA = 999;
+        if (idxB == -1) idxB = 999;
+        return idxA.compareTo(idxB);
+      });
+    } else {
+      keys.sort((a, b) {
+        final valA = data.allocations[a] ?? 0;
+        final valB = data.allocations[b] ?? 0;
+        return valB.compareTo(valA);
+      });
+    }
+
+    // Determine max value for Y-axis scaling
     double maxY = 0;
-
-    for (int i = 0; i < keys.length; i++) {
-      final key = keys[i];
+    for (var key in keys) {
       final allocated = data.allocations[key] ?? 0;
       final spent = data.expenses[key] ?? 0;
       if (allocated > maxY) maxY = allocated;
       if (spent > maxY) maxY = spent;
-
-      barGroups.add(
-        BarChartGroupData(
-          x: i,
-          barRods: [
-            BarChartRodData(
-              toY: allocated,
-              color: BudgetrColors.accent,
-              width: 12,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(4),
-              ),
-            ),
-            BarChartRodData(
-              toY: spent,
-              color: const Color(0xFFFF006E),
-              width: 12,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(4),
-              ),
-            ),
-          ],
-          barsSpace: 8,
-        ),
-      );
     }
+    maxY = maxY * 1.2; // Buffer
+    if (maxY == 0) maxY = 1000;
 
     return BarChart(
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
-        maxY: maxY * 1.1, // Add buffer
-        barGroups: barGroups, // <--- FIXED: Added this line
+        maxY: maxY,
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (_) => BudgetrColors.cardSurface.withOpacity(0.9),
-            tooltipPadding: const EdgeInsets.all(8),
-            tooltipMargin: 8,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              final category = keys[group.x.toInt()];
-              final type = rodIndex == 0 ? 'Allocated' : 'Spent';
+              final key = keys[groupIndex];
+              final isAllocated = rodIndex == 0;
+              final value = rod.toY;
               return BarTooltipItem(
-                '$category\n',
+                '$key\n',
                 const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
                 ),
                 children: [
                   TextSpan(
-                    text:
-                        '$type: ${NumberFormat.simpleCurrency(locale: 'en_IN', decimalDigits: 0).format(rod.toY)}',
+                    text: isAllocated ? 'Allocated: ' : 'Spent: ',
                     style: TextStyle(
-                      color: rod.color,
+                      color: Colors.white.withOpacity(0.7),
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  TextSpan(
+                    text: NumberFormat.currency(
+                      locale: 'en_IN',
+                      symbol: '₹',
+                      decimalDigits: 0,
+                    ).format(value),
+                    style: TextStyle(
+                      color: isAllocated
+                          ? BudgetrColors.accent
+                          : const Color(0xFFFF006E),
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
@@ -142,16 +133,41 @@ class SettlementChart extends StatelessWidget {
           rightTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
           ),
-          leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
+          // --- UPDATED: Show Left Y-Axis Titles ---
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40, // Reserve space for the labels
+              getTitlesWidget: (value, meta) {
+                if (value == 0) return const SizedBox.shrink();
+                return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  child: Text(
+                    NumberFormat.compactCurrency(
+                      locale: 'en_IN',
+                      symbol: '',
+                      decimalDigits: 0,
+                    ).format(value),
+                    style: BudgetrStyles.caption.copyWith(
+                      fontSize: 10,
+                      color: Colors.white.withOpacity(0.5),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) {
-                if (value.toInt() < keys.length) {
-                  String text = keys[value.toInt()];
-                  if (text.length > 3) text = text.substring(0, 3);
+                final index = value.toInt();
+                if (index >= 0 && index < keys.length) {
+                  String text = keys[index];
+                  if (text.length > 8) {
+                    text = '${text.substring(0, 6)}..';
+                  }
                   return SideTitleWidget(
                     axisSide: meta.axisSide,
                     child: Padding(
@@ -172,8 +188,56 @@ class SettlementChart extends StatelessWidget {
             ),
           ),
         ),
-        borderData: FlBorderData(show: false),
-        gridData: const FlGridData(show: false),
+        borderData: FlBorderData(
+          show: true,
+          border: Border(
+            bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
+            left: BorderSide(color: Colors.white.withOpacity(0.1)),
+          ),
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: maxY / 5, // Show ~5 grid lines
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.white.withOpacity(0.05),
+              strokeWidth: 1,
+            );
+          },
+        ),
+        barGroups: List.generate(keys.length, (index) {
+          final key = keys[index];
+          final allocated = data.allocations[key] ?? 0;
+          final spent = data.expenses[key] ?? 0;
+
+          return BarChartGroupData(
+            x: index,
+            barRods: [
+              // Allocated Rod
+              BarChartRodData(
+                toY: allocated,
+                color: BudgetrColors.accent,
+                width: 8,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(2),
+                  topRight: Radius.circular(2),
+                ),
+              ),
+              // Spent Rod
+              BarChartRodData(
+                toY: spent,
+                color: const Color(0xFFFF006E),
+                width: 8,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(2),
+                  topRight: Radius.circular(2),
+                ),
+              ),
+            ],
+            barsSpace: 4,
+          );
+        }),
       ),
     );
   }
@@ -201,8 +265,7 @@ class SettlementChart extends StatelessWidget {
         Text(
           text,
           style: BudgetrStyles.caption.copyWith(
-            color: Colors.white70,
-            fontWeight: FontWeight.bold,
+            color: Colors.white.withOpacity(0.7),
           ),
         ),
       ],

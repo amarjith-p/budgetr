@@ -9,12 +9,14 @@ class FinancialRecord {
   final int month;
   final double effectiveIncome;
   final Timestamp createdAt;
-  final Timestamp updatedAt; // NEW: Track updates
+  final Timestamp updatedAt;
 
   // Dynamic Allocations: Key = Category Name, Value = Amount
   final Map<String, double> allocations;
   // Snapshot of percentages used at the time of creation
   final Map<String, double> allocationPercentages;
+  // NEW: Persisted order of buckets
+  final List<String> bucketOrder;
 
   FinancialRecord({
     required this.id,
@@ -25,9 +27,10 @@ class FinancialRecord {
     required this.month,
     required this.effectiveIncome,
     required this.createdAt,
-    required this.updatedAt, // Require in constructor
+    required this.updatedAt,
     required this.allocations,
     required this.allocationPercentages,
+    required this.bucketOrder, // Required field
   });
 
   factory FinancialRecord.fromFirestore(DocumentSnapshot doc) {
@@ -37,7 +40,6 @@ class FinancialRecord {
     Map<String, double> percentages = {};
 
     if (data.containsKey('allocations')) {
-      // Load new dynamic structure
       allocations = Map<String, double>.from(
         data['allocations'].map(
           (key, value) => MapEntry(key, (value as num).toDouble()),
@@ -51,7 +53,7 @@ class FinancialRecord {
         );
       }
     } else {
-      // Legacy support: convert old fields to map
+      // Legacy support
       allocations = {
         'Necessities': (data['necessities'] ?? 0.0).toDouble(),
         'Lifestyle': (data['lifestyle'] ?? 0.0).toDouble(),
@@ -77,10 +79,15 @@ class FinancialRecord {
       month: data['month'] ?? 0,
       effectiveIncome: (data['effectiveIncome'] ?? 0.0).toDouble(),
       createdAt: data['createdAt'] ?? Timestamp.now(),
-      // Use updatedAt if available, else fallback to createdAt, else Now
       updatedAt: data['updatedAt'] ?? data['createdAt'] ?? Timestamp.now(),
       allocations: allocations,
       allocationPercentages: percentages,
+      // Load stored order or empty list for legacy records
+      bucketOrder:
+          (data['bucketOrder'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 
@@ -94,9 +101,10 @@ class FinancialRecord {
       'month': month,
       'effectiveIncome': effectiveIncome,
       'createdAt': createdAt,
-      'updatedAt': updatedAt, // Save to DB
+      'updatedAt': updatedAt,
       'allocations': allocations,
       'allocationPercentages': allocationPercentages,
+      'bucketOrder': bucketOrder, // Persist order
     };
   }
 }

@@ -113,19 +113,19 @@ class _SettlementScreenState extends State<SettlementScreen> {
     });
   }
 
-  void _showSettlementInputSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const SettlementInputSheet(),
-    ).then((_) {
-      if (_selectedYear != null && _selectedMonth != null) {
-        _fetchSettlementData();
-      }
-    });
-  }
+  // void _showSettlementInputSheet() {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     isScrollControlled: true,
+  //     useSafeArea: true,
+  //     backgroundColor: Colors.transparent,
+  //     builder: (context) => const SettlementInputSheet(),
+  //   ).then((_) {
+  //     if (_selectedYear != null && _selectedMonth != null) {
+  //       _fetchSettlementData();
+  //     }
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {

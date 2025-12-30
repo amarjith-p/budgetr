@@ -422,6 +422,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     effectiveIncome: 0,
                     allocations: {},
                     allocationPercentages: {},
+                    bucketOrder: [],
                     createdAt: Timestamp.now(),
                     updatedAt: Timestamp.now(),
                   ),
