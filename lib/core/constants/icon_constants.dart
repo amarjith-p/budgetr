@@ -25,7 +25,8 @@ class IconConstants {
       }
       // Fallback for icons that might have been saved but removed from list
       // Note: This relies on the font family being loaded
-      return IconData(code, fontFamily: 'MaterialIcons');
+      // return IconData(code, fontFamily: 'MaterialIcons');
+      return Icons.category_outlined;
     } catch (_) {
       return Icons.category_outlined;
     }
