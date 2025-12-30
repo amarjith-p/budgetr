@@ -1,7 +1,10 @@
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/glass_card.dart';
 import '../../../core/models/financial_record_model.dart';
 import '../../../core/models/percentage_config_model.dart';
 import '../../../core/models/settlement_model.dart';
@@ -66,6 +69,8 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
     final years = _yearMonthData.map((e) => e['year']!).toSet().toList();
     years.sort((a, b) => b.compareTo(a));
     _availableYears = years;
+
+    // Always load the fresh config when opening the sheet
     _percentageConfig = await _settingsService.getPercentageConfig();
 
     final now = DateTime.now();
@@ -111,14 +116,18 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
         '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
 
     try {
+      // Re-fetch config here too just to be absolutely safe
+      final configFuture = _settingsService.getPercentageConfig();
       final results = await Future.wait([
         _dashboardService.getRecordById(recordId),
         _settlementService.getSettlementById(recordId),
+        configFuture,
       ]);
 
       setState(() {
         _budgetRecord = results[0] as FinancialRecord;
         _existingSettlement = results[1] as Settlement?;
+        _percentageConfig = results[2] as PercentageConfig;
 
         _controllers.clear();
         _focusNodes.clear();
@@ -141,9 +150,12 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error fetching data: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error fetching data: $e"),
+            backgroundColor: AppColors.dangerRed,
+          ),
+        );
       }
     }
   }
@@ -197,46 +209,17 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
 
   void _handleNext() {
     if (_activeController == null) return;
-
-    final entries = _budgetRecord!.allocations.entries.toList();
-    if (_percentageConfig != null) {
-      entries.sort((a, b) {
-        int idxA = _percentageConfig!.categories.indexWhere(
-          (c) => c.name == a.key,
-        );
-        int idxB = _percentageConfig!.categories.indexWhere(
-          (c) => c.name == b.key,
-        );
-        if (idxA == -1) idxA = 999;
-        if (idxB == -1) idxB = 999;
-        return idxA.compareTo(idxB);
-      });
-    } else {
-      entries.sort((a, b) => b.value.compareTo(a.value));
-    }
-
-    int currentIndex = -1;
-    for (int i = 0; i < entries.length; i++) {
-      if (_controllers[entries[i].key] == _activeController) {
-        currentIndex = i;
-        break;
-      }
-    }
-
-    if (currentIndex != -1 && currentIndex < entries.length - 1) {
-      final nextKey = entries[currentIndex + 1].key;
-      _setActive(_controllers[nextKey]!, _focusNodes[nextKey]!);
-    } else {
-      _closeKeyboard();
-    }
+    _navigateInput(1);
   }
 
-  // --- NEW: Handle Previous Logic ---
   void _handlePrevious() {
     if (_activeController == null) return;
+    _navigateInput(-1);
+  }
 
-    // Use same sort logic to ensure we navigate in visual order
+  void _navigateInput(int direction) {
     final entries = _budgetRecord!.allocations.entries.toList();
+    // Sort logic
     if (_percentageConfig != null) {
       entries.sort((a, b) {
         int idxA = _percentageConfig!.categories.indexWhere(
@@ -261,9 +244,10 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
       }
     }
 
-    if (currentIndex > 0) {
-      final prevKey = entries[currentIndex - 1].key;
-      _setActive(_controllers[prevKey]!, _focusNodes[prevKey]!);
+    int nextIndex = currentIndex + direction;
+    if (nextIndex >= 0 && nextIndex < entries.length) {
+      final nextKey = entries[nextIndex].key;
+      _setActive(_controllers[nextKey]!, _focusNodes[nextKey]!);
     } else {
       _closeKeyboard();
     }
@@ -296,14 +280,17 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Settlement saved successfully!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.successGreen,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.dangerRed,
+          ),
         );
       }
     }
@@ -315,7 +302,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      color: const Color(0xff0D1B2A),
+      color: AppColors.deepVoid,
       child: Column(
         mainAxisSize: MainAxisSize.max,
         children: [
@@ -325,66 +312,102 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ModernDropdownPill<int>(
-                          label: _selectedYear?.toString() ?? 'Year',
-                          isActive: _selectedYear != null,
-                          icon: Icons.calendar_today_outlined,
-                          onTap: () => showSelectionSheet<int>(
-                            context: context,
-                            title: 'Select Year',
-                            items: _availableYears,
-                            labelBuilder: (y) => y.toString(),
-                            onSelect: _onYearSelected,
-                            selectedItem: _selectedYear,
-                          ),
-                        ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ModernDropdownPill<int>(
-                          label: _selectedMonth != null
-                              ? DateFormat(
-                                  'MMMM',
-                                ).format(DateTime(0, _selectedMonth!))
-                              : 'Month',
-                          isActive: _selectedMonth != null,
-                          icon: Icons.calendar_view_month_outlined,
-                          isEnabled: _selectedYear != null,
-                          onTap: () => showSelectionSheet<int>(
-                            context: context,
-                            title: 'Select Month',
-                            items: _availableMonthsForYear,
-                            labelBuilder: (m) =>
-                                DateFormat('MMMM').format(DateTime(0, m)),
-                            onSelect: (val) =>
-                                setState(() => _selectedMonth = val),
-                            selectedItem: _selectedMonth,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.downloading,
-                          color: Colors.white70,
-                        ),
-                        onPressed: _fetchData,
-                        tooltip: 'Fetch Budget Data',
-                      ),
-                    ],
+                    ),
                   ),
-                  const Divider(height: 32, color: Colors.white24),
+                  const SizedBox(height: 20),
+
+                  GlassCard(
+                    padding: const EdgeInsets.all(12),
+                    borderRadius: 16,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ModernDropdownPill<int>(
+                            label: _selectedYear?.toString() ?? 'Year',
+                            isActive: _selectedYear != null,
+                            icon: Icons.calendar_today_outlined,
+                            onTap: () => showSelectionSheet<int>(
+                              context: context,
+                              title: 'Select Year',
+                              items: _availableYears,
+                              labelBuilder: (y) => y.toString(),
+                              onSelect: _onYearSelected,
+                              selectedItem: _selectedYear,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ModernDropdownPill<int>(
+                            label: _selectedMonth != null
+                                ? DateFormat(
+                                    'MMMM',
+                                  ).format(DateTime(0, _selectedMonth!))
+                                : 'Month',
+                            isActive: _selectedMonth != null,
+                            icon: Icons.calendar_view_month_outlined,
+                            isEnabled: _selectedYear != null,
+                            onTap: () => showSelectionSheet<int>(
+                              context: context,
+                              title: 'Select Month',
+                              items: _availableMonthsForYear,
+                              labelBuilder: (m) =>
+                                  DateFormat('MMMM').format(DateTime(0, m)),
+                              onSelect: (val) =>
+                                  setState(() => _selectedMonth = val),
+                              selectedItem: _selectedMonth,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.royalBlue.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.downloading_rounded,
+                              color: AppColors.royalBlue,
+                            ),
+                            onPressed: _fetchData,
+                            tooltip: 'Fetch Budget Data',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
                   Expanded(
                     child: _budgetRecord == null
                         ? Center(
-                            child: Text(
-                              'Select a month and fetch data to begin.',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
-                              ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.touch_app_outlined,
+                                  size: 40,
+                                  color: Colors.white.withOpacity(0.2),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Select a month and fetch data',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.5),
+                                  ),
+                                ),
+                              ],
                             ),
                           )
                         : _buildSettlementForm(),
@@ -394,6 +417,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
             ),
           ),
           if (_budgetRecord != null) _buildStickyBottomBar(),
+
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
@@ -411,8 +435,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
                     onClose: _closeKeyboard,
                     onSwitchToSystem: _switchToSystemKeyboard,
                     onNext: _handleNext,
-                    onPrevious:
-                        _handlePrevious, // ADDED: Connected to previous logic
+                    onPrevious: _handlePrevious,
                   )
                 : const SizedBox.shrink(),
           ),
@@ -429,103 +452,117 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
         ? (_totalExpense / income).clamp(0.0, 1.0)
         : 0.0;
     final statusColor = isOverBudget
-        ? const Color(0xFFFF5252)
-        : const Color(0xFF00E676);
+        ? AppColors.dangerRed
+        : AppColors.successGreen;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xff0D1B2A),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Total Spent: ${_currencyFormat.format(_totalExpense)}",
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                isOverBudget
-                    ? "Over by ${_currencyFormat.format(balance.abs())}"
-                    : "Left: ${_currencyFormat.format(balance)}",
-                style: TextStyle(
-                  color: statusColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.white10,
-              valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-              minHeight: 6,
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.deepVoid.withOpacity(0.85),
+            border: Border(
+              top: BorderSide(color: Colors.white.withOpacity(0.1)),
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.white.withOpacity(0.2)),
-                    foregroundColor: Colors.white70,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Spent: ${_currencyFormat.format(_totalExpense)}",
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  child: const Text('Cancel'),
+                  Text(
+                    isOverBudget
+                        ? "Over by ${_currencyFormat.format(balance.abs())}"
+                        : "Left: ${_currencyFormat.format(balance)}",
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          color: statusColor.withOpacity(0.5),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.white10,
+                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                  minHeight: 6,
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _onSettle,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3A86FF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: Colors.white.withOpacity(0.1),
+                          ),
+                          foregroundColor: Colors.white70,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text('Cancel'),
+                      ),
                     ),
                   ),
-                  child: const Text(
-                    'Settle Budget',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _onSettle,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.royalBlue,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          shadowColor: AppColors.royalBlue.withOpacity(0.4),
+                        ).copyWith(elevation: MaterialStateProperty.all(8)),
+                        child: const Text(
+                          'Settle Budget',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildSettlementForm() {
     final entries = _budgetRecord!.allocations.entries.toList();
+    // Sorting logic
     if (_percentageConfig != null) {
       entries.sort((a, b) {
         int idxA = _percentageConfig!.categories.indexWhere(
@@ -544,9 +581,11 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
 
     return GestureDetector(
       onTap: _closeKeyboard,
-      child: ListView.builder(
+      child: ListView.separated(
         controller: _scrollController,
         itemCount: entries.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        padding: const EdgeInsets.only(bottom: 20),
         itemBuilder: (context, index) {
           final entry = entries[index];
           return _buildSettlementRow(
@@ -567,52 +606,81 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
     if (!_focusNodes.containsKey(title)) _focusNodes[title] = FocusNode();
     final focusNode = _focusNodes[title]!;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        subtitle: Text(
-          'Allocated: ${_currencyFormat.format(allocated)}',
-          style: TextStyle(color: Colors.white.withOpacity(0.5)),
-        ),
-        trailing: SizedBox(
-          width: 140,
-          child: TextFormField(
-            controller: controller,
-            focusNode: focusNode,
-            readOnly: !_useSystemKeyboard,
-            showCursor: true,
-            textAlign: TextAlign.end,
-            keyboardType: TextInputType.number,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+    return GlassCard(
+      borderRadius: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Allocated: ${_currencyFormat.format(allocated)}',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
             ),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: '0',
-              hintStyle: TextStyle(color: Colors.white24),
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.05),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
+          ),
+          const SizedBox(width: 16),
+          SizedBox(
+            width: 120,
+            child: GestureDetector(
+              onTap: () => _setActive(controller, focusNode),
+              child: AbsorbPointer(
+                absorbing: !_useSystemKeyboard,
+                child: TextFormField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  readOnly: !_useSystemKeyboard,
+                  showCursor: true,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.electricPink,
+                    fontSize: 18,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: '0',
+                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.1)),
+                    filled: true,
+                    fillColor: Colors.black.withOpacity(0.2),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppColors.electricPink,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
               ),
             ),
-            onTap: () => _setActive(controller, focusNode),
           ),
-        ),
+        ],
       ),
     );
   }
