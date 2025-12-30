@@ -8,6 +8,11 @@ import '../services/net_worth_service.dart';
 import 'net_worth_chart.dart';
 import 'net_worth_input_sheet.dart';
 
+// --- DESIGN SYSTEM IMPORTS ---
+import '../../../core/design/budgetr_colors.dart';
+import '../../../core/design/budgetr_styles.dart';
+import '../../../core/design/budgetr_components.dart';
+
 class NetWorthDashboardTab extends StatefulWidget {
   const NetWorthDashboardTab({super.key});
 
@@ -24,25 +29,14 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
   );
   final DateFormat _dateFormat = DateFormat('dd MMM yyyy');
 
-  final Color _cardColor = const Color(0xFF1B263B).withOpacity(0.6);
-  final Color _accentColor = const Color(0xFF2EC4B6);
-  final Color _greenColor = const Color(0xFF00E676);
-  final Color _redColor = const Color(0xFFFF5252);
-
   Future<void> _deleteRecord(String id) async {
     bool confirm =
         await showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF0D1B2A),
-            title: const Text(
-              'Delete Record?',
-              style: TextStyle(color: Colors.white),
-            ),
-            content: const Text(
-              'This cannot be undone.',
-              style: TextStyle(color: Colors.white70),
-            ),
+            backgroundColor: BudgetrColors.cardSurface,
+            title: Text('Delete Record?', style: BudgetrStyles.h2),
+            content: Text('This cannot be undone.', style: BudgetrStyles.body),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
@@ -55,7 +49,7 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                 onPressed: () => Navigator.pop(ctx, true),
                 child: const Text(
                   'Delete',
-                  style: TextStyle(color: Colors.redAccent),
+                  style: TextStyle(color: BudgetrColors.error),
                 ),
               ),
             ],
@@ -115,33 +109,31 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    // Summary Card
+                    // --- Summary Card ---
                     Container(
+                      width: double.infinity,
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [_cardColor, _cardColor.withOpacity(0.8)],
+                          colors: [
+                            BudgetrColors.cardSurface,
+                            BudgetrColors.cardSurface.withOpacity(0.8),
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.05),
+                        borderRadius: BudgetrStyles.radiusL,
+                        border: BudgetrStyles.glassBorder,
+                        boxShadow: BudgetrStyles.glowBoxShadow(
+                          BudgetrColors.accent,
                         ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 10,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
                       ),
                       child: Column(
                         children: [
                           Text(
                             "CURRENT NET WORTH",
-                            style: TextStyle(
-                              color: _accentColor,
+                            style: BudgetrStyles.caption.copyWith(
+                              color: BudgetrColors.accent,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.5,
@@ -150,10 +142,9 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                           const SizedBox(height: 8),
                           Text(
                             _currencyFormat.format(current),
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: BudgetrStyles.h1.copyWith(
                               fontSize: 32,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -164,8 +155,11 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: (growth >= 0 ? _greenColor : _redColor)
-                                    .withOpacity(0.2),
+                                color:
+                                    (growth >= 0
+                                            ? BudgetrColors.success
+                                            : BudgetrColors.error)
+                                        .withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
@@ -176,8 +170,8 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                                         ? Icons.trending_up
                                         : Icons.trending_down,
                                     color: growth >= 0
-                                        ? _greenColor
-                                        : _redColor,
+                                        ? BudgetrColors.success
+                                        : BudgetrColors.error,
                                     size: 16,
                                   ),
                                   const SizedBox(width: 6),
@@ -185,8 +179,8 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                                     "${growth >= 0 ? '+' : ''}${_shortCurrency.format(growth)}",
                                     style: TextStyle(
                                       color: growth >= 0
-                                          ? _greenColor
-                                          : _redColor,
+                                          ? BudgetrColors.success
+                                          : BudgetrColors.error,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -200,36 +194,33 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
 
                     const SizedBox(height: 24),
 
-                    // Refactored Chart Widget
+                    // --- Chart ---
                     NetWorthChart(
                       sortedRecords: sortedRecords,
                       currencyFormat: _currencyFormat,
-                      accentColor: _accentColor,
+                      accentColor: BudgetrColors.accent,
                     ),
 
                     const SizedBox(height: 24),
 
-                    // Table
+                    // --- History Table ---
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
                         "History Log",
-                        style: TextStyle(
+                        style: BudgetrStyles.h3.copyWith(
                           color: Colors.white.withOpacity(0.7),
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                     const SizedBox(height: 12),
 
                     Container(
+                      width: double.infinity,
                       decoration: BoxDecoration(
-                        color: _cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.05),
-                        ),
+                        color: BudgetrColors.cardSurface.withOpacity(0.6),
+                        borderRadius: BudgetrStyles.radiusM,
+                        border: BudgetrStyles.glassBorder,
                       ),
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
@@ -242,20 +233,18 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                             DataColumn(
                               label: Text(
                                 'DATE',
-                                style: TextStyle(
-                                  color: _accentColor,
+                                style: BudgetrStyles.caption.copyWith(
+                                  color: BudgetrColors.accent,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 11,
                                 ),
                               ),
                             ),
                             DataColumn(
                               label: Text(
                                 'NET WORTH',
-                                style: TextStyle(
-                                  color: _accentColor,
+                                style: BudgetrStyles.caption.copyWith(
+                                  color: BudgetrColors.accent,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 11,
                                 ),
                               ),
                               numeric: true,
@@ -263,10 +252,9 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                             DataColumn(
                               label: Text(
                                 'DIFFERENCE',
-                                style: TextStyle(
-                                  color: _accentColor,
+                                style: BudgetrStyles.caption.copyWith(
+                                  color: BudgetrColors.accent,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 11,
                                 ),
                               ),
                               numeric: true,
@@ -282,8 +270,7 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                                 DataCell(
                                   Text(
                                     _dateFormat.format(record.date),
-                                    style: const TextStyle(
-                                      color: Colors.white70,
+                                    style: BudgetrStyles.body.copyWith(
                                       fontSize: 13,
                                     ),
                                   ),
@@ -291,10 +278,10 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                                 DataCell(
                                   Text(
                                     _currencyFormat.format(record.amount),
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: BudgetrStyles.body.copyWith(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
@@ -305,9 +292,9 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                                         : '${diff > 0 ? '+' : ''}${_currencyFormat.format(diff)}',
                                     style: TextStyle(
                                       color: diff > 0
-                                          ? _greenColor
+                                          ? BudgetrColors.success
                                           : (diff < 0
-                                                ? _redColor
+                                                ? BudgetrColors.error
                                                 : Colors.white30),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
@@ -335,7 +322,7 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
               ),
             ),
 
-            // Floating Capsule
+            // --- Floating Action Button (Capsule) ---
             Positioned(
               bottom: 20,
               left: 0,
@@ -352,20 +339,11 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                       vertical: 16,
                     ),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [_accentColor, const Color(0xFF2563EB)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      gradient: BudgetrColors.primaryGradient,
                       borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _accentColor.withOpacity(0.4),
-                          blurRadius: 20,
-                          spreadRadius: -5,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
+                      boxShadow: BudgetrStyles.glowBoxShadow(
+                        BudgetrColors.accent,
+                      ),
                       border: Border.all(
                         color: Colors.white.withOpacity(0.2),
                         width: 1,
@@ -404,36 +382,51 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: _accentColor.withOpacity(0.1),
+              color: BudgetrColors.accent.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.currency_rupee, size: 48, color: _accentColor),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            "Start Tracking Wealth",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+            child: const Icon(
+              Icons.currency_rupee,
+              size: 48,
+              color: BudgetrColors.accent,
             ),
           ),
+          const SizedBox(height: 24),
+          Text("Start Tracking Wealth", style: BudgetrStyles.h2),
           const SizedBox(height: 8),
           Text(
             "Add your assets and liabilities\nto see your net worth grow.",
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white.withOpacity(0.5)),
+            style: BudgetrStyles.body.copyWith(
+              color: Colors.white.withOpacity(0.5),
+            ),
           ),
           const SizedBox(height: 40),
-          ElevatedButton.icon(
-            onPressed: _showInputSheet,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _accentColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          GestureDetector(
+            onTap: () => _showInputSheet(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              decoration: BoxDecoration(
+                gradient: BudgetrColors.primaryGradient,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: BudgetrStyles.glowBoxShadow(BudgetrColors.accent),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    "Add First Entry",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            icon: const Icon(Icons.add),
-            label: const Text("Add First Entry"),
           ),
         ],
       ),

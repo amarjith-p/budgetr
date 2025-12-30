@@ -3,6 +3,10 @@ import 'package:intl/intl.dart';
 import '../../../core/models/percentage_config_model.dart';
 import '../../../core/models/settlement_model.dart';
 
+// --- DESIGN SYSTEM IMPORTS ---
+import '../../../core/design/budgetr_colors.dart';
+import '../../../core/design/budgetr_styles.dart';
+
 class SettlementTable extends StatelessWidget {
   final Settlement settlement;
   final PercentageConfig? percentageConfig;
@@ -17,12 +21,10 @@ class SettlementTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color cardColor = Color(0xFF1B263B);
-    const Color accentColor = Color(0xFF3A86FF);
-
+    // 1. Prepare Data
     final entries = settlement.allocations.entries.toList();
 
-    // Sorting Logic
+    // Sorting Logic (Preserved)
     if (percentageConfig != null) {
       entries.sort((a, b) {
         int idxA = percentageConfig!.categories.indexWhere(
@@ -39,154 +41,174 @@ class SettlementTable extends StatelessWidget {
       entries.sort((a, b) => b.value.compareTo(a.value));
     }
 
-    List<DataRow> rows = [];
+    // 2. Build Table Rows
+    List<TableRow> tableRows = [];
 
+    // --- Header Row ---
+    tableRows.add(
+      TableRow(
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          border: Border(
+            bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
+          ),
+        ),
+        children: [
+          _buildHeaderCell('Bucket', Alignment.centerLeft),
+          _buildHeaderCell('Allocated', Alignment.centerRight),
+          _buildHeaderCell('Spent / Bal', Alignment.centerRight),
+        ],
+      ),
+    );
+
+    // --- Data Rows ---
     for (var entry in entries) {
       final key = entry.key;
       final allocated = entry.value;
       final spent = settlement.expenses[key] ?? 0.0;
       final balance = allocated - spent;
-      rows.add(_createDataRow(key, allocated, spent, balance));
+
+      tableRows.add(
+        TableRow(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: Colors.white.withOpacity(0.02)),
+            ),
+          ),
+          children: [
+            _buildCell(key, Alignment.centerLeft, style: BudgetrStyles.body),
+            _buildCell(
+              currencyFormat.format(allocated),
+              Alignment.centerRight,
+              style: BudgetrStyles.body,
+            ),
+            _buildDoubleCell(spent, balance, Alignment.centerRight),
+          ],
+        ),
+      );
     }
 
-    // Total Row
-    rows.add(
-      DataRow(
-        cells: [
-          const DataCell(
-            Text(
-              'TOTAL',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+    // --- Total Row ---
+    tableRows.add(
+      TableRow(
+        decoration: BoxDecoration(
+          color: BudgetrColors.accent.withOpacity(
+            0.15,
+          ), // Highlighted Total Row
+        ),
+        children: [
+          _buildCell(
+            'TOTAL',
+            Alignment.centerLeft,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: 1,
             ),
           ),
-          DataCell(
-            Text(
-              currencyFormat.format(settlement.totalIncome),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+          _buildCell(
+            currencyFormat.format(settlement.totalIncome),
+            Alignment.centerRight,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
           ),
-          DataCell(
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  currencyFormat.format(settlement.totalExpense),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  currencyFormat.format(settlement.totalBalance),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                    color: settlement.totalBalance >= 0
-                        ? Colors.greenAccent
-                        : Colors.redAccent,
-                  ),
-                ),
-              ],
-            ),
+          _buildDoubleCell(
+            settlement.totalExpense,
+            settlement.totalBalance,
+            Alignment.centerRight,
+            isTotal: true,
           ),
         ],
       ),
     );
 
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: cardColor.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        color: BudgetrColors.cardSurface.withOpacity(0.6),
+        borderRadius: BudgetrStyles.radiusM,
+        border: BudgetrStyles.glassBorder,
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: MaterialStateProperty.all(
-            Colors.white.withOpacity(0.05),
-          ),
-          columnSpacing: 20,
-          columns: [
-            DataColumn(
-              label: Text(
-                'Bucket',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: accentColor,
-                ),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'Allocated',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: accentColor,
-                ),
-              ),
-              numeric: true,
-            ),
-            DataColumn(
-              label: Text(
-                'Spent / Bal',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: accentColor,
-                ),
-              ),
-              numeric: true,
-            ),
-          ],
-          rows: rows,
+      child: ClipRRect(
+        borderRadius: BudgetrStyles.radiusM,
+        child: Table(
+          // Use FlexColumnWidth to proportionally fill the width
+          columnWidths: const {
+            0: FlexColumnWidth(1.4), // Bucket column gets slightly more space
+            1: FlexColumnWidth(1.0), // Allocated
+            2: FlexColumnWidth(1.0), // Spent/Bal
+          },
+          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+          children: tableRows,
         ),
       ),
     );
   }
 
-  DataRow _createDataRow(
-    String category,
-    double allocated,
-    double spent,
-    double balance,
-  ) {
-    return DataRow(
-      cells: [
-        DataCell(Text(category, style: const TextStyle(color: Colors.white70))),
-        DataCell(
-          Text(
-            currencyFormat.format(allocated),
-            style: const TextStyle(color: Colors.white70),
+  // --- Helper Widgets ---
+
+  Widget _buildHeaderCell(String text, Alignment alignment) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Align(
+        alignment: alignment,
+        child: Text(
+          text,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: BudgetrColors.accent,
+            fontSize: 13,
           ),
         ),
-        DataCell(
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                currencyFormat.format(spent),
-                style: const TextStyle(color: Colors.white70),
+      ),
+    );
+  }
+
+  Widget _buildCell(String text, Alignment alignment, {TextStyle? style}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Align(
+        alignment: alignment,
+        child: Text(text, style: style ?? BudgetrStyles.body),
+      ),
+    );
+  }
+
+  Widget _buildDoubleCell(
+    double v1,
+    double v2,
+    Alignment alignment, {
+    bool isTotal = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Align(
+        alignment: alignment,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              currencyFormat.format(v1),
+              style: isTotal
+                  ? const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    )
+                  : BudgetrStyles.body,
+            ),
+            Text(
+              currencyFormat.format(v2),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: v2 >= 0 ? BudgetrColors.success : BudgetrColors.error,
               ),
-              Text(
-                currencyFormat.format(balance),
-                style: TextStyle(
-                  fontSize: 11,
-                  color: balance >= 0
-                      ? Colors.greenAccent.withOpacity(0.7)
-                      : Colors.redAccent.withOpacity(0.7),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

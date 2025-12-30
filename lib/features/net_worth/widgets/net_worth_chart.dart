@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/net_worth_model.dart';
 
+// --- DESIGN SYSTEM IMPORTS ---
+import '../../../core/design/budgetr_colors.dart';
+import '../../../core/design/budgetr_styles.dart';
+
 class NetWorthChart extends StatelessWidget {
   final List<NetWorthRecord> sortedRecords;
   final NumberFormat currencyFormat;
@@ -17,9 +21,6 @@ class NetWorthChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Theme constant for the card background inside the tooltip
-    final tooltipBgColor = const Color(0xFF0D1B2A).withOpacity(0.95);
-
     List<FlSpot> spots = [];
     double sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
     int n = sortedRecords.length;
@@ -38,117 +39,184 @@ class NetWorthChart extends StatelessWidget {
     if (n > 1) {
       double slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
       double intercept = (sumY - slope * sumX) / n;
-      trendSpots.add(FlSpot(0, intercept));
-      trendSpots.add(FlSpot((n - 1).toDouble(), slope * (n - 1) + intercept));
-    } else if (n == 1) {
-      trendSpots.add(FlSpot(0, spots[0].y));
+      for (int i = 0; i < n; i++) {
+        trendSpots.add(FlSpot(i.toDouble(), slope * i + intercept));
+      }
     }
 
-    // Calculate X-Axis Interval
-    double interval = 1.0;
-    if (n > 5) interval = (n / 5).ceilToDouble();
+    // Determine Y-Axis Interval
+    double minY = spots.isEmpty
+        ? 0
+        : spots.map((e) => e.y).reduce((a, b) => a < b ? a : b);
+    double maxY = spots.isEmpty
+        ? 100
+        : spots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+    double range = maxY - minY;
+    if (range == 0) range = maxY == 0 ? 100 : maxY;
+    double interval = range / 4;
+    if (interval == 0) interval = 10;
+
+    // Adjust Y Range for padding
+    double chartMinY = minY - (range * 0.1);
+    double chartMaxY = maxY + (range * 0.1);
 
     return Container(
+      width: double.infinity,
       height: 320,
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1B263B).withOpacity(0.6),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        color: BudgetrColors.cardSurface.withOpacity(0.6),
+        borderRadius: BudgetrStyles.radiusM,
+        border: BudgetrStyles.glassBorder,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 8.0, bottom: 20),
-            child: Text(
-              "Growth Trajectory",
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("GROWTH TREND", style: BudgetrStyles.caption),
+              if (n > 1)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: accentColor.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.trending_up, size: 14, color: accentColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Linear Projection",
+                        style: TextStyle(
+                          color: accentColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
+          const SizedBox(height: 24),
           Expanded(
             child: LineChart(
               LineChartData(
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (spot) => tooltipBgColor,
-                    tooltipRoundedRadius: 8,
-                    getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
-                      return touchedBarSpots.map((barSpot) {
-                        // Ignore trend line tooltips (index 0)
-                        if (barSpot.barIndex == 0) return null;
-
-                        final index = barSpot.x.toInt();
-                        if (index >= 0 && index < sortedRecords.length) {
-                          final record = sortedRecords[index];
-                          final dateStr = DateFormat(
-                            'dd MMM yyyy',
-                          ).format(record.date);
-                          return LineTooltipItem(
-                            '$dateStr\n',
-                            const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: currencyFormat.format(barSpot.y),
-                                style: TextStyle(
-                                  color: accentColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                        return null;
-                      }).toList();
-                    },
+                minY: chartMinY,
+                maxY: chartMaxY,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: interval,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.white.withOpacity(0.05),
+                    strokeWidth: 1,
                   ),
                 ),
-                gridData: const FlGridData(show: false),
                 titlesData: FlTitlesData(
+                  show: true,
                   rightTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
                   topTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 45,
+                      interval: interval,
+                      getTitlesWidget: (value, meta) {
+                        if (value < minY || value > maxY) {
+                          return const SizedBox.shrink();
+                        }
+                        return Text(
+                          NumberFormat.compactCurrency(
+                            symbol: '',
+                            decimalDigits: 0,
+                            locale: 'en_IN',
+                          ).format(value),
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.3),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: interval,
+                      reservedSize: 30,
+                      interval: 1,
                       getTitlesWidget: (value, meta) {
                         int index = value.toInt();
-                        if (index >= 0 && index < sortedRecords.length) {
+                        if (index >= 0 && index < n) {
+                          // FIX: Removed .toDate() as .date is already DateTime
+                          final date = sortedRecords[index].date;
+
+                          // Show label only for specific indices to avoid crowding
+                          if (n > 6 && index % (n ~/ 4) != 0) {
+                            return const SizedBox.shrink();
+                          }
                           return Padding(
                             padding: const EdgeInsets.only(top: 8.0),
                             child: Text(
-                              DateFormat(
-                                'MMM yy',
-                              ).format(sortedRecords[index].date),
+                              DateFormat('MMM yy').format(date),
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.3),
                                 fontSize: 10,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           );
                         }
-                        return const Text('');
+                        return const SizedBox.shrink();
                       },
                     ),
                   ),
                 ),
                 borderData: FlBorderData(show: false),
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) =>
+                        BudgetrColors.background.withOpacity(0.95),
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        if (spot.barIndex == 0) return null; // Skip Trend Line
+
+                        // FIX: Removed .toDate() as .date is already DateTime
+                        final date = sortedRecords[spot.x.toInt()].date;
+
+                        return LineTooltipItem(
+                          '${DateFormat('MMM yyyy').format(date)}\n',
+                          const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: currencyFormat.format(spot.y),
+                              style: TextStyle(
+                                color: accentColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
                 lineBarsData: [
                   // Trend Line
                   LineChartBarData(

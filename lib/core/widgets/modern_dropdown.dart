@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../design/budgetr_colors.dart';
+import '../design/budgetr_styles.dart';
 
 class ModernDropdownPill<T> extends StatelessWidget {
   final String label;
@@ -23,17 +25,17 @@ class ModernDropdownPill<T> extends StatelessWidget {
       onTap: isEnabled ? onTap : null,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        // Reduced horizontal padding slightly (16 -> 12) to save space
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
         decoration: BoxDecoration(
           color: isActive
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-              : Theme.of(context).colorScheme.surfaceContainerHighest
-                    .withOpacity(isEnabled ? 0.3 : 0.1),
+              ? BudgetrColors.accent.withOpacity(0.2)
+              : Colors.white.withOpacity(
+                  isEnabled ? 0.1 : 0.05,
+                ), // Standardized opacity
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isActive
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                ? BudgetrColors.accent.withOpacity(0.5)
                 : Colors.white.withOpacity(isEnabled ? 0.1 : 0.05),
           ),
         ),
@@ -45,25 +47,20 @@ class ModernDropdownPill<T> extends StatelessWidget {
               icon,
               size: 18,
               color: isEnabled
-                  ? (isActive
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.white70)
+                  ? (isActive ? BudgetrColors.accent : Colors.white70)
                   : Colors.white24,
             ),
             const SizedBox(width: 8),
-            // FIX: Use Flexible to prevent overflow
             Flexible(
               child: Text(
                 label,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: isEnabled
-                      ? (isActive
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.white)
+                      ? (isActive ? BudgetrColors.accent : Colors.white)
                       : Colors.white24,
                 ),
-                overflow: TextOverflow.ellipsis, // Add ellipsis
+                overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
             ),
@@ -72,9 +69,7 @@ class ModernDropdownPill<T> extends StatelessWidget {
               Icon(
                 Icons.keyboard_arrow_down,
                 size: 16,
-                color: isActive
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.white54,
+                color: isActive ? BudgetrColors.accent : Colors.white54,
               ),
           ],
         ),
@@ -99,7 +94,7 @@ void showSelectionSheet<T>({
       filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xff0D1B2A).withOpacity(0.95),
+          color: BudgetrColors.background.withOpacity(0.95),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
         ),
@@ -120,7 +115,7 @@ void showSelectionSheet<T>({
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleLarge),
+                  Text(title, style: BudgetrStyles.h2),
                   if (showReset)
                     TextButton(
                       onPressed: () {
@@ -129,13 +124,13 @@ void showSelectionSheet<T>({
                       },
                       child: const Text(
                         'Reset',
-                        style: TextStyle(color: Colors.redAccent),
+                        style: TextStyle(color: BudgetrColors.error),
                       ),
                     ),
                 ],
               ),
             ),
-            const Divider(height: 1),
+            const Divider(height: 1, color: Colors.white10),
             SizedBox(
               height: 300,
               child: ListView.builder(
@@ -148,7 +143,7 @@ void showSelectionSheet<T>({
                       labelBuilder(item),
                       style: TextStyle(
                         color: isSelected
-                            ? Theme.of(context).colorScheme.primary
+                            ? BudgetrColors.accent
                             : Colors.white70,
                         fontWeight: isSelected
                             ? FontWeight.bold
@@ -156,10 +151,7 @@ void showSelectionSheet<T>({
                       ),
                     ),
                     trailing: isSelected
-                        ? Icon(
-                            Icons.check,
-                            color: Theme.of(context).colorScheme.primary,
-                          )
+                        ? const Icon(Icons.check, color: BudgetrColors.accent)
                         : null,
                     onTap: () {
                       onSelect(item);

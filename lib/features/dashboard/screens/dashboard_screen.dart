@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// Removed: import 'package:local_auth/local_auth.dart';
 
 import '../../../core/models/financial_record_model.dart';
 import '../services/dashboard_service.dart';
@@ -11,6 +10,10 @@ import '../widgets/add_record_sheet.dart';
 import '../widgets/dashboard_summary_card.dart';
 import '../widgets/budget_allocations_list.dart';
 import '../widgets/jump_to_date_sheet.dart';
+
+// --- DESIGN SYSTEM ---
+import '../../../core/design/budgetr_colors.dart';
+import '../../../core/design/budgetr_styles.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -21,14 +24,10 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final DashboardService _dashboardService = DashboardService();
-  // Removed: final LocalAuthentication auth = LocalAuthentication();
 
   // Infinite Scroll Logic
   final int _initialIndex = 12 * 50;
   late final PageController _pageController;
-
-  final Color _bgColor = const Color(0xff0D1B2A);
-  final Color _accentColor = const Color(0xFF3A86FF);
 
   DateTime _currentDate = DateTime.now();
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
@@ -91,7 +90,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- NEW: Modern Options Sheet ---
   void _showRecordOptions(FinancialRecord record) {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
@@ -100,7 +98,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: _bgColor,
+          color: BudgetrColors.background,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
         ),
@@ -121,11 +119,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 24),
             Text(
               "Budget Options",
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
-                fontSize: 14,
+              style: BudgetrStyles.caption.copyWith(
                 fontWeight: FontWeight.bold,
-                letterSpacing: 1,
               ),
             ),
             const SizedBox(height: 16),
@@ -135,12 +130,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BudgetrStyles.radiusM,
               ),
               child: ListTile(
                 onTap: () {
-                  Navigator.pop(context); // Close options
-                  _handleDeleteRecord(record); // Trigger Delete Flow
+                  Navigator.pop(context);
+                  _handleDeleteRecord(record);
                 },
                 leading: Container(
                   padding: const EdgeInsets.all(8),
@@ -175,30 +170,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleDeleteRecord(FinancialRecord record) async {
-    // 1. Confirm Delete
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: _bgColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withOpacity(0.1)),
-        ),
-        title: const Text(
-          "Delete Budget?",
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text("Delete Budget?"),
         content: Text(
           "Are you sure you want to delete the budget for ${DateFormat('MMMM yyyy').format(DateTime(record.year, record.month))}? This cannot be undone.",
-          style: TextStyle(color: Colors.white.withOpacity(0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text("Cancel"),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -216,9 +198,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (confirm != true) return;
 
-    // Removed: Secure Auth Check
-
-    // 2. Delete (Service handles cascading delete of Settlement)
     await _dashboardService.deleteFinancialRecord(record.id);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -233,7 +212,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: BudgetrColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -300,7 +279,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(width: 8),
                           Icon(
                             Icons.arrow_drop_down,
-                            color: _accentColor,
+                            color: BudgetrColors.accent,
                             size: 20,
                           ),
                         ],
@@ -322,12 +301,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 }
 
                 final records = snapshot.data ?? [];
-                // Find record for current date view or create empty one
                 final currentRecord = records.firstWhere(
                   (r) =>
                       r.year == _currentDate.year &&
                       r.month == _currentDate.month,
-                  // FIX: Added required updatedAt param
                   orElse: () => FinancialRecord(
                     id: '',
                     salary: 0,
@@ -339,7 +316,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     allocations: {},
                     allocationPercentages: {},
                     createdAt: Timestamp.now(),
-                    updatedAt: Timestamp.now(), // Added
+                    updatedAt: Timestamp.now(),
                   ),
                 );
 
@@ -352,29 +329,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Column(
                         children: [
                           if (hasData) ...[
-                            // --- Refactored Widget: Summary Card ---
                             DashboardSummaryCard(
                               record: currentRecord,
                               currencyFormat: _currencyFormat,
                               onOptionsTap: () =>
                                   _showRecordOptions(currentRecord),
                             ),
-
                             const SizedBox(height: 24),
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
                                 "Budget Allocations",
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.7),
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                                style: BudgetrStyles.h3.copyWith(
+                                  color: Colors.white70,
                                 ),
                               ),
                             ),
                             const SizedBox(height: 12),
-
-                            // --- Refactored Widget: Allocations List ---
                             BudgetAllocationsList(
                               record: currentRecord,
                               currencyFormat: _currencyFormat,
@@ -385,7 +356,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
 
-                    // --- Floating Action Button (Edit/Create) ---
+                    // --- FAB ---
                     Positioned(
                       bottom: 20,
                       left: 0,
@@ -394,10 +365,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: GestureDetector(
                           onTap: () {
                             if (hasData) {
-                              // REMOVED: Authentication Check
                               _showAddRecordSheet(currentRecord);
                             } else {
-                              // CREATE NEW (Use passed date)
                               _showAddRecordSheet(null);
                             }
                           },
@@ -407,20 +376,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               vertical: 16,
                             ),
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [_accentColor, const Color(0xFF2563EB)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
+                              gradient: BudgetrColors.primaryGradient,
                               borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _accentColor.withOpacity(0.4),
-                                  blurRadius: 20,
-                                  spreadRadius: -5,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
+                              boxShadow: BudgetrStyles.glowBoxShadow(
+                                BudgetrColors.accent,
+                              ),
                               border: Border.all(
                                 color: Colors.white.withOpacity(0.2),
                                 width: 1,
@@ -479,19 +439,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              "No Budget Found",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text("No Budget Found", style: BudgetrStyles.h2),
             const SizedBox(height: 8),
             Text(
               "Tap 'Create Budget' to plan\nfor ${DateFormat('MMMM').format(_currentDate)}.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white.withOpacity(0.5)),
+              style: BudgetrStyles.body.copyWith(color: Colors.white54),
             ),
           ],
         ),

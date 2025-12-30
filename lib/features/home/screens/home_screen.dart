@@ -11,17 +11,15 @@ import '../widgets/home_app_bar.dart';
 import '../widgets/home_bottom_bar.dart';
 import '../widgets/home_feature_card.dart';
 
+import '../../../core/design/budgetr_colors.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Theme Constants
-    final bgColor = const Color(0xff0D1B2A);
-    final accentBlue = const Color(0xFF3A86FF);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: BudgetrColors.background,
       extendBodyBehindAppBar: true,
       appBar: const HomeAppBar(),
       body: Stack(
@@ -36,7 +34,10 @@ class HomeScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [accentBlue.withOpacity(0.2), Colors.transparent],
+                  colors: [
+                    BudgetrColors.accent.withOpacity(0.2),
+                    Colors.transparent,
+                  ],
                   center: Alignment.center,
                   radius: 0.6,
                 ),
@@ -71,15 +72,6 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 10),
-                  // Text(
-                  //   "Welcome Back",
-                  //   style: TextStyle(
-                  //     color: Colors.white.withOpacity(0.6),
-                  //     fontSize: 14,
-                  //     fontWeight: FontWeight.w600,
-                  //     letterSpacing: 1,
-                  //   ),
-                  // ),
                   const SizedBox(height: 20),
 
                   // --- Dashboard Grid ---
@@ -97,12 +89,11 @@ class HomeScreen extends StatelessWidget {
                           color: const Color(0xFF4361EE),
                           destination: const DashboardScreen(),
                         ),
-                        // --- 2. NEW INVESTMENT CARD ADDED HERE ---
                         HomeFeatureCard(
                           title: "Investments",
                           subtitle: "Stocks & Mutual Funds",
-                          icon: Icons.show_chart_rounded, // Trending Up Icon
-                          color: const Color(0xFFFF9F1C), // Orange Accent
+                          icon: Icons.show_chart_rounded,
+                          color: const Color(0xFFFF9F1C),
                           destination: const InvestmentScreen(),
                         ),
                         HomeFeatureCard(
@@ -119,12 +110,11 @@ class HomeScreen extends StatelessWidget {
                           color: const Color(0xFF7209B7),
                           destination: const SettlementScreen(),
                         ),
-                        // --- 2. NEW CREDIT TRACKER CARD ---
                         HomeFeatureCard(
                           title: "Credit Tracker",
                           subtitle: "Cards & Repayments",
                           icon: Icons.credit_card_outlined,
-                          color: const Color(0xFFE63946), // Crimson Red
+                          color: const Color(0xFFE63946),
                           destination: const CreditTrackerScreen(),
                         ),
                         HomeFeatureCard(
