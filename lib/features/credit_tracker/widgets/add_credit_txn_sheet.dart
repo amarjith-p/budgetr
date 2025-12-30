@@ -8,6 +8,7 @@ import '../../../core/models/percentage_config_model.dart';
 import '../../../core/models/transaction_category_model.dart';
 import '../../../core/services/category_service.dart';
 import '../../settings/services/settings_service.dart';
+import '../../dashboard/services/dashboard_service.dart'; // Import DashboardService
 import '../models/credit_models.dart';
 import '../services/credit_service.dart';
 
@@ -33,7 +34,10 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
 
   CreditCardModel? _selectedCard;
   List<CreditCardModel> _cards = [];
+
+  // Buckets Logic
   List<String> _buckets = [];
+  List<String> _globalFallbackBuckets = []; // Store global config as fallback
 
   List<TransactionCategoryModel> _allCategories = [];
 
@@ -45,17 +49,15 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
 
   bool _isLoading = false;
   bool _showCustomKeyboard = false;
-  // ADDED: State to track if system keyboard is preferred for amount
   bool _systemKeyboardActive = false;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadInitialData(); // Renamed from _loadData
 
     _amountNode.addListener(() {
       if (_amountNode.hasFocus) {
-        // If we previously switched to system, keep it unless reset
         if (!_systemKeyboardActive) {
           setState(() => _showCustomKeyboard = true);
         }
@@ -93,7 +95,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
     });
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadInitialData() async {
     final cardStream = CreditService().getCreditCards().first;
     final configFuture = SettingsService().getPercentageConfig();
     final categoriesStream = CategoryService().getCategories().first;
@@ -105,13 +107,14 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
     ]);
 
     if (mounted) {
+      final config = results[1] as PercentageConfig;
+
+      // Store Global Defaults
+      _globalFallbackBuckets = config.categories.map((e) => e.name).toList();
+      _globalFallbackBuckets.add('Out of Bucket');
+
       setState(() {
         _cards = results[0] as List<CreditCardModel>;
-        final config = results[1] as PercentageConfig;
-
-        _buckets = config.categories.map((e) => e.name).toList();
-        _buckets.add('Out of Bucket');
-
         _allCategories = results[2] as List<TransactionCategoryModel>;
 
         if (widget.transactionToEdit != null) {
@@ -132,10 +135,64 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
             orElse: () => _cards.isNotEmpty ? _cards.first : _cards[0],
           );
         } else {
-          _selectedCard = null;
+          _selectedCard = _cards.isNotEmpty ? _cards[0] : null;
           _selectedBucket = null;
         }
       });
+
+      // Now fetch the context-aware buckets for the selected date
+      await _updateBucketsForDate(_date);
+    }
+  }
+
+  /// NEW: Fetches correct buckets based on the transaction date
+  Future<void> _updateBucketsForDate(DateTime date) async {
+    try {
+      // 1. Try to find a Budget Record for this specific month
+      final record = await DashboardService().getRecordForMonth(
+        date.year,
+        date.month,
+      );
+
+      List<String> newBuckets = [];
+
+      if (record != null) {
+        // Case A: Budget exists -> Use its buckets (Source of Truth for that month)
+        // Sort keys by value (highest allocation first) just for better UX
+        final sortedEntries = record.allocations.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+        newBuckets = sortedEntries.map((e) => e.key).toList();
+      } else {
+        // Case B: No budget (future/past/unset) -> Use Global Settings
+        newBuckets = List.from(_globalFallbackBuckets);
+      }
+
+      // Ensure 'Out of Bucket' is always an option
+      if (!newBuckets.contains('Out of Bucket')) {
+        newBuckets.add('Out of Bucket');
+      }
+
+      if (mounted) {
+        setState(() {
+          _buckets = newBuckets;
+
+          // Validation: If previously selected bucket doesn't exist in new list, reset it
+          if (_selectedBucket != null && !_buckets.contains(_selectedBucket)) {
+            // Optional: You could keep it to allow legacy data preservation,
+            // but resetting forces the user to pick a valid bucket for *that* month.
+            // We'll reset it to ensure consistency.
+            _selectedBucket = null;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching buckets for date: $e");
+      // Fallback on error
+      if (mounted) {
+        setState(() {
+          _buckets = List.from(_globalFallbackBuckets);
+        });
+      }
     }
   }
 
@@ -299,6 +356,8 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
 
                         if (pickedDate != null) {
                           if (!mounted) return;
+
+                          // Handle Time
                           final pickedTime = await showTimePicker(
                             context: context,
                             initialTime: TimeOfDay.fromDateTime(_date),
@@ -306,17 +365,20 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                                 Theme(data: ThemeData.dark(), child: child!),
                           );
 
-                          if (pickedTime != null) {
-                            setState(() {
-                              _date = DateTime(
-                                pickedDate.year,
-                                pickedDate.month,
-                                pickedDate.day,
-                                pickedTime.hour,
-                                pickedTime.minute,
-                              );
-                            });
-                          }
+                          final newDate = DateTime(
+                            pickedDate.year,
+                            pickedDate.month,
+                            pickedDate.day,
+                            pickedTime?.hour ?? _date.hour,
+                            pickedTime?.minute ?? _date.minute,
+                          );
+
+                          setState(() {
+                            _date = newDate;
+                          });
+
+                          // NEW: Refresh buckets based on new date
+                          await _updateBucketsForDate(newDate);
                         }
                       },
                       borderRadius: BorderRadius.circular(12),
@@ -340,7 +402,6 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                       key: _amountFieldKey,
                       focusNode: _amountNode,
                       controller: _amountCtrl,
-                      // FIXED: Only disable system keyboard if using custom
                       keyboardType: _systemKeyboardActive
                           ? const TextInputType.numberWithOptions(decimal: true)
                           : TextInputType.none,
@@ -371,7 +432,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                       _buildSelectField<String>(
                         label: "Budget Bucket",
                         value: _selectedBucket,
-                        items: _buckets,
+                        items: _buckets, // Uses context-aware buckets
                         labelBuilder: (v) => v,
                         onSelect: (v) => setState(() => _selectedBucket = v),
                         validator: (v) => v == null ? 'Required' : null,
@@ -476,14 +537,13 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                 setState(() => _showCustomKeyboard = false);
                 FocusScope.of(context).requestFocus(_notesNode);
               },
-              // ADDED: Switch to System Keyboard
+              // Switch to System Keyboard
               onSwitchToSystem: () {
                 setState(() {
                   _showCustomKeyboard = false;
                   _systemKeyboardActive = true;
                 });
                 // Re-request focus to trigger system keyboard
-                // Must lose focus first if it was readOnly
                 _amountNode.unfocus();
                 Future.delayed(const Duration(milliseconds: 100), () {
                   FocusScope.of(context).requestFocus(_amountNode);

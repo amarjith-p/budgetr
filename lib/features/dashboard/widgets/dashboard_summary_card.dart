@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart'; // Added for Timestamp
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/financial_record_model.dart';
@@ -7,12 +6,14 @@ class DashboardSummaryCard extends StatelessWidget {
   final FinancialRecord record;
   final NumberFormat currencyFormat;
   final VoidCallback onOptionsTap;
+  final VoidCallback? onCardTap; // NEW Callback
 
   const DashboardSummaryCard({
     super.key,
     required this.record,
     required this.currencyFormat,
     required this.onOptionsTap,
+    this.onCardTap,
   });
 
   @override
@@ -26,87 +27,109 @@ class DashboardSummaryCard extends StatelessWidget {
     final totalDeductions = record.emi;
     final balance = record.effectiveIncome;
 
-    // Use updatedAt to show the last modified time
     final String formattedDate = DateFormat(
       'dd MMM yyyy : HH:mm',
     ).format(record.updatedAt.toDate());
 
     return Stack(
       children: [
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [cardColor, cardColor.withOpacity(0.8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+        // --- NEW: Wrap Container in Material & InkWell for Tap ---
+        Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+          child: InkWell(
+            onTap: onCardTap,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              const Text(
-                "NET EFFECTIVE INCOME",
-                style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
+            splashColor: Colors.white.withOpacity(0.1),
+            highlightColor: Colors.white.withOpacity(0.05),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [cardColor, cardColor.withOpacity(0.8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ),
-              // --- NEW: As on Date Label ---
-              const SizedBox(height: 4),
-              Text(
-                "As on $formattedDate",
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.3),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              // -----------------------------
-              const SizedBox(height: 8),
-              Text(
-                currencyFormat.format(balance),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: _summaryItem(
-                      "Gross Income",
-                      totalIncome,
-                      greenColor,
-                      Icons.arrow_downward,
-                    ),
-                  ),
-                  Container(width: 1, height: 40, color: Colors.white10),
-                  Expanded(
-                    child: _summaryItem(
-                      "Deductions",
-                      totalDeductions,
-                      redColor,
-                      Icons.arrow_upward,
-                    ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
-            ],
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "NET EFFECTIVE INCOME",
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      // Hint icon to show it's clickable
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.white.withOpacity(0.2),
+                        size: 14,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "As on $formattedDate",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.3),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    currencyFormat.format(balance),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _summaryItem(
+                          "Gross Income",
+                          totalIncome,
+                          greenColor,
+                          Icons.arrow_downward,
+                        ),
+                      ),
+                      Container(width: 1, height: 40, color: Colors.white10),
+                      Expanded(
+                        child: _summaryItem(
+                          "Deductions",
+                          totalDeductions,
+                          redColor,
+                          Icons.arrow_upward,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
+
+        // ---------------------------------------------------------
         Positioned(
           top: 8,
           right: 8,

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'monthly_spending_screen.dart';
 import '../../../core/models/financial_record_model.dart';
 import '../services/dashboard_service.dart';
 import '../widgets/add_record_sheet.dart';
@@ -322,95 +322,119 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 final hasData = currentRecord.id.isNotEmpty;
 
-                return Stack(
-                  children: [
-                    SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                      child: Column(
-                        children: [
-                          if (hasData) ...[
-                            DashboardSummaryCard(
-                              record: currentRecord,
-                              currencyFormat: _currencyFormat,
-                              onOptionsTap: () =>
-                                  _showRecordOptions(currentRecord),
-                            ),
-                            const SizedBox(height: 24),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                "Budget Allocations",
-                                style: BudgetrStyles.h3.copyWith(
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            BudgetAllocationsList(
-                              record: currentRecord,
-                              currencyFormat: _currencyFormat,
-                            ),
-                          ] else
-                            _buildEmptyState(),
-                        ],
-                      ),
-                    ),
+                // --- NEW STREAM BUILDER FOR CREDIT SPENDING ---
+                return StreamBuilder<Map<String, double>>(
+                  stream: _dashboardService.getMonthlyBucketSpending(
+                    _currentDate.year,
+                    _currentDate.month,
+                  ),
+                  builder: (context, spendingSnapshot) {
+                    final spendingMap = spendingSnapshot.data ?? {};
 
-                    // --- FAB ---
-                    Positioned(
-                      bottom: 20,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: GestureDetector(
-                          onTap: () {
-                            if (hasData) {
-                              _showAddRecordSheet(currentRecord);
-                            } else {
-                              _showAddRecordSheet(null);
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: BudgetrColors.primaryGradient,
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: BudgetrStyles.glowBoxShadow(
-                                BudgetrColors.accent,
-                              ),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  hasData
-                                      ? Icons.edit_outlined
-                                      : Icons.add_rounded,
-                                  color: Colors.white,
+                    return Stack(
+                      children: [
+                        SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                          child: Column(
+                            children: [
+                              if (hasData) ...[
+                                DashboardSummaryCard(
+                                  record: currentRecord,
+                                  currencyFormat: _currencyFormat,
+                                  onOptionsTap: () =>
+                                      _showRecordOptions(currentRecord),
+                                  onCardTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            MonthlySpendingScreen(
+                                              record: currentRecord,
+                                            ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  hasData ? "Edit Budget" : "Create Budget",
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                                const SizedBox(height: 24),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    "Budget Allocations",
+                                    style: BudgetrStyles.h3.copyWith(
+                                      color: Colors.white70,
+                                    ),
                                   ),
                                 ),
-                              ],
+                                const SizedBox(height: 12),
+                                BudgetAllocationsList(
+                                  record: currentRecord,
+                                  currencyFormat: _currencyFormat,
+                                  spendingMap:
+                                      spendingMap, // Pass the spending data
+                                ),
+                              ] else
+                                _buildEmptyState(),
+                            ],
+                          ),
+                        ),
+
+                        // --- FAB ---
+                        Positioned(
+                          bottom: 20,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: GestureDetector(
+                              onTap: () {
+                                if (hasData) {
+                                  _showAddRecordSheet(currentRecord);
+                                } else {
+                                  _showAddRecordSheet(null);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: BudgetrColors.primaryGradient,
+                                  borderRadius: BorderRadius.circular(30),
+                                  boxShadow: BudgetrStyles.glowBoxShadow(
+                                    BudgetrColors.accent,
+                                  ),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      hasData
+                                          ? Icons.edit_outlined
+                                          : Icons.add_rounded,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      hasData ? "Edit Budget" : "Create Budget",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 );
               },
             ),
