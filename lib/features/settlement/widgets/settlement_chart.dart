@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/models/percentage_config_model.dart';
 import '../../../core/models/settlement_model.dart';
 
@@ -16,24 +17,14 @@ class SettlementChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Local theme constants to maintain consistency
-    const Color cardColor = Color(0xFF1B263B); // base color
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: cardColor.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Column(
-        children: [
-          SizedBox(height: 300, child: _buildChart(settlement)),
-          const SizedBox(height: 16),
-          _buildLegend(),
-        ],
-      ),
+    // Note: External decoration removed as this widget is now wrapped
+    // in a GlassCard in the parent screen.
+    return Column(
+      children: [
+        SizedBox(height: 300, child: _buildChart(settlement)),
+        const SizedBox(height: 16),
+        _buildLegend(),
+      ],
     );
   }
 
@@ -67,15 +58,18 @@ class SettlementChart extends StatelessWidget {
           return BarChartGroupData(
             x: index,
             barRods: [
+              // Allocated Bar (Royal Blue)
               BarChartRodData(
                 toY: allocated,
-                color: const Color(0xFF3A86FF),
+                color: AppColors.royalBlue,
                 width: 12,
                 borderRadius: BorderRadius.circular(2),
+                backDrawRodData: BackgroundBarChartRodData(show: false),
               ),
+              // Spent Bar (Electric Pink)
               BarChartRodData(
                 toY: spent,
-                color: const Color(0xFFFF006E),
+                color: AppColors.electricPink,
                 width: 12,
                 borderRadius: BorderRadius.circular(2),
               ),
@@ -98,7 +92,8 @@ class SettlementChart extends StatelessWidget {
                   NumberFormat.compact().format(value),
                   style: TextStyle(
                     fontSize: 10,
-                    color: Colors.white.withOpacity(0.5),
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
                   ),
                 );
               },
@@ -113,11 +108,15 @@ class SettlementChart extends StatelessWidget {
                   if (text.length > 3) text = text.substring(0, 3);
                   return SideTitleWidget(
                     axisSide: meta.axisSide,
-                    child: Text(
-                      text.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.white.withOpacity(0.5),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        text.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   );
@@ -129,7 +128,12 @@ class SettlementChart extends StatelessWidget {
           ),
         ),
         borderData: FlBorderData(show: false),
-        gridData: const FlGridData(show: false),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (value) =>
+              FlLine(color: Colors.white.withOpacity(0.05), strokeWidth: 1),
+        ),
       ),
     );
   }
@@ -138,9 +142,9 @@ class SettlementChart extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _legendItem(const Color(0xFF3A86FF), 'Allocated'),
+        _legendItem(AppColors.royalBlue, 'Allocated'),
         const SizedBox(width: 24),
-        _legendItem(const Color(0xFFFF006E), 'Spent'),
+        _legendItem(AppColors.electricPink, 'Spent'),
       ],
     );
   }
@@ -149,14 +153,24 @@ class SettlementChart extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(color: color.withOpacity(0.5), blurRadius: 6),
+            ],
+          ),
         ),
         const SizedBox(width: 8),
         Text(
           text,
-          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );

@@ -4,6 +4,10 @@ import '../../../core/models/transaction_category_model.dart';
 import '../../../core/services/category_service.dart';
 import '../../../core/widgets/modern_loader.dart';
 import '../../../core/constants/icon_constants.dart';
+// --- New Design System Imports ---
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/aurora_scaffold.dart';
+import '../../../core/widgets/glass_card.dart';
 
 class CategoryManagerScreen extends StatefulWidget {
   const CategoryManagerScreen({super.key});
@@ -19,9 +23,6 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
   int _selectedTabIndex = 0;
 
   late Stream<List<TransactionCategoryModel>> _categoriesStream;
-
-  final Color _bgColor = const Color(0xff0D1B2A);
-  final Color _accentColor = const Color(0xFF3A86FF);
 
   @override
   void initState() {
@@ -44,37 +45,33 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
 
   // --- Logic to Restore Defaults (Factory Reset) ---
   Future<void> _handleRestoreDefaults() async {
-    // 1. Show Confirmation Dialog
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0D1B2A),
+        backgroundColor: AppColors.darkCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+          side: BorderSide(color: AppColors.glassBorder),
         ),
         title: const Text(
           "Reset to Defaults?",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        content: const Text(
+        content: Text(
           "This will DELETE all your custom categories and revert any changes made to default ones.\n\nAre you sure you want to start fresh?",
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Colors.white.withOpacity(0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text("Cancel"),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
+              backgroundColor: AppColors.dangerRed,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: const Text(
@@ -91,7 +88,6 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
 
     if (confirm != true) return;
 
-    // 2. Show Loader & Execute
     if (mounted) {
       showDialog(
         context: context,
@@ -107,7 +103,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("All categories reset to system defaults."),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.successGreen,
           ),
         );
       }
@@ -115,7 +111,10 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Error: $e"),
+            backgroundColor: AppColors.dangerRed,
+          ),
         );
       }
     }
@@ -123,37 +122,42 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _bgColor,
-      extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: false,
+    // 1. Use AuroraScaffold
+    return AuroraScaffold(
+      accentColor1: AppColors.electricPink,
+      accentColor2: AppColors.royalBlue,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.glassFill,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           "Categories",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
         flexibleSpace: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(color: Colors.transparent),
           ),
         ),
-        // --- Restore Defaults Option ---
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
-            color: const Color(0xFF1B263B),
+            color: AppColors.darkCard,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.white.withOpacity(0.1)),
+              side: BorderSide(color: AppColors.glassBorder),
             ),
             onSelected: (val) {
               if (val == 'restore') _handleRestoreDefaults();
@@ -163,11 +167,11 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
                 value: 'restore',
                 child: Row(
                   children: [
-                    Icon(Icons.restore, color: Colors.redAccent, size: 20),
+                    Icon(Icons.restore, color: AppColors.dangerRed, size: 20),
                     SizedBox(width: 12),
                     Text(
                       "Reset to Defaults",
-                      style: TextStyle(color: Colors.redAccent),
+                      style: TextStyle(color: AppColors.dangerRed),
                     ),
                   ],
                 ),
@@ -178,26 +182,11 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
       ),
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0, -0.8),
-                  radius: 1.2,
-                  colors: [const Color(0xFF1B263B).withOpacity(0.4), _bgColor],
-                ),
-              ),
-            ),
-          ),
-
           Column(
             children: [
-              SizedBox(height: MediaQuery.of(context).padding.top + 60),
-
+              const SizedBox(height: 10),
               _buildSyncedSlidingToggle(),
-
               const SizedBox(height: 24),
-
               Expanded(
                 child: StreamBuilder<List<TransactionCategoryModel>>(
                   stream: _categoriesStream,
@@ -221,8 +210,8 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
                       controller: _tabController,
                       physics: const BouncingScrollPhysics(),
                       children: [
-                        _buildCategoryList(expenses, Colors.redAccent),
-                        _buildCategoryList(income, Colors.greenAccent),
+                        _buildCategoryList(expenses, AppColors.electricPink),
+                        _buildCategoryList(income, AppColors.successGreen),
                       ],
                     );
                   },
@@ -231,6 +220,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
             ],
           ),
 
+          // Floating Action Button
           Positioned(
             bottom: 30,
             left: 0,
@@ -245,23 +235,20 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
                   ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [_accentColor, const Color(0xFF2563EB)],
+                      colors: [AppColors.royalBlue, AppColors.deepPurple],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: [
                       BoxShadow(
-                        color: _accentColor.withOpacity(0.4),
+                        color: AppColors.royalBlue.withOpacity(0.4),
                         blurRadius: 20,
                         spreadRadius: -5,
                         offset: const Offset(0, 10),
                       ),
                     ],
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
-                      width: 1,
-                    ),
+                    border: Border.all(color: AppColors.glassBorder, width: 1),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -312,10 +299,10 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0D1B2A),
+        backgroundColor: AppColors.darkCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+          side: BorderSide(color: AppColors.glassBorder),
         ),
         title: const Text(
           "Delete Category?",
@@ -341,7 +328,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
             child: const Text(
               "Delete",
               style: TextStyle(
-                color: Colors.redAccent,
+                color: AppColors.dangerRed,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -353,16 +340,15 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
 
   // --- WIDGETS ---
 
-  // Synced Toggle (From Previous Turn)
   Widget _buildSyncedSlidingToggle() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       width: double.infinity,
       height: 48,
       decoration: BoxDecoration(
-        color: Colors.black26,
+        color: AppColors.glassFill,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: AppColors.glassBorder),
       ),
       child: AnimatedBuilder(
         animation: _tabController.animation!,
@@ -371,8 +357,8 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
           final double alignmentX = (value * 2) - 1;
 
           final Color indicatorColor = Color.lerp(
-            Colors.redAccent,
-            Colors.greenAccent,
+            AppColors.electricPink,
+            AppColors.successGreen,
             value,
           )!;
 
@@ -385,11 +371,15 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
                   child: Container(
                     margin: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: indicatorColor,
+                      color: indicatorColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: indicatorColor.withOpacity(0.5),
+                        width: 1,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: indicatorColor.withOpacity(0.4),
+                          color: indicatorColor.withOpacity(0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -425,7 +415,6 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
           child: AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
             style: TextStyle(
-              fontFamily: 'SF Pro Display',
               fontSize: 12,
               letterSpacing: 1.2,
               fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
@@ -483,8 +472,6 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
   }
 }
 
-// ... (Rest of the standard classes _ModernAddEditCategorySheet, _CategoryCard, etc. remain unchanged)
-// Re-inserting _ModernAddEditCategorySheet for completeness
 class _ModernAddEditCategorySheet extends StatefulWidget {
   final TransactionCategoryModel? category;
   final String initialType;
@@ -563,17 +550,17 @@ class _ModernAddEditCategorySheetState
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xff0D1B2A);
-    final cardColor = const Color(0xFF1B263B);
-    final accentColor = const Color(0xFF3A86FF);
+    final accentColor = _type == 'Income'
+        ? AppColors.successGreen
+        : AppColors.electricPink;
 
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+      decoration: const BoxDecoration(
+        color: AppColors.deepVoid,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.9,
@@ -626,7 +613,7 @@ class _ModernAddEditCategorySheetState
                         width: 90,
                         height: 90,
                         decoration: BoxDecoration(
-                          color: cardColor,
+                          color: AppColors.glassFill,
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: accentColor.withOpacity(0.5),
@@ -686,10 +673,10 @@ class _ModernAddEditCategorySheetState
                           color: Colors.white.withOpacity(0.2),
                         ),
                         filled: true,
-                        fillColor: Colors.white.withOpacity(0.03),
+                        fillColor: AppColors.glassFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(color: AppColors.glassBorder),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -713,13 +700,13 @@ class _ModernAddEditCategorySheetState
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
+                          color: AppColors.glassFill,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Row(
                           children: [
-                            _buildTypeOption("Expense", Colors.redAccent),
-                            _buildTypeOption("Income", Colors.greenAccent),
+                            _buildTypeOption("Expense", AppColors.electricPink),
+                            _buildTypeOption("Income", AppColors.successGreen),
                           ],
                         ),
                       ),
@@ -751,10 +738,10 @@ class _ModernAddEditCategorySheetState
                           color: Colors.white.withOpacity(0.3),
                         ),
                         filled: true,
-                        fillColor: cardColor,
+                        fillColor: AppColors.glassFill,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(color: AppColors.glassBorder),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -786,7 +773,7 @@ class _ModernAddEditCategorySheetState
                                     fontSize: 12,
                                   ),
                                 ),
-                                backgroundColor: Colors.white.withOpacity(0.08),
+                                backgroundColor: AppColors.glassFill,
                                 deleteIcon: const Icon(
                                   Icons.close_rounded,
                                   size: 14,
@@ -797,9 +784,7 @@ class _ModernAddEditCategorySheetState
                                 materialTapTargetSize:
                                     MaterialTapTargetSize.shrinkWrap,
                                 padding: const EdgeInsets.all(4),
-                                side: BorderSide(
-                                  color: Colors.white.withOpacity(0.1),
-                                ),
+                                side: BorderSide(color: AppColors.glassBorder),
                               ),
                             )
                             .toList(),
@@ -819,7 +804,7 @@ class _ModernAddEditCategorySheetState
               border: Border(
                 top: BorderSide(color: Colors.white.withOpacity(0.05)),
               ),
-              color: bgColor,
+              color: AppColors.deepVoid,
             ),
             child: SizedBox(
               width: double.infinity,
@@ -870,7 +855,7 @@ class _ModernAddEditCategorySheetState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("'$val' already added!"),
-          backgroundColor: Colors.orangeAccent,
+          backgroundColor: AppColors.vibrantOrange,
         ),
       );
       _subNode.requestFocus();
@@ -905,7 +890,7 @@ class _ModernAddEditCategorySheetState
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("Category '$name' already exists in $_type."),
-              backgroundColor: Colors.redAccent,
+              backgroundColor: AppColors.dangerRed,
             ),
           );
         }
@@ -998,6 +983,7 @@ class _CategoryCardState extends State<_CategoryCard> {
       icon = IconConstants.getIconByCode(widget.category.iconCode!);
     }
 
+    // We manually style this to handle the animation, using AppColors keys
     return GestureDetector(
       onTap: () => setState(() => _isExpanded = !_isExpanded),
       child: AnimatedContainer(
@@ -1006,12 +992,12 @@ class _CategoryCardState extends State<_CategoryCard> {
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1B263B).withOpacity(_isExpanded ? 0.8 : 0.5),
+          color: AppColors.glassFill,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: _isExpanded
-                ? widget.themeColor.withOpacity(0.3)
-                : Colors.white.withOpacity(0.05),
+                ? widget.themeColor.withOpacity(0.5)
+                : AppColors.glassBorder,
             width: 1,
           ),
           boxShadow: _isExpanded
@@ -1034,6 +1020,9 @@ class _CategoryCardState extends State<_CategoryCard> {
                   decoration: BoxDecoration(
                     color: widget.themeColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: widget.themeColor.withOpacity(0.2),
+                    ),
                   ),
                   child: Icon(icon, color: widget.themeColor, size: 24),
                 ),
@@ -1108,17 +1097,10 @@ class _CategoryCardState extends State<_CategoryCard> {
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Colors.white.withOpacity(0.08),
-                                            Colors.white.withOpacity(0.04),
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
+                                        color: AppColors.glassFill,
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: Colors.white.withOpacity(0.1),
+                                          color: AppColors.glassBorder,
                                         ),
                                       ),
                                       child: Text(
@@ -1148,7 +1130,7 @@ class _CategoryCardState extends State<_CategoryCard> {
                               _ActionButton(
                                 icon: Icons.delete_outline,
                                 label: "Delete",
-                                color: Colors.redAccent,
+                                color: AppColors.dangerRed,
                                 onTap: widget.onDelete,
                               ),
                             ],
@@ -1242,7 +1224,7 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
       height: MediaQuery.of(context).size.height * 0.8,
       padding: const EdgeInsets.all(24),
       decoration: const BoxDecoration(
-        color: Color(0xff0D1B2A),
+        color: AppColors.deepVoid,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -1286,7 +1268,7 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
                     )
                   : null,
               filled: true,
-              fillColor: Colors.white.withOpacity(0.05),
+              fillColor: AppColors.glassFill,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -1366,9 +1348,9 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
       borderRadius: BorderRadius.circular(12),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: AppColors.glassFill,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: AppColors.glassBorder),
         ),
         child: Icon(meta.icon, color: Colors.white70, size: 24),
       ),
