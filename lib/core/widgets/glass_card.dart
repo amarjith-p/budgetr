@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../design/budgetr_colors.dart';
+import '../design/budgetr_styles.dart';
 
 class GlassCard extends StatelessWidget {
   final Widget child;
@@ -21,8 +23,7 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color accentColor = Color(0xFF3A86FF);
-
+    // Standardizing the look using BudgetrStyles
     Widget content = Container(
       padding: padding,
       decoration: BoxDecoration(
@@ -34,7 +35,7 @@ class GlassCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: accentColor.withOpacity(0.15),
+            color: BudgetrColors.accent.withOpacity(0.15),
             blurRadius: 20,
             spreadRadius: 5,
           ),
@@ -47,8 +48,8 @@ class GlassCard extends StatelessWidget {
       content = InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(borderRadius),
-        highlightColor: accentColor.withOpacity(0.1),
-        splashColor: accentColor.withOpacity(0.2),
+        highlightColor: BudgetrColors.accent.withOpacity(0.1),
+        splashColor: BudgetrColors.accent.withOpacity(0.2),
         child: content,
       );
     }

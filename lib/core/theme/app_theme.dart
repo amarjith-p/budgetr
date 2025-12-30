@@ -1,35 +1,50 @@
 import 'package:flutter/material.dart';
+import '../design/budgetr_colors.dart';
+import '../design/budgetr_styles.dart';
 
 class AppTheme {
   static final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: const Color(0xff0D1B2A),
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFF3A86FF),
-      brightness: Brightness.dark,
-      primary: const Color(0xFF3A86FF),
-      secondary: const Color(0xFF90E0EF),
-    ),
+    scaffoldBackgroundColor: BudgetrColors.background,
     useMaterial3: true,
+
+    // Color Scheme
+    colorScheme: const ColorScheme.dark(
+      primary: BudgetrColors.accent,
+      secondary: BudgetrColors.secondary,
+      surface: BudgetrColors.cardSurface,
+      error: BudgetrColors.error,
+      brightness: Brightness.dark,
+    ),
+
+    // AppBar Theme
     appBarTheme: AppBarTheme(
-      backgroundColor: const Color(0xff0D1B2A),
+      backgroundColor: BudgetrColors.background,
       elevation: 0,
+      centerTitle: true,
       shape: Border(
         bottom: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
       ),
-      titleTextStyle: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: Colors.white,
-      ),
-      iconTheme: IconThemeData(color: Colors.white.withOpacity(0.8)),
+      titleTextStyle: BudgetrStyles.h2,
+      iconTheme: const IconThemeData(color: Colors.white),
     ),
+
+    // Card Theme
     cardTheme: CardThemeData(
       elevation: 0,
-      color: const Color(0xFF1B263B).withOpacity(0.5),
+      color: BudgetrColors.cardSurface.withOpacity(0.5),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.white.withOpacity(0.1)),
+        borderRadius: BudgetrStyles.radiusM,
+        side: BudgetrStyles.glassBorder.top, // using the border side from style
+      ),
+    ),
+
+    // Bottom Sheet Theme
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: BudgetrColors.background,
+      modalBackgroundColor: BudgetrColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
     ),
   );

@@ -1,17 +1,22 @@
 import 'package:budget/core/widgets/modern_loader.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // For PlatformException
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:local_auth/local_auth.dart'; // Local Auth
+import 'package:local_auth/local_auth.dart';
 
-import '../../../core/constants/firebase_constants.dart'; // Firebase Constants
+import '../../../core/constants/firebase_constants.dart';
 import '../../../core/widgets/calculator_keyboard.dart';
 import '../../../core/widgets/modern_dropdown.dart';
 import '../../../core/models/financial_record_model.dart';
 import '../../../core/models/percentage_config_model.dart';
 import '../services/dashboard_service.dart';
 import '../../settings/services/settings_service.dart';
+
+// --- DESIGN SYSTEM IMPORTS ---
+import '../../../core/design/budgetr_colors.dart';
+import '../../../core/design/budgetr_styles.dart';
+import '../../../core/design/budgetr_components.dart';
 
 class AddRecordSheet extends StatefulWidget {
   final FinancialRecord? recordToEdit;
@@ -28,11 +33,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
   final _settingsService = SettingsService();
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
   final ScrollController _scrollController = ScrollController();
-  final LocalAuthentication _auth = LocalAuthentication(); // Auth Instance
-
-  // Theme
-  final Color _bgColor = const Color(0xff0D1B2A);
-  final Color _accentColor = const Color(0xFF3A86FF);
+  final LocalAuthentication _auth = LocalAuthentication();
 
   // Controllers
   late TextEditingController _salaryController;
@@ -89,10 +90,8 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       _selectedYear = widget.recordToEdit!.year;
       _selectedMonth = widget.recordToEdit!.month;
 
-      // MERGE LOGIC: Respect Master Order, preserve historic values
       List<CategoryConfig> mergedCategories = [];
 
-      // 1. Add categories from Master Config that exist in Record
       for (var masterCat in masterConfig.categories) {
         if (widget.recordToEdit!.allocationPercentages.containsKey(
           masterCat.name,
@@ -107,7 +106,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
         }
       }
 
-      // 2. Add remaining categories from Record that weren't in Master Config (Legacy buckets)
       widget.recordToEdit!.allocationPercentages.forEach((key, val) {
         if (!mergedCategories.any((c) => c.name == key)) {
           mergedCategories.add(CategoryConfig(name: key, percentage: val));
@@ -119,7 +117,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
         _calculate();
       });
     } else {
-      // Use the passed initialDate (from Dashboard) or fallback to Now
       final date = widget.initialDate ?? DateTime.now();
       _selectedYear = date.year;
       _selectedMonth = date.month;
@@ -202,7 +199,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       _closeKeyboard();
   }
 
-  // --- NEW: Handle Previous Field ---
   void _handlePrevious() {
     if (_activeController == _emiController)
       _setActive(_extraIncomeController, _extraFocus);
@@ -220,23 +216,12 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: _bgColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: Colors.white.withOpacity(0.1)),
-            ),
-            title: const Text(
-              "Validation Error",
-              style: TextStyle(color: Colors.white),
-            ),
-            content: const Text(
-              "Salary is required.",
-              style: TextStyle(color: Colors.white70),
-            ),
+            title: const Text("Validation Error"),
+            content: const Text("Salary is required."),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text("OK", style: TextStyle(color: _accentColor)),
+                child: const Text("OK"),
               ),
             ],
           ),
@@ -248,15 +233,12 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
     final idString =
         '$_selectedYear${_selectedMonth.toString().padLeft(2, '0')}';
 
-    // --- SMART SECURITY CHECK ---
     try {
-      // 1. Check if record actually exists in DB
       final docSnapshot = await FirebaseFirestore.instance
           .collection(FirebaseConstants.financialRecords)
           .doc(idString)
           .get();
 
-      // 2. Only authenticate if we are overwriting/updating existing data
       if (docSnapshot.exists) {
         bool authenticated = false;
         try {
@@ -265,61 +247,41 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
             options: const AuthenticationOptions(stickyAuth: true),
           );
         } on PlatformException catch (_) {
-          // Handle auth errors (user cancelled, etc.)
           return;
         }
 
         if (!authenticated) {
           if (mounted) {
-            // FIX: Use showDialog instead of SnackBar so it appears OVER the BottomSheet
             showDialog(
               context: context,
               builder: (ctx) => AlertDialog(
-                backgroundColor: _bgColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: Colors.white.withOpacity(0.1)),
-                ),
-                title: const Text(
-                  "Authentication Failed",
-                  style: TextStyle(color: Colors.white),
-                ),
+                title: const Text("Authentication Failed"),
                 content: const Text(
                   "Authentication is required to update an existing budget record.",
-                  style: TextStyle(color: Colors.white70),
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: Text("OK", style: TextStyle(color: _accentColor)),
+                    child: const Text("OK"),
                   ),
                 ],
               ),
             );
           }
-          return; // Abort Save
+          return;
         }
       }
     } catch (e) {
-      // Handle network/firestore errors gracefully with a Dialog
       if (mounted) {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: _bgColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: Colors.white.withOpacity(0.1)),
-            ),
-            title: const Text("Error", style: TextStyle(color: Colors.white)),
-            content: Text(
-              "Error checking record: $e",
-              style: const TextStyle(color: Colors.white70),
-            ),
+            title: const Text("Error"),
+            content: Text("Error checking record: $e"),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text("OK", style: TextStyle(color: _accentColor)),
+                child: const Text("OK"),
               ),
             ],
           ),
@@ -327,9 +289,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       }
       return;
     }
-    // --- END SECURITY CHECK ---
 
-    // Calculate Allocations using the ORDERED config
     Map<String, double> allocations = {};
     Map<String, double> percentages = {};
     for (var cat in _config!.categories) {
@@ -347,7 +307,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       effectiveIncome: _effectiveIncome,
       allocations: allocations,
       allocationPercentages: percentages,
-      // Preserve creation, set update to Now
       createdAt: widget.recordToEdit?.createdAt ?? Timestamp.now(),
       updatedAt: Timestamp.now(),
     );
@@ -364,7 +323,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      color: _bgColor,
+      color: BudgetrColors.background,
       child: Column(
         mainAxisSize: MainAxisSize.max,
         children: [
@@ -392,16 +351,10 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                     children: [
                       Text(
                         _isEditing ? 'Edit Budget' : 'New Budget',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: BudgetrStyles.h2,
                       ),
-                      // Date selection disabled during Edit
                       Row(
                         children: [
-                          // Year Pill
                           GestureDetector(
                             onTap: _isEditing
                                 ? null
@@ -420,7 +373,6 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          // Month Pill
                           GestureDetector(
                             onTap: _isEditing
                                 ? null
@@ -454,22 +406,22 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                     "Base Salary",
                     _salaryController,
                     _salaryFocus,
-                    const Color(0xFF00E676),
-                  ), // Green
+                    BudgetrColors.success,
+                  ),
                   const SizedBox(height: 16),
                   _buildInput(
                     "Extra Income",
                     _extraIncomeController,
                     _extraFocus,
-                    const Color(0xFF00E676),
-                  ), // Green
+                    BudgetrColors.success,
+                  ),
                   const SizedBox(height: 16),
                   _buildInput(
                     "EMI / Deductions",
                     _emiController,
                     _emiFocus,
-                    const Color(0xFFFF5252),
-                  ), // Red
+                    BudgetrColors.error,
+                  ),
 
                   const SizedBox(height: 32),
                   // --- Projected Splits Preview ---
@@ -477,13 +429,11 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           "PROJECTED ALLOCATIONS",
-                          style: TextStyle(
+                          style: BudgetrStyles.caption.copyWith(
                             color: Colors.white54,
-                            fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -497,43 +447,37 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                               children: [
                                 Row(
                                   children: [
-                                    // Percentage Pill
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 6,
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: _accentColor.withOpacity(0.1),
+                                        color: BudgetrColors.accent.withOpacity(
+                                          0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
-                                          color: _accentColor.withOpacity(0.2),
+                                          color: BudgetrColors.accent
+                                              .withOpacity(0.2),
                                         ),
                                       ),
                                       child: Text(
                                         "${cat.percentage.toStringAsFixed(0)}%",
                                         style: TextStyle(
-                                          color: _accentColor,
+                                          color: BudgetrColors.accent,
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      cat.name,
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                      ),
-                                    ),
+                                    Text(cat.name, style: BudgetrStyles.body),
                                   ],
                                 ),
                                 Text(
                                   _currencyFormat.format(amount),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: BudgetrStyles.h3,
                                 ),
                               ],
                             ),
@@ -547,11 +491,11 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
             ),
           ),
 
-          // --- STICKY BOTTOM BAR (Calculator) ---
+          // --- STICKY BOTTOM BAR ---
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: _bgColor,
+              color: BudgetrColors.background,
               border: Border(
                 top: BorderSide(color: Colors.white.withOpacity(0.1)),
               ),
@@ -576,7 +520,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                     Text(
                       _currencyFormat.format(_effectiveIncome),
                       style: TextStyle(
-                        color: _accentColor,
+                        color: BudgetrColors.accent,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -595,7 +539,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                             color: Colors.white.withOpacity(0.2),
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BudgetrStyles.radiusM,
                           ),
                         ),
                         child: const Text(
@@ -606,21 +550,9 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: ElevatedButton(
+                      child: BudgetrButton(
+                        text: "Save Budget",
                         onPressed: _save,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: _accentColor,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: const Text(
-                          "Save Budget",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
                       ),
                     ),
                   ],
@@ -646,8 +578,7 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
                     onClose: _closeKeyboard,
                     onSwitchToSystem: _switchToSystemKeyboard,
                     onNext: _handleNext,
-                    onPrevious:
-                        _handlePrevious, // ADDED: Connected to previous logic
+                    onPrevious: _handlePrevious,
                   )
                 : const SizedBox.shrink(),
           ),
@@ -697,18 +628,14 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
         TextFormField(
           controller: ctrl,
           focusNode: node,
-          readOnly: !_useSystemKeyboard,
-          showCursor: true,
+          readOnly: !_useSystemKeyboard, // KEEP THIS for custom keyboard
+          showCursor: true, // KEEP THIS for custom keyboard
           keyboardType: TextInputType.number,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: BudgetrStyles.inputNumber,
           decoration: InputDecoration(
             prefixText: '₹ ',
             prefixStyle: TextStyle(
-              color: Colors.white.withOpacity(0.5),
+              color: BudgetrColors.textSecondary,
               fontSize: 20,
             ),
             hintText: '0',
@@ -717,12 +644,16 @@ class _AddRecordSheetState extends State<AddRecordSheet> {
             fillColor: Colors.white.withOpacity(0.05),
             isDense: true,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BudgetrStyles.radiusS,
               borderSide: BorderSide.none,
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BudgetrStyles.radiusS,
+              borderSide: BorderSide(color: accent),
             ),
           ),
           onTap: () => _setActive(ctrl, node),

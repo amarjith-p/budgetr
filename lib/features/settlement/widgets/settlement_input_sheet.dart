@@ -11,6 +11,11 @@ import '../../dashboard/services/dashboard_service.dart';
 import '../../settings/services/settings_service.dart';
 import '../services/settlement_service.dart';
 
+// --- DESIGN SYSTEM IMPORTS ---
+import '../../../core/design/budgetr_colors.dart';
+import '../../../core/design/budgetr_styles.dart';
+import '../../../core/design/budgetr_components.dart';
+
 class SettlementInputSheet extends StatefulWidget {
   const SettlementInputSheet({super.key});
 
@@ -141,9 +146,12 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error fetching data: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error fetching data: $e"),
+            backgroundColor: BudgetrColors.error,
+          ),
+        );
       }
     }
   }
@@ -231,11 +239,9 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
     }
   }
 
-  // --- NEW: Handle Previous Logic ---
   void _handlePrevious() {
     if (_activeController == null) return;
 
-    // Use same sort logic to ensure we navigate in visual order
     final entries = _budgetRecord!.allocations.entries.toList();
     if (_percentageConfig != null) {
       entries.sort((a, b) {
@@ -296,14 +302,17 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Settlement saved successfully!'),
-            backgroundColor: Colors.green,
+            backgroundColor: BudgetrColors.success,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: BudgetrColors.error,
+          ),
         );
       }
     }
@@ -315,7 +324,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      color: const Color(0xff0D1B2A),
+      color: BudgetrColors.background,
       child: Column(
         mainAxisSize: MainAxisSize.max,
         children: [
@@ -366,23 +375,34 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
                           ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.downloading,
-                          color: Colors.white70,
+                      const SizedBox(width: 8),
+                      // Styled Fetch Button
+                      Container(
+                        decoration: BoxDecoration(
+                          color: BudgetrColors.cardSurface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.1),
+                          ),
                         ),
-                        onPressed: _fetchData,
-                        tooltip: 'Fetch Budget Data',
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.downloading,
+                            color: Colors.white70,
+                          ),
+                          onPressed: _fetchData,
+                          tooltip: 'Fetch Budget Data',
+                        ),
                       ),
                     ],
                   ),
-                  const Divider(height: 32, color: Colors.white24),
+                  const Divider(height: 32, color: Colors.white10),
                   Expanded(
                     child: _budgetRecord == null
                         ? Center(
                             child: Text(
                               'Select a month and fetch data to begin.',
-                              style: TextStyle(
+                              style: BudgetrStyles.body.copyWith(
                                 color: Colors.white.withOpacity(0.5),
                               ),
                             ),
@@ -411,8 +431,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
                     onClose: _closeKeyboard,
                     onSwitchToSystem: _switchToSystemKeyboard,
                     onNext: _handleNext,
-                    onPrevious:
-                        _handlePrevious, // ADDED: Connected to previous logic
+                    onPrevious: _handlePrevious,
                   )
                 : const SizedBox.shrink(),
           ),
@@ -429,13 +448,13 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
         ? (_totalExpense / income).clamp(0.0, 1.0)
         : 0.0;
     final statusColor = isOverBudget
-        ? const Color(0xFFFF5252)
-        : const Color(0xFF00E676);
+        ? BudgetrColors.error
+        : BudgetrColors.success;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xff0D1B2A),
+        color: BudgetrColors.background,
         border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
         boxShadow: [
           BoxShadow(
@@ -453,7 +472,7 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
             children: [
               Text(
                 "Total Spent: ${_currencyFormat.format(_totalExpense)}",
-                style: const TextStyle(
+                style: BudgetrStyles.caption.copyWith(
                   color: Colors.white70,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -463,9 +482,8 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
                 isOverBudget
                     ? "Over by ${_currencyFormat.format(balance.abs())}"
                     : "Left: ${_currencyFormat.format(balance)}",
-                style: TextStyle(
+                style: BudgetrStyles.body.copyWith(
                   color: statusColor,
-                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -490,30 +508,39 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: Colors.white.withOpacity(0.2)),
                     foregroundColor: Colors.white70,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BudgetrStyles.radiusM,
                     ),
                   ),
                   child: const Text('Cancel'),
                 ),
               ),
               const SizedBox(width: 16),
+
+              // FIX: Replaced BudgetrButton with Manual GestureDetector
+              // This ensures the label is Solid White and never faded.
               Expanded(
-                child: ElevatedButton(
-                  onPressed: _onSettle,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3A86FF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                child: GestureDetector(
+                  onTap: _onSettle,
+                  child: Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: BudgetrColors.primaryGradient,
+                      borderRadius: BudgetrStyles.radiusM,
+                      boxShadow: BudgetrStyles.glowBoxShadow(
+                        BudgetrColors.accent,
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'Settle Budget',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    child: const Text(
+                      'Settle Budget',
+                      style: TextStyle(
+                        color: Colors.white, // Forces Solid White
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -573,14 +600,16 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
         contentPadding: EdgeInsets.zero,
         title: Text(
           title,
-          style: const TextStyle(
+          style: BudgetrStyles.body.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.w500,
           ),
         ),
         subtitle: Text(
           'Allocated: ${_currencyFormat.format(allocated)}',
-          style: TextStyle(color: Colors.white.withOpacity(0.5)),
+          style: BudgetrStyles.caption.copyWith(
+            color: Colors.white.withOpacity(0.5),
+          ),
         ),
         trailing: SizedBox(
           width: 140,
@@ -591,10 +620,8 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
             showCursor: true,
             textAlign: TextAlign.end,
             keyboardType: TextInputType.number,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+            style: BudgetrStyles.h3.copyWith(fontWeight: FontWeight.bold),
+            cursorColor: BudgetrColors.accent,
             decoration: InputDecoration(
               isDense: true,
               hintText: '0',
@@ -602,8 +629,12 @@ class _SettlementInputSheetState extends State<SettlementInputSheet> {
               filled: true,
               fillColor: Colors.white.withOpacity(0.05),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BudgetrStyles.radiusS,
                 borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BudgetrStyles.radiusS,
+                borderSide: const BorderSide(color: BudgetrColors.accent),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,

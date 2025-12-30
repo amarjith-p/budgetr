@@ -5,6 +5,11 @@ import '../../../core/services/category_service.dart';
 import '../../../core/widgets/modern_loader.dart';
 import '../../../core/constants/icon_constants.dart';
 
+// --- DESIGN SYSTEM IMPORTS ---
+import '../../../core/design/budgetr_colors.dart';
+import '../../../core/design/budgetr_styles.dart';
+import '../../../core/design/budgetr_components.dart';
+
 class CategoryManagerScreen extends StatefulWidget {
   const CategoryManagerScreen({super.key});
 
@@ -19,9 +24,6 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
   int _selectedTabIndex = 0;
 
   late Stream<List<TransactionCategoryModel>> _categoriesStream;
-
-  final Color _bgColor = const Color(0xff0D1B2A);
-  final Color _accentColor = const Color(0xFF3A86FF);
 
   @override
   void initState() {
@@ -44,46 +46,25 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
 
   // --- Logic to Restore Defaults (Factory Reset) ---
   Future<void> _handleRestoreDefaults() async {
-    // 1. Show Confirmation Dialog
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0D1B2A),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withOpacity(0.1)),
-        ),
-        title: const Text(
-          "Reset to Defaults?",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Reset to Defaults?"),
         content: const Text(
           "This will DELETE all your custom categories and revert any changes made to default ones.\n\nAre you sure you want to start fresh?",
-          style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text("Cancel"),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              backgroundColor: BudgetrColors.error,
+              foregroundColor: Colors.white,
             ),
-            child: const Text(
-              "Reset All",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: const Text("Reset All"),
           ),
         ],
       ),
@@ -91,7 +72,6 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
 
     if (confirm != true) return;
 
-    // 2. Show Loader & Execute
     if (mounted) {
       showDialog(
         context: context,
@@ -107,7 +87,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("All categories reset to system defaults."),
-            backgroundColor: Colors.green,
+            backgroundColor: BudgetrColors.success,
           ),
         );
       }
@@ -115,7 +95,10 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Error: $e"),
+            backgroundColor: BudgetrColors.error,
+          ),
         );
       }
     }
@@ -123,22 +106,13 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _bgColor,
-      extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: false,
+    return BudgetrScaffold(
+      // Unified AppBar using Design Tokens
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          "Categories",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
+        title: Text("Categories", style: BudgetrStyles.h2),
         iconTheme: const IconThemeData(color: Colors.white),
         flexibleSpace: ClipRect(
           child: BackdropFilter(
@@ -150,10 +124,10 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
-            color: const Color(0xFF1B263B),
+            color: BudgetrColors.cardSurface,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.white.withOpacity(0.1)),
+              borderRadius: BudgetrStyles.radiusS,
+              side: BudgetrStyles.glassBorder.top,
             ),
             onSelected: (val) {
               if (val == 'restore') _handleRestoreDefaults();
@@ -163,11 +137,11 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
                 value: 'restore',
                 child: Row(
                   children: [
-                    Icon(Icons.restore, color: Colors.redAccent, size: 20),
+                    Icon(Icons.restore, color: BudgetrColors.error, size: 20),
                     SizedBox(width: 12),
                     Text(
                       "Reset to Defaults",
-                      style: TextStyle(color: Colors.redAccent),
+                      style: TextStyle(color: BudgetrColors.error),
                     ),
                   ],
                 ),
@@ -178,21 +152,10 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
       ),
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0, -0.8),
-                  radius: 1.2,
-                  colors: [const Color(0xFF1B263B).withOpacity(0.4), _bgColor],
-                ),
-              ),
-            ),
-          ),
-
           Column(
             children: [
-              SizedBox(height: MediaQuery.of(context).padding.top + 60),
+              // Adjusted spacing to 20px
+              const SizedBox(height: 20),
 
               _buildSyncedSlidingToggle(),
 
@@ -221,8 +184,8 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
                       controller: _tabController,
                       physics: const BouncingScrollPhysics(),
                       children: [
-                        _buildCategoryList(expenses, Colors.redAccent),
-                        _buildCategoryList(income, Colors.greenAccent),
+                        _buildCategoryList(expenses, BudgetrColors.error),
+                        _buildCategoryList(income, BudgetrColors.success),
                       ],
                     );
                   },
@@ -231,6 +194,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
             ],
           ),
 
+          // Explicitly styled button for Main Screen
           Positioned(
             bottom: 30,
             left: 0,
@@ -244,20 +208,11 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
                     vertical: 16,
                   ),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [_accentColor, const Color(0xFF2563EB)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    gradient: BudgetrColors.primaryGradient,
                     borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _accentColor.withOpacity(0.4),
-                        blurRadius: 20,
-                        spreadRadius: -5,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+                    boxShadow: BudgetrStyles.glowBoxShadow(
+                      BudgetrColors.accent,
+                    ),
                     border: Border.all(
                       color: Colors.white.withOpacity(0.2),
                       width: 1,
@@ -266,14 +221,15 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
-                      Icon(Icons.add_rounded, color: Colors.white),
+                      Icon(Icons.add_rounded, color: Colors.white, size: 24),
                       SizedBox(width: 12),
                       Text(
                         "Add Category",
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Colors.white, // Forces bright white text
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
+                          inherit: false,
                         ),
                       ),
                     ],
@@ -312,26 +268,14 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0D1B2A),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withOpacity(0.1)),
-        ),
-        title: const Text(
-          "Delete Category?",
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Text(
+        title: const Text("Delete Category?"),
+        content: const Text(
           "This will remove the category from selection. Existing transactions will remain unaffected.",
-          style: TextStyle(color: Colors.white.withOpacity(0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text("Cancel"),
           ),
           TextButton(
             onPressed: () {
@@ -341,7 +285,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
             child: const Text(
               "Delete",
               style: TextStyle(
-                color: Colors.redAccent,
+                color: BudgetrColors.error,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -353,16 +297,15 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
 
   // --- WIDGETS ---
 
-  // Synced Toggle (From Previous Turn)
   Widget _buildSyncedSlidingToggle() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       width: double.infinity,
       height: 48,
       decoration: BoxDecoration(
-        color: Colors.black26,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        color: BudgetrColors.cardSurface.withOpacity(0.5),
+        borderRadius: BudgetrStyles.radiusS,
+        border: BudgetrStyles.glassBorder,
       ),
       child: AnimatedBuilder(
         animation: _tabController.animation!,
@@ -371,8 +314,8 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
           final double alignmentX = (value * 2) - 1;
 
           final Color indicatorColor = Color.lerp(
-            Colors.redAccent,
-            Colors.greenAccent,
+            BudgetrColors.error, // Red for Expense
+            BudgetrColors.success, // Green for Income
             value,
           )!;
 
@@ -424,8 +367,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
         child: Center(
           child: AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
-            style: TextStyle(
-              fontFamily: 'SF Pro Display',
+            style: BudgetrStyles.caption.copyWith(
               fontSize: 12,
               letterSpacing: 1.2,
               fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
@@ -451,9 +393,8 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
           const SizedBox(height: 16),
           Text(
             "No categories found",
-            style: TextStyle(
+            style: BudgetrStyles.body.copyWith(
               color: Colors.white.withOpacity(0.3),
-              fontSize: 16,
             ),
           ),
         ],
@@ -483,8 +424,6 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
   }
 }
 
-// ... (Rest of the standard classes _ModernAddEditCategorySheet, _CategoryCard, etc. remain unchanged)
-// Re-inserting _ModernAddEditCategorySheet for completeness
 class _ModernAddEditCategorySheet extends StatefulWidget {
   final TransactionCategoryModel? category;
   final String initialType;
@@ -563,16 +502,12 @@ class _ModernAddEditCategorySheetState
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xff0D1B2A);
-    final cardColor = const Color(0xFF1B263B);
-    final accentColor = const Color(0xFF3A86FF);
-
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: BudgetrColors.background,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       ),
       constraints: BoxConstraints(
@@ -601,11 +536,7 @@ class _ModernAddEditCategorySheetState
                       widget.category == null
                           ? "Create New Category"
                           : "Edit Category",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: BudgetrStyles.h2,
                     ),
                     const SizedBox(height: 30),
 
@@ -626,15 +557,15 @@ class _ModernAddEditCategorySheetState
                         width: 90,
                         height: 90,
                         decoration: BoxDecoration(
-                          color: cardColor,
+                          color: BudgetrColors.cardSurface,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: accentColor.withOpacity(0.5),
+                            color: BudgetrColors.accent.withOpacity(0.5),
                             width: 1.5,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: accentColor.withOpacity(0.2),
+                              color: BudgetrColors.accent.withOpacity(0.2),
                               blurRadius: 20,
                               spreadRadius: 2,
                             ),
@@ -653,8 +584,8 @@ class _ModernAddEditCategorySheetState
                               right: 0,
                               child: Container(
                                 padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: accentColor,
+                                decoration: const BoxDecoration(
+                                  color: BudgetrColors.accent,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -675,11 +606,7 @@ class _ModernAddEditCategorySheetState
                       focusNode: _nameNode,
                       controller: _nameCtrl,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: BudgetrStyles.h2,
                       decoration: InputDecoration(
                         hintText: "Category Name",
                         hintStyle: TextStyle(
@@ -688,7 +615,7 @@ class _ModernAddEditCategorySheetState
                         filled: true,
                         fillColor: Colors.white.withOpacity(0.03),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BudgetrStyles.radiusM,
                           borderSide: BorderSide.none,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
@@ -714,12 +641,12 @@ class _ModernAddEditCategorySheetState
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BudgetrStyles.radiusM,
                         ),
                         child: Row(
                           children: [
-                            _buildTypeOption("Expense", Colors.redAccent),
-                            _buildTypeOption("Income", Colors.greenAccent),
+                            _buildTypeOption("Expense", BudgetrColors.error),
+                            _buildTypeOption("Income", BudgetrColors.success),
                           ],
                         ),
                       ),
@@ -730,11 +657,9 @@ class _ModernAddEditCategorySheetState
                       alignment: Alignment.centerLeft,
                       child: Text(
                         "SUB-CATEGORIES",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.4),
-                          fontSize: 11,
+                        style: BudgetrStyles.caption.copyWith(
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 1.5,
+                          color: Colors.white.withOpacity(0.4),
                         ),
                       ),
                     ),
@@ -744,16 +669,16 @@ class _ModernAddEditCategorySheetState
                       key: _subFieldKey,
                       focusNode: _subNode,
                       controller: _subCtrl,
-                      style: const TextStyle(color: Colors.white),
+                      style: BudgetrStyles.body.copyWith(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: "Add sub-category (e.g. Uber, Groceries)",
                         hintStyle: TextStyle(
                           color: Colors.white.withOpacity(0.3),
                         ),
                         filled: true,
-                        fillColor: cardColor,
+                        fillColor: BudgetrColors.cardSurface,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BudgetrStyles.radiusS,
                           borderSide: BorderSide.none,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
@@ -761,7 +686,10 @@ class _ModernAddEditCategorySheetState
                           vertical: 14,
                         ),
                         suffixIcon: IconButton(
-                          icon: Icon(Icons.add_circle, color: accentColor),
+                          icon: const Icon(
+                            Icons.add_circle,
+                            color: BudgetrColors.accent,
+                          ),
                           onPressed: _addSubCategory,
                         ),
                       ),
@@ -781,9 +709,8 @@ class _ModernAddEditCategorySheetState
                               (s) => Chip(
                                 label: Text(
                                   s,
-                                  style: const TextStyle(
+                                  style: BudgetrStyles.caption.copyWith(
                                     color: Colors.white,
-                                    fontSize: 12,
                                   ),
                                 ),
                                 backgroundColor: Colors.white.withOpacity(0.08),
@@ -800,6 +727,9 @@ class _ModernAddEditCategorySheetState
                                 side: BorderSide(
                                   color: Colors.white.withOpacity(0.1),
                                 ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
                               ),
                             )
                             .toList(),
@@ -813,47 +743,51 @@ class _ModernAddEditCategorySheetState
             ),
           ),
 
+          // FIX: Updated Bottom Sheet Button to Custom Gradient to Fix Fading
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(color: Colors.white.withOpacity(0.05)),
               ),
-              color: bgColor,
+              color: BudgetrColors.background,
             ),
             child: SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  disabledBackgroundColor: accentColor.withOpacity(0.5),
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+              child: GestureDetector(
+                onTap: _isLoading ? null : _save,
+                child: Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: BudgetrColors.primaryGradient,
+                    borderRadius: BudgetrStyles.radiusM,
+                    boxShadow: BudgetrStyles.glowBoxShadow(
+                      BudgetrColors.accent,
+                    ),
                   ),
-                  elevation: 8,
-                  shadowColor: accentColor.withOpacity(0.4),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          widget.category == null
+                              ? "Create Category"
+                              : "Save Changes",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        widget.category == null
-                            ? "Create Category"
-                            : "Save Changes",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
-                      ),
               ),
             ),
           ),
@@ -870,7 +804,7 @@ class _ModernAddEditCategorySheetState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("'$val' already added!"),
-          backgroundColor: Colors.orangeAccent,
+          backgroundColor: BudgetrColors.warning,
         ),
       );
       _subNode.requestFocus();
@@ -888,6 +822,7 @@ class _ModernAddEditCategorySheetState
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isLoading) return;
 
     setState(() => _isLoading = true);
 
@@ -905,7 +840,7 @@ class _ModernAddEditCategorySheetState
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("Category '$name' already exists in $_type."),
-              backgroundColor: Colors.redAccent,
+              backgroundColor: BudgetrColors.error,
             ),
           );
         }
@@ -936,7 +871,10 @@ class _ModernAddEditCategorySheetState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Error: $e"),
+            backgroundColor: BudgetrColors.error,
+          ),
         );
       }
       setState(() => _isLoading = false);
@@ -1006,8 +944,8 @@ class _CategoryCardState extends State<_CategoryCard> {
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1B263B).withOpacity(_isExpanded ? 0.8 : 0.5),
-          borderRadius: BorderRadius.circular(20),
+          color: BudgetrColors.cardSurface.withOpacity(_isExpanded ? 0.8 : 0.5),
+          borderRadius: BudgetrStyles.radiusM,
           border: Border.all(
             color: _isExpanded
                 ? widget.themeColor.withOpacity(0.3)
@@ -1042,21 +980,11 @@ class _CategoryCardState extends State<_CategoryCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.category.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
+                      Text(widget.category.name, style: BudgetrStyles.h3),
                       const SizedBox(height: 4),
                       Text(
                         "${widget.category.subCategories.length} sub-categories",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
-                          fontSize: 12,
-                        ),
+                        style: BudgetrStyles.caption,
                       ),
                     ],
                   ),
@@ -1090,10 +1018,8 @@ class _CategoryCardState extends State<_CategoryCard> {
                           if (widget.category.subCategories.isEmpty)
                             Text(
                               "No sub-categories defined.",
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.3),
+                              style: BudgetrStyles.caption.copyWith(
                                 fontStyle: FontStyle.italic,
-                                fontSize: 13,
                               ),
                             )
                           else
@@ -1123,10 +1049,8 @@ class _CategoryCardState extends State<_CategoryCard> {
                                       ),
                                       child: Text(
                                         sub,
-                                        style: const TextStyle(
+                                        style: BudgetrStyles.caption.copyWith(
                                           color: Colors.white70,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
                                     ),
@@ -1148,7 +1072,7 @@ class _CategoryCardState extends State<_CategoryCard> {
                               _ActionButton(
                                 icon: Icons.delete_outline,
                                 label: "Delete",
-                                color: Colors.redAccent,
+                                color: BudgetrColors.error,
                                 onTap: widget.onDelete,
                               ),
                             ],
@@ -1242,7 +1166,7 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
       height: MediaQuery.of(context).size.height * 0.8,
       padding: const EdgeInsets.all(24),
       decoration: const BoxDecoration(
-        color: Color(0xff0D1B2A),
+        color: BudgetrColors.background,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -1259,14 +1183,7 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            "Select Icon",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text("Select Icon", style: BudgetrStyles.h2),
           const SizedBox(height: 16),
           TextField(
             controller: _searchCtrl,
@@ -1288,7 +1205,7 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
               filled: true,
               fillColor: Colors.white.withOpacity(0.05),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BudgetrStyles.radiusM,
                 borderSide: BorderSide.none,
               ),
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -1316,11 +1233,8 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
           children: [
             Text(
               group.title.toUpperCase(),
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
-                fontSize: 12,
+              style: BudgetrStyles.caption.copyWith(
                 fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
               ),
             ),
             const SizedBox(height: 12),
