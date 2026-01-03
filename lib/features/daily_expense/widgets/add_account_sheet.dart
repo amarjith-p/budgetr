@@ -25,12 +25,12 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
   late TextEditingController _accountNoController;
   late TextEditingController _balanceController;
 
-  // Focus Nodes for Enter-to-Next & Auto-Scroll
+  // Focus Nodes
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _accNumFocus = FocusNode();
   final FocusNode _balanceFocus = FocusNode();
 
-  // Global Keys to identify widgets for Auto-Scrolling
+  // Global Keys for Auto-Scrolling
   final GlobalKey _nameFieldKey = GlobalKey();
   final GlobalKey _accNumFieldKey = GlobalKey();
   final GlobalKey _balanceFieldKey = GlobalKey();
@@ -39,9 +39,9 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
   String? _selectedBank;
   String? _selectedAccountType;
 
-  // Professional Financial Color Palette
+  // EXPANDED: 15 Professional Financial Colors
   final List<Color> _accountColors = [
-    const Color(0xFF1E1E1E), // Matte Black
+    const Color(0xFF1E1E1E), // Matte Black (Default)
     const Color(0xFF2C3E50), // Midnight Blue
     const Color(0xFF1A5276), // Deep Ocean
     const Color(0xFF004D40), // British Racing Green
@@ -49,7 +49,15 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     const Color(0xFF4A148C), // Deep Purple
     const Color(0xFF37474F), // Slate Grey
     const Color(0xFFBF360C), // Burnt Orange
+    const Color(0xFFB71C1C), // Crimson Red
+    const Color(0xFF0D47A1), // Cobalt Blue
+    const Color(0xFF1B5E20), // Forest Green
+    const Color(0xFFF57F17), // Deep Amber (Gold-ish)
+    const Color(0xFF4E342E), // Espresso Brown
+    const Color(0xFF006064), // Cyan Teal
+    const Color(0xFF311B92), // Indigo Violet
   ];
+
   late Color _selectedColor;
 
   final List<String> _accountTypes = ['Savings Account', 'Salary Account'];
@@ -75,7 +83,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
       _selectedColor = _accountColors[0];
     }
 
-    // Attach Focus Listeners for Auto-Scroll
     _nameFocus.addListener(() {
       if (_nameFocus.hasFocus) _scrollToField(_nameFieldKey);
     });
@@ -98,14 +105,12 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     super.dispose();
   }
 
-  // --- AUTO SCROLL LOGIC ---
   void _scrollToField(GlobalKey key) {
-    // Small delay to allow keyboard animation to start/finish
     Future.delayed(const Duration(milliseconds: 300), () {
       if (key.currentContext != null) {
         Scrollable.ensureVisible(
           key.currentContext!,
-          alignment: 0.5, // Center the field in the view
+          alignment: 0.5,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
@@ -180,14 +185,13 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                 hint: "e.g. Personal Savings",
                 icon: Icons.edit_outlined,
                 inputAction: TextInputAction.next,
-                // Skip Dropdowns, jump to Account Number
                 onSubmitted: () =>
                     FocusScope.of(context).requestFocus(_accNumFocus),
               ),
 
               const SizedBox(height: 16),
 
-              // 2. Row: Bank & Account Type
+              // 2. Bank & Type
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -332,7 +336,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     );
   }
 
-  // --- HELPER WIDGETS ---
   InputDecoration _inputDeco(String label) {
     return InputDecoration(
       labelText: label,
@@ -362,17 +365,17 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     required String label,
     required String hint,
     required IconData icon,
-    GlobalKey? fieldKey, // Key for scrolling
-    FocusNode? focusNode, // Focus Node for management
-    TextInputAction? inputAction, // Enter Key Action
-    VoidCallback? onSubmitted, // Action on Enter
+    GlobalKey? fieldKey,
+    FocusNode? focusNode,
+    TextInputAction? inputAction,
+    VoidCallback? onSubmitted,
     TextInputType inputType = TextInputType.text,
     int? maxLength,
     bool isDigitOnly = false,
     String? Function(String?)? validator,
   }) {
     return Container(
-      key: fieldKey, // Attach Key here so Scrollable finds this widget
+      key: fieldKey,
       child: TextFormField(
         controller: controller,
         focusNode: focusNode,
@@ -417,7 +420,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
           children: [
             InkWell(
               onTap: () {
-                // Clear text focus before opening sheet
                 _nameFocus.unfocus();
                 _accNumFocus.unfocus();
                 _balanceFocus.unfocus();
