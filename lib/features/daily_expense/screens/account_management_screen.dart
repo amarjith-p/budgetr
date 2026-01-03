@@ -7,7 +7,6 @@ import '../models/expense_models.dart';
 import '../services/expense_service.dart';
 import '../widgets/add_account_sheet.dart';
 import '../widgets/bank_account_card.dart';
-import '../widgets/dashboard_account_config_sheet.dart';
 import 'account_detail_screen.dart';
 
 class AccountManagementScreen extends StatefulWidget {
@@ -19,8 +18,37 @@ class AccountManagementScreen extends StatefulWidget {
 }
 
 class _AccountManagementScreenState extends State<AccountManagementScreen> {
-  // Loading state for Delete/Edit operations
+  List<ExpenseAccountModel> _accounts = [];
   bool _isLoading = false;
+  bool _hasLoaded = false;
+  bool _showTip = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen to stream to keep data fresh, but _accounts is modified by drag/drop
+    ExpenseService().getAccounts().listen((data) {
+      if (mounted && !_isLoading) {
+        setState(() {
+          _accounts = data;
+          _hasLoaded = true;
+        });
+      }
+    });
+  }
+
+  void _onReorder(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    setState(() {
+      final item = _accounts.removeAt(oldIndex);
+      _accounts.insert(newIndex, item);
+    });
+
+    // Save new order to Firebase
+    ExpenseService().updateAccountOrder(_accounts);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,93 +57,95 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text("My Wallet", style: TextStyle(color: Colors.white)),
+        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          // --- UPDATED: Explicit "Customize" Button ---
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-            child: TextButton.icon(
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (ctx) => const DashboardAccountConfigSheet(),
-                );
-              },
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-              icon: const Icon(
-                Icons.tune_rounded,
-                size: 16,
-                color: Colors.white,
-              ),
-              label: const Text(
-                "Customize",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-
-          // Add Account Button
           IconButton(
             onPressed: () => _showAddAccountSheet(context, null),
             icon: const Icon(Icons.add),
             tooltip: "Add Account",
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
         ],
       ),
       body: Stack(
         children: [
-          StreamBuilder<List<ExpenseAccountModel>>(
-            stream: ExpenseService().getAccounts(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: ModernLoader());
-              }
+          if (!_hasLoaded)
+            const Center(child: ModernLoader())
+          else if (_accounts.isEmpty)
+            _buildEmptyState()
+          else
+            ReorderableListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+              itemCount: _accounts.length,
+              onReorder: _onReorder,
 
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return _buildEmptyState();
-              }
+              // Info Header tells user how to interact
+              header:
+                  _showTip ? _buildReorderTip() : const SizedBox(height: 16),
 
-              final accounts = snapshot.data!;
+              proxyDecorator: (child, index, animation) {
+                return AnimatedBuilder(
+                  animation: animation,
+                  builder: (BuildContext context, Widget? child) {
+                    return Material(
+                      elevation: 8,
+                      color: Colors.transparent,
+                      shadowColor: Colors.black54,
+                      child: child,
+                    );
+                  },
+                  child: child,
+                );
+              },
+              itemBuilder: (context, index) {
+                final account = _accounts[index];
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: accounts.length,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: BankAccountCard(
-                      account: accounts[index],
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              AccountDetailScreen(account: accounts[index]),
+                return Column(
+                  key: ValueKey(account.id),
+                  children: [
+                    // Visual Divider for the "Top 6" dashboard cutoff
+                    if (index == 6)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          children: [
+                            const Expanded(
+                                child: Divider(color: Colors.white24)),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              child: Text(
+                                "Not on Dashboard",
+                                style: TextStyle(
+                                    color: Colors.white.withOpacity(0.5),
+                                    fontSize: 12),
+                              ),
+                            ),
+                            const Expanded(
+                                child: Divider(color: Colors.white24)),
+                          ],
                         ),
                       ),
-                      // Trigger the options dialog here
-                      onMoreTap: () =>
-                          _showAccountOptions(context, accounts[index]),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
 
-          // Loading Overlay for Delete operations
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: BankAccountCard(
+                        account: account,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                AccountDetailScreen(account: account),
+                          ),
+                        ),
+                        onMoreTap: () => _showAccountOptions(context, account),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           if (_isLoading)
             Container(
               color: Colors.black54,
@@ -126,7 +156,54 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     );
   }
 
-  // --- 1. OPTIONS DIALOG (Edit/Delete) ---
+  Widget _buildReorderTip() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16, top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF00B4D8).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF00B4D8).withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline_rounded,
+              color: Color(0xFF00B4D8), size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Customize Your View",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "Long press & drag cards to reorder. The top 6 accounts will appear on your Home Dashboard.",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => setState(() => _showTip = false),
+            icon: const Icon(Icons.close, size: 18, color: Colors.white54),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          )
+        ],
+      ),
+    );
+  }
+
   void _showAccountOptions(BuildContext context, ExpenseAccountModel account) {
     final currency =
         NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
@@ -145,7 +222,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -182,26 +258,17 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-
-                // --- SUMMARY ---
                 _buildDetailRow("Account Name", account.name),
                 const Divider(color: Colors.white10, height: 24),
-
                 _buildDetailRow("Bank", account.bankName),
                 const Divider(color: Colors.white10, height: 24),
-
                 _buildDetailRow("Type", account.accountType),
                 const Divider(color: Colors.white10, height: 24),
-
                 _buildDetailRow("Account No", "**** ${account.accountNumber}"),
                 const Divider(color: Colors.white10, height: 24),
-
                 _buildDetailRow(
                     "Balance", currency.format(account.currentBalance)),
-
                 const SizedBox(height: 32),
-
-                // Action Buttons
                 Row(
                   children: [
                     Expanded(
@@ -228,7 +295,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                       child: TextButton.icon(
                         onPressed: () {
                           Navigator.pop(ctx);
-                          _showAddAccountSheet(context, account); // Edit Mode
+                          _showAddAccountSheet(context, account);
                         },
                         icon: const Icon(Icons.edit_outlined,
                             color: Colors.white, size: 20),
@@ -253,7 +320,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     );
   }
 
-  // --- 2. ADD/EDIT SHEET LOGIC ---
   void _showAddAccountSheet(
       BuildContext context, ExpenseAccountModel? accountToEdit) {
     showModalBottomSheet(
@@ -263,8 +329,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       builder: (context) => AddAccountSheet(
         accountToEdit: accountToEdit,
         onAccountAdded: (data) async {
-          // If editing, preserve ID, CreatedAt and Dashboard Config
-          // If adding, generate new ID and CreatedAt
           final newAccount = ExpenseAccountModel(
             id: accountToEdit?.id ??
                 DateTime.now().millisecondsSinceEpoch.toString(),
@@ -276,9 +340,8 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
             accountNumber: data['accountNumber'],
             color: data['color'],
             createdAt: accountToEdit?.createdAt ?? Timestamp.now(),
-            // Preserve dashboard settings if editing
             showOnDashboard: accountToEdit?.showOnDashboard ?? true,
-            dashboardOrder: accountToEdit?.dashboardOrder ?? 0,
+            dashboardOrder: accountToEdit?.dashboardOrder ?? _accounts.length,
           );
 
           try {
@@ -307,7 +370,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     );
   }
 
-  // --- 3. DELETE LOGIC ---
   void _handleDeleteAccount(BuildContext context, ExpenseAccountModel account) {
     showDialog(
       context: context,

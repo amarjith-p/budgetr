@@ -5,51 +5,60 @@ import '../models/expense_models.dart';
 class ExpenseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // --- ACCOUNTS (Management Screen - All Accounts) ---
+  // --- ACCOUNTS (Management & Dropdowns) ---
+  // Now sorts by dashboardOrder so Dropdowns match your custom order
   Stream<List<ExpenseAccountModel>> getAccounts() {
     return _db
         .collection(FirebaseConstants.expenseAccounts)
-        .orderBy('createdAt', descending: true)
+        .orderBy('dashboardOrder', descending: false)
         .snapshots()
         .map((s) =>
             s.docs.map((d) => ExpenseAccountModel.fromFirestore(d)).toList());
   }
 
-  // --- NEW: DASHBOARD ACCOUNTS (Filtered & Sorted) ---
+  // --- DASHBOARD ACCOUNTS (Daily Expense Screen) ---
+  // Returns the Top 6 accounts based on your custom order
   Stream<List<ExpenseAccountModel>> getDashboardAccounts() {
     return _db
         .collection(FirebaseConstants.expenseAccounts)
-        .where('showOnDashboard', isEqualTo: true)
         .orderBy('dashboardOrder', descending: false)
-        // Note: Firestore requires an index for 'showOnDashboard' + 'dashboardOrder'
-        .limit(6)
+        .limit(6) // The "First ^" accounts
         .snapshots()
         .map((s) =>
             s.docs.map((d) => ExpenseAccountModel.fromFirestore(d)).toList());
   }
 
-  // --- NEW: UPDATE ORDER & VISIBILITY ---
-  Future<void> updateDashboardConfig(List<ExpenseAccountModel> accounts) async {
+  // --- REORDER METHOD ---
+  Future<void> updateAccountOrder(List<ExpenseAccountModel> accounts) async {
     final batch = _db.batch();
 
-    for (var account in accounts) {
-      final ref =
-          _db.collection(FirebaseConstants.expenseAccounts).doc(account.id);
-      batch.update(ref, {
-        'showOnDashboard': account.showOnDashboard,
-        'dashboardOrder': account.dashboardOrder,
-      });
+    for (int i = 0; i < accounts.length; i++) {
+      final account = accounts[i];
+      // Only update if the order index has changed
+      if (account.dashboardOrder != i) {
+        final ref =
+            _db.collection(FirebaseConstants.expenseAccounts).doc(account.id);
+        batch.update(ref, {'dashboardOrder': i});
+      }
     }
 
     await batch.commit();
   }
 
-  // ... (Rest of existing add/update/delete methods remain unchanged)
-  Future<void> addAccount(ExpenseAccountModel account) {
+  // ... (Existing CRUD methods remain unchanged below) ...
+
+  Future<void> addAccount(ExpenseAccountModel account) async {
+    // When adding, put it at the end of the list by default
+    final snapshot =
+        await _db.collection(FirebaseConstants.expenseAccounts).count().get();
+    final count = snapshot.count ?? 0;
+
+    final newAccount = account.copyWith(dashboardOrder: count);
+
     return _db
         .collection(FirebaseConstants.expenseAccounts)
-        .doc(account.id)
-        .set(account.toMap());
+        .doc(newAccount.id)
+        .set(newAccount.toMap());
   }
 
   Future<void> updateAccount(ExpenseAccountModel account) async {
