@@ -116,9 +116,8 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
         _allCategories = results[1] as List<TransactionCategoryModel>;
         _buckets = cats;
 
-        if (_cards.isNotEmpty) {
-          _selectedCard = _cards.first;
-        }
+        // CHANGED: Removed default card selection logic.
+        // It now remains null until user selects one.
 
         if (widget.transactionToEdit != null) {
           final t = widget.transactionToEdit!;
@@ -129,10 +128,13 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
           _selectedBucket = t.bucket;
           _category = t.category;
           _subCategory = t.subCategory;
-          _selectedCard = _cards.firstWhere(
-            (c) => c.id == t.cardId,
-            orElse: () => _cards.first,
-          );
+
+          // Only set card if it exists in the list
+          try {
+            _selectedCard = _cards.firstWhere((c) => c.id == t.cardId);
+          } catch (e) {
+            _selectedCard = null;
+          }
 
           // CHECK SYNC LINK
           if (t.linkedExpenseId != null && t.linkedExpenseId!.isNotEmpty) {
@@ -144,7 +146,10 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
   }
 
   Future<void> _save() async {
+    // This will now trigger validators on Card, Bucket, and Category as well
     if (!_formKey.currentState!.validate()) return;
+
+    // Safety check (should be caught by validate, but good for type safety)
     if (_selectedCard == null) return;
 
     setState(() => _isLoading = true);
@@ -186,7 +191,6 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
     }
   }
 
-  // ... (Keep existing _pickDate and _inputDeco exactly as is)
   Future<void> _pickDate() async {
     _amountNode.unfocus();
     _notesNode.unfocus();
@@ -239,6 +243,14 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
         borderSide: const BorderSide(color: Color(0xFF00B4D8), width: 1.5),
       ),
       errorStyle: const TextStyle(color: Colors.redAccent),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 1.0),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+      ),
     );
   }
 
@@ -250,7 +262,6 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
 
     List<String> subCategories = [];
     if (_category != null) {
-      // safe find
       final hasCat = categoryList.any((e) => e.name == _category);
       if (hasCat) {
         final catModel = categoryList.firstWhere((e) => e.name == _category);
@@ -342,8 +353,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Card Dropdown - LOCKED if _isLinked
-                    // Use opacity and IgnorePointer to disable
+                    // Card Dropdown - MANDATORY
                     Opacity(
                       opacity: _isLinked ? 0.5 : 1.0,
                       child: IgnorePointer(
@@ -356,6 +366,9 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                           onSelect: (val) {
                             setState(() => _selectedCard = val);
                           },
+                          // Validator Added
+                          validator: (val) =>
+                              val == null ? 'Please select a card' : null,
                         ),
                       ),
                     ),
@@ -381,7 +394,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Amount
+                    // Amount - MANDATORY
                     Container(
                       key: _amountFieldKey,
                       child: TextFormField(
@@ -406,16 +419,19 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                         decoration: _inputDeco("Amount").copyWith(
                           prefixText: '₹ ',
                         ),
+                        // Existing Validator covers Mandatory Requirement
                         validator: (val) {
-                          if (val == null || val.isEmpty) return 'Required';
-                          if (double.tryParse(val) == null) return 'Invalid';
+                          if (val == null || val.isEmpty)
+                            return 'Amount required';
+                          if (double.tryParse(val) == null)
+                            return 'Invalid amount';
                           return null;
                         },
                       ),
                     ),
                     const SizedBox(height: 16),
 
-                    // Bucket
+                    // Bucket - MANDATORY IF EXPENSE
                     if (_type == 'Expense') ...[
                       _buildSelectField<String>(
                         label: "Bucket",
@@ -425,11 +441,14 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                         onSelect: (val) {
                           setState(() => _selectedBucket = val);
                         },
+                        // Validator Added
+                        validator: (val) =>
+                            val == null ? 'Bucket required' : null,
                       ),
                       const SizedBox(height: 16),
                     ],
 
-                    // Category
+                    // Category - MANDATORY
                     Row(
                       children: [
                         Expanded(
@@ -444,6 +463,9 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                                 _subCategory = null;
                               });
                             },
+                            // Validator Added
+                            validator: (val) =>
+                                val == null ? 'Category required' : null,
                           ),
                         ),
                         if (subCategories.isNotEmpty) ...[
@@ -457,6 +479,8 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                               onSelect: (val) {
                                 setState(() => _subCategory = val);
                               },
+                              // Optional
+                              validator: null,
                             ),
                           ),
                         ]
@@ -554,16 +578,18 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
     );
   }
 
-  // --- RESTORED: Your original _buildSelectField logic ---
+  // --- MODIFIED: Added Validator Support ---
   Widget _buildSelectField<T>({
     required String label,
     required T? value,
     required List<T> items,
     required String Function(T) labelBuilder,
     required Function(T) onSelect,
+    String? Function(T?)? validator, // Added parameter
   }) {
     return FormField<T>(
       initialValue: value,
+      validator: validator, // Hook up validator
       builder: (FormFieldState<T> state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -582,7 +608,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                   onSelect: (v) {
                     if (v != null) {
                       onSelect(v);
-                      state.didChange(v);
+                      state.didChange(v); // Update form state
                     }
                   },
                 );
@@ -590,7 +616,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
               borderRadius: BorderRadius.circular(12),
               child: InputDecorator(
                 decoration: _inputDeco(label).copyWith(
-                  errorText: state.errorText,
+                  errorText: state.errorText, // Display validation error
                   suffixIcon: const Icon(
                     Icons.keyboard_arrow_down,
                     color: Colors.white54,
@@ -701,9 +727,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
     );
   }
 
-  // --- RESTORED: Your original _typeButton logic ---
   Widget _typeButton(String label, Color color, bool isSelected) {
-    // MODIFICATION: Add disable logic for _isLinked
     return Opacity(
       opacity: _isLinked ? 0.5 : 1.0,
       child: GestureDetector(
