@@ -13,6 +13,8 @@ import '../widgets/add_credit_txn_sheet.dart';
 import '../utils/billing_cycle_utils.dart';
 import '../widgets/credit_summary_card.dart';
 import '../widgets/transaction_list_item.dart';
+// IMPORT NEW FILTER SHEET
+import '../widgets/credit_filter_sheet.dart';
 
 class CreditCardDetailScreen extends StatefulWidget {
   final CreditCardModel card;
@@ -23,7 +25,7 @@ class CreditCardDetailScreen extends StatefulWidget {
 }
 
 class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
-  // ... (Keep existing state variables) ...
+  // --- Filter States ---
   String _selectedType = 'All';
   String _sortOption = 'Newest';
   DateTimeRange? _dateRange;
@@ -202,6 +204,9 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
 
               return Column(
                 children: [
+                  // --- NEW: Active Filters List ---
+                  if (_hasActiveFilters) _buildActiveFiltersList(),
+
                   CreditSummaryCard(
                     currentUnbilled: currentUnbilledTotal,
                     lastBillDate: lastStatementDate,
@@ -227,7 +232,6 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                                 onMarkAsRepayment: () =>
                                     _handleMarkAsRepayment(t),
                                 onIgnore: () => _handleIgnoreTransaction(t.id),
-                                // For Current Cycle, we allow moving BACK if it was pushed here manually
                                 onDeferToNextBill: t.includeInNextStatement
                                     ? () => _handleDeferTransaction(t, false)
                                     : null,
@@ -291,16 +295,12 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                                       _handleMarkAsRepayment(t),
                                   onIgnore: () =>
                                       _handleIgnoreTransaction(t.id),
-
-                                  // CHANGED: Hide 'Move to Next' if Verified!
                                   onDeferToNextBill: t.isSettlementVerified
                                       ? null
                                       : () => _handleDeferTransaction(
                                           t, !t.includeInNextStatement),
-
                                   onVerifySettlement: () =>
                                       _handleVerifySettlement(t),
-
                                   showDangerWarning: showWarning,
                                 );
                               }),
@@ -351,6 +351,143 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
     );
   }
 
+  // --- Filter Helpers ---
+
+  // REPLACED OLD METHOD with Widget Call
+  void _openFilterSheet(
+      BuildContext context, List<CreditTransactionModel> allTxns) {
+    final uniqueCategories = allTxns
+        .map((e) => e.category)
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    final uniqueBuckets = allTxns
+        .map((e) => e.bucket)
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: CreditFilterSheet(
+          initialType: _selectedType,
+          initialSort: _sortOption,
+          initialDateRange: _dateRange,
+          initialCategories: _selectedCategories,
+          initialBuckets: _selectedBuckets,
+          availableCategories: uniqueCategories,
+          availableBuckets: uniqueBuckets,
+          onApply: (type, sort, dateRange, categories, buckets) {
+            setState(() {
+              _selectedType = type;
+              _sortOption = sort;
+              _dateRange = dateRange;
+              _selectedCategories.clear();
+              _selectedCategories.addAll(categories);
+              _selectedBuckets.clear();
+              _selectedBuckets.addAll(buckets);
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  // --- NEW: Active Filters List (Same as AccountDetail) ---
+  Widget _buildActiveFiltersList() {
+    return Container(
+      height: 50,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          GestureDetector(
+            onTap: () => setState(() {
+              _selectedType = 'All';
+              _sortOption = 'Newest';
+              _dateRange = null;
+              _selectedCategories.clear();
+              _selectedBuckets.clear();
+            }),
+            child: Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+              ),
+              child: const Center(
+                child: Text(
+                  "Clear All",
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (_selectedType != 'All')
+            _buildFilterChip(
+              _selectedType,
+              () => setState(() => _selectedType = 'All'),
+            ),
+          if (_dateRange != null)
+            _buildFilterChip(
+              "${DateFormat('dd MMM').format(_dateRange!.start)} - ${DateFormat('dd MMM').format(_dateRange!.end)}",
+              () => setState(() => _dateRange = null),
+            ),
+          ..._selectedCategories.map((c) => _buildFilterChip(c, () {
+                setState(() => _selectedCategories.remove(c));
+              })),
+          ..._selectedBuckets.map((b) => _buildFilterChip("Bucket: $b", () {
+                setState(() => _selectedBuckets.remove(b));
+              })),
+          if (_sortOption != 'Newest')
+            _buildFilterChip(
+              "Sort: $_sortOption",
+              () => setState(() => _sortOption = 'Newest'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // Helper for Active Filters
+  Widget _buildFilterChip(String label, VoidCallback onRemove) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.only(left: 12, right: 4, top: 6, bottom: 6),
+      decoration: BoxDecoration(
+          color: _accentColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _accentColor.withOpacity(0.3))),
+      child: Row(children: [
+        Text(label,
+            style: TextStyle(
+                color: _accentColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 11)),
+        const SizedBox(width: 4),
+        InkWell(
+            onTap: onRemove,
+            borderRadius: BorderRadius.circular(10),
+            child: Icon(Icons.close, size: 16, color: _accentColor))
+      ]),
+    );
+  }
+
+  // ... (Existing Methods: verify, defer, markAsRepayment, etc. remain unchanged) ...
+
   Future<void> _handleVerifySettlement(CreditTransactionModel txn) async {
     try {
       final updatedTxn = CreditTransactionModel(
@@ -365,7 +502,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
         bucket: txn.bucket,
         linkedExpenseId: txn.linkedExpenseId,
         includeInNextStatement: txn.includeInNextStatement,
-        isSettlementVerified: true, // Mark Verified
+        isSettlementVerified: true,
       );
       await CreditService().updateTransaction(updatedTxn);
     } catch (e) {
@@ -391,7 +528,6 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
         bucket: txn.bucket,
         linkedExpenseId: txn.linkedExpenseId,
         includeInNextStatement: shouldDefer,
-        // Reset verification if we are moving it
         isSettlementVerified: false,
       );
 
@@ -413,8 +549,6 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
-  // ... (Keep existing helpers _handleMarkAsRepayment, _buildStatementHeader, _buildSectionHeader, _calculateTotal, _handleEdit, _handleDeleteTransaction, _applyFilters, _buildFilterChip, _openFilterSheet, _buildEmptyState, _buildSectionTitle, _sortChip, _typeButton) ...
 
   Future<void> _handleMarkAsRepayment(CreditTransactionModel txn) async {
     setState(() => _isLoading = true);
@@ -613,161 +747,10 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
       _selectedBuckets.isNotEmpty ||
       _sortOption != 'Newest';
 
-  Widget _buildFilterChip(String label, VoidCallback onRemove) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.only(left: 12, right: 4, top: 6, bottom: 6),
-      decoration: BoxDecoration(
-          color: _accentColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _accentColor.withOpacity(0.3))),
-      child: Row(children: [
-        Text(label,
-            style: TextStyle(
-                color: _accentColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 11)),
-        const SizedBox(width: 4),
-        InkWell(
-            onTap: onRemove,
-            borderRadius: BorderRadius.circular(10),
-            child: Icon(Icons.close, size: 16, color: _accentColor))
-      ]),
-    );
-  }
-
-  void _openFilterSheet(
-      BuildContext context, List<CreditTransactionModel> allTxns) {
-    final uniqueCategories = allTxns
-        .map((e) => e.category)
-        .where((e) => e.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final uniqueBuckets = allTxns
-        .map((e) => e.bucket)
-        .where((e) => e.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: Container(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          decoration: BoxDecoration(
-              color: _bgColor,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border.all(color: Colors.white.withOpacity(0.1))),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: StatefulBuilder(
-                builder: (ctx, setModalState) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text("Filter & Sort",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle("Sort By"),
-                      const SizedBox(height: 12),
-                      SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(children: [
-                            _sortChip("Newest", setModalState),
-                            _sortChip("Oldest", setModalState),
-                            _sortChip("Amount High", setModalState),
-                            _sortChip("Amount Low", setModalState)
-                          ])),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle("Type"),
-                      const SizedBox(height: 12),
-                      Row(children: [
-                        Expanded(child: _typeButton("All", setModalState)),
-                        const SizedBox(width: 8),
-                        Expanded(child: _typeButton("Expense", setModalState)),
-                        const SizedBox(width: 8),
-                        Expanded(child: _typeButton("Income", setModalState))
-                      ]),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: _accentColor,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16)),
-                              child: const Text("Apply Filters",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: Colors.white)))),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState(String msg) => Center(
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.search_off, size: 48, color: Colors.white.withOpacity(0.2)),
         const SizedBox(height: 16),
         Text(msg, style: TextStyle(color: Colors.white.withOpacity(0.5)))
       ]));
-
-  Widget _buildSectionTitle(String t) => Text(t.toUpperCase(),
-      style: TextStyle(
-          color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold));
-  Widget _sortChip(String l, StateSetter s) => GestureDetector(
-      onTap: () {
-        s(() => _sortOption = l);
-        setState(() => _sortOption = l);
-      },
-      child: Container(
-          margin: const EdgeInsets.only(right: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-              color: _sortOption == l ? _accentColor : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                  color: _sortOption == l ? _accentColor : Colors.white12)),
-          child: Text(l,
-              style: TextStyle(
-                  color: _sortOption == l ? Colors.white : Colors.white70))));
-  Widget _typeButton(String l, StateSetter s) => GestureDetector(
-      onTap: () {
-        s(() => _selectedType = l);
-        setState(() => _selectedType = l);
-      },
-      child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-              color: _selectedType == l
-                  ? _accentColor.withOpacity(0.2)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                  color: _selectedType == l ? _accentColor : Colors.white12)),
-          child: Center(
-              child: Text(l,
-                  style: TextStyle(
-                      color: _selectedType == l ? _accentColor : Colors.white54,
-                      fontWeight: FontWeight.bold)))));
 }
