@@ -7,12 +7,10 @@ class CreditService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // --- CARDS ---
-
   Stream<List<CreditCardModel>> getCreditCards() {
     return _db
         .collection(FirebaseConstants.creditCards)
-        .where('isArchived',
-            isEqualTo: false) // Ensure we only show active cards
+        .where('isArchived', isEqualTo: false)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
@@ -24,7 +22,6 @@ class CreditService {
     return _db.collection(FirebaseConstants.creditCards).add(card.toMap());
   }
 
-  // RESTORED: This method was missing in the previous snippet
   Future<void> updateCreditCard(CreditCardModel card) async {
     await _db
         .collection(FirebaseConstants.creditCards)
@@ -34,7 +31,6 @@ class CreditService {
 
   Future<void> deleteCreditCard(String cardId) async {
     final batch = _db.batch();
-
     final cardRef = _db.collection(FirebaseConstants.creditCards).doc(cardId);
     batch.delete(cardRef);
 
@@ -46,7 +42,6 @@ class CreditService {
     for (final doc in txnsSnapshot.docs) {
       batch.delete(doc.reference);
     }
-
     await batch.commit();
   }
 
@@ -67,10 +62,8 @@ class CreditService {
 
   Future<void> addTransaction(CreditTransactionModel txn) async {
     final batch = _db.batch();
-
     final txnRef = _db.collection(FirebaseConstants.creditTransactions).doc();
 
-    // Create new object with ID to ensure consistency
     final newTxn = CreditTransactionModel(
       id: txnRef.id,
       cardId: txn.cardId,
@@ -81,24 +74,22 @@ class CreditService {
       category: txn.category,
       subCategory: txn.subCategory,
       notes: txn.notes,
-      linkedExpenseId: txn.linkedExpenseId, // Save the link!
+      linkedExpenseId: txn.linkedExpenseId,
     );
 
     batch.set(txnRef, newTxn.toMap());
 
-    // Expense adds to debt (+), Income reduces debt (-)
     final cardRef =
         _db.collection(FirebaseConstants.creditCards).doc(txn.cardId);
     double delta = txn.type == 'Expense' ? txn.amount : -txn.amount;
 
     batch.update(cardRef, {'currentBalance': FieldValue.increment(delta)});
-
     await batch.commit();
   }
 
+  // Standard Delete (UI Triggered)
   Future<void> deleteTransaction(CreditTransactionModel txn) async {
     final batch = _db.batch();
-
     final txnRef =
         _db.collection(FirebaseConstants.creditTransactions).doc(txn.id);
     final cardRef =
@@ -106,57 +97,105 @@ class CreditService {
 
     batch.delete(txnRef);
 
-    // Reverse the effect:
-    // If it was Expense (+), we subtract (-).
-    // If it was Income (-), we add (+).
     double reverseDelta = txn.type == 'Expense' ? -txn.amount : txn.amount;
-
     batch.update(cardRef, {
       'currentBalance': FieldValue.increment(reverseDelta),
     });
 
     await batch.commit();
 
-    // --- DATA CONSISTENCY CHECK ---
-    // If this Credit Txn is linked to a Bank Txn, delete the Bank Txn too.
+    // BI-DIRECTIONAL SYNC: If linked, delete the Bank Transaction too
     if (txn.linkedExpenseId != null && txn.linkedExpenseId!.isNotEmpty) {
-      await ExpenseService().deleteTransactionById(txn.linkedExpenseId!);
+      await ExpenseService().deleteTransactionFromCredit(txn.linkedExpenseId!);
     }
   }
 
-  // RESTORED: This method was missing in the previous snippet
+  // Standard Update (UI Triggered)
   Future<void> updateTransaction(CreditTransactionModel newTxn) async {
-    // Run inside a transaction to safely read the OLD value and update balance
-    return _db.runTransaction((transaction) async {
+    await _db.runTransaction((transaction) async {
       final txnRef =
           _db.collection(FirebaseConstants.creditTransactions).doc(newTxn.id);
       final cardRef =
           _db.collection(FirebaseConstants.creditCards).doc(newTxn.cardId);
 
-      // 1. Get Old Data
       final docSnapshot = await transaction.get(txnRef);
-      if (!docSnapshot.exists) {
-        throw Exception("Transaction does not exist!");
-      }
+      if (!docSnapshot.exists) throw Exception("Transaction does not exist!");
       final oldTxn = CreditTransactionModel.fromFirestore(docSnapshot);
 
-      // 2. Calculate Balance Adjustments
-      // Remove old effect
       double oldEffect =
           oldTxn.type == 'Expense' ? oldTxn.amount : -oldTxn.amount;
-      // Add new effect
       double newEffect =
           newTxn.type == 'Expense' ? newTxn.amount : -newTxn.amount;
-
       double netChange = newEffect - oldEffect;
 
-      // 3. Update Card Balance
       transaction.update(cardRef, {
         'currentBalance': FieldValue.increment(netChange),
       });
 
-      // 4. Update Transaction Document
       transaction.update(txnRef, newTxn.toMap());
     });
+
+    // BI-DIRECTIONAL SYNC: If linked, update the Bank Transaction too
+    if (newTxn.linkedExpenseId != null && newTxn.linkedExpenseId!.isNotEmpty) {
+      await ExpenseService().updateTransactionFromCredit(
+          newTxn.linkedExpenseId!, newTxn.amount, newTxn.date);
+    }
+  }
+
+  // --- INTERNAL / SYNC HELPERS (Called by ExpenseService) ---
+
+  // Called when ExpenseService updates a Bank Transaction (no callback loop)
+  Future<void> updateTransactionFromExpense(
+      String expenseId, double newAmount, Timestamp newDate) async {
+    final snapshot = await _db
+        .collection(FirebaseConstants.creditTransactions)
+        .where('linkedExpenseId', isEqualTo: expenseId)
+        .get();
+
+    for (var doc in snapshot.docs) {
+      final oldTxn = CreditTransactionModel.fromFirestore(doc);
+
+      // Perform local update only
+      await _db.runTransaction((transaction) async {
+        final cardRef =
+            _db.collection(FirebaseConstants.creditCards).doc(oldTxn.cardId);
+
+        double oldEffect =
+            oldTxn.type == 'Expense' ? oldTxn.amount : -oldTxn.amount;
+        double newEffect = oldTxn.type == 'Expense' ? newAmount : -newAmount;
+        double netChange = newEffect - oldEffect;
+
+        transaction.update(cardRef, {
+          'currentBalance': FieldValue.increment(netChange),
+        });
+        transaction.update(doc.reference, {
+          'amount': newAmount,
+          'date': newDate,
+        });
+      });
+    }
+  }
+
+  // Called when ExpenseService deletes a Bank Transaction (no callback loop)
+  Future<void> deleteTransactionFromExpense(String expenseId) async {
+    final snapshot = await _db
+        .collection(FirebaseConstants.creditTransactions)
+        .where('linkedExpenseId', isEqualTo: expenseId)
+        .get();
+
+    for (var doc in snapshot.docs) {
+      final txn = CreditTransactionModel.fromFirestore(doc);
+      final batch = _db.batch();
+      batch.delete(doc.reference);
+
+      final cardRef =
+          _db.collection(FirebaseConstants.creditCards).doc(txn.cardId);
+      double reverseDelta = txn.type == 'Expense' ? -txn.amount : txn.amount;
+      batch.update(cardRef, {
+        'currentBalance': FieldValue.increment(reverseDelta),
+      });
+
+      await batch.commit();
+    }
   }
 }

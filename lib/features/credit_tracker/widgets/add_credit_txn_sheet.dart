@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import '../../../core/widgets/modern_dropdown.dart';
 import '../../../core/widgets/modern_loader.dart';
 import '../../../core/widgets/calculator_keyboard.dart';
-import '../../../core/models/percentage_config_model.dart';
 import '../../../core/models/transaction_category_model.dart';
 import '../../../core/services/category_service.dart';
 import '../../settings/services/settings_service.dart';
@@ -33,18 +31,12 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
   final GlobalKey _amountFieldKey = GlobalKey();
   final GlobalKey _notesFieldKey = GlobalKey();
 
-  CreditCardModel? _selectedCard;
   List<CreditCardModel> _cards = [];
-
-  // Buckets Logic
-  List<String> _buckets = [];
-  List<String> _globalFallbackBuckets = [];
-
-  List<TransactionCategoryModel> _allCategories = [];
+  CreditCardModel? _selectedCard;
 
   DateTime _date = DateTime.now();
-  String? _selectedBucket;
   String _type = 'Expense';
+  String? _selectedBucket;
   String? _category;
   String? _subCategory;
 
@@ -52,13 +44,16 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
   bool _showCustomKeyboard = false;
   bool _systemKeyboardActive = false;
 
-  // Settlement State
-  bool _isMonthSettled = false;
+  List<String> _buckets = [];
+  List<TransactionCategoryModel> _allCategories = [];
+
+  // LOCK FLAG for Synced Transactions
+  bool _isLinked = false;
 
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    _loadData();
 
     _amountNode.addListener(() {
       if (_amountNode.hasFocus) {
@@ -77,15 +72,6 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
     });
   }
 
-  @override
-  void dispose() {
-    _amountNode.dispose();
-    _notesNode.dispose();
-    _amountCtrl.dispose();
-    _notesCtrl.dispose();
-    super.dispose();
-  }
-
   void _scrollToField(GlobalKey key) {
     Future.delayed(const Duration(milliseconds: 300), () {
       if (key.currentContext != null) {
@@ -99,194 +85,183 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
     });
   }
 
-  Future<void> _loadInitialData() async {
-    final cardStream = CreditService().getCreditCards().first;
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _notesCtrl.dispose();
+    _amountNode.dispose();
+    _notesNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    final cardsFuture = CreditService().getCreditCards().first;
+    final catsFuture = CategoryService().getCategories().first;
     final configFuture = SettingsService().getPercentageConfig();
-    final categoriesStream = CategoryService().getCategories().first;
 
     final results = await Future.wait([
-      cardStream,
+      cardsFuture,
+      catsFuture,
       configFuture,
-      categoriesStream,
     ]);
 
     if (mounted) {
-      final config = results[1] as PercentageConfig;
-
-      _globalFallbackBuckets = config.categories.map((e) => e.name).toList();
-      _globalFallbackBuckets.add('Out of Bucket');
+      final config = results[2] as dynamic;
+      final cats =
+          (config.categories as List).map((e) => e.name as String).toList();
+      cats.add('Out of Bucket');
 
       setState(() {
         _cards = results[0] as List<CreditCardModel>;
-        _allCategories = results[2] as List<TransactionCategoryModel>;
+        _allCategories = results[1] as List<TransactionCategoryModel>;
+        _buckets = cats;
+
+        if (_cards.isNotEmpty) {
+          _selectedCard = _cards.first;
+        }
 
         if (widget.transactionToEdit != null) {
           final t = widget.transactionToEdit!;
-          _amountCtrl.text = t.amount.toStringAsFixed(2);
-          if (_amountCtrl.text.endsWith(".00")) {
-            _amountCtrl.text = t.amount.toStringAsFixed(0);
-          }
+          _amountCtrl.text = t.amount.toStringAsFixed(0);
           _notesCtrl.text = t.notes;
           _date = t.date.toDate();
           _type = t.type;
+          _selectedBucket = t.bucket;
           _category = t.category;
           _subCategory = t.subCategory;
-          _selectedBucket = t.bucket.isNotEmpty ? t.bucket : null;
-
           _selectedCard = _cards.firstWhere(
             (c) => c.id == t.cardId,
-            orElse: () => _cards.isNotEmpty ? _cards.first : _cards[0],
+            orElse: () => _cards.first,
           );
-        } else {
-          _selectedCard = null;
-          _selectedBucket = null;
+
+          // CHECK SYNC LINK
+          if (t.linkedExpenseId != null && t.linkedExpenseId!.isNotEmpty) {
+            _isLinked = true;
+          }
         }
       });
-
-      await _updateBucketsForDate(_date);
-    }
-  }
-
-  Future<void> _updateBucketsForDate(DateTime date) async {
-    try {
-      // 1. Check if the month is already settled (Closed)
-      final isSettled = await SettlementService().isMonthSettled(
-        date.year,
-        date.month,
-      );
-
-      if (isSettled) {
-        if (mounted) {
-          setState(() {
-            _isMonthSettled = true;
-            _buckets = ['Out of Bucket'];
-            _selectedBucket = 'Out of Bucket';
-          });
-        }
-        return;
-      }
-
-      // 2. Fetch Record
-      final record = await DashboardService().getRecordForMonth(
-        date.year,
-        date.month,
-      );
-
-      List<String> newBuckets = [];
-
-      if (record != null) {
-        // --- UPDATED LOGIC: Respect Dashboard Order ---
-        if (record.bucketOrder.isNotEmpty) {
-          // Use the saved display order
-          newBuckets = List.from(record.bucketOrder);
-
-          // Safety: Add any buckets in allocations that might be missing from order
-          for (var key in record.allocations.keys) {
-            if (!newBuckets.contains(key)) {
-              newBuckets.add(key);
-            }
-          }
-        } else {
-          // Legacy: Sort by allocation amount descending
-          final sortedEntries = record.allocations.entries.toList()
-            ..sort((a, b) => b.value.compareTo(a.value));
-          newBuckets = sortedEntries.map((e) => e.key).toList();
-        }
-      } else {
-        newBuckets = List.from(_globalFallbackBuckets);
-      }
-
-      if (!newBuckets.contains('Out of Bucket')) {
-        newBuckets.add('Out of Bucket');
-      }
-
-      if (mounted) {
-        setState(() {
-          _isMonthSettled = false;
-          _buckets = newBuckets;
-
-          if (_selectedBucket != null && !_buckets.contains(_selectedBucket)) {
-            _selectedBucket = null;
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint("Error fetching buckets for date: $e");
-      if (mounted) {
-        setState(() {
-          _isMonthSettled = false;
-          _buckets = List.from(_globalFallbackBuckets);
-        });
-      }
     }
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedCard == null) return;
+
     setState(() => _isLoading = true);
 
     try {
-      final bucketValue = _type == 'Expense' ? (_selectedBucket!) : 'Repayment';
+      final amount = double.parse(_amountCtrl.text);
 
       final txn = CreditTransactionModel(
         id: widget.transactionToEdit?.id ?? '',
         cardId: _selectedCard!.id,
-        amount: double.parse(_amountCtrl.text),
+        amount: amount,
         date: Timestamp.fromDate(_date),
-        bucket: bucketValue,
+        bucket: _type == 'Expense'
+            ? (_selectedBucket ?? 'Unallocated')
+            : 'Unallocated',
         type: _type,
-        category: _category!,
+        category: _category ?? 'General',
         subCategory: _subCategory ?? 'General',
         notes: _notesCtrl.text,
+        // PRESERVE LINK
+        linkedExpenseId: widget.transactionToEdit?.linkedExpenseId,
       );
 
-      if (widget.transactionToEdit != null) {
-        await CreditService().updateTransaction(txn);
-      } else {
+      if (widget.transactionToEdit == null) {
         await CreditService().addTransaction(txn);
+      } else {
+        await CreditService().updateTransaction(txn);
       }
 
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
       }
-      setState(() => _isLoading = false);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // ... (Keep existing _pickDate and _inputDeco exactly as is)
+  Future<void> _pickDate() async {
+    _amountNode.unfocus();
+    _notesNode.unfocus();
+    setState(() => _showCustomKeyboard = false);
+
+    final d = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(data: ThemeData.dark(), child: child!);
+      },
+    );
+
+    if (d != null) {
+      final t = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_date),
+        builder: (context, child) {
+          return Theme(data: ThemeData.dark(), child: child!);
+        },
+      );
+
+      if (t != null) {
+        setState(() {
+          _date = DateTime(d.year, d.month, d.day, t.hour, t.minute);
+        });
+      }
+    }
+  }
+
+  InputDecoration _inputDeco(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.05),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF00B4D8), width: 1.5),
+      ),
+      errorStyle: const TextStyle(color: Colors.redAccent),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.transactionToEdit != null;
-
-    final relevantCategories =
-        _allCategories.where((c) => c.type == _type).toList();
-
-    final categoryKeys = relevantCategories.map((e) => e.name).toList();
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+    final categoryList = _allCategories.where((c) => c.type == _type).toList();
+    final categoryNames = categoryList.map((e) => e.name).toList();
 
     List<String> subCategories = [];
     if (_category != null) {
-      final selectedCatModel = relevantCategories.firstWhere(
-        (c) => c.name == _category,
-        orElse: () => relevantCategories.isNotEmpty
-            ? relevantCategories.first
-            : TransactionCategoryModel(
-                id: '',
-                name: '',
-                type: '',
-                subCategories: [],
-              ),
-      );
-      subCategories = selectedCatModel.subCategories;
+      // safe find
+      final hasCat = categoryList.any((e) => e.name == _category);
+      if (hasCat) {
+        final catModel = categoryList.firstWhere((e) => e.name == _category);
+        subCategories = catModel.subCategories;
+      }
     }
 
-    final bottomPadding =
-        _showCustomKeyboard ? 0.0 : MediaQuery.of(context).viewInsets.bottom;
-
     return Container(
-      padding: EdgeInsets.only(bottom: bottomPadding),
+      padding: EdgeInsets.only(
+        bottom: _showCustomKeyboard ? 0 : bottomPadding,
+      ),
       decoration: const BoxDecoration(
         color: Color(0xff0D1B2A),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -301,160 +276,97 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Center(
                       child: Container(
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.white24,
+                          color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      isEditing ? "Edit Transaction" : "Add Transaction",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
-                    // --- Settlement Warning Banner ---
-                    if (_isMonthSettled && _type == 'Expense') ...[
+                    // --- LOCKED NOTICE ---
+                    if (_isLinked)
                       Container(
+                        margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.only(bottom: 24),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.orange.withOpacity(0.5),
-                          ),
+                          color: Colors.blueAccent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Row(
+                        child: const Row(
                           children: [
-                            const Icon(
-                              Icons.lock_outline,
-                              color: Colors.orange,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
+                            Icon(Icons.link,
+                                color: Colors.blueAccent, size: 20),
+                            SizedBox(width: 12),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    "Budget Closed for this Month",
-                                    style: TextStyle(
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "Transactions are forced to 'Out of Bucket'.",
-                                    style: TextStyle(
-                                      color: Colors.orange.withOpacity(0.8),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
+                              child: Text(
+                                "Synced Transaction: Type and Card are locked.",
+                                style: TextStyle(
+                                    color: Colors.blueAccent, fontSize: 12),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
 
-                    // -------------------------------------
-                    AbsorbPointer(
-                      absorbing: isEditing,
-                      child: Opacity(
-                        opacity: isEditing ? 0.5 : 1.0,
+                    Text(
+                      widget.transactionToEdit != null
+                          ? "Edit Transaction"
+                          : "New Transaction",
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Type Row - LOCKED if _isLinked
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _typeButton(
+                              'Expense', Colors.redAccent, _type == 'Expense'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _typeButton(
+                              'Income', Colors.greenAccent, _type == 'Income'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Card Dropdown - LOCKED if _isLinked
+                    // Use opacity and IgnorePointer to disable
+                    Opacity(
+                      opacity: _isLinked ? 0.5 : 1.0,
+                      child: IgnorePointer(
+                        ignoring: _isLinked,
                         child: _buildSelectField<CreditCardModel>(
                           label: "Credit Card",
                           value: _selectedCard,
                           items: _cards,
                           labelBuilder: (c) => "${c.bankName} - ${c.name}",
-                          onSelect: (v) => setState(() => _selectedCard = v),
-                          validator: (v) =>
-                              v == null ? 'Please select a card' : null,
+                          onSelect: (val) {
+                            setState(() => _selectedCard = val);
+                          },
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _typeButton(
-                            "Expense",
-                            Colors.redAccent,
-                            _type == 'Expense',
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _typeButton(
-                            "Payment/Income",
-                            Colors.greenAccent,
-                            _type == 'Income',
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
+                    // Date
                     InkWell(
-                      onTap: () async {
-                        _amountNode.unfocus();
-                        _notesNode.unfocus();
-                        setState(() => _showCustomKeyboard = false);
-
-                        final pickedDate = await showDatePicker(
-                          context: context,
-                          initialDate: _date,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2030),
-                          builder: (context, child) =>
-                              Theme(data: ThemeData.dark(), child: child!),
-                        );
-
-                        if (pickedDate != null) {
-                          if (!mounted) return;
-
-                          // Handle Time
-                          final pickedTime = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.fromDateTime(_date),
-                            builder: (context, child) =>
-                                Theme(data: ThemeData.dark(), child: child!),
-                          );
-
-                          final newDate = DateTime(
-                            pickedDate.year,
-                            pickedDate.month,
-                            pickedDate.day,
-                            pickedTime?.hour ?? _date.hour,
-                            pickedTime?.minute ?? _date.minute,
-                          );
-
-                          setState(() {
-                            _date = newDate;
-                          });
-
-                          await _updateBucketsForDate(newDate);
-                        }
-                      },
+                      onTap: _pickDate,
                       borderRadius: BorderRadius.circular(12),
                       child: InputDecorator(
-                        decoration: _inputDeco('Date & Time').copyWith(
+                        decoration: _inputDeco("Date").copyWith(
                           suffixIcon: const Icon(
                             Icons.calendar_today,
                             color: Colors.white54,
@@ -462,103 +374,116 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                           ),
                         ),
                         child: Text(
-                          DateFormat('dd MMM yyyy, hh:mm a').format(_date),
+                          DateFormat('dd MMM, hh:mm a').format(_date),
                           style: const TextStyle(color: Colors.white),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
 
-                    TextFormField(
+                    // Amount
+                    Container(
                       key: _amountFieldKey,
-                      focusNode: _amountNode,
-                      controller: _amountCtrl,
-                      keyboardType: _systemKeyboardActive
-                          ? const TextInputType.numberWithOptions(decimal: true)
-                          : TextInputType.none,
-                      showCursor: true,
-                      readOnly: !_systemKeyboardActive,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                      child: TextFormField(
+                        controller: _amountCtrl,
+                        focusNode: _amountNode,
+                        readOnly: !_systemKeyboardActive,
+                        showCursor: _systemKeyboardActive,
+                        onTap: () {
+                          if (!_amountNode.hasFocus) {
+                            FocusScope.of(context).requestFocus(_amountNode);
+                          }
+                          setState(() {
+                            _showCustomKeyboard = true;
+                            _systemKeyboardActive = false;
+                          });
+                        },
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        decoration: _inputDeco("Amount").copyWith(
+                          prefixText: '₹ ',
+                        ),
+                        validator: (val) {
+                          if (val == null || val.isEmpty) return 'Required';
+                          if (double.tryParse(val) == null) return 'Invalid';
+                          return null;
+                        },
                       ),
-                      decoration: _inputDeco(
-                        'Amount',
-                      ).copyWith(prefixText: '₹ '),
-                      validator: (v) => v!.trim().isEmpty ? 'Required' : null,
-                      onTap: () {
-                        if (!_amountNode.hasFocus) {
-                          FocusScope.of(context).requestFocus(_amountNode);
-                        }
-                        setState(() {
-                          _showCustomKeyboard = true;
-                          _systemKeyboardActive = false; // Reset on tap
-                        });
-                      },
                     ),
                     const SizedBox(height: 16),
 
+                    // Bucket
                     if (_type == 'Expense') ...[
                       _buildSelectField<String>(
-                        label: "Budget Bucket",
+                        label: "Bucket",
                         value: _selectedBucket,
                         items: _buckets,
-                        labelBuilder: (v) => v,
-                        onSelect: (v) => setState(() => _selectedBucket = v),
-                        validator: (v) => v == null ? 'Required' : null,
+                        labelBuilder: (s) => s,
+                        onSelect: (val) {
+                          setState(() => _selectedBucket = val);
+                        },
                       ),
                       const SizedBox(height: 16),
                     ],
 
+                    // Category
                     Row(
                       children: [
                         Expanded(
                           child: _buildSelectField<String>(
                             label: "Category",
                             value: _category,
-                            items: categoryKeys,
-                            labelBuilder: (v) => v,
-                            onSelect: (v) => setState(() {
-                              _category = v;
-                              _subCategory = null;
-                            }),
-                            validator: (v) => v == null ? 'Required' : null,
+                            items: categoryNames,
+                            labelBuilder: (s) => s,
+                            onSelect: (val) {
+                              setState(() {
+                                _category = val;
+                                _subCategory = null;
+                              });
+                            },
                           ),
                         ),
-                        if (_category != null) ...[
+                        if (subCategories.isNotEmpty) ...[
                           const SizedBox(width: 12),
                           Expanded(
                             child: _buildSelectField<String>(
                               label: "Sub-Category",
                               value: _subCategory,
                               items: subCategories,
-                              labelBuilder: (v) => v,
-                              onSelect: (v) => setState(() => _subCategory = v),
+                              labelBuilder: (s) => s,
+                              onSelect: (val) {
+                                setState(() => _subCategory = val);
+                              },
                             ),
                           ),
-                        ],
+                        ]
                       ],
                     ),
                     const SizedBox(height: 16),
 
-                    TextFormField(
+                    // Notes
+                    Container(
                       key: _notesFieldKey,
-                      focusNode: _notesNode,
-                      controller: _notesCtrl,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _inputDeco('Notes (Optional)'),
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _notesNode.unfocus(),
+                      child: TextFormField(
+                        controller: _notesCtrl,
+                        focusNode: _notesNode,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _inputDeco("Notes (Optional)"),
+                        onFieldSubmitted: (_) => _save(),
+                      ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
+                    // Save Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _save,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3A86FF),
+                          backgroundColor: const Color(0xFF00B4D8),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -572,12 +497,12 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                                 child: ModernLoader(size: 24),
                               )
                             : Text(
-                                isEditing
-                                    ? "Update Transaction"
-                                    : "Add Transaction",
+                                widget.transactionToEdit != null
+                                    ? "Update"
+                                    : "Save",
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
                                   fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                       ),
@@ -589,17 +514,19 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
           ),
           if (_showCustomKeyboard)
             CalculatorKeyboard(
-              onKeyPress: (val) =>
-                  CalculatorKeyboard.handleKeyPress(_amountCtrl, val),
-              onBackspace: () =>
-                  CalculatorKeyboard.handleBackspace(_amountCtrl),
-              onClear: () => _amountCtrl.clear(),
-              onEquals: () => CalculatorKeyboard.handleEquals(_amountCtrl),
-              onClose: () {
-                setState(() => _showCustomKeyboard = false);
-                _amountNode.unfocus();
+              onKeyPress: (val) {
+                CalculatorKeyboard.handleKeyPress(_amountCtrl, val);
               },
-              onPrevious: () {
+              onBackspace: () {
+                CalculatorKeyboard.handleBackspace(_amountCtrl);
+              },
+              onEquals: () {
+                CalculatorKeyboard.handleEquals(_amountCtrl);
+              },
+              onClear: () {
+                _amountCtrl.clear();
+              },
+              onClose: () {
                 setState(() => _showCustomKeyboard = false);
                 _amountNode.unfocus();
               },
@@ -613,9 +540,13 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                   _systemKeyboardActive = true;
                 });
                 _amountNode.unfocus();
-                Future.delayed(const Duration(milliseconds: 100), () {
+                Future.delayed(const Duration(milliseconds: 50), () {
                   FocusScope.of(context).requestFocus(_amountNode);
                 });
+              },
+              onPrevious: () {
+                setState(() => _showCustomKeyboard = false);
+                _amountNode.unfocus();
               },
             ),
         ],
@@ -623,30 +554,15 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
     );
   }
 
-  InputDecoration _inputDeco(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-      filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    );
-  }
-
+  // --- RESTORED: Your original _buildSelectField logic ---
   Widget _buildSelectField<T>({
     required String label,
     required T? value,
     required List<T> items,
     required String Function(T) labelBuilder,
     required Function(T) onSelect,
-    String? Function(T?)? validator,
   }) {
     return FormField<T>(
-      validator: validator,
       initialValue: value,
       builder: (FormFieldState<T> state) {
         return Column(
@@ -657,10 +573,9 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                 _amountNode.unfocus();
                 _notesNode.unfocus();
                 setState(() => _showCustomKeyboard = false);
-
                 showSelectionSheet<T>(
                   context: context,
-                  title: "Select $label",
+                  title: label,
                   items: items,
                   selectedItem: value,
                   labelBuilder: labelBuilder,
@@ -694,29 +609,128 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
     );
   }
 
+  void showSelectionSheet<T>({
+    required BuildContext context,
+    required String title,
+    required List<T> items,
+    T? selectedItem,
+    required String Function(T) labelBuilder,
+    required Function(T) onSelect,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
+          decoration: const BoxDecoration(
+            color: Color(0xff1B263B),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Divider(color: Colors.white10, height: 1),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    final isSelected = item == selectedItem;
+                    return ListTile(
+                      onTap: () {
+                        onSelect(item);
+                        Navigator.pop(context);
+                      },
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      tileColor: isSelected
+                          ? const Color(0xFF00B4D8).withOpacity(0.2)
+                          : Colors.transparent,
+                      title: Text(
+                        labelBuilder(item),
+                        style: TextStyle(
+                          color: isSelected
+                              ? const Color(0xFF00B4D8)
+                              : Colors.white70,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? const Icon(Icons.check, color: Color(0xFF00B4D8))
+                          : null,
+                    );
+                  },
+                ),
+              ),
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- RESTORED: Your original _typeButton logic ---
   Widget _typeButton(String label, Color color, bool isSelected) {
-    return GestureDetector(
-      onTap: () => setState(() {
-        _type = label == 'Expense' ? 'Expense' : 'Income';
-        _category = null;
-        _subCategory = null;
-        if (_type == 'Income') {
-          _selectedBucket = null;
-        }
-      }),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isSelected ? color : Colors.white12),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? color : Colors.white54,
-              fontWeight: FontWeight.bold,
+    // MODIFICATION: Add disable logic for _isLinked
+    return Opacity(
+      opacity: _isLinked ? 0.5 : 1.0,
+      child: GestureDetector(
+        onTap: _isLinked
+            ? null
+            : () => setState(() {
+                  _type = label == 'Expense' ? 'Expense' : 'Income';
+                  _category = null;
+                  _subCategory = null;
+                  if (_type == 'Income') {
+                    _selectedBucket = null;
+                  }
+                }),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.2) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: isSelected ? color : Colors.white12),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? color : Colors.white54,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
