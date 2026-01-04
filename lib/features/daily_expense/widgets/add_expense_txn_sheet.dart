@@ -36,10 +36,12 @@ class _AddExpenseTransactionSheetState
 
   // Mode Toggle
   bool _isCreditEntry = false;
+  // If true, we lock critical fields to prevent breaking the sync link
+  bool _isLinkedTransaction = false;
 
   // Selected Data
   ExpenseAccountModel? _selectedAccount;
-  ExpenseAccountModel? _toAccount; // For Transfer (Bank -> Credit)
+  ExpenseAccountModel? _toAccount;
 
   // For Credit Card Mode
   CreditCardModel? _selectedCreditCard;
@@ -129,10 +131,11 @@ class _AddExpenseTransactionSheetState
           _category = t.category;
           _subCategory = t.subCategory;
 
-          // Detect Credit Entry
+          // Detect Linked Transaction (Credit Entry or Synced Transfer)
           if (t.linkedCreditCardId != null &&
               t.linkedCreditCardId!.isNotEmpty) {
             _isCreditEntry = true;
+            _isLinkedTransaction = true; // Lock Editing
             _selectedCreditCard = _creditCards.firstWhere(
                 (c) => c.id == t.linkedCreditCardId,
                 orElse: () => _creditCards.first);
@@ -143,10 +146,7 @@ class _AddExpenseTransactionSheetState
 
           if (t.type == 'Transfer Out' || t.type == 'Transfer In') {
             _type = 'Transfer';
-            // If transfer, accountId is 'From', transferAccountId is 'To'
             if (_isCreditEntry) {
-              // This is tricky. A synced transfer might be deleted.
-              // Assuming unsynced: Bank -> Pool
               _selectedAccount = _accounts.firstWhere(
                   (a) => a.id == t.accountId,
                   orElse: () => _accounts.first);
@@ -207,8 +207,6 @@ class _AddExpenseTransactionSheetState
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // --- CREDIT CARD POOL LOGIC ---
-    // If Credit Entry, we need to find the "Credit Card Pool Account"
     ExpenseAccountModel? targetPoolAccount;
     if (_isCreditEntry ||
         (_type == 'Transfer' && _selectedCreditCard != null)) {
@@ -219,12 +217,11 @@ class _AddExpenseTransactionSheetState
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text(
-                "Error: No 'Credit Card Pool Account' found. Please create one in Accounts.")));
+                "Error: No 'Credit Card Pool Account' found. Please create one.")));
         return;
       }
     }
 
-    // Validation
     if (!_isCreditEntry && _selectedAccount == null) return;
     if (_isCreditEntry && _selectedCreditCard == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -238,13 +235,11 @@ class _AddExpenseTransactionSheetState
             .showSnackBar(const SnackBar(content: Text("Select From Account")));
         return;
       }
-      // If paying a CC, destination is CC
       if (_isCreditEntry && _selectedCreditCard == null) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Select Credit Card to pay")));
         return;
       }
-      // Normal Transfer
       if (!_isCreditEntry && _toAccount == null) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Select Destination Account")));
@@ -257,105 +252,115 @@ class _AddExpenseTransactionSheetState
       final double amount = double.tryParse(_amountCtrl.text) ?? 0.0;
       bool isEditing = widget.txnToEdit != null;
 
-      // Handle Edit: Delete old first
-      if (isEditing)
-        await ExpenseService().deleteTransaction(widget.txnToEdit!);
-
-      if (_type == 'Transfer') {
-        // CASE: Paying Credit Card (Bank -> Pool[Card])
-        if (_isCreditEntry) {
-          final transferOut = ExpenseTransactionModel(
-            id: '',
-            accountId: _selectedAccount!.id,
-            amount: amount,
-            date: Timestamp.fromDate(_date),
-            bucket: 'Unallocated',
-            type: 'Transfer Out',
-            category: 'Transfer',
-            subCategory: 'Credit Card Payment',
-            notes: _notesCtrl.text,
-            transferAccountId: targetPoolAccount!.id, // To Pool
-            transferAccountName: _selectedCreditCard!.name, // Display CC Name
-            transferAccountBankName: _selectedCreditCard!.bankName,
-            linkedCreditCardId: _selectedCreditCard!.id, // Metadata for Sync
-          );
-
-          // For the receiving side (Pool), we create a Transfer In
-          final transferIn = ExpenseTransactionModel(
-            id: '',
-            accountId: targetPoolAccount.id,
-            amount: amount,
-            date: Timestamp.fromDate(_date),
-            bucket: 'Unallocated',
-            type: 'Transfer In',
-            category: 'Transfer',
-            subCategory: 'Credit Card Payment',
-            notes: _notesCtrl.text,
-            transferAccountId: _selectedAccount!.id,
-            transferAccountName: _selectedAccount!.name,
-            transferAccountBankName: _selectedAccount!.bankName,
-            linkedCreditCardId: _selectedCreditCard!.id, // Metadata for Sync
-          );
-
-          await ExpenseService().addTransaction(transferOut);
-          await ExpenseService().addTransaction(transferIn);
-        } else {
-          // Standard Bank -> Bank
-          final transferOut = ExpenseTransactionModel(
-            id: '',
-            accountId: _selectedAccount!.id,
-            amount: amount,
-            date: Timestamp.fromDate(_date),
-            bucket: 'Unallocated',
-            type: 'Transfer Out',
-            category: 'Transfer',
-            subCategory: 'General',
-            notes: _notesCtrl.text,
-            transferAccountId: _toAccount!.id,
-            transferAccountName: _toAccount!.name,
-            transferAccountBankName: _toAccount!.bankName,
-          );
-          final transferIn = ExpenseTransactionModel(
-            id: '',
-            accountId: _toAccount!.id,
-            amount: amount,
-            date: Timestamp.fromDate(_date),
-            bucket: 'Unallocated',
-            type: 'Transfer In',
-            category: 'Transfer',
-            subCategory: 'General',
-            notes: _notesCtrl.text,
-            transferAccountId: _selectedAccount!.id,
-            transferAccountName: _selectedAccount!.name,
-            transferAccountBankName: _selectedAccount!.bankName,
-          );
-          await ExpenseService().addTransaction(transferOut);
-          await ExpenseService().addTransaction(transferIn);
-        }
-      } else {
-        // Expense or Income
-        final bucketValue = _type == 'Expense' ? (_selectedBucket!) : 'Income';
-        // If CC Entry, use Pool ID, otherwise selected Account ID
-        final finalAccountId =
-            _isCreditEntry ? targetPoolAccount!.id : _selectedAccount!.id;
-        final ccId = _isCreditEntry ? _selectedCreditCard!.id : null;
-
-        final txn = ExpenseTransactionModel(
-          id: widget.txnToEdit?.id ??
-              '', // Use old ID if editing (though we deleted it, usually standard is update, but delete/add is safer for transfers)
-          accountId: finalAccountId,
+      // Handle Edit: Update standard or simple fields
+      if (isEditing) {
+        final newTxn = ExpenseTransactionModel(
+          id: widget.txnToEdit!.id,
+          accountId: widget.txnToEdit!.accountId,
           amount: amount,
           date: Timestamp.fromDate(_date),
-          bucket: bucketValue,
-          type: _type,
-          category: _category!,
-          subCategory: _subCategory ?? 'General',
+          bucket: widget.txnToEdit!.bucket,
+          type: widget.txnToEdit!.type,
+          category: widget.txnToEdit!.category,
+          subCategory: widget.txnToEdit!.subCategory,
           notes: _notesCtrl.text,
-          linkedCreditCardId: ccId,
+          linkedCreditCardId: widget.txnToEdit!.linkedCreditCardId,
+          transferAccountId: widget.txnToEdit!.transferAccountId,
+          transferAccountName: widget.txnToEdit!.transferAccountName,
+          transferAccountBankName: widget.txnToEdit!.transferAccountBankName,
         );
+        await ExpenseService().updateTransaction(newTxn);
+      } else {
+        // Handle Add (Standard Logic)
+        if (_type == 'Transfer') {
+          if (_isCreditEntry) {
+            final transferOut = ExpenseTransactionModel(
+              id: '',
+              accountId: _selectedAccount!.id,
+              amount: amount,
+              date: Timestamp.fromDate(_date),
+              bucket: 'Unallocated',
+              type: 'Transfer Out',
+              category: 'Transfer',
+              subCategory: 'Credit Card Bill',
+              notes: _notesCtrl.text,
+              transferAccountId: targetPoolAccount!.id,
+              transferAccountName: _selectedCreditCard!.name,
+              transferAccountBankName: _selectedCreditCard!.bankName,
+              linkedCreditCardId: _selectedCreditCard!.id,
+            );
 
-        // Since we delete/add strategy for complex transfers, we use add here
-        await ExpenseService().addTransaction(txn);
+            final transferIn = ExpenseTransactionModel(
+              id: '',
+              accountId: targetPoolAccount.id,
+              amount: amount,
+              date: Timestamp.fromDate(_date),
+              bucket: 'Unallocated',
+              type: 'Transfer In',
+              category: 'Transfer',
+              subCategory: 'Credit Card Bill',
+              notes: _notesCtrl.text,
+              transferAccountId: _selectedAccount!.id,
+              transferAccountName: _selectedAccount!.name,
+              transferAccountBankName: _selectedAccount!.bankName,
+              linkedCreditCardId: _selectedCreditCard!.id,
+            );
+
+            await ExpenseService().addTransaction(transferOut);
+            await ExpenseService().addTransaction(transferIn);
+          } else {
+            final transferOut = ExpenseTransactionModel(
+              id: '',
+              accountId: _selectedAccount!.id,
+              amount: amount,
+              date: Timestamp.fromDate(_date),
+              bucket: 'Unallocated',
+              type: 'Transfer Out',
+              category: 'Transfer',
+              subCategory: 'General',
+              notes: _notesCtrl.text,
+              transferAccountId: _toAccount!.id,
+              transferAccountName: _toAccount!.name,
+              transferAccountBankName: _toAccount!.bankName,
+            );
+            final transferIn = ExpenseTransactionModel(
+              id: '',
+              accountId: _toAccount!.id,
+              amount: amount,
+              date: Timestamp.fromDate(_date),
+              bucket: 'Unallocated',
+              type: 'Transfer In',
+              category: 'Transfer',
+              subCategory: 'General',
+              notes: _notesCtrl.text,
+              transferAccountId: _selectedAccount!.id,
+              transferAccountName: _selectedAccount!.name,
+              transferAccountBankName: _selectedAccount!.bankName,
+            );
+            await ExpenseService().addTransaction(transferOut);
+            await ExpenseService().addTransaction(transferIn);
+          }
+        } else {
+          final bucketValue =
+              _type == 'Expense' ? (_selectedBucket!) : 'Income';
+          final finalAccountId =
+              _isCreditEntry ? targetPoolAccount!.id : _selectedAccount!.id;
+          final ccId = _isCreditEntry ? _selectedCreditCard!.id : null;
+
+          final txn = ExpenseTransactionModel(
+            id: '',
+            accountId: finalAccountId,
+            amount: amount,
+            date: Timestamp.fromDate(_date),
+            bucket: bucketValue,
+            type: _type,
+            category: _category!,
+            subCategory: _subCategory ?? 'General',
+            notes: _notesCtrl.text,
+            linkedCreditCardId: ccId,
+          );
+          await ExpenseService().addTransaction(txn);
+        }
       }
 
       if (mounted) Navigator.pop(context);
@@ -404,7 +409,7 @@ class _AddExpenseTransactionSheetState
                               borderRadius: BorderRadius.circular(2)))),
                   const SizedBox(height: 16),
 
-                  // --- HEADER WITH CREDIT TOGGLE ---
+                  // HEADER
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -417,136 +422,155 @@ class _AddExpenseTransactionSheetState
                               fontSize: 20,
                               fontWeight: FontWeight.bold)),
                       // Credit Card Toggle
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                            color: _isCreditEntry
-                                ? Colors.purpleAccent.withOpacity(0.2)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color: _isCreditEntry
-                                    ? Colors.purpleAccent
-                                    : Colors.white24)),
-                        child: Row(
-                          children: [
-                            Icon(Icons.credit_card,
-                                size: 16,
-                                color: _isCreditEntry
-                                    ? Colors.purpleAccent
-                                    : Colors.white54),
-                            const SizedBox(width: 8),
-                            Text("Credit Card",
-                                style: TextStyle(
-                                    color: _isCreditEntry
-                                        ? Colors.purpleAccent
-                                        : Colors.white54,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold)),
-                            Switch(
-                              value: _isCreditEntry,
-                              onChanged: (val) {
-                                setState(() {
-                                  _isCreditEntry = val;
-                                  // Logic adjustment: If transfer + CC, destination is CC
-                                  if (_type == 'Transfer' && _isCreditEntry) {
-                                    _toAccount = null; // Hide bank destination
-                                  }
-                                });
-                              },
-                              activeColor: Colors.purpleAccent,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                            )
-                          ],
+                      Opacity(
+                        opacity:
+                            _isLinkedTransaction ? 0.5 : 1.0, // Dim if disabled
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: _isCreditEntry
+                                  ? Colors.purpleAccent.withOpacity(0.2)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color: _isCreditEntry
+                                      ? Colors.purpleAccent
+                                      : Colors.white24)),
+                          child: Row(
+                            children: [
+                              Icon(Icons.credit_card,
+                                  size: 16,
+                                  color: _isCreditEntry
+                                      ? Colors.purpleAccent
+                                      : Colors.white54),
+                              const SizedBox(width: 8),
+                              Text("Credit Card",
+                                  style: TextStyle(
+                                      color: _isCreditEntry
+                                          ? Colors.purpleAccent
+                                          : Colors.white54,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold)),
+                              Switch(
+                                value: _isCreditEntry,
+                                onChanged: _isLinkedTransaction
+                                    ? null // Disabled if linked
+                                    : (val) {
+                                        setState(() {
+                                          _isCreditEntry = val;
+                                          if (_type == 'Transfer' &&
+                                              _isCreditEntry) {
+                                            _toAccount = null;
+                                          }
+                                        });
+                                      },
+                                activeColor: Colors.purpleAccent,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              )
+                            ],
+                          ),
                         ),
                       )
                     ],
                   ),
 
                   const SizedBox(height: 20),
-                  if (_isMonthSettled && _type == 'Expense')
+                  if (_isLinkedTransaction)
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.blueAccent.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8)),
-                      child: const Text("Month Settled: Bucket locked.",
-                          style: TextStyle(color: Colors.orange)),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.link, color: Colors.blueAccent, size: 20),
+                          SizedBox(width: 12),
+                          Expanded(
+                              child: Text(
+                                  "Linked Transaction: Type and Accounts are locked to maintain sync.",
+                                  style: TextStyle(color: Colors.blueAccent)))
+                        ],
+                      ),
                     ),
 
-                  // Type Buttons
-                  Row(children: [
-                    Expanded(child: _typeBtn("Expense", Colors.redAccent)),
-                    const SizedBox(width: 8),
-                    Expanded(child: _typeBtn("Income", Colors.greenAccent)),
-                    const SizedBox(width: 8),
-                    Expanded(child: _typeBtn("Transfer", Colors.blueAccent)),
-                  ]),
+                  // Type Buttons (Locked if linked)
+                  Opacity(
+                    opacity: _isLinkedTransaction ? 0.5 : 1.0,
+                    child: Row(children: [
+                      Expanded(
+                          child: _typeBtn("Expense", Colors.redAccent,
+                              _isLinkedTransaction)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: _typeBtn("Income", Colors.greenAccent,
+                              _isLinkedTransaction)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: _typeBtn("Transfer", Colors.blueAccent,
+                              _isLinkedTransaction)),
+                    ]),
+                  ),
                   const SizedBox(height: 24),
 
-                  // --- ACCOUNT SELECTION LOGIC ---
+                  // ACCOUNTS (Locked if linked)
                   if (_type == 'Transfer') ...[
-                    // FROM: Always Bank Account (for Paying Bill)
                     _buildSelectField<ExpenseAccountModel>(
-                      "From Account",
-                      _selectedAccount,
-                      _accounts,
-                      (a) => "${a.bankName} - ${a.name}",
-                      (v) => setState(() => _selectedAccount = v),
-                      validator: (v) => v == null ? "Required" : null,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // TO: If Credit Entry -> Credit Card List, Else Bank List
-                    if (_isCreditEntry)
-                      _buildSelectField<CreditCardModel>(
-                        "To Credit Card",
-                        _selectedCreditCard,
-                        _creditCards,
-                        (c) => "${c.bankName} - ${c.name}",
-                        (v) => setState(() => _selectedCreditCard = v),
-                        validator: (v) => v == null ? "Select Card" : null,
-                      )
-                    else
-                      _buildSelectField<ExpenseAccountModel>(
-                        "To Account",
-                        _toAccount,
-                        _accounts
-                            .where((a) => a.id != _selectedAccount?.id)
-                            .toList(),
-                        (a) => "${a.bankName} - ${a.name}",
-                        (v) => setState(() => _toAccount = v),
-                        validator: (v) =>
-                            v == null ? "Select Destination" : null,
-                      ),
-                  ] else ...[
-                    // NORMAL EXPENSE/INCOME
-                    if (_isCreditEntry)
-                      _buildSelectField<CreditCardModel>(
-                        "Use Credit Card",
-                        _selectedCreditCard,
-                        _creditCards,
-                        (c) => "${c.bankName} - ${c.name}",
-                        (v) => setState(() => _selectedCreditCard = v),
-                        validator: (v) => v == null ? "Select Card" : null,
-                      )
-                    else
-                      _buildSelectField<ExpenseAccountModel>(
-                        "Account",
+                        "From Account",
                         _selectedAccount,
                         _accounts,
                         (a) => "${a.bankName} - ${a.name}",
                         (v) => setState(() => _selectedAccount = v),
                         validator: (v) => v == null ? "Required" : null,
-                      ),
+                        isEnabled: !_isLinkedTransaction),
+                    const SizedBox(height: 16),
+                    if (_isCreditEntry)
+                      _buildSelectField<CreditCardModel>(
+                          "To Credit Card",
+                          _selectedCreditCard,
+                          _creditCards,
+                          (c) => "${c.bankName} - ${c.name}",
+                          (v) => setState(() => _selectedCreditCard = v),
+                          validator: (v) => v == null ? "Select Card" : null,
+                          isEnabled: !_isLinkedTransaction)
+                    else
+                      _buildSelectField<ExpenseAccountModel>(
+                          "To Account",
+                          _toAccount,
+                          _accounts
+                              .where((a) => a.id != _selectedAccount?.id)
+                              .toList(),
+                          (a) => "${a.bankName} - ${a.name}",
+                          (v) => setState(() => _toAccount = v),
+                          validator: (v) =>
+                              v == null ? "Select Destination" : null,
+                          isEnabled: !_isLinkedTransaction),
+                  ] else ...[
+                    if (_isCreditEntry)
+                      _buildSelectField<CreditCardModel>(
+                          "Use Credit Card",
+                          _selectedCreditCard,
+                          _creditCards,
+                          (c) => "${c.bankName} - ${c.name}",
+                          (v) => setState(() => _selectedCreditCard = v),
+                          validator: (v) => v == null ? "Select Card" : null,
+                          isEnabled: !_isLinkedTransaction)
+                    else
+                      _buildSelectField<ExpenseAccountModel>(
+                          "Account",
+                          _selectedAccount,
+                          _accounts,
+                          (a) => "${a.bankName} - ${a.name}",
+                          (v) => setState(() => _selectedAccount = v),
+                          validator: (v) => v == null ? "Required" : null,
+                          isEnabled: !_isLinkedTransaction),
                   ],
 
                   const SizedBox(height: 16),
 
-                  // Date Picker
+                  // Date (Editable)
                   InkWell(
                     onTap: _pickDate,
                     borderRadius: BorderRadius.circular(12),
@@ -560,7 +584,7 @@ class _AddExpenseTransactionSheetState
                   ),
                   const SizedBox(height: 16),
 
-                  // Amount
+                  // Amount (Editable)
                   Container(
                     key: _amountFieldKey,
                     child: TextFormField(
@@ -593,19 +617,8 @@ class _AddExpenseTransactionSheetState
                   ),
                   const SizedBox(height: 16),
 
-                  // Bucket (If Expense)
-                  if (_type == 'Expense' && !_isCreditEntry) ...[
-                    // Standard Bucket for Bank Expense
-                    _buildSelectField<String>(
-                        "Bucket",
-                        _selectedBucket,
-                        _buckets,
-                        (s) => s,
-                        (v) => setState(() => _selectedBucket = v),
-                        validator: (v) => v == null ? "Select Bucket" : null),
-                    const SizedBox(height: 16),
-                  ] else if (_type == 'Expense' && _isCreditEntry) ...[
-                    // Credit Expenses also need Buckets
+                  // Buckets & Categories
+                  if (_type == 'Expense') ...[
                     _buildSelectField<String>(
                         "Bucket",
                         _selectedBucket,
@@ -616,7 +629,6 @@ class _AddExpenseTransactionSheetState
                     const SizedBox(height: 16),
                   ],
 
-                  // Categories
                   if (_type != 'Transfer') ...[
                     Row(children: [
                       Expanded(
@@ -644,7 +656,7 @@ class _AddExpenseTransactionSheetState
                     const SizedBox(height: 16),
                   ],
 
-                  // Notes
+                  // Notes (Editable)
                   Container(
                     key: _notesFieldKey,
                     child: TextFormField(
@@ -764,16 +776,18 @@ class _AddExpenseTransactionSheetState
     );
   }
 
-  Widget _typeBtn(String label, Color col) {
+  Widget _typeBtn(String label, Color col, bool disabled) {
     bool isSel = _type == label;
     return GestureDetector(
-      onTap: () => setState(() {
-        _type = label;
-        _category = null;
-        _subCategory = null;
-        if ((_type == 'Income' && !_isCreditEntry) || _type == 'Transfer')
-          _selectedBucket = null;
-      }),
+      onTap: disabled
+          ? null
+          : () => setState(() {
+                _type = label;
+                _category = null;
+                _subCategory = null;
+                if ((_type == 'Income' && !_isCreditEntry) ||
+                    _type == 'Transfer') _selectedBucket = null;
+              }),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
@@ -791,41 +805,47 @@ class _AddExpenseTransactionSheetState
 
   Widget _buildSelectField<T>(String label, T? val, List<T> items,
       String Function(T) labelGen, Function(T) onSel,
-      {String? Function(T?)? validator}) {
+      {String? Function(T?)? validator, bool isEnabled = true}) {
     return FormField<T>(
       validator: validator,
       initialValue: val,
       builder: (FormFieldState<T> state) {
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          InkWell(
-            onTap: () {
-              _amountNode.unfocus();
-              _notesNode.unfocus();
-              setState(() => _showCustomKeyboard = false);
-              showSelectionSheet<T>(
-                  context: context,
-                  title: label,
-                  items: items,
-                  selectedItem: val,
-                  labelBuilder: labelGen,
-                  onSelect: (v) {
-                    if (v != null) {
-                      onSel(v);
-                      state.didChange(v);
+        return Opacity(
+          opacity: isEnabled ? 1.0 : 0.5,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            InkWell(
+              onTap: isEnabled
+                  ? () {
+                      _amountNode.unfocus();
+                      _notesNode.unfocus();
+                      setState(() => _showCustomKeyboard = false);
+                      showSelectionSheet<T>(
+                          context: context,
+                          title: label,
+                          items: items,
+                          selectedItem: val,
+                          labelBuilder: labelGen,
+                          onSelect: (v) {
+                            if (v != null) {
+                              onSel(v);
+                              state.didChange(v);
+                            }
+                          });
                     }
-                  });
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: InputDecorator(
-                decoration: _inputDeco(label).copyWith(
-                    errorText: state.errorText,
-                    suffixIcon: const Icon(Icons.keyboard_arrow_down,
-                        color: Colors.white54)),
-                isEmpty: val == null,
-                child: Text(val != null ? labelGen(val) : '',
-                    style: const TextStyle(color: Colors.white))),
-          ),
-        ]);
+                  : null,
+              borderRadius: BorderRadius.circular(12),
+              child: InputDecorator(
+                  decoration: _inputDeco(label).copyWith(
+                      errorText: state.errorText,
+                      suffixIcon: const Icon(Icons.keyboard_arrow_down,
+                          color: Colors.white54)),
+                  isEmpty: val == null,
+                  child: Text(val != null ? labelGen(val) : '',
+                      style: const TextStyle(color: Colors.white))),
+            ),
+          ]),
+        );
       },
     );
   }
