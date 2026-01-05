@@ -7,6 +7,8 @@ import '../models/expense_models.dart';
 import '../services/expense_service.dart';
 import '../widgets/add_account_sheet.dart';
 import '../widgets/bank_account_card.dart';
+// ADD THIS IMPORT
+import '../widgets/total_balance_summary.dart';
 import 'account_detail_screen.dart';
 
 class AccountManagementScreen extends StatefulWidget {
@@ -28,7 +30,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     super.initState();
     // Listen to stream to keep data fresh, but _accounts is modified by drag/drop
     ExpenseService().getAccounts().listen((data) {
-      // FIXED: Removed '!_isLoading' check so the list updates even while deleting.
       if (mounted) {
         setState(() {
           _accounts = data;
@@ -76,76 +77,89 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           else if (_accounts.isEmpty)
             _buildEmptyState()
           else
-            ReorderableListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-              itemCount: _accounts.length,
-              onReorder: _onReorder,
+            // MODIFIED: Wrapped in Column to support Fixed Header + Scrollable List
+            Column(
+              children: [
+                // 1. The Modern Balance Header (Fixed at top)
+                TotalBalanceSummary(accounts: _accounts),
 
-              // Info Header tells user how to interact
-              header:
-                  _showTip ? _buildReorderTip() : const SizedBox(height: 16),
+                // 2. The Reorderable List (Scrollable)
+                Expanded(
+                  child: ReorderableListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                    itemCount: _accounts.length,
+                    onReorder: _onReorder,
 
-              proxyDecorator: (child, index, animation) {
-                return AnimatedBuilder(
-                  animation: animation,
-                  builder: (BuildContext context, Widget? child) {
-                    return Material(
-                      elevation: 8,
-                      color: Colors.transparent,
-                      shadowColor: Colors.black54,
-                      child: child,
-                    );
-                  },
-                  child: child,
-                );
-              },
-              itemBuilder: (context, index) {
-                final account = _accounts[index];
+                    // Info Header tells user how to interact
+                    header: _showTip
+                        ? _buildReorderTip()
+                        : const SizedBox(height: 0),
 
-                return Column(
-                  key: ValueKey(account.id),
-                  children: [
-                    // Visual Divider for the "Top 6" dashboard cutoff
-                    if (index == 6)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Row(
-                          children: [
-                            const Expanded(
-                                child: Divider(color: Colors.white24)),
+                    proxyDecorator: (child, index, animation) {
+                      return AnimatedBuilder(
+                        animation: animation,
+                        builder: (BuildContext context, Widget? child) {
+                          return Material(
+                            elevation: 8,
+                            color: Colors.transparent,
+                            shadowColor: Colors.black54,
+                            child: child,
+                          );
+                        },
+                        child: child,
+                      );
+                    },
+                    itemBuilder: (context, index) {
+                      final account = _accounts[index];
+
+                      return Column(
+                        key: ValueKey(account.id),
+                        children: [
+                          // Visual Divider for the "Top 6" dashboard cutoff
+                          if (index == 6)
                             Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8),
-                              child: Text(
-                                "Not on Dashboard",
-                                style: TextStyle(
-                                    color: Colors.white.withOpacity(0.5),
-                                    fontSize: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Row(
+                                children: [
+                                  const Expanded(
+                                      child: Divider(color: Colors.white24)),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
+                                    child: Text(
+                                      "Not on Dashboard",
+                                      style: TextStyle(
+                                          color: Colors.white.withOpacity(0.5),
+                                          fontSize: 12),
+                                    ),
+                                  ),
+                                  const Expanded(
+                                      child: Divider(color: Colors.white24)),
+                                ],
                               ),
                             ),
-                            const Expanded(
-                                child: Divider(color: Colors.white24)),
-                          ],
-                        ),
-                      ),
 
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: BankAccountCard(
-                        account: account,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                AccountDetailScreen(account: account),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: BankAccountCard(
+                              account: account,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      AccountDetailScreen(account: account),
+                                ),
+                              ),
+                              onMoreTap: () =>
+                                  _showAccountOptions(context, account),
+                            ),
                           ),
-                        ),
-                        onMoreTap: () => _showAccountOptions(context, account),
-                      ),
-                    ),
-                  ],
-                );
-              },
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           if (_isLoading)
             Container(
@@ -156,6 +170,8 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       ),
     );
   }
+
+  // ... [Keep _buildReorderTip, _showAccountOptions, _showAddAccountSheet, _handleDeleteAccount, _buildEmptyState, _buildDetailRow exactly as they were]
 
   Widget _buildReorderTip() {
     return Container(
@@ -393,8 +409,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-
-              // FIXED: Manually remove item instantly so user sees it gone immediately
               setState(() {
                 _isLoading = true;
                 _accounts.removeWhere((a) => a.id == account.id);
