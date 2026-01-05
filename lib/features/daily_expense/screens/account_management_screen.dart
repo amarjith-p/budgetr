@@ -28,7 +28,8 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     super.initState();
     // Listen to stream to keep data fresh, but _accounts is modified by drag/drop
     ExpenseService().getAccounts().listen((data) {
-      if (mounted && !_isLoading) {
+      // FIXED: Removed '!_isLoading' check so the list updates even while deleting.
+      if (mounted) {
         setState(() {
           _accounts = data;
           _hasLoaded = true;
@@ -392,7 +393,12 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              setState(() => _isLoading = true);
+
+              // FIXED: Manually remove item instantly so user sees it gone immediately
+              setState(() {
+                _isLoading = true;
+                _accounts.removeWhere((a) => a.id == account.id);
+              });
 
               try {
                 await ExpenseService().deleteAccount(account.id);
