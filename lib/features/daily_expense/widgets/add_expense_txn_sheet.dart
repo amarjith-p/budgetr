@@ -252,17 +252,16 @@ class _AddExpenseTransactionSheetState
       final double amount = double.tryParse(_amountCtrl.text) ?? 0.0;
       bool isEditing = widget.txnToEdit != null;
 
-      // Handle Edit: Update standard or simple fields
       if (isEditing) {
         final newTxn = ExpenseTransactionModel(
           id: widget.txnToEdit!.id,
-          accountId: widget.txnToEdit!.accountId,
+          accountId: _selectedAccount!.id, // Allows account switching
           amount: amount,
           date: Timestamp.fromDate(_date),
-          bucket: widget.txnToEdit!.bucket,
-          type: widget.txnToEdit!.type,
-          category: widget.txnToEdit!.category,
-          subCategory: widget.txnToEdit!.subCategory,
+          bucket: _selectedBucket ?? 'Unallocated', // Allow bucket update
+          type: _type, // Locked in UI if editing, but passed here
+          category: _category!,
+          subCategory: _subCategory ?? 'General',
           notes: _notesCtrl.text,
           linkedCreditCardId: widget.txnToEdit!.linkedCreditCardId,
           transferAccountId: widget.txnToEdit!.transferAccountId,
@@ -386,6 +385,9 @@ class _AddExpenseTransactionSheetState
     final bottomPadding =
         _showCustomKeyboard ? 0.0 : MediaQuery.of(context).viewInsets.bottom;
 
+    // Check if we are editing
+    final bool isEditing = widget.txnToEdit != null;
+
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xff0D1B2A),
@@ -413,18 +415,16 @@ class _AddExpenseTransactionSheetState
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                          widget.txnToEdit != null
-                              ? "Edit Transaction"
-                              : "Log Transaction",
+                      Text(isEditing ? "Edit Transaction" : "Log Transaction",
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 20,
                               fontWeight: FontWeight.bold)),
                       // Credit Card Toggle
                       Opacity(
+                        // Dim if disabled (Linked OR Editing)
                         opacity:
-                            _isLinkedTransaction ? 0.5 : 1.0, // Dim if disabled
+                            (_isLinkedTransaction || isEditing) ? 0.5 : 1.0,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 4),
@@ -454,8 +454,9 @@ class _AddExpenseTransactionSheetState
                                       fontWeight: FontWeight.bold)),
                               Switch(
                                 value: _isCreditEntry,
-                                onChanged: _isLinkedTransaction
-                                    ? null // Disabled if linked
+                                // DISABLED ON EDIT to prevent complex state changes
+                                onChanged: (_isLinkedTransaction || isEditing)
+                                    ? null
                                     : (val) {
                                         setState(() {
                                           _isCreditEntry = val;
@@ -496,7 +497,7 @@ class _AddExpenseTransactionSheetState
                       ),
                     ),
 
-                  // Type Buttons (Locked if linked)
+                  // Type Buttons (Locked if linked, Transfer Disabled if Editing)
                   Opacity(
                     opacity: _isLinkedTransaction ? 0.5 : 1.0,
                     child: Row(children: [
@@ -508,11 +509,14 @@ class _AddExpenseTransactionSheetState
                           child: _typeBtn("Income", Colors.greenAccent,
                               _isLinkedTransaction)),
                       const SizedBox(width: 8),
+                      // DISABLE TRANSFER BUTTON IF EDITING
                       Expanded(
                           child: _typeBtn("Transfer", Colors.blueAccent,
-                              _isLinkedTransaction)),
+                              _isLinkedTransaction || isEditing)),
                     ]),
                   ),
+
+                  // ... [The rest of the file remains exactly the same] ...
                   const SizedBox(height: 24),
 
                   // ACCOUNTS (Locked if linked)
