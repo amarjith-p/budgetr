@@ -7,8 +7,9 @@ import '../models/expense_models.dart';
 import '../services/expense_service.dart';
 import '../widgets/add_account_sheet.dart';
 import '../widgets/bank_account_card.dart';
-// ADD THIS IMPORT
 import '../widgets/total_balance_summary.dart';
+// IMPORT THE NEW WIDGET
+import '../widgets/account_options_dialog.dart';
 import 'account_detail_screen.dart';
 
 class AccountManagementScreen extends StatefulWidget {
@@ -28,7 +29,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   @override
   void initState() {
     super.initState();
-    // Listen to stream to keep data fresh, but _accounts is modified by drag/drop
     ExpenseService().getAccounts().listen((data) {
       if (mounted) {
         setState(() {
@@ -48,7 +48,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       _accounts.insert(newIndex, item);
     });
 
-    // Save new order to Firebase
     ExpenseService().updateAccountOrder(_accounts);
   }
 
@@ -77,24 +76,17 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
           else if (_accounts.isEmpty)
             _buildEmptyState()
           else
-            // MODIFIED: Wrapped in Column to support Fixed Header + Scrollable List
             Column(
               children: [
-                // 1. The Modern Balance Header (Fixed at top)
                 TotalBalanceSummary(accounts: _accounts),
-
-                // 2. The Reorderable List (Scrollable)
                 Expanded(
                   child: ReorderableListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
                     itemCount: _accounts.length,
                     onReorder: _onReorder,
-
-                    // Info Header tells user how to interact
                     header: _showTip
                         ? _buildReorderTip()
                         : const SizedBox(height: 0),
-
                     proxyDecorator: (child, index, animation) {
                       return AnimatedBuilder(
                         animation: animation,
@@ -115,7 +107,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                       return Column(
                         key: ValueKey(account.id),
                         children: [
-                          // Visual Divider for the "Top 6" dashboard cutoff
                           if (index == 6)
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -138,7 +129,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                 ],
                               ),
                             ),
-
                           Padding(
                             padding: const EdgeInsets.only(bottom: 16),
                             child: BankAccountCard(
@@ -170,8 +160,6 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       ),
     );
   }
-
-  // ... [Keep _buildReorderTip, _showAccountOptions, _showAddAccountSheet, _handleDeleteAccount, _buildEmptyState, _buildDetailRow exactly as they were]
 
   Widget _buildReorderTip() {
     return Container(
@@ -222,117 +210,12 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   }
 
   void _showAccountOptions(BuildContext context, ExpenseAccountModel account) {
-    final currency =
-        NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 2);
-
     showDialog(
       context: context,
-      builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: Dialog(
-          backgroundColor: const Color(0xff1B263B).withOpacity(0.9),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: Colors.white.withOpacity(0.1))),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.account_balance_wallet,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          "Account Options",
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white54),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildDetailRow("Account Name", account.name),
-                const Divider(color: Colors.white10, height: 24),
-                _buildDetailRow("Bank", account.bankName),
-                const Divider(color: Colors.white10, height: 24),
-                _buildDetailRow("Type", account.accountType),
-                const Divider(color: Colors.white10, height: 24),
-                _buildDetailRow("Account No", "**** ${account.accountNumber}"),
-                const Divider(color: Colors.white10, height: 24),
-                _buildDetailRow(
-                    "Balance", currency.format(account.currentBalance)),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton.icon(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _handleDeleteAccount(context, account);
-                        },
-                        icon: const Icon(Icons.delete_outline,
-                            color: Colors.redAccent, size: 20),
-                        label: const Text("Delete",
-                            style: TextStyle(color: Colors.redAccent)),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          backgroundColor: Colors.redAccent.withOpacity(0.1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextButton.icon(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _showAddAccountSheet(context, account);
-                        },
-                        icon: const Icon(Icons.edit_outlined,
-                            color: Colors.white, size: 20),
-                        label: const Text("Edit",
-                            style: TextStyle(color: Colors.white)),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          backgroundColor: Colors.white.withOpacity(0.1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+      builder: (ctx) => AccountOptionsDialog(
+        account: account,
+        onDelete: () => _handleDeleteAccount(context, account),
+        onEdit: () => _showAddAccountSheet(context, account),
       ),
     );
   }
@@ -456,12 +339,4 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       ),
     );
   }
-
-  Widget _buildDetailRow(String label, String value) =>
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.5))),
-        Text(value,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold))
-      ]);
 }
