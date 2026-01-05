@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/bank_list.dart';
+import '../../../core/widgets/modern_loader.dart';
 import '../models/expense_models.dart';
 
 class AddAccountSheet extends StatefulWidget {
-  final Function(Map<String, dynamic>) onAccountAdded;
+  // CHANGED: Returns Future so we can await completion
+  final Future<void> Function(Map<String, dynamic>) onAccountAdded;
   final ExpenseAccountModel? accountToEdit;
 
   const AddAccountSheet({
@@ -34,6 +36,8 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
 
   String? _selectedBank;
   String? _selectedAccountType;
+  // ADDED: Loading state
+  bool _isLoading = false;
 
   final List<Color> _accountColors = [
     const Color(0xFF1E1E1E),
@@ -55,7 +59,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
 
   late Color _selectedColor;
 
-  // Added 'Credit Card' to types
   final List<String> _accountTypes = [
     'Savings Account',
     'Salary Account',
@@ -83,7 +86,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
       _selectedColor = _accountColors[0];
     }
 
-    // Auto-scroll listeners...
     _nameFocus.addListener(() {
       if (_nameFocus.hasFocus) _scrollToField(_nameFieldKey);
     });
@@ -121,12 +123,10 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     setState(() {
       _selectedAccountType = val;
       if (val == 'Credit Card') {
-        // Enforce logic for Credit Card Pool
         _selectedBank = 'Credit Card Pool Account';
         _accountNoController.text = '****';
         _balanceController.text = '0.0';
       } else {
-        // Reset if switching back to normal, only if it was auto-filled
         if (_selectedBank == 'Credit Card Pool Account') _selectedBank = null;
         if (_accountNoController.text == '****') _accountNoController.clear();
         if (_balanceController.text == '0.0') _balanceController.clear();
@@ -134,20 +134,34 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     });
   }
 
-  void _submit() {
+  // MODIFIED: Async submission with loading state
+  Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
-      final newAccountData = {
-        'name': _nameController.text.trim(),
-        'bankName': _selectedBank,
-        'accountType': _selectedAccountType,
-        'accountNumber': _accountNoController.text.trim(),
-        'currentBalance':
-            double.tryParse(_balanceController.text.replaceAll(',', '')) ?? 0.0,
-        'color': _selectedColor.value,
-        'type': 'Bank', // Internally it's still a Bank structure in Firestore
-      };
-      widget.onAccountAdded(newAccountData);
-      Navigator.pop(context);
+      setState(() => _isLoading = true);
+
+      try {
+        final newAccountData = {
+          'name': _nameController.text.trim(),
+          'bankName': _selectedBank,
+          'accountType': _selectedAccountType,
+          'accountNumber': _accountNoController.text.trim(),
+          'currentBalance':
+              double.tryParse(_balanceController.text.replaceAll(',', '')) ??
+                  0.0,
+          'color': _selectedColor.value,
+          'type': 'Bank',
+        };
+
+        // Await the parent callback so loader stays until done
+        await widget.onAccountAdded(newAccountData);
+
+        if (mounted) Navigator.pop(context);
+      } catch (e) {
+        // Handle error (optional: show snackbar)
+        debugPrint("Error adding account: $e");
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -228,7 +242,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                           ? ['Credit Card Pool Account']
                           : BankConstants.indianBanks,
                       labelBuilder: (val) => val,
-                      // Disable bank selection if Credit Card is chosen
                       isEnabled: !isCreditCard,
                       onSelect: (val) => setState(() => _selectedBank = val),
                       validator: (v) => v == null ? 'Required' : null,
@@ -237,8 +250,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                 ],
               ),
 
-              // Only show Account Number and Balance if NOT a Credit Card Pool
-              // (Or if we want to show them disabled)
               if (!isCreditCard) ...[
                 const SizedBox(height: 16),
                 _buildTextField(
@@ -269,7 +280,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                   onSubmitted: () => _submit(),
                 ),
               ] else ...[
-                // Info text for Credit Card mode
                 Container(
                   margin: const EdgeInsets.only(top: 16),
                   padding: const EdgeInsets.all(12),
@@ -293,7 +303,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
               ],
 
               const SizedBox(height: 24),
-              // Color Picker
               Text("Card Color",
                   style: TextStyle(
                       fontSize: 12,
@@ -333,10 +342,12 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                 ),
               ),
               const SizedBox(height: 32),
+
+              // MODIFIED: Button with Loader
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _submit,
+                  onPressed: _isLoading ? null : _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00B4D8),
                     foregroundColor: Colors.white,
@@ -344,9 +355,18 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text(isEditing ? "Update Account" : "Add Account",
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(isEditing ? "Update Account" : "Add Account",
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -356,7 +376,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     );
   }
 
-  // Helper Methods (Text Field & Select Field)
+  // Helper Methods remain unchanged
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
