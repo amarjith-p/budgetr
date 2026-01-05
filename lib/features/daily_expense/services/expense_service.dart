@@ -112,6 +112,7 @@ class ExpenseService {
 
     batch.set(txnRef, txnToSave.toMap());
 
+    // Update Balance
     final accRef =
         _db.collection(FirebaseConstants.expenseAccounts).doc(txn.accountId);
     double delta = 0.0;
@@ -121,54 +122,73 @@ class ExpenseService {
       delta = txn.amount;
     }
     batch.update(accRef, {'currentBalance': FieldValue.increment(delta)});
+
+    // Handle Transfer Partner Creation
+    if ((txn.type == 'Transfer Out' || txn.type == 'Transfer In') &&
+        txn.transferAccountId != null) {
+      final partnerType =
+          txn.type == 'Transfer Out' ? 'Transfer In' : 'Transfer Out';
+      final partnerDocId =
+          _db.collection(FirebaseConstants.expenseTransactions).doc().id;
+      final partnerRef = _db
+          .collection(FirebaseConstants.expenseTransactions)
+          .doc(partnerDocId);
+
+      final partnerTxn = ExpenseTransactionModel(
+        id: partnerDocId,
+        accountId: txn.transferAccountId!,
+        amount: txn.amount,
+        date: txn.date,
+        bucket: txn.bucket,
+        type: partnerType,
+        category: txn.category,
+        subCategory: txn.subCategory,
+        notes: txn.notes,
+        transferAccountId: txn.accountId,
+        transferAccountName: "Linked Account",
+        transferAccountBankName: "",
+      );
+
+      batch.set(partnerRef, partnerTxn.toMap());
+
+      // Update Partner Balance
+      final partnerAccRef = _db
+          .collection(FirebaseConstants.expenseAccounts)
+          .doc(txn.transferAccountId);
+      double partnerDelta = 0.0;
+      if (partnerType == 'Transfer In') {
+        partnerDelta = txn.amount;
+      } else {
+        partnerDelta = -txn.amount;
+      }
+      batch.update(partnerAccRef,
+          {'currentBalance': FieldValue.increment(partnerDelta)});
+    }
+
     await batch.commit();
   }
 
-  // Standard Delete (UI Triggered)
-  Future<void> deleteTransaction(ExpenseTransactionModel txn) async {
-    // 1. Delete this transaction
-    await _db
-        .collection(FirebaseConstants.expenseTransactions)
-        .doc(txn.id)
-        .delete();
-
-    // 2. Revert Balance
-    await _updateAccountBalance(txn.accountId, txn.amount, txn.type,
-        isAdding: false);
-
-    // 3. Delete Transfer Partner (e.g. Pool Account entry)
-    if (txn.type == 'Transfer Out' || txn.type == 'Transfer In') {
-      final linkedTxn = await findLinkedTransfer(txn);
-      if (linkedTxn != null) {
-        await _db
-            .collection(FirebaseConstants.expenseTransactions)
-            .doc(linkedTxn.id)
-            .delete();
-        await _updateAccountBalance(
-            linkedTxn.accountId, linkedTxn.amount, linkedTxn.type,
-            isAdding: false);
-      }
-    }
-
-    // 4. BI-DIRECTIONAL SYNC: Delete linked Credit Tracker Transaction
-    // If this was a Bank Transfer -> Credit Card, delete the Credit side.
-    await CreditService().deleteTransactionFromExpense(txn.id);
-  }
-
-  // Standard Update (UI Triggered)
+  // --- ATOMIC UPDATE TRANSACTION ---
   Future<void> updateTransaction(ExpenseTransactionModel newTxn) async {
+    // Uses runTransaction to atomically update balance and transaction document.
+    // This handles Expense <-> Income switching correctly by calculating net impact.
+    // Since Transfer type is disabled in UI during edit, we focus on standard updates.
+
     await _db.runTransaction((transaction) async {
+      // 1. Read Old Transaction
       final txnRef =
           _db.collection(FirebaseConstants.expenseTransactions).doc(newTxn.id);
-      final accRef = _db
-          .collection(FirebaseConstants.expenseAccounts)
-          .doc(newTxn.accountId);
-
       final docSnapshot = await transaction.get(txnRef);
-      if (!docSnapshot.exists) throw Exception("Transaction does not exist!");
+
+      if (!docSnapshot.exists) {
+        throw Exception("Transaction does not exist!");
+      }
 
       final oldTxn = ExpenseTransactionModel.fromFirestore(docSnapshot);
 
+      // 2. Handle Balance Updates
+
+      // Calculate effect of OLD transaction (to revert)
       double oldEffect = 0.0;
       if (oldTxn.type == 'Expense' || oldTxn.type == 'Transfer Out') {
         oldEffect = -oldTxn.amount;
@@ -176,6 +196,7 @@ class ExpenseService {
         oldEffect = oldTxn.amount;
       }
 
+      // Calculate effect of NEW transaction (to apply)
       double newEffect = 0.0;
       if (newTxn.type == 'Expense' || newTxn.type == 'Transfer Out') {
         newEffect = -newTxn.amount;
@@ -183,20 +204,82 @@ class ExpenseService {
         newEffect = newTxn.amount;
       }
 
-      double netChange = newEffect - oldEffect;
-      transaction
-          .update(accRef, {'currentBalance': FieldValue.increment(netChange)});
+      // Check if Account Changed
+      if (oldTxn.accountId != newTxn.accountId) {
+        // Revert old account
+        final oldAccRef = _db
+            .collection(FirebaseConstants.expenseAccounts)
+            .doc(oldTxn.accountId);
+        transaction.update(
+            oldAccRef, {'currentBalance': FieldValue.increment(-oldEffect)});
+
+        // Apply to new account
+        final newAccRef = _db
+            .collection(FirebaseConstants.expenseAccounts)
+            .doc(newTxn.accountId);
+        transaction.update(
+            newAccRef, {'currentBalance': FieldValue.increment(newEffect)});
+      } else {
+        // Same account: Apply net difference
+        final accRef = _db
+            .collection(FirebaseConstants.expenseAccounts)
+            .doc(newTxn.accountId);
+        double netChange = newEffect - oldEffect;
+        transaction.update(
+            accRef, {'currentBalance': FieldValue.increment(netChange)});
+      }
+
+      // 3. Update Transaction Document
       transaction.update(txnRef, newTxn.toMap());
     });
 
-    // BI-DIRECTIONAL SYNC: Update linked Credit Tracker Transaction
+    // Sync with Credit Tracker
     await CreditService()
         .updateTransactionFromExpense(newTxn.id, newTxn.amount, newTxn.date);
   }
 
-  // --- INTERNAL / SYNC HELPERS (Called by CreditService) ---
+  Future<void> deleteTransaction(ExpenseTransactionModel txn) async {
+    final batch = _db.batch();
 
-  // Called when CreditService needs to update a Bank Transaction (to avoid infinite loops)
+    // 1. Delete Main
+    batch.delete(
+        _db.collection(FirebaseConstants.expenseTransactions).doc(txn.id));
+
+    // 2. Revert Balance
+    await _updateAccountBalance(txn.accountId, txn.amount, txn.type,
+        isAdding: false);
+
+    // 3. Delete Transfer Partner
+    if (txn.type == 'Transfer Out' || txn.type == 'Transfer In') {
+      final linkedTxn = await findLinkedTransfer(txn);
+      if (linkedTxn != null) {
+        batch.delete(_db
+            .collection(FirebaseConstants.expenseTransactions)
+            .doc(linkedTxn.id));
+        await _updateAccountBalance(
+            linkedTxn.accountId, linkedTxn.amount, linkedTxn.type,
+            isAdding: false);
+      }
+    }
+
+    // 4. BI-DIRECTIONAL SYNC
+    await CreditService().deleteTransactionFromExpense(txn.id);
+    await batch.commit();
+  }
+
+  // --- REQUIRED BY CREDIT SERVICE ---
+  Future<void> deleteTransactionSingle(ExpenseTransactionModel txn) async {
+    await _db
+        .collection(FirebaseConstants.expenseTransactions)
+        .doc(txn.id)
+        .delete();
+
+    await _updateAccountBalance(txn.accountId, txn.amount, txn.type,
+        isAdding: false);
+  }
+
+  // --- INTERNAL / SYNC HELPERS ---
+
   Future<void> updateTransactionFromCredit(
       String txnId, double newAmount, Timestamp newDate) async {
     final txnRef =
@@ -238,7 +321,6 @@ class ExpenseService {
     }
   }
 
-  // Called when CreditService needs to delete a Bank Transaction
   Future<void> deleteTransactionFromCredit(String txnId) async {
     final doc = await _db
         .collection(FirebaseConstants.expenseTransactions)
@@ -248,16 +330,6 @@ class ExpenseService {
       final txn = ExpenseTransactionModel.fromFirestore(doc);
       await deleteTransactionSingle(txn);
     }
-  }
-
-  Future<void> deleteTransactionSingle(ExpenseTransactionModel txn) async {
-    await _db
-        .collection(FirebaseConstants.expenseTransactions)
-        .doc(txn.id)
-        .delete();
-
-    await _updateAccountBalance(txn.accountId, txn.amount, txn.type,
-        isAdding: false);
   }
 
   Future<ExpenseTransactionModel?> findLinkedTransfer(
@@ -272,7 +344,6 @@ class ExpenseService {
         .where('accountId', isEqualTo: txn.transferAccountId)
         .where('transferAccountId', isEqualTo: txn.accountId)
         .where('amount', isEqualTo: txn.amount)
-        .where('date', isEqualTo: txn.date)
         .where('type', isEqualTo: linkedType)
         .limit(1)
         .get();
