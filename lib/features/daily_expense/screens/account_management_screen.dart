@@ -1,14 +1,11 @@
-import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../../core/widgets/modern_loader.dart';
 import '../models/expense_models.dart';
 import '../services/expense_service.dart';
 import '../widgets/add_account_sheet.dart';
 import '../widgets/bank_account_card.dart';
 import '../widgets/total_balance_summary.dart';
-// IMPORT THE NEW WIDGET
 import '../widgets/account_options_dialog.dart';
 import 'account_detail_screen.dart';
 
@@ -222,12 +219,30 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
 
   void _showAddAccountSheet(
       BuildContext context, ExpenseAccountModel? accountToEdit) {
+    // [CHANGED] Check if Credit Card Pool already exists in the list
+    final bool hasCreditPool =
+        _accounts.any((acc) => acc.accountType == 'Credit Card');
+
+    // [CHANGED] Logic to decide if we should allow creating a Credit Card
+    // 1. If we are adding a NEW account, allow only if NONE exist.
+    // 2. If we are EDITING, allow if none exist OR if the one we are editing IS the credit card.
+    bool isCreditPoolAvailable = true;
+
+    if (accountToEdit == null) {
+      isCreditPoolAvailable = !hasCreditPool;
+    } else {
+      isCreditPoolAvailable =
+          !hasCreditPool || accountToEdit.accountType == 'Credit Card';
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => AddAccountSheet(
         accountToEdit: accountToEdit,
+        // [CHANGED] Pass the restriction flag
+        isCreditPoolAvailable: isCreditPoolAvailable,
         onAccountAdded: (data) async {
           final newAccount = ExpenseAccountModel(
             id: accountToEdit?.id ??

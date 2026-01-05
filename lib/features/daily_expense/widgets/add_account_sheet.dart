@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/bank_list.dart';
-import '../../../core/widgets/modern_loader.dart';
 import '../models/expense_models.dart';
 
 class AddAccountSheet extends StatefulWidget {
-  // CHANGED: Returns Future so we can await completion
   final Future<void> Function(Map<String, dynamic>) onAccountAdded;
   final ExpenseAccountModel? accountToEdit;
+  // [CHANGED] Flag to control if Credit Card option should be shown
+  final bool isCreditPoolAvailable;
 
   const AddAccountSheet({
     super.key,
     required this.onAccountAdded,
     this.accountToEdit,
+    // [CHANGED] Default to true so it behaves normally if not specified
+    this.isCreditPoolAvailable = true,
   });
 
   @override
@@ -36,7 +38,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
 
   String? _selectedBank;
   String? _selectedAccountType;
-  // ADDED: Loading state
   bool _isLoading = false;
 
   final List<Color> _accountColors = [
@@ -59,11 +60,20 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
 
   late Color _selectedColor;
 
-  final List<String> _accountTypes = [
+  final List<String> _allAccountTypes = [
     'Savings Account',
     'Salary Account',
+    'Current Account',
     'Credit Card'
   ];
+
+  // [CHANGED] Dynamic list based on availability
+  List<String> get _availableAccountTypes {
+    if (widget.isCreditPoolAvailable) {
+      return _allAccountTypes;
+    }
+    return _allAccountTypes.where((t) => t != 'Credit Card').toList();
+  }
 
   @override
   void initState() {
@@ -134,7 +144,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     });
   }
 
-  // MODIFIED: Async submission with loading state
   Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
@@ -152,12 +161,10 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
           'type': 'Bank',
         };
 
-        // Await the parent callback so loader stays until done
         await widget.onAccountAdded(newAccountData);
 
         if (mounted) Navigator.pop(context);
       } catch (e) {
-        // Handle error (optional: show snackbar)
         debugPrint("Error adding account: $e");
       } finally {
         if (mounted) setState(() => _isLoading = false);
@@ -227,7 +234,8 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                     child: _buildSelectField<String>(
                       label: "Type",
                       value: _selectedAccountType,
-                      items: _accountTypes,
+                      // [CHANGED] Use the filtered list here
+                      items: _availableAccountTypes,
                       labelBuilder: (val) => val,
                       onSelect: _onTypeChanged,
                       validator: (v) => v == null ? 'Required' : null,
@@ -343,7 +351,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
               ),
               const SizedBox(height: 32),
 
-              // MODIFIED: Button with Loader
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -376,7 +383,6 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     );
   }
 
-  // Helper Methods remain unchanged
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
