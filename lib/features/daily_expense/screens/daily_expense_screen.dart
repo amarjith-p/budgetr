@@ -9,11 +9,12 @@ import '../widgets/bank_account_mini_card.dart';
 import 'account_detail_screen.dart';
 import 'account_management_screen.dart';
 
-// --- NEW IMPORTS ---
+// --- IMPORTS ---
 import 'all_transactions_screen.dart';
 import 'expense_analytics_screen.dart';
+import 'category_breakdown_screen.dart'; // NEW SCREEN
 import '../widgets/cash_flow_card.dart';
-import '../widgets/balance_trend_chart.dart'; // NEW
+import '../widgets/balance_trend_chart.dart';
 
 class DailyExpenseScreen extends StatefulWidget {
   const DailyExpenseScreen({super.key});
@@ -52,9 +53,10 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          _buildOriginalHomeContent(),
-          const AllTransactionsScreen(),
-          const ExpenseAnalyticsScreen(),
+          _buildOriginalHomeContent(), // 0: Overview
+          const AllTransactionsScreen(), // 1: Transactions
+          const ExpenseAnalyticsScreen(), // 2: Analytics
+          const CategoryBreakdownScreen(), // 3: Breakdown (Replaces Settings)
         ],
       ),
       bottomNavigationBar: _buildPrismDock(),
@@ -65,6 +67,7 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
     String title = "Daily Tracker";
     if (_currentIndex == 1) title = "Transactions";
     if (_currentIndex == 2) title = "Analytics";
+    if (_currentIndex == 3) title = "Breakdown"; // Updated Title
 
     return AppBar(
       backgroundColor: bgColor.withOpacity(0.9),
@@ -149,7 +152,6 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- 1. ACCOUNTS HEADER ---
               if (accounts.isNotEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -163,8 +165,6 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
                     ),
                   ),
                 ),
-
-              // --- 2. ACCOUNTS ROWS ---
               if (row1Items.isNotEmpty) ...[
                 SizedBox(
                   height: 90,
@@ -186,7 +186,6 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-
               SizedBox(
                 height: 90,
                 child: ListView.separated(
@@ -210,14 +209,8 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
                   },
                 ),
               ),
-
-              // --- 3. CASH FLOW WIDGET ---
               const CashFlowCard(),
-
-              // --- 4. BALANCE TREND CHART (Placed Below Cash Flow) ---
               const BalanceTrendChart(),
-
-              // Bottom Spacer
               const SizedBox(height: 140),
             ],
           ),
@@ -336,8 +329,8 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
                 _buildPrismTab(1, Icons.receipt_long_rounded, "History"),
                 _buildPrismFab(),
                 _buildPrismTab(2, Icons.bar_chart_rounded, "Analytics"),
-                _buildPrismTab(3, Icons.settings_rounded, "Settings",
-                    isDisabled: true),
+                // Updated Tab 3: Breakdown
+                _buildPrismTab(3, Icons.category_rounded, "Breakdown"),
               ],
             ),
           ),
