@@ -24,6 +24,16 @@ class BankConstants {
     'Others',
   ];
 
+  // [NEW] Added Wallet List
+  static const List<String> wallets = [
+    'PayTM',
+    'Amazon Pay',
+    'Samsung Wallet',
+    'Mobikwik',
+    'PhonePe',
+    'Others',
+  ];
+
   // Helper to get asset path
   // Updates: Removes spaces and special characters to match filenames like 'hdfcbank.png'
   static String getBankLogoPath(String bankName) {

@@ -6,14 +6,12 @@ import '../models/expense_models.dart';
 class AddAccountSheet extends StatefulWidget {
   final Future<void> Function(Map<String, dynamic>) onAccountAdded;
   final ExpenseAccountModel? accountToEdit;
-  // [CHANGED] Flag to control if Credit Card option should be shown
   final bool isCreditPoolAvailable;
 
   const AddAccountSheet({
     super.key,
     required this.onAccountAdded,
     this.accountToEdit,
-    // [CHANGED] Default to true so it behaves normally if not specified
     this.isCreditPoolAvailable = true,
   });
 
@@ -64,10 +62,11 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     'Savings Account',
     'Salary Account',
     'Current Account',
+    'Wallet', // [NEW] Added Wallet
+    'Cash',
     'Credit Card'
   ];
 
-  // [CHANGED] Dynamic list based on availability
   List<String> get _availableAccountTypes {
     if (widget.isCreditPoolAvailable) {
       return _allAccountTypes;
@@ -131,15 +130,44 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
 
   void _onTypeChanged(String? val) {
     setState(() {
+      // If switching types, generally reset the "Bank/Wallet" selection
+      // unless switching between similar types (e.g. Savings <-> Salary)
+      if (_selectedAccountType != val) {
+        // Reset specific fields when switching mainly to/from special types
+        if (val == 'Credit Card' ||
+            val == 'Cash' ||
+            val == 'Wallet' ||
+            _selectedAccountType == 'Credit Card' ||
+            _selectedAccountType == 'Cash' ||
+            _selectedAccountType == 'Wallet') {
+          _selectedBank = null;
+        }
+      }
+
       _selectedAccountType = val;
+
       if (val == 'Credit Card') {
         _selectedBank = 'Credit Card Pool Account';
         _accountNoController.text = '****';
         _balanceController.text = '0.0';
+      } else if (val == 'Cash') {
+        _selectedBank = 'Cash';
+        _accountNoController.clear();
+      } else if (val == 'Wallet') {
+        // [NEW] Wallet logic: Reset bank so user selects from Wallet list
+        // We keep account number field clear/enabled for user to potentially enter Phone No.
       } else {
-        if (_selectedBank == 'Credit Card Pool Account') _selectedBank = null;
-        if (_accountNoController.text == '****') _accountNoController.clear();
-        if (_balanceController.text == '0.0') _balanceController.clear();
+        // Normal Bank Accounts
+        if (_selectedBank == 'Credit Card Pool Account' ||
+            _selectedBank == 'Cash') {
+          _selectedBank = null;
+        }
+        if (_accountNoController.text == '****') {
+          _accountNoController.clear();
+        }
+        if (_balanceController.text == '0.0') {
+          _balanceController.clear();
+        }
       }
     });
   }
@@ -178,6 +206,8 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
     final isEditing = widget.accountToEdit != null;
     final isCreditCard = _selectedAccountType == 'Credit Card';
+    final isCash = _selectedAccountType == 'Cash';
+    final isWallet = _selectedAccountType == 'Wallet'; // [NEW]
 
     return Container(
       decoration: const BoxDecoration(
@@ -216,17 +246,24 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                 fieldKey: _nameFieldKey,
                 controller: _nameController,
                 focusNode: _nameFocus,
-                label: "Account Name",
-                hint:
-                    isCreditCard ? "Credit Card Pool" : "e.g. Personal Savings",
-                icon: Icons.edit_outlined,
+                label: isWallet ? "Wallet Name" : "Account Name",
+                hint: isCreditCard
+                    ? "Credit Card Pool"
+                    : (isCash
+                        ? "e.g. Wallet / Petty Cash"
+                        : (isWallet
+                            ? "e.g. Personal PayTM"
+                            : "e.g. Personal Savings")),
+                icon: isWallet
+                    ? Icons.account_balance_wallet
+                    : Icons.edit_outlined,
                 inputAction: TextInputAction.next,
                 onSubmitted: () =>
                     FocusScope.of(context).requestFocus(_accNumFocus),
               ),
               const SizedBox(height: 16),
 
-              // 2. Type & Bank
+              // 2. Type & Provider (Bank/Wallet)
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -234,52 +271,68 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                     child: _buildSelectField<String>(
                       label: "Type",
                       value: _selectedAccountType,
-                      // [CHANGED] Use the filtered list here
                       items: _availableAccountTypes,
                       labelBuilder: (val) => val,
                       onSelect: _onTypeChanged,
                       validator: (v) => v == null ? 'Required' : null,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildSelectField<String>(
-                      label: "Bank",
-                      value: _selectedBank,
-                      items: isCreditCard
-                          ? ['Credit Card Pool Account']
-                          : BankConstants.indianBanks,
-                      labelBuilder: (val) => val,
-                      isEnabled: !isCreditCard,
-                      onSelect: (val) => setState(() => _selectedBank = val),
-                      validator: (v) => v == null ? 'Required' : null,
+
+                  // Hide Provider Dropdown if Cash
+                  if (!isCash) ...[
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildSelectField<String>(
+                        label:
+                            isWallet ? "Wallet" : "Bank", // [NEW] Dynamic Label
+                        value: _selectedBank,
+                        // [NEW] Switch items based on type
+                        items: isCreditCard
+                            ? ['Credit Card Pool Account']
+                            : (isWallet
+                                ? BankConstants.wallets
+                                : BankConstants.indianBanks),
+                        labelBuilder: (val) => val,
+                        isEnabled: !isCreditCard,
+                        onSelect: (val) => setState(() => _selectedBank = val),
+                        validator: (v) => v == null ? 'Required' : null,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
 
-              if (!isCreditCard) ...[
+              // 3. Account Number / ID
+              // Hidden for Cash and Credit Card.
+              // Visible for Wallet (User can put Phone Number) and Bank.
+              if (!isCreditCard && !isCash) ...[
                 const SizedBox(height: 16),
                 _buildTextField(
                   fieldKey: _accNumFieldKey,
                   controller: _accountNoController,
                   focusNode: _accNumFocus,
-                  label: "Last 4 Digits",
-                  hint: "e.g. 8842",
+                  // [NEW] Label change for Wallet
+                  label: isWallet ? "Phone / ID (Optional)" : "Last 4 Digits",
+                  hint: isWallet ? "e.g. 9876543210" : "e.g. 8842",
                   icon: Icons.numbers,
                   inputType: TextInputType.number,
-                  maxLength: 4,
+                  // Remove max length constraint for wallets as phone numbers are longer
+                  maxLength: isWallet ? 15 : 4,
                   isDigitOnly: true,
                   inputAction: TextInputAction.next,
                   onSubmitted: () =>
                       FocusScope.of(context).requestFocus(_balanceFocus),
                 ),
+              ],
+
+              // 4. Balance
+              if (!isCreditCard) ...[
                 const SizedBox(height: 16),
                 _buildTextField(
                   fieldKey: _balanceFieldKey,
                   controller: _balanceController,
                   focusNode: _balanceFocus,
-                  label: "Current Balance",
+                  label: isCash ? "Amount on Hand" : "Current Balance",
                   hint: "₹ 0.00",
                   icon: Icons.currency_rupee,
                   inputType:
