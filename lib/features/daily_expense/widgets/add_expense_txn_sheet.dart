@@ -124,7 +124,8 @@ class _AddExpenseTransactionSheetState
 
         if (widget.txnToEdit != null) {
           final t = widget.txnToEdit!;
-          _amountCtrl.text = t.amount.toStringAsFixed(0);
+          _amountCtrl.text =
+              t.amount.toString().replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "");
           _notesCtrl.text = t.notes;
           _date = t.date.toDate();
           _selectedBucket = t.bucket;

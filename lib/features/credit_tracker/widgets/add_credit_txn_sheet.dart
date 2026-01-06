@@ -121,7 +121,8 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
 
         if (widget.transactionToEdit != null) {
           final t = widget.transactionToEdit!;
-          _amountCtrl.text = t.amount.toStringAsFixed(0);
+          _amountCtrl.text =
+              t.amount.toString().replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "");
           _notesCtrl.text = t.notes;
           _date = t.date.toDate();
           _type = t.type;

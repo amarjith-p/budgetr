@@ -83,7 +83,11 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     _accountNoController =
         TextEditingController(text: edit?.accountNumber ?? '');
     _balanceController = TextEditingController(
-      text: edit != null ? edit.currentBalance.toStringAsFixed(0) : '',
+      text: edit != null
+          ? edit.currentBalance
+              .toString()
+              .replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "")
+          : '',
     );
 
     _selectedBank = edit?.bankName;

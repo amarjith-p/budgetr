@@ -91,7 +91,8 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
   void _loadExistingData() {
     final c = widget.cardToEdit!;
     _nameCtrl.text = c.name;
-    _limitCtrl.text = c.creditLimit.toStringAsFixed(0);
+    _limitCtrl.text =
+        c.creditLimit.toString().replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "");
     _selectedBank = c.bankName;
     _billDate = c.billDate;
     _dueDate = c.dueDate;
@@ -136,9 +137,8 @@ class _AddCreditCardSheetState extends State<AddCreditCardSheet> {
   @override
   Widget build(BuildContext context) {
     // Adjust bottom padding
-    final bottomPadding = _showCustomKeyboard
-        ? 0.0
-        : MediaQuery.of(context).viewInsets.bottom;
+    final bottomPadding =
+        _showCustomKeyboard ? 0.0 : MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       padding: EdgeInsets.only(bottom: bottomPadding),
