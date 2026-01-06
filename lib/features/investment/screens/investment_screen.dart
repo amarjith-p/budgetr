@@ -32,7 +32,7 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
   final _currencyFormat = NumberFormat.currency(
     locale: 'en_IN',
     symbol: '₹',
-    decimalDigits: 0,
+    decimalDigits: 2,
   );
   final _preciseFormat = NumberFormat.currency(
     locale: 'en_IN',
@@ -117,9 +117,8 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
       // 4. Calculate Derived Metrics
       final now = DateTime.now();
       final totalReturn = current - invested;
-      final returnPercent = invested == 0
-          ? 0.0
-          : (totalReturn / invested) * 100;
+      final returnPercent =
+          invested == 0 ? 0.0 : (totalReturn / invested) * 100;
 
       // 5. Check for Existing Record (Same Day)
       // CONSTRAINT: Only applicable for Investment AutoTrackers
@@ -371,7 +370,6 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
               ),
               const Divider(color: Colors.white10),
               const SizedBox(height: 16),
-
               _buildSectionTitle("Sort By"),
               Wrap(
                 spacing: 8,
@@ -400,7 +398,6 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-
               _buildSectionTitle("Asset Type (Multi-Select)"),
               Wrap(
                 spacing: 8,
@@ -423,7 +420,6 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-
               if (availableBuckets.isNotEmpty) ...[
                 _buildSectionTitle("Bucket / Goal (Multi-Select)"),
                 Wrap(
@@ -458,7 +454,6 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                 ),
                 const SizedBox(height: 32),
               ],
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -491,16 +486,16 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
   }
 
   Widget _buildSectionTitle(String title) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Text(
-      title,
-      style: const TextStyle(
-        color: Colors.white54,
-        fontSize: 13,
-        letterSpacing: 0.5,
-      ),
-    ),
-  );
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 13,
+            letterSpacing: 0.5,
+          ),
+        ),
+      );
 
   Widget _buildSortChip(
     String label,
@@ -653,7 +648,6 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                 onChanged: (v) => setState(() => _searchQuery = v),
               ),
             ),
-
             Expanded(
               child: StreamBuilder<List<InvestmentRecord>>(
                 stream: _service.getInvestments(),
@@ -669,8 +663,8 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                     records = records
                         .where(
                           (r) => r.name.toLowerCase().contains(
-                            _searchQuery.toLowerCase(),
-                          ),
+                                _searchQuery.toLowerCase(),
+                              ),
                         )
                         .toList();
                   }
@@ -728,9 +722,7 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                           onRecordData: _handleRecordSnapshot, // New Handler
                         ),
                       ),
-
                       const SizedBox(height: 16),
-
                       Expanded(
                         child: records.isEmpty
                             ? Center(

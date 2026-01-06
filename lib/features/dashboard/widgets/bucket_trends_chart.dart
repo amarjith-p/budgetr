@@ -134,7 +134,7 @@ class _BucketTrendsChartState extends State<BucketTrendsChart> {
     final fullCurrency = NumberFormat.currency(
       locale: 'en_IN',
       symbol: '₹',
-      decimalDigits: 0,
+      decimalDigits: 2,
     );
 
     // --- Color Logic ---
