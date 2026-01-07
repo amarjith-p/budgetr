@@ -136,9 +136,8 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
 
       try {
         final result = _evaluateRPN(expr);
-        final formatted = result
-            .toStringAsFixed(2)
-            .replaceAll(RegExp(r'\.00$'), '');
+        final formatted =
+            result.toStringAsFixed(2).replaceAll(RegExp(r'\.00$'), '');
 
         if (_controllers[field.name]!.text != formatted) {
           _controllers[field.name]!.text = formatted;
@@ -375,22 +374,32 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
 
     if (warnings.isNotEmpty) {
       warnings = warnings.toSet().toList();
-      final shouldProceed =
-          await showDialog<bool>(
+      final shouldProceed = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
               backgroundColor: const Color(0xff0D1B2A),
+              icon: const Icon(
+                Icons.warning_amber_sharp,
+                color: Colors.amber,
+                size: 40,
+              ),
               title: const Text(
                 "Missing Values",
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Colors.redAccent),
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    "These fields are empty but used in formulas. They will count as 0:",
+                    "Some of the fields are empty but It is used in formulas. Empty Field(s) will recorded as 0 if not provided.",
                     style: TextStyle(color: Colors.white70),
+                    textAlign: TextAlign.center,
+                  ),
+                  const Text(
+                    "\nMissing Value(s):\n",
+                    style: TextStyle(color: Colors.white70),
+                    textAlign: TextAlign.left,
                   ),
                   const SizedBox(height: 12),
                   ...warnings.map(
@@ -432,7 +441,8 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _accentColor,
                   ),
-                  child: const Text("Save Anyway"),
+                  child: const Text("Save Anyway",
+                      style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
@@ -690,8 +700,7 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
       );
     }
 
-    final isNum =
-        field.type == CustomFieldType.number ||
+    final isNum = field.type == CustomFieldType.number ||
         field.type == CustomFieldType.currency;
     final isSerial = field.type == CustomFieldType.serial;
     final isFormula = field.type == CustomFieldType.formula;
@@ -715,8 +724,7 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
       inputIcon = Icons.currency_rupee;
     else if (field.type == CustomFieldType.number)
       inputIcon = Icons.dialpad;
-    else if (isFormula)
-      inputIcon = Icons.functions;
+    else if (isFormula) inputIcon = Icons.functions;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -732,9 +740,8 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
         keyboardType: isNum ? TextInputType.number : TextInputType.text,
 
         // --- AUTO NAVIGATION ---
-        textInputAction: isLastInput
-            ? TextInputAction.done
-            : TextInputAction.next,
+        textInputAction:
+            isLastInput ? TextInputAction.done : TextInputAction.next,
         onFieldSubmitted: (_) => _navigateRelative(field.name, 1),
 
         // -----------------------
@@ -745,9 +752,9 @@ class _DynamicEntrySheetState extends State<DynamicEntrySheet> {
 
         onTap: (isNum && !isSerial && !isFormula)
             ? () => _setActive(
-                _controllers[field.name]!,
-                _focusNodes[field.name]!,
-              )
+                  _controllers[field.name]!,
+                  _focusNodes[field.name]!,
+                )
             : () => setState(() => _isKeyboardVisible = false),
 
         decoration: InputDecoration(

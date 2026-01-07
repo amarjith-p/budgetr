@@ -1,3 +1,4 @@
+import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../../core/widgets/modern_loader.dart';
@@ -286,55 +287,89 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   }
 
   void _handleDeleteAccount(BuildContext context, ExpenseAccountModel account) {
-    showDialog(
+    showStatusSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0D1B2A),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.white.withOpacity(0.1))),
-        title: const Text("Delete Account?",
-            style: TextStyle(color: Colors.white)),
-        content: Text(
+      title: "Delete Account?",
+      message:
           "Are you sure you want to delete '${account.name}'? This will permanently delete the account and ALL its transactions.",
-          style: TextStyle(color: Colors.white.withOpacity(0.7)),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text("Cancel",
-                  style: TextStyle(color: Colors.white54))),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              setState(() {
-                _isLoading = true;
-                _accounts.removeWhere((a) => a.id == account.id);
-              });
+      icon: Icons.delete_sweep_sharp,
+      color: Colors.redAccent,
+      cancelButtonText: "Cancel",
+      onCancel: () {},
+      buttonText: "Delete",
+      onDismiss: () async {
+        setState(() {
+          _isLoading = true;
+          _accounts.removeWhere((a) => a.id == account.id);
+        });
 
-              try {
-                await ExpenseService().deleteAccount(account.id);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("Account deleted successfully"),
-                      backgroundColor: Colors.redAccent));
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text("Error: $e")));
-                }
-              } finally {
-                if (mounted) setState(() => _isLoading = false);
-              }
-            },
-            child: const Text("Delete",
-                style: TextStyle(
-                    color: Colors.redAccent, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+        try {
+          await ExpenseService().deleteAccount(account.id);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text("Account deleted successfully"),
+                backgroundColor: Colors.redAccent));
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text("Error: $e")));
+          }
+        } finally {
+          if (mounted) setState(() => _isLoading = false);
+        }
+      },
     );
+
+    // showDialog(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     backgroundColor: const Color(0xff0D1B2A),
+    //     shape: RoundedRectangleBorder(
+    //         borderRadius: BorderRadius.circular(16),
+    //         side: BorderSide(color: Colors.white.withOpacity(0.1))),
+    //     title: const Text("Delete Account?",
+    //         style: TextStyle(color: Colors.white)),
+    //     content: Text(
+    //       "Are you sure you want to delete '${account.name}'? This will permanently delete the account and ALL its transactions.",
+    //       style: TextStyle(color: Colors.white.withOpacity(0.7)),
+    //     ),
+    //     actions: [
+    //       TextButton(
+    //           onPressed: () => Navigator.pop(ctx),
+    //           child: const Text("Cancel",
+    //               style: TextStyle(color: Colors.white54))),
+    //       TextButton(
+    //         onPressed: () async {
+    //           Navigator.pop(ctx);
+    //           setState(() {
+    //             _isLoading = true;
+    //             _accounts.removeWhere((a) => a.id == account.id);
+    //           });
+
+    //           try {
+    //             await ExpenseService().deleteAccount(account.id);
+    //             if (mounted) {
+    //               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+    //                   content: Text("Account deleted successfully"),
+    //                   backgroundColor: Colors.redAccent));
+    //             }
+    //           } catch (e) {
+    //             if (mounted) {
+    //               ScaffoldMessenger.of(context)
+    //                   .showSnackBar(SnackBar(content: Text("Error: $e")));
+    //             }
+    //           } finally {
+    //             if (mounted) setState(() => _isLoading = false);
+    //           }
+    //         },
+    //         child: const Text("Delete",
+    //             style: TextStyle(
+    //                 color: Colors.redAccent, fontWeight: FontWeight.bold)),
+    //       ),
+    //     ],
+    //   ),
+    // );
   }
 
   Widget _buildEmptyState() {

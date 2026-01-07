@@ -1,3 +1,4 @@
+import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -30,34 +31,48 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
   final DateFormat _dateFormat = DateFormat('dd MMM yyyy');
 
   Future<void> _deleteRecord(String id) async {
-    bool confirm =
-        await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: BudgetrColors.cardSurface,
-            title: Text('Delete Record?', style: BudgetrStyles.h2),
-            content: Text('This cannot be undone.', style: BudgetrStyles.body),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text(
-                  'Delete',
-                  style: TextStyle(color: BudgetrColors.error),
-                ),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    // bool confirm = await showDialog(
+    //       context: context,
+    //       builder: (ctx) => AlertDialog(
+    //         backgroundColor: BudgetrColors.cardSurface,
+    //         title: Text('Delete Record?', style: BudgetrStyles.h2),
+    //         content: Text('This cannot be undone.', style: BudgetrStyles.body),
+    //         actions: [
+    //           TextButton(
+    //             onPressed: () => Navigator.pop(ctx, false),
+    //             child: const Text(
+    //               'Cancel',
+    //               style: TextStyle(color: Colors.white70),
+    //             ),
+    //           ),
+    //           TextButton(
+    //             onPressed: () => Navigator.pop(ctx, true),
+    //             child: const Text(
+    //               'Delete',
+    //               style: TextStyle(color: BudgetrColors.error),
+    //             ),
+    //           ),
+    //         ],
+    //       ),
+    //     ) ??
+    //     false;
 
-    if (confirm) await _netWorthService.deleteNetWorthRecord(id);
+    // if (confirm) await _netWorthService.deleteNetWorthRecord(id);
+
+    showStatusSheet(
+      context: context,
+      title: "Delete Record?",
+      message:
+          "Are you sure you want to remove this transaction? This action cannot be undone.",
+      icon: Icons.delete_sweep_sharp,
+      color: Colors.redAccent,
+      cancelButtonText: "Cancel",
+      onCancel: () {},
+      buttonText: "Delete",
+      onDismiss: () async {
+        await _netWorthService.deleteNetWorthRecord(id);
+      },
+    );
   }
 
   void _showInputSheet() {
@@ -155,11 +170,10 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color:
-                                    (growth >= 0
-                                            ? BudgetrColors.success
-                                            : BudgetrColors.error)
-                                        .withOpacity(0.2),
+                                color: (growth >= 0
+                                        ? BudgetrColors.success
+                                        : BudgetrColors.error)
+                                    .withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
@@ -294,8 +308,8 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                                       color: diff > 0
                                           ? BudgetrColors.success
                                           : (diff < 0
-                                                ? BudgetrColors.error
-                                                : Colors.white30),
+                                              ? BudgetrColors.error
+                                              : Colors.white30),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
                                     ),

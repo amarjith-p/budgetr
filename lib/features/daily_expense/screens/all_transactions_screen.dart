@@ -1,3 +1,4 @@
+import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
@@ -145,28 +146,43 @@ class _AllTransactionsScreenState extends State<AllTransactionsScreen> {
 
   Future<void> _handleDelete(
       BuildContext context, ExpenseTransactionModel txn) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF1B263B),
-        title: const Text("Delete Transaction?",
-            style: TextStyle(color: Colors.white)),
-        content: const Text("This will revert the balance on the account.",
-            style: TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(c, false),
-              child: const Text("Cancel")),
-          TextButton(
-              onPressed: () => Navigator.pop(c, true),
-              child: const Text("Delete",
-                  style: TextStyle(color: Colors.redAccent))),
-        ],
-      ),
-    );
+    // final confirm = await showDialog<bool>(
+    //   context: context,
+    //   builder: (c) => AlertDialog(
+    //     backgroundColor: const Color(0xFF1B263B),
+    //     title: const Text("Delete Transaction?",
+    //         style: TextStyle(color: Colors.white)),
+    //     content: const Text("This will revert the balance on the account.",
+    //         style: TextStyle(color: Colors.white70)),
+    //     actions: [
+    //       TextButton(
+    //           onPressed: () => Navigator.pop(c, false),
+    //           child: const Text("Cancel")),
+    //       TextButton(
+    //           onPressed: () => Navigator.pop(c, true),
+    //           child: const Text("Delete",
+    //               style: TextStyle(color: Colors.redAccent))),
+    //     ],
+    //   ),
+    // );
 
-    if (confirm == true) {
-      await _service.deleteTransaction(txn);
-    }
+    // if (confirm == true) {
+    //   await _service.deleteTransaction(txn);
+    // }
+
+    showStatusSheet(
+      context: context,
+      title: "Delete Transaction?",
+      message:
+          "Are you sure you want to remove this transaction? This action cannot be undone.",
+      icon: Icons.delete_sweep_sharp,
+      color: Colors.redAccent,
+      cancelButtonText: "Cancel",
+      onCancel: () {},
+      buttonText: "Delete",
+      onDismiss: () async {
+        await _service.deleteTransaction(txn);
+      },
+    );
   }
 }

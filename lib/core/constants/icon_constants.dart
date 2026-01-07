@@ -68,6 +68,10 @@ class IconConstants {
         'mastercard',
         'payment',
       ]),
+      IconMetadata(Icons.store, ['business', 'shop', 'store', 'trade']),
+      IconMetadata(Icons.trending_up, ['growth', 'invest', 'profit', 'stocks']),
+      IconMetadata(Icons.replay, ['refund', 'return', 'back']),
+      IconMetadata(Icons.sell, ['sold', 'sale', 'scrap']),
       IconMetadata(Icons.qr_code_scanner, [
         'upi',
         'scan',
@@ -149,7 +153,6 @@ class IconConstants {
       IconMetadata(Icons.payments, ['cash', 'pay', 'transaction']),
       IconMetadata(Icons.request_quote, ['bill', 'invoice', 'estimate']),
     ]),
-
     IconGroup('Food & Drink', [
       IconMetadata(Icons.restaurant, [
         'food',
@@ -244,7 +247,6 @@ class IconConstants {
       IconMetadata(Icons.delivery_dining, ['delivery', 'food', 'scooter']),
       IconMetadata(Icons.bakery_dining, ['bread', 'bun', 'toast', 'bakery']),
     ]),
-
     IconGroup('Travel & Transport', [
       IconMetadata(Icons.local_taxi, [
         'auto',
@@ -320,7 +322,6 @@ class IconConstants {
         'comfort',
       ]),
     ]),
-
     IconGroup('Home & Utilities', [
       IconMetadata(Icons.home, ['house', 'rent', 'emi', 'home', 'ghar']),
       IconMetadata(Icons.lightbulb, [
@@ -330,6 +331,9 @@ class IconConstants {
         'bill',
         'current',
       ]),
+      IconMetadata(
+          Icons.family_restroom, ['family', 'kids', 'parents', 'group']),
+      IconMetadata(Icons.add_circle_outline, ['other', 'add', 'extra']),
       IconMetadata(Icons.water_drop, ['water', 'paani', 'tanker', 'bill']),
       IconMetadata(Icons.wifi, [
         'internet',
@@ -381,7 +385,6 @@ class IconConstants {
       IconMetadata(Icons.pest_control, ['pest', 'insects', 'spray']),
       IconMetadata(Icons.solar_power, ['solar', 'energy', 'green']),
     ]),
-
     IconGroup('Health & Personal', [
       IconMetadata(Icons.medical_services, [
         'doctor',
@@ -430,7 +433,6 @@ class IconConstants {
       ]),
       IconMetadata(Icons.self_improvement, ['yoga', 'meditation', 'peace']),
     ]),
-
     IconGroup('Education & Work', [
       IconMetadata(Icons.school, [
         'school',
@@ -453,7 +455,6 @@ class IconConstants {
       IconMetadata(Icons.engineering, ['engineer', 'work', 'technical']),
       IconMetadata(Icons.psychology, ['learning', 'brain', 'skill']),
     ]),
-
     IconGroup('Entertainment', [
       IconMetadata(Icons.movie, [
         'movie',
@@ -485,7 +486,6 @@ class IconConstants {
       IconMetadata(Icons.pool, ['swim', 'water', 'sport']),
       IconMetadata(Icons.theater_comedy, ['comedy', 'show', 'event']),
     ]),
-
     IconGroup('Miscellaneous', [
       IconMetadata(Icons.temple_hindu, [
         'puja',

@@ -1,4 +1,5 @@
 import 'package:budget/core/widgets/modern_loader.dart';
+import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:budget/features/settlement/screens/settlement_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -304,44 +305,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleDeleteRecord(FinancialRecord record) async {
-    final bool? confirm = await showDialog<bool>(
+    // final bool? confirm = await showDialog<bool>(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     title: const Text("Delete Budget?"),
+    //     content: Text(
+    //       "Are you sure you want to delete the budget for ${DateFormat('MMMM yyyy').format(DateTime(record.year, record.month))}? This cannot be undone.",
+    //     ),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.pop(ctx, false),
+    //         child: const Text("Cancel"),
+    //       ),
+    //       TextButton(
+    //         onPressed: () => Navigator.pop(ctx, true),
+    //         child: const Text(
+    //           "Delete",
+    //           style: TextStyle(
+    //             color: Colors.redAccent,
+    //             fontWeight: FontWeight.bold,
+    //           ),
+    //         ),
+    //       ),
+    //     ],
+    //   ),
+    // );
+
+    // if (confirm != true) return;
+
+    // await _dashboardService.deleteFinancialRecord(record.id);
+    // _checkSettlementStatus(); // Refresh settlement status
+    // if (mounted) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(
+    //       content: Text("Budget & Settlement data deleted."),
+    //       backgroundColor: Colors.redAccent,
+    //     ),
+    //   );
+    // }
+    showStatusSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Delete Budget?"),
-        content: Text(
-          "Are you sure you want to delete the budget for ${DateFormat('MMMM yyyy').format(DateTime(record.year, record.month))}? This cannot be undone.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              "Delete",
-              style: TextStyle(
-                color: Colors.redAccent,
-                fontWeight: FontWeight.bold,
-              ),
+      title: "Delete Budget?",
+      message:
+          "Are you sure you want to delete the budget for ${DateFormat('MMMM yyyy').format(DateTime(record.year, record.month))}? \nThis cannot be undone.",
+      icon: Icons.delete_sweep_sharp,
+      color: Colors.redAccent,
+      cancelButtonText: "Cancel",
+      onCancel: () {},
+      buttonText: "Delete",
+      onDismiss: () async {
+        await _dashboardService.deleteFinancialRecord(record.id);
+        _checkSettlementStatus(); // Refresh settlement status
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Budget & Settlement data deleted."),
+              backgroundColor: Colors.redAccent,
             ),
-          ),
-        ],
-      ),
+          );
+        }
+      },
     );
-
-    if (confirm != true) return;
-
-    await _dashboardService.deleteFinancialRecord(record.id);
-    _checkSettlementStatus(); // Refresh settlement status
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Budget & Settlement data deleted."),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
   }
 
   @override
@@ -407,8 +431,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     _isMonthSettled)
                                 ? Icons.lock_outline
                                 : Icons.calendar_month,
-                            color:
-                                (date.year == _currentDate.year &&
+                            color: (date.year == _currentDate.year &&
                                     date.month == _currentDate.month &&
                                     _isMonthSettled)
                                 ? Colors.orangeAccent
@@ -536,8 +559,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       MaterialPageRoute(
                                         builder: (context) =>
                                             MonthlySpendingScreen(
-                                              record: currentRecord,
-                                            ),
+                                          record: currentRecord,
+                                        ),
                                       ),
                                     );
                                   },
@@ -595,9 +618,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   // Change style if closed
-                                  color: _isMonthSettled
-                                      ? Colors.grey[800]
-                                      : null,
+                                  color:
+                                      _isMonthSettled ? Colors.grey[800] : null,
                                   gradient: _isMonthSettled
                                       ? null
                                       : BudgetrColors.primaryGradient,
@@ -619,8 +641,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       _isMonthSettled
                                           ? Icons.lock_outline
                                           : (hasData
-                                                ? Icons.edit_outlined
-                                                : Icons.add_rounded),
+                                              ? Icons.edit_outlined
+                                              : Icons.add_rounded),
                                       color: _isMonthSettled
                                           ? Colors.white54
                                           : Colors.white,
@@ -630,8 +652,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       _isMonthSettled
                                           ? "Closed Budget"
                                           : (hasData
-                                                ? "Edit Budget"
-                                                : "Create Budget"),
+                                              ? "Edit Budget"
+                                              : "Create Budget"),
                                       style: TextStyle(
                                         color: _isMonthSettled
                                             ? Colors.white54

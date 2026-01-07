@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import '../../../core/models/transaction_category_model.dart';
 import '../../../core/services/category_service.dart';
@@ -46,62 +47,106 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
 
   // --- Logic to Restore Defaults (Factory Reset) ---
   Future<void> _handleRestoreDefaults() async {
-    final bool? confirm = await showDialog<bool>(
+    // final bool? confirm = await showDialog<bool>(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     title: const Text("Reset to Defaults?"),
+    //     content: const Text(
+    //       "This will DELETE all your custom categories and revert any changes made to default ones.\n\nAre you sure you want to start fresh?",
+    //     ),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.pop(ctx, false),
+    //         child: const Text("Cancel"),
+    //       ),
+    //       ElevatedButton(
+    //         onPressed: () => Navigator.pop(ctx, true),
+    //         style: ElevatedButton.styleFrom(
+    //           backgroundColor: BudgetrColors.error,
+    //           foregroundColor: Colors.white,
+    //         ),
+    //         child: const Text("Reset All"),
+    //       ),
+    //     ],
+    //   ),
+    // );
+
+    // if (confirm != true) return;
+
+    // if (mounted) {
+    //   showDialog(
+    //     context: context,
+    //     barrierDismissible: false,
+    //     builder: (ctx) => const Center(child: ModernLoader()),
+    //   );
+    // }
+
+    // try {
+    //   await _service.resetToDefaults();
+    //   if (mounted) {
+    //     Navigator.pop(context); // Close Loader
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       const SnackBar(
+    //         content: Text("All categories reset to system defaults."),
+    //         backgroundColor: BudgetrColors.success,
+    //       ),
+    //     );
+    //   }
+    // } catch (e) {
+    //   if (mounted) {
+    //     Navigator.pop(context);
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       SnackBar(
+    //         content: Text("Error: $e"),
+    //         backgroundColor: BudgetrColors.error,
+    //       ),
+    //     );
+    //   }
+    // }
+
+    showStatusSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Reset to Defaults?"),
-        content: const Text(
+      title: "Reset to Defaults?",
+      message:
           "This will DELETE all your custom categories and revert any changes made to default ones.\n\nAre you sure you want to start fresh?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: BudgetrColors.error,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text("Reset All"),
-          ),
-        ],
-      ),
+      icon: Icons.restore,
+      color: Colors.redAccent,
+      cancelButtonText: "Cancel",
+      onCancel: () {},
+      buttonText: "Reset All",
+      onDismiss: () async {
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => const Center(child: ModernLoader()),
+          );
+        }
+
+        try {
+          await _service.resetToDefaults();
+          if (mounted) {
+            Navigator.pop(context); // Close Loader
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("All categories reset to system defaults."),
+                backgroundColor: BudgetrColors.success,
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Error: $e"),
+                backgroundColor: BudgetrColors.error,
+              ),
+            );
+          }
+        }
+      },
     );
-
-    if (confirm != true) return;
-
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => const Center(child: ModernLoader()),
-      );
-    }
-
-    try {
-      await _service.resetToDefaults();
-      if (mounted) {
-        Navigator.pop(context); // Close Loader
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("All categories reset to system defaults."),
-            backgroundColor: BudgetrColors.success,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Error: $e"),
-            backgroundColor: BudgetrColors.error,
-          ),
-        );
-      }
-    }
   }
 
   @override
@@ -176,9 +221,8 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
                     final expenses = allCategories
                         .where((c) => c.type == 'Expense')
                         .toList();
-                    final income = allCategories
-                        .where((c) => c.type == 'Income')
-                        .toList();
+                    final income =
+                        allCategories.where((c) => c.type == 'Income').toList();
 
                     return TabBarView(
                       controller: _tabController,
@@ -265,33 +309,48 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen>
   }
 
   void _confirmDelete(BuildContext context, String id) {
-    showDialog(
+    // showDialog(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     title: const Text("Delete Category?"),
+    //     content: const Text(
+    //       "This will remove the category from selection. Existing transactions will remain unaffected.",
+    //     ),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.pop(ctx),
+    //         child: const Text("Cancel"),
+    //       ),
+    //       TextButton(
+    //         onPressed: () {
+    //           _service.deleteCategory(id);
+    //           Navigator.pop(ctx);
+    //         },
+    //         child: const Text(
+    //           "Delete",
+    //           style: TextStyle(
+    //             color: BudgetrColors.error,
+    //             fontWeight: FontWeight.bold,
+    //           ),
+    //         ),
+    //       ),
+    //     ],
+    //   ),
+    // );
+
+    showStatusSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Delete Category?"),
-        content: const Text(
-          "This will remove the category from selection. Existing transactions will remain unaffected.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              _service.deleteCategory(id);
-              Navigator.pop(ctx);
-            },
-            child: const Text(
-              "Delete",
-              style: TextStyle(
-                color: BudgetrColors.error,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+      title: "Delete Category?",
+      message:
+          "This will remove the category from selection.\nExisting transactions will remain unaffected.",
+      icon: Icons.delete_forever,
+      color: Colors.redAccent,
+      cancelButtonText: "Cancel",
+      onCancel: () {},
+      buttonText: "Delete",
+      onDismiss: () async {
+        _service.deleteCategory(id);
+      },
     );
   }
 
@@ -539,7 +598,6 @@ class _ModernAddEditCategorySheetState
                       style: BudgetrStyles.h2,
                     ),
                     const SizedBox(height: 30),
-
                     GestureDetector(
                       onTap: () async {
                         _nameNode.unfocus();
@@ -600,7 +658,6 @@ class _ModernAddEditCategorySheetState
                       ),
                     ),
                     const SizedBox(height: 30),
-
                     TextFormField(
                       key: _nameFieldKey,
                       focusNode: _nameNode,
@@ -635,7 +692,6 @@ class _ModernAddEditCategorySheetState
                       },
                     ),
                     const SizedBox(height: 24),
-
                     if (widget.category == null) ...[
                       Container(
                         padding: const EdgeInsets.all(4),
@@ -652,7 +708,6 @@ class _ModernAddEditCategorySheetState
                       ),
                       const SizedBox(height: 30),
                     ],
-
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
@@ -664,7 +719,6 @@ class _ModernAddEditCategorySheetState
                       ),
                     ),
                     const SizedBox(height: 12),
-
                     TextFormField(
                       key: _subFieldKey,
                       focusNode: _subNode,
@@ -697,7 +751,6 @@ class _ModernAddEditCategorySheetState
                       onFieldSubmitted: (_) => _addSubCategory(),
                     ),
                     const SizedBox(height: 16),
-
                     SizedBox(
                       width: double.infinity,
                       child: Wrap(
@@ -735,7 +788,6 @@ class _ModernAddEditCategorySheetState
                             .toList(),
                       ),
                     ),
-
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -999,7 +1051,6 @@ class _CategoryCardState extends State<_CategoryCard> {
                 ),
               ],
             ),
-
             AnimatedSize(
               duration: const Duration(milliseconds: 300),
               curve: Curves.fastOutSlowIn,
@@ -1014,7 +1065,6 @@ class _CategoryCardState extends State<_CategoryCard> {
                           const SizedBox(height: 20),
                           const Divider(color: Colors.white10, height: 1),
                           const SizedBox(height: 16),
-
                           if (widget.category.subCategories.isEmpty)
                             Text(
                               "No sub-categories defined.",
@@ -1057,7 +1107,6 @@ class _CategoryCardState extends State<_CategoryCard> {
                                   )
                                   .toList(),
                             ),
-
                           const SizedBox(height: 24),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,

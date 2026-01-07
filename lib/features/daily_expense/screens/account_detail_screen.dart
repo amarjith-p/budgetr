@@ -1,3 +1,4 @@
+import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
@@ -59,90 +60,166 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
       return;
     }
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xff1B263B),
-        title: const Text("Sync to Credit Tracker?",
-            style: TextStyle(color: Colors.white)),
-        content: Text(
+    showStatusSheet(
+        context: context,
+        title: "Sync to Credit Tracker?",
+        message:
             "This will move ${creditEntries.length} transactions to the Credit Tracker.\n\nNote: Transfers will be linked. If you delete them in Credit Tracker, the Bank deduction will also be removed.",
-            style: const TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(c, false),
-              child: const Text("Cancel")),
-          TextButton(
-              onPressed: () => Navigator.pop(c, true),
-              child: const Text("Sync Now",
-                  style: TextStyle(color: Colors.cyanAccent))),
-        ],
-      ),
-    );
+        icon: Icons.sync_sharp,
+        color: Colors.cyanAccent,
+        cancelButtonText: "Cancel",
+        onCancel: () {},
+        buttonText: "Sync Now",
+        onDismiss: () async {
+          setState(() => _isLoading = true);
 
-    if (confirm != true) return;
+          try {
+            int successCount = 0;
 
-    setState(() => _isLoading = true);
+            for (var txn in creditEntries) {
+              String creditType = 'Expense';
+              String finalNotes = txn.notes;
+              String? linkedExpenseId;
 
-    try {
-      int successCount = 0;
+              if (txn.type == 'Transfer In' || txn.type == 'Income') {
+                creditType = 'Income';
+                final sourceTxn =
+                    await ExpenseService().findLinkedTransfer(txn);
+                if (sourceTxn != null) {
+                  linkedExpenseId = sourceTxn.id;
+                }
 
-      for (var txn in creditEntries) {
-        String creditType = 'Expense';
-        String finalNotes = txn.notes;
-        String? linkedExpenseId;
+                if (txn.type == 'Transfer In' &&
+                    txn.transferAccountBankName != null) {
+                  final sourceInfo =
+                      "Transfer from ${txn.transferAccountBankName} - ${txn.transferAccountName}";
+                  if (txn.notes.isEmpty) {
+                    finalNotes = sourceInfo;
+                  } else {
+                    finalNotes = "$sourceInfo. ${txn.notes}";
+                  }
+                }
+              }
 
-        if (txn.type == 'Transfer In' || txn.type == 'Income') {
-          creditType = 'Income';
-          final sourceTxn = await ExpenseService().findLinkedTransfer(txn);
-          if (sourceTxn != null) {
-            linkedExpenseId = sourceTxn.id;
-          }
+              final creditTxn = CreditTransactionModel(
+                id: '',
+                cardId: txn.linkedCreditCardId!,
+                amount: txn.amount,
+                date: txn.date,
+                bucket: txn.bucket,
+                type: creditType,
+                category: txn.category,
+                subCategory: txn.subCategory,
+                notes: finalNotes,
+                linkedExpenseId: linkedExpenseId,
+              );
 
-          if (txn.type == 'Transfer In' &&
-              txn.transferAccountBankName != null) {
-            final sourceInfo =
-                "Transfer from ${txn.transferAccountBankName} - ${txn.transferAccountName}";
-            if (txn.notes.isEmpty) {
-              finalNotes = sourceInfo;
-            } else {
-              finalNotes = "$sourceInfo. ${txn.notes}";
+              await CreditService().addTransaction(creditTxn);
+              await ExpenseService().deleteTransactionSingle(txn);
+              successCount++;
             }
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content:
+                      Text("Successfully synced $successCount transactions!"),
+                  backgroundColor: Colors.green));
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text("Sync Error: $e")));
+            }
+          } finally {
+            if (mounted) setState(() => _isLoading = false);
           }
-        }
-
-        final creditTxn = CreditTransactionModel(
-          id: '',
-          cardId: txn.linkedCreditCardId!,
-          amount: txn.amount,
-          date: txn.date,
-          bucket: txn.bucket,
-          type: creditType,
-          category: txn.category,
-          subCategory: txn.subCategory,
-          notes: finalNotes,
-          linkedExpenseId: linkedExpenseId,
-        );
-
-        await CreditService().addTransaction(creditTxn);
-        await ExpenseService().deleteTransactionSingle(txn);
-        successCount++;
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("Successfully synced $successCount transactions!"),
-            backgroundColor: Colors.green));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Sync Error: $e")));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+        });
   }
+
+  //   final confirm = await showDialog<bool>(
+  //     context: context,
+  //     builder: (c) => AlertDialog(
+  //       backgroundColor: const Color(0xff1B263B),
+  //       title: const Text("Sync to Credit Tracker?",
+  //           style: TextStyle(color: Colors.white)),
+  //       content: Text(
+  //           "This will move ${creditEntries.length} transactions to the Credit Tracker.\n\nNote: Transfers will be linked. If you delete them in Credit Tracker, the Bank deduction will also be removed.",
+  //           style: const TextStyle(color: Colors.white70)),
+  //       actions: [
+  //         TextButton(
+  //             onPressed: () => Navigator.pop(c, false),
+  //             child: const Text("Cancel")),
+  //         TextButton(
+  //             onPressed: () => Navigator.pop(c, true),
+  //             child: const Text("Sync Now",
+  //                 style: TextStyle(color: Colors.cyanAccent))),
+  //       ],
+  //     ),
+  //   );
+
+  //   if (confirm != true) return;
+
+  //   setState(() => _isLoading = true);
+
+  //   try {
+  //     int successCount = 0;
+
+  //     for (var txn in creditEntries) {
+  //       String creditType = 'Expense';
+  //       String finalNotes = txn.notes;
+  //       String? linkedExpenseId;
+
+  //       if (txn.type == 'Transfer In' || txn.type == 'Income') {
+  //         creditType = 'Income';
+  //         final sourceTxn = await ExpenseService().findLinkedTransfer(txn);
+  //         if (sourceTxn != null) {
+  //           linkedExpenseId = sourceTxn.id;
+  //         }
+
+  //         if (txn.type == 'Transfer In' &&
+  //             txn.transferAccountBankName != null) {
+  //           final sourceInfo =
+  //               "Transfer from ${txn.transferAccountBankName} - ${txn.transferAccountName}";
+  //           if (txn.notes.isEmpty) {
+  //             finalNotes = sourceInfo;
+  //           } else {
+  //             finalNotes = "$sourceInfo. ${txn.notes}";
+  //           }
+  //         }
+  //       }
+
+  //       final creditTxn = CreditTransactionModel(
+  //         id: '',
+  //         cardId: txn.linkedCreditCardId!,
+  //         amount: txn.amount,
+  //         date: txn.date,
+  //         bucket: txn.bucket,
+  //         type: creditType,
+  //         category: txn.category,
+  //         subCategory: txn.subCategory,
+  //         notes: finalNotes,
+  //         linkedExpenseId: linkedExpenseId,
+  //       );
+
+  //       await CreditService().addTransaction(creditTxn);
+  //       await ExpenseService().deleteTransactionSingle(txn);
+  //       successCount++;
+  //     }
+
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+  //           content: Text("Successfully synced $successCount transactions!"),
+  //           backgroundColor: Colors.green));
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context)
+  //           .showSnackBar(SnackBar(content: Text("Sync Error: $e")));
+  //     }
+  //   } finally {
+  //     if (mounted) setState(() => _isLoading = false);
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -329,50 +406,80 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
 
   void _handleDeleteTransaction(
       BuildContext context, ExpenseTransactionModel txn) {
-    showDialog(
+    showStatusSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0D1B2A),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.white.withOpacity(0.1))),
-        title: const Text("Delete Transaction?",
-            style: TextStyle(color: Colors.white)),
-        content: Text(
-            "This will permanently remove the transaction and update your account balance.",
-            style: TextStyle(color: Colors.white.withOpacity(0.7))),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text("Cancel",
-                  style: TextStyle(color: Colors.white54))),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              setState(() => _isLoading = true);
-              try {
-                await ExpenseService().deleteTransaction(txn);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("Transaction deleted"),
-                      backgroundColor: Colors.redAccent));
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text("Error: $e")));
-                }
-              } finally {
-                if (mounted) setState(() => _isLoading = false);
-              }
-            },
-            child: const Text("Delete",
-                style: TextStyle(
-                    color: Colors.redAccent, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+      title: "Delete Transaction?",
+      message:
+          "Are you sure you want to remove this transaction? This action cannot be undone.",
+      icon: Icons.delete_sweep_sharp,
+      color: Colors.redAccent,
+      cancelButtonText: "Cancel",
+      onCancel: () {},
+      buttonText: "Delete",
+      onDismiss: () async {
+        setState(() => _isLoading = true);
+        try {
+          await ExpenseService().deleteTransaction(txn);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text("Transaction deleted"),
+                backgroundColor: Colors.redAccent));
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text("Error: $e")));
+          }
+        } finally {
+          if (mounted) setState(() => _isLoading = false);
+        }
+      },
     );
+
+    // showDialog(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     backgroundColor: const Color(0xff0D1B2A),
+    //     shape: RoundedRectangleBorder(
+    //         borderRadius: BorderRadius.circular(16),
+    //         side: BorderSide(color: Colors.white.withOpacity(0.1))),
+    //     title: const Text("Delete Transaction?",
+    //         style: TextStyle(color: Colors.white)),
+    //     content: Text(
+    //         "This will permanently remove the transaction and update your account balance.",
+    //         style: TextStyle(color: Colors.white.withOpacity(0.7))),
+    //     actions: [
+    //       TextButton(
+    //           onPressed: () => Navigator.pop(ctx),
+    //           child: const Text("Cancel",
+    //               style: TextStyle(color: Colors.white54))),
+    //       TextButton(
+    //         onPressed: () async {
+    //           Navigator.pop(ctx);
+    //           setState(() => _isLoading = true);
+    //           try {
+    //             await ExpenseService().deleteTransaction(txn);
+    //             if (mounted) {
+    //               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+    //                   content: Text("Transaction deleted"),
+    //                   backgroundColor: Colors.redAccent));
+    //             }
+    //           } catch (e) {
+    //             if (mounted) {
+    //               ScaffoldMessenger.of(context)
+    //                   .showSnackBar(SnackBar(content: Text("Error: $e")));
+    //             }
+    //           } finally {
+    //             if (mounted) setState(() => _isLoading = false);
+    //           }
+    //         },
+    //         child: const Text("Delete",
+    //             style: TextStyle(
+    //                 color: Colors.redAccent, fontWeight: FontWeight.bold)),
+    //       ),
+    //     ],
+    //   ),
+    // );
   }
 
   List<ExpenseTransactionModel> _applyFilters(
