@@ -1,3 +1,4 @@
+import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -32,39 +33,54 @@ class _NetWorthSplitsTabState extends State<NetWorthSplitsTab> {
   int? _filterMonth;
 
   Future<void> _deleteSplit(String id) async {
-    bool confirm =
-        await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF0D1B2A),
-            title: const Text(
-              'Delete Record?',
-              style: TextStyle(color: Colors.white),
-            ),
-            content: const Text(
-              'This cannot be undone.',
-              style: TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text(
-                  'Delete',
-                  style: TextStyle(color: Colors.redAccent),
-                ),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-    if (confirm) await _netWorthService.deleteNetWorthSplit(id);
+    // bool confirm =
+    //     await showDialog(
+    //       context: context,
+    //       builder: (ctx) => AlertDialog(
+    //         backgroundColor: const Color(0xFF0D1B2A),
+    //         title: const Text(
+    //           'Delete Record?',
+    //           style: TextStyle(color: Colors.white),
+    //         ),
+    //         content: const Text(
+    //           'This cannot be undone.',
+    //           style: TextStyle(color: Colors.white70),
+    //         ),
+    //         actions: [
+    //           TextButton(
+    //             onPressed: () => Navigator.pop(ctx, false),
+    //             child: const Text(
+    //               'Cancel',
+    //               style: TextStyle(color: Colors.white70),
+    //             ),
+    //           ),
+    //           TextButton(
+    //             onPressed: () => Navigator.pop(ctx, true),
+    //             child: const Text(
+    //               'Delete',
+    //               style: TextStyle(color: Colors.redAccent),
+    //             ),
+    //           ),
+    //         ],
+    //       ),
+    //     ) ??
+    //     false;
+    // if (confirm) await _netWorthService.deleteNetWorthSplit(id);
+
+    showStatusSheet(
+      context: context,
+      title: "Delete Record?",
+      message:
+          "Are you sure you want to remove this transaction? This action cannot be undone.",
+      icon: Icons.delete_sweep_sharp,
+      color: Colors.redAccent,
+      cancelButtonText: "Cancel",
+      onCancel: () {},
+      buttonText: "Delete",
+      onDismiss: () async {
+        await _netWorthService.deleteNetWorthSplit(id);
+      },
+    );
   }
 
   @override

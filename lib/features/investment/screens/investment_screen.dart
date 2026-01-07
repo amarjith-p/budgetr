@@ -1,3 +1,4 @@
+import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -279,34 +280,49 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
   }
 
   Future<void> _deleteRecord(String id) async {
-    final confirm = await showDialog<bool>(
+    // final confirm = await showDialog<bool>(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     backgroundColor: const Color(0xff0D1B2A),
+    //     title: const Text(
+    //       "Delete Asset?",
+    //       style: TextStyle(color: Colors.white),
+    //     ),
+    //     content: const Text(
+    //       "This action cannot be undone.",
+    //       style: TextStyle(color: Colors.white70),
+    //     ),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.pop(ctx, false),
+    //         child: const Text("Cancel"),
+    //       ),
+    //       TextButton(
+    //         onPressed: () => Navigator.pop(ctx, true),
+    //         child: const Text(
+    //           "Delete",
+    //           style: TextStyle(color: Colors.redAccent),
+    //         ),
+    //       ),
+    //     ],
+    //   ),
+    // );
+    // if (confirm == true) await _service.deleteInvestment(id);
+
+    showStatusSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xff0D1B2A),
-        title: const Text(
-          "Delete Asset?",
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          "This action cannot be undone.",
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              "Delete",
-              style: TextStyle(color: Colors.redAccent),
-            ),
-          ),
-        ],
-      ),
+      title: "Delete Asset?",
+      message:
+          "Are you sure you want to remove this Asset? \nThis action cannot be undone.",
+      icon: Icons.delete_sweep_sharp,
+      color: Colors.redAccent,
+      cancelButtonText: "Cancel",
+      onCancel: () {},
+      buttonText: "Delete",
+      onDismiss: () async {
+        await _service.deleteInvestment(id);
+      },
     );
-    if (confirm == true) await _service.deleteInvestment(id);
   }
 
   // --- Filter Sheet ---

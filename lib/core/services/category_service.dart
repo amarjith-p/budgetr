@@ -125,7 +125,7 @@ class CategoryService {
         'Baby Supplies',
         'Toys',
       ],
-      'icon': Icons.people.codePoint,
+      'icon': Icons.family_restroom.codePoint,
     },
     'Pet Care': {
       'subs': [

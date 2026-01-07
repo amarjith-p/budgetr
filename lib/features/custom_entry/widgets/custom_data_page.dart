@@ -1,4 +1,5 @@
 import 'package:budget/core/widgets/modern_loader.dart';
+import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -48,8 +49,7 @@ class _CustomDataPageState extends State<CustomDataPage>
             double numVal = 0.0;
             if (val is num)
               numVal = val.toDouble();
-            else if (val is String)
-              numVal = double.tryParse(val) ?? 0.0;
+            else if (val is String) numVal = double.tryParse(val) ?? 0.0;
             String replacement = numVal < 0 ? "($numVal)" : numVal.toString();
             expr = expr.replaceAll(placeholder, replacement);
           }
@@ -125,8 +125,7 @@ class _CustomDataPageState extends State<CustomDataPage>
           stack.add(a - b);
         else if (t == '*')
           stack.add(a * b);
-        else if (t == '/')
-          stack.add(b == 0 ? 0 : a / b);
+        else if (t == '/') stack.add(b == 0 ? 0 : a / b);
       }
     }
     return stack.isNotEmpty ? stack.last : 0.0;
@@ -317,7 +316,6 @@ class _CustomDataPageState extends State<CustomDataPage>
                               ),
                             ),
                           ),
-
                         Expanded(
                           flex: 2,
                           child: ElevatedButton(
@@ -370,81 +368,108 @@ class _CustomDataPageState extends State<CustomDataPage>
   }
 
   Future<void> _deleteSheet() async {
-    bool confirm =
-        await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF0D1B2A),
-            title: const Text(
-              'Delete Sheet?',
-              style: TextStyle(color: Colors.white),
-            ),
-            content: Text(
-              'Are you sure you want to delete "${widget.template.name}"?\n\nThis will permanently delete the sheet structure AND all its entered data.',
-              style: const TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text(
-                  'Delete Forever',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    // bool confirm = await showDialog(
+    //       context: context,
+    //       builder: (ctx) => AlertDialog(
+    //         backgroundColor: const Color(0xFF0D1B2A),
+    //         title: const Text(
+    //           'Delete Sheet?',
+    //           style: TextStyle(color: Colors.white),
+    //         ),
+    //         content: Text(
+    //           'Are you sure you want to delete "${widget.template.name}"?\n\nThis will permanently delete the sheet structure AND all its entered data.',
+    //           style: const TextStyle(color: Colors.white70),
+    //         ),
+    //         actions: [
+    //           TextButton(
+    //             onPressed: () => Navigator.pop(ctx, false),
+    //             child: const Text(
+    //               'Cancel',
+    //               style: TextStyle(color: Colors.white70),
+    //             ),
+    //           ),
+    //           TextButton(
+    //             onPressed: () => Navigator.pop(ctx, true),
+    //             child: const Text(
+    //               'Delete Forever',
+    //               style: TextStyle(color: Colors.red),
+    //             ),
+    //           ),
+    //         ],
+    //       ),
+    //     ) ??
+    //     false;
 
-    if (confirm) {
-      await _service.deleteCustomTemplate(widget.template.id);
-    }
+    // if (confirm) {
+    //   await _service.deleteCustomTemplate(widget.template.id);
+    // }
+    showStatusSheet(
+      context: context,
+      title: "Delete Sheet?",
+      message:
+          "Are you sure you want to delete '${widget.template.name}'?\nThis will permanently delete the sheet structure and all its entered data.",
+      icon: Icons.delete_sweep_sharp,
+      color: Colors.redAccent,
+      cancelButtonText: "Cancel",
+      onCancel: () {},
+      buttonText: "Delete",
+      onDismiss: () async {
+        await _service.deleteCustomTemplate(widget.template.id);
+      },
+    );
   }
 
   Future<void> _deleteRecord(String id) async {
-    bool confirm =
-        await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF0D1B2A),
-            title: const Text(
-              'Delete Entry?',
-              style: TextStyle(color: Colors.white),
-            ),
-            content: const Text(
-              'This cannot be undone.',
-              style: TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text(
-                  'Delete',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    // bool confirm =
+    //     await showDialog(
+    //       context: context,
+    //       builder: (ctx) => AlertDialog(
+    //         backgroundColor: const Color(0xFF0D1B2A),
+    //         title: const Text(
+    //           'Delete Entry?',
+    //           style: TextStyle(color: Colors.white),
+    //         ),
+    //         content: const Text(
+    //           'This cannot be undone.',
+    //           style: TextStyle(color: Colors.white70),
+    //         ),
+    //         actions: [
+    //           TextButton(
+    //             onPressed: () => Navigator.pop(ctx, false),
+    //             child: const Text(
+    //               'Cancel',
+    //               style: TextStyle(color: Colors.white70),
+    //             ),
+    //           ),
+    //           TextButton(
+    //             onPressed: () => Navigator.pop(ctx, true),
+    //             child: const Text(
+    //               'Delete',
+    //               style: TextStyle(color: Colors.red),
+    //             ),
+    //           ),
+    //         ],
+    //       ),
+    //     ) ??
+    //     false;
 
-    if (confirm) {
-      await _service.deleteCustomRecord(id);
-    }
+    // if (confirm) {
+    //   await _service.deleteCustomRecord(id);
+    // }
+    showStatusSheet(
+      context: context,
+      title: "Delete Entry?",
+      message:
+          "Are you sure you want to remove this entry?\nThis action cannot be undone.",
+      icon: Icons.delete_sweep_sharp,
+      color: Colors.redAccent,
+      cancelButtonText: "Cancel",
+      onCancel: () {},
+      buttonText: "Delete",
+      onDismiss: () async {
+        await _service.deleteCustomRecord(id);
+      },
+    );
   }
 
   @override
@@ -554,7 +579,6 @@ class _CustomDataPageState extends State<CustomDataPage>
                       ],
                     ),
                   ),
-
                   if (widget.template.xAxisField != null &&
                       widget.template.yAxisField != null &&
                       records.isNotEmpty) ...[
@@ -619,7 +643,6 @@ class _CustomDataPageState extends State<CustomDataPage>
                       ),
                     ),
                   ],
-
                   if (records.isNotEmpty)
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -712,8 +735,7 @@ class _CustomDataPageState extends State<CustomDataPage>
                                     }
 
                                     // Visual Cue for Stale Cell
-                                    bool highlightCell =
-                                        isStale &&
+                                    bool highlightCell = isStale &&
                                         f.type == CustomFieldType.formula;
 
                                     return DataCell(
@@ -781,8 +803,8 @@ class _CustomDataPageState extends State<CustomDataPage>
                                 cells: [
                                   ...widget.template.fields.map((f) {
                                     if (totals.containsKey(f.name)) {
-                                      String amount = totals[f.name]!
-                                          .toStringAsFixed(2);
+                                      String amount =
+                                          totals[f.name]!.toStringAsFixed(2);
                                       if (f.type == CustomFieldType.currency) {
                                         amount =
                                             '${f.currencySymbol ?? '₹'}$amount';
@@ -865,8 +887,7 @@ class _CustomDataPageState extends State<CustomDataPage>
       var raw = sorted[i].data[yKey];
       if (raw is num)
         val = raw.toDouble();
-      else if (raw is String)
-        val = double.tryParse(raw) ?? 0.0;
+      else if (raw is String) val = double.tryParse(raw) ?? 0.0;
 
       spots.add(FlSpot(i.toDouble(), val));
       if (val < minY) minY = val;
@@ -932,9 +953,8 @@ class _CustomDataPageState extends State<CustomDataPage>
                   String xLabel = (d is DateTime)
                       ? DateFormat('dd MMM yyyy').format(d)
                       : d.toString();
-                  Color valColor = barSpot.y > 0
-                      ? _positiveColor
-                      : _negativeColor;
+                  Color valColor =
+                      barSpot.y > 0 ? _positiveColor : _negativeColor;
 
                   return LineTooltipItem(
                     '$xLabel\n',
