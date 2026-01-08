@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/firebase_constants.dart';
-import '../../../core/models/percentage_config_model.dart';
+import '../../../core/models/financial_record_model.dart';
 import '../../daily_expense/models/expense_models.dart';
 import '../../credit_tracker/models/credit_models.dart'; // Imported Credit Models
 import '../managers/budget_guardian_manager.dart';
@@ -43,56 +43,34 @@ class BudgetNotificationService {
       final startOfMonth = DateTime(now.year, now.month, 1);
       final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
 
-      // 3. Fetch Total Income (The Baseline)
-      // Income is generally tracked in expense_transactions (Salary, etc.)
-      final incomeQuery = await _db
-          .collection(FirebaseConstants.expenseTransactions)
-          .where('type', isEqualTo: 'Income')
-          .where('date',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
-          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
+      // 3. Fetch Financial Record for the Current Month
+      // Instead of calculating from Income * Percentage, we fetch the fixed record.
+      final recordQuery = await _db
+          .collection(FirebaseConstants.financialRecords)
+          .where('year', isEqualTo: now.year)
+          .where('month', isEqualTo: now.month)
+          .limit(1)
           .get();
 
-      double totalIncome = 0.0;
-      for (var doc in incomeQuery.docs) {
-        totalIncome += (doc.data()['amount'] ?? 0.0) as double;
-      }
-
-      if (totalIncome <= 0) {
+      if (recordQuery.docs.isEmpty) {
         print(
-            "⚠️ [Budget Service] No income recorded this month. Cannot calculate ratios.");
+            "⚠️ [Budget Service] No financial record found for ${now.month}/${now.year}. Cannot determine budget limits.");
         return;
       }
 
-      // 4. Fetch Config from Firestore
-      final configDoc =
-          await _db.collection('settings').doc('percentages').get();
+      final financialRecord =
+          FinancialRecord.fromFirestore(recordQuery.docs.first);
 
-      if (!configDoc.exists) {
+      // 4. Get Allocated Budget for the Bucket
+      final double limitAmount = financialRecord.allocations[bucketName] ?? 0.0;
+
+      if (limitAmount <= 0) {
         print(
-            "❌ [Budget Service] Config document 'settings/percentage_config' not found.");
+            "ℹ️ [Budget Service] No budget allocated for bucket: $bucketName in this month's record.");
         return;
       }
 
-      final config = PercentageConfig.fromFirestore(configDoc);
-
-      // Find the specific bucket config (e.g., 'Lifestyle' -> 30%)
-      final categoryConfig = config.categories.firstWhere(
-        (c) => c.name == bucketName,
-        orElse: () => CategoryConfig(name: 'Unknown', percentage: 0),
-      );
-
-      if (categoryConfig.percentage <= 0) {
-        print(
-            "ℹ️ [Budget Service] No budget allocated for bucket: $bucketName");
-        return;
-      }
-
-      // 5. Calculate Limits
-      final double limitAmount =
-          totalIncome * (categoryConfig.percentage / 100);
-
-      // 6. Fetch Current Spending in this Bucket (Standard Expenses)
+      // 5. Fetch Current Spending in this Bucket (Standard Expenses)
       final expenseQuery = await _db
           .collection(FirebaseConstants.expenseTransactions)
           .where('type', isEqualTo: 'Expense')
@@ -107,9 +85,9 @@ class BudgetNotificationService {
         currentSpent += (doc.data()['amount'] ?? 0.0) as double;
       }
 
-      // 7. Fetch Current Spending in this Bucket (Credit Transactions) [Fix applied here]
+      // 6. Fetch Current Spending in this Bucket (Credit Transactions)
       final creditQuery = await _db
-          .collection(FirebaseConstants.creditTransactions) //
+          .collection(FirebaseConstants.creditTransactions)
           .where('type', isEqualTo: 'Expense')
           .where('bucket', isEqualTo: bucketName)
           .where('date',
@@ -124,7 +102,7 @@ class BudgetNotificationService {
       print(
           "📊 [Budget Service] $bucketName: Spent $currentSpent / Limit $limitAmount (Includes Credit & Cash)");
 
-      // 8. Trigger Notification Manager
+      // 7. Trigger Notification Manager
       await BudgetGuardianManager().checkBudgetHealth(
         bucketName: bucketName,
         currentSpent: currentSpent,

@@ -10,6 +10,8 @@ import '../../dashboard/services/dashboard_service.dart';
 import '../../settlement/services/settlement_service.dart';
 import '../models/credit_models.dart';
 import '../services/credit_service.dart';
+// 1. IMPORT THE NOTIFICATION SERVICE
+import '../../notifications/services/budget_notification_service.dart';
 
 class AddCreditTransactionSheet extends StatefulWidget {
   final CreditTransactionModel? transactionToEdit;
@@ -116,9 +118,6 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
         _allCategories = results[1] as List<TransactionCategoryModel>;
         _buckets = cats;
 
-        // CHANGED: Removed default card selection logic.
-        // It now remains null until user selects one.
-
         if (widget.transactionToEdit != null) {
           final t = widget.transactionToEdit!;
           _amountCtrl.text =
@@ -130,14 +129,12 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
           _category = t.category;
           _subCategory = t.subCategory;
 
-          // Only set card if it exists in the list
           try {
             _selectedCard = _cards.firstWhere((c) => c.id == t.cardId);
           } catch (e) {
             _selectedCard = null;
           }
 
-          // CHECK SYNC LINK
           if (t.linkedExpenseId != null && t.linkedExpenseId!.isNotEmpty) {
             _isLinked = true;
           }
@@ -147,10 +144,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
   }
 
   Future<void> _save() async {
-    // This will now trigger validators on Card, Bucket, and Category as well
     if (!_formKey.currentState!.validate()) return;
-
-    // Safety check (should be caught by validate, but good for type safety)
     if (_selectedCard == null) return;
 
     setState(() => _isLoading = true);
@@ -170,12 +164,18 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
         category: _category ?? 'General',
         subCategory: _subCategory ?? 'General',
         notes: _notesCtrl.text,
-        // PRESERVE LINK
         linkedExpenseId: widget.transactionToEdit?.linkedExpenseId,
       );
 
       if (widget.transactionToEdit == null) {
+        // Add Transaction
         await CreditService().addTransaction(txn);
+
+        // 2. TRIGGER NOTIFICATION CHECK (Only for new transactions)
+        if (mounted) {
+          await BudgetNotificationService()
+              .checkAndTriggerCreditNotification(txn);
+        }
       } else {
         await CreditService().updateTransaction(txn);
       }
@@ -301,7 +301,6 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                     ),
                     const SizedBox(height: 16),
 
-                    // --- LOCKED NOTICE ---
                     if (_isLinked)
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
@@ -338,7 +337,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Type Row - LOCKED if _isLinked
+                    // Type Row
                     Row(
                       children: [
                         Expanded(
@@ -354,7 +353,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Card Dropdown - MANDATORY
+                    // Card Dropdown
                     Opacity(
                       opacity: _isLinked ? 0.5 : 1.0,
                       child: IgnorePointer(
@@ -367,7 +366,6 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                           onSelect: (val) {
                             setState(() => _selectedCard = val);
                           },
-                          // Validator Added
                           validator: (val) =>
                               val == null ? 'Please select a card' : null,
                         ),
@@ -395,7 +393,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Amount - MANDATORY
+                    // Amount
                     Container(
                       key: _amountFieldKey,
                       child: TextFormField(
@@ -420,7 +418,6 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                         decoration: _inputDeco("Amount").copyWith(
                           prefixText: '₹ ',
                         ),
-                        // Existing Validator covers Mandatory Requirement
                         validator: (val) {
                           if (val == null || val.isEmpty)
                             return 'Amount required';
@@ -432,7 +429,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Bucket - MANDATORY IF EXPENSE
+                    // Bucket
                     if (_type == 'Expense') ...[
                       _buildSelectField<String>(
                         label: "Bucket",
@@ -442,14 +439,13 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                         onSelect: (val) {
                           setState(() => _selectedBucket = val);
                         },
-                        // Validator Added
                         validator: (val) =>
                             val == null ? 'Bucket required' : null,
                       ),
                       const SizedBox(height: 16),
                     ],
 
-                    // Category - MANDATORY
+                    // Category
                     Row(
                       children: [
                         Expanded(
@@ -464,7 +460,6 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                                 _subCategory = null;
                               });
                             },
-                            // Validator Added
                             validator: (val) =>
                                 val == null ? 'Category required' : null,
                           ),
@@ -480,7 +475,6 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                               onSelect: (val) {
                                 setState(() => _subCategory = val);
                               },
-                              // Optional
                               validator: null,
                             ),
                           ),
@@ -579,18 +573,17 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
     );
   }
 
-  // --- MODIFIED: Added Validator Support ---
   Widget _buildSelectField<T>({
     required String label,
     required T? value,
     required List<T> items,
     required String Function(T) labelBuilder,
     required Function(T) onSelect,
-    String? Function(T?)? validator, // Added parameter
+    String? Function(T?)? validator,
   }) {
     return FormField<T>(
       initialValue: value,
-      validator: validator, // Hook up validator
+      validator: validator,
       builder: (FormFieldState<T> state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -609,7 +602,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
                   onSelect: (v) {
                     if (v != null) {
                       onSelect(v);
-                      state.didChange(v); // Update form state
+                      state.didChange(v);
                     }
                   },
                 );
@@ -617,7 +610,7 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
               borderRadius: BorderRadius.circular(12),
               child: InputDecorator(
                 decoration: _inputDeco(label).copyWith(
-                  errorText: state.errorText, // Display validation error
+                  errorText: state.errorText,
                   suffixIcon: const Icon(
                     Icons.keyboard_arrow_down,
                     color: Colors.white54,
