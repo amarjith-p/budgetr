@@ -106,7 +106,7 @@ class _BalanceTrendChartState extends State<BalanceTrendChart> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: const Color(0xFF151D29),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white.withOpacity(0.08)),
                 boxShadow: [
                   BoxShadow(
@@ -373,7 +373,7 @@ class _BalanceTrendChartState extends State<BalanceTrendChart> {
       constraints: const BoxConstraints(maxWidth: 200),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -390,7 +390,7 @@ class _BalanceTrendChartState extends State<BalanceTrendChart> {
                   color: isSelected
                       ? Colors.white.withOpacity(0.1)
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   range,
@@ -417,7 +417,7 @@ class _BalanceTrendChartState extends State<BalanceTrendChart> {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: DropdownButtonHideUnderline(

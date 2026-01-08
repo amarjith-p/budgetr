@@ -234,7 +234,7 @@ class _CategoryBreakdownScreenState extends State<CategoryBreakdownScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(4),
             border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
           child: DropdownButtonHideUnderline(
@@ -284,7 +284,7 @@ class _CategoryBreakdownScreenState extends State<CategoryBreakdownScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: DropdownButtonHideUnderline(
@@ -325,7 +325,7 @@ class _CategoryBreakdownScreenState extends State<CategoryBreakdownScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isActive ? color.withOpacity(0.15) : const Color(0xFF151D29),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isActive ? color.withOpacity(0.5) : Colors.transparent,
             width: 1.5,
@@ -384,7 +384,7 @@ class _CategoryBreakdownScreenState extends State<CategoryBreakdownScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF151D29),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Theme(

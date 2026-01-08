@@ -137,7 +137,7 @@ class _NetWorthDashboardTabState extends State<NetWorthDashboardTab> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BudgetrStyles.radiusL,
+                        borderRadius: BorderRadius.circular(12),
                         border: BudgetrStyles.glassBorder,
                         boxShadow: BudgetrStyles.glowBoxShadow(
                           BudgetrColors.accent,

@@ -997,7 +997,7 @@ class _CategoryCardState extends State<_CategoryCard> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: BudgetrColors.cardSurface.withOpacity(_isExpanded ? 0.8 : 0.5),
-          borderRadius: BudgetrStyles.radiusM,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _isExpanded
                 ? widget.themeColor.withOpacity(0.3)

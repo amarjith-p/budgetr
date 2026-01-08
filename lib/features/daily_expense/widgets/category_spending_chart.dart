@@ -64,7 +64,7 @@ class _CategorySpendingChartState extends State<CategorySpendingChart> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: const Color(0xFF151D29),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.08)),
         boxShadow: [
           BoxShadow(
@@ -345,7 +345,7 @@ class _CategorySpendingChartState extends State<CategorySpendingChart> {
       height: 32,
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
         children: ranges.map((range) {
@@ -360,7 +360,7 @@ class _CategorySpendingChartState extends State<CategorySpendingChart> {
                 decoration: BoxDecoration(
                   color:
                       isSelected ? const Color(0xFF00B4D8) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   range,
@@ -396,7 +396,7 @@ class _CategorySpendingChartState extends State<CategorySpendingChart> {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(4),
             border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
           child: DropdownButtonHideUnderline(

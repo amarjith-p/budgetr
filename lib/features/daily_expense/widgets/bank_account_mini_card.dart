@@ -30,7 +30,7 @@ class BankAccountMiniCard extends StatelessWidget {
         // Reduced padding to prevent overflow
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
             colors: [baseColor, _darken(baseColor, 0.2)],
             begin: Alignment.topLeft,

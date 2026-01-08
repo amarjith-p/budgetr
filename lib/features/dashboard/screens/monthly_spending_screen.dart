@@ -191,7 +191,7 @@ class _MonthlySpendingScreenState extends State<MonthlySpendingScreen> {
                           color: _hideOutOfBucket
                               ? BudgetrColors.accent.withOpacity(0.15)
                               : BudgetrColors.cardSurface.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: _hideOutOfBucket
                                 ? BudgetrColors.accent.withOpacity(0.5)
@@ -323,7 +323,7 @@ class _MonthlyTransactionCardState extends State<MonthlyTransactionCard> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: BudgetrColors.cardSurface.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _isExpanded
                 ? Colors.white.withOpacity(0.2)

@@ -181,7 +181,7 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: BudgetrColors.cardSurface,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.white.withOpacity(0.05)),
             ),
             child: Column(
@@ -296,9 +296,8 @@ class _BudgetClosureSheetState extends State<BudgetClosureSheet> {
                             _currencyFormat.format(spent),
                             style: TextStyle(
                               color: isOver ? Colors.redAccent : Colors.white,
-                              fontWeight: isOver
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                              fontWeight:
+                                  isOver ? FontWeight.bold : FontWeight.normal,
                             ),
                           ),
                           if (isOver)

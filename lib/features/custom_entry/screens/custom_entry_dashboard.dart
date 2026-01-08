@@ -85,8 +85,7 @@ class _CustomEntryDashboardState extends State<CustomEntryDashboard>
         }
 
         // --- 4. MANAGE CONTROLLER ---
-        bool recreateController =
-            _tabController == null ||
+        bool recreateController = _tabController == null ||
             _tabController!.length != templates.length;
 
         if (recreateController) {

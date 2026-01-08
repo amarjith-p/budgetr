@@ -47,9 +47,8 @@ class BudgetAllocationsList extends StatelessWidget {
 
         final spent = spendingMap[bucketName] ?? 0.0;
         final remaining = allocated - spent;
-        final double progress = allocated > 0
-            ? (spent / allocated).clamp(0.0, 1.0)
-            : 0.0;
+        final double progress =
+            allocated > 0 ? (spent / allocated).clamp(0.0, 1.0) : 0.0;
 
         final bool isOverBudget = spent > allocated;
 
@@ -71,7 +70,7 @@ class BudgetAllocationsList extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: BudgetrColors.cardSurface.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.white.withOpacity(0.05)),
             ),
             child: Column(

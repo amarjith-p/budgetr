@@ -1,3 +1,4 @@
+import 'package:budget/core/design/budgetr_colors.dart';
 import 'package:budget/core/widgets/modern_loader.dart';
 import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:flutter/material.dart';
@@ -488,11 +489,14 @@ class _CustomDataPageState extends State<CustomDataPage>
               : FloatingActionButton.extended(
                   heroTag: 'custom_data_fab_${widget.template.id}',
                   backgroundColor: _accentColor,
+                  foregroundColor: BudgetrColors.inputFill,
                   onPressed: () => _showEntrySheet(records),
                   icon: const Icon(Icons.add),
                   label: const Text(
                     'Add Entry',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
           body: Builder(
@@ -543,7 +547,7 @@ class _CustomDataPageState extends State<CustomDataPage>
                     ),
                     decoration: BoxDecoration(
                       color: _glassColor,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.white.withOpacity(0.05)),
                     ),
                     child: Row(
@@ -615,7 +619,7 @@ class _CustomDataPageState extends State<CustomDataPage>
                       ),
                       decoration: BoxDecoration(
                         color: _glassColor,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: Colors.white.withOpacity(0.05),
                         ),

@@ -388,8 +388,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Color statusColor = Colors.redAccent;
     if ((_currentTotal - 100.0).abs() < 0.1)
       statusColor = Colors.greenAccent;
-    else if (_currentTotal < 100)
-      statusColor = Colors.orangeAccent;
+    else if (_currentTotal < 100) statusColor = Colors.orangeAccent;
 
     return Scaffold(
       backgroundColor: _bgColor,
@@ -462,7 +461,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                   ),
-
                 Expanded(
                   child: Form(
                     key: _formKey,
@@ -486,7 +484,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-
       bottomNavigationBar: _isEditing
           ? Container(
               padding: const EdgeInsets.all(20),
@@ -569,7 +566,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: _cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
         boxShadow: [
           BoxShadow(
@@ -662,7 +659,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Expanded(
                             child: TextFormField(
-                              initialValue: _categories[index].percentage
+                              initialValue: _categories[index]
+                                  .percentage
                                   .toStringAsFixed(0),
                               enabled: _isEditing,
                               keyboardType: TextInputType.number,

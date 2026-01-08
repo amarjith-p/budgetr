@@ -168,7 +168,7 @@ class _BucketTrendsChartState extends State<BucketTrendsChart> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: BudgetrColors.cardSurface.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Column(

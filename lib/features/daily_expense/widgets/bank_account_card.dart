@@ -32,7 +32,7 @@ class BankAccountCard extends StatelessWidget {
         height: 180,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
             colors: [baseColor, _darken(baseColor, 0.25)],
             begin: Alignment.topLeft,

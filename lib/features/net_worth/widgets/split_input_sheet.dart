@@ -356,7 +356,7 @@ class _SplitInputSheetState extends State<SplitInputSheet> {
                     onPressed: _save,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: const Color(0xFF2EC4B6),
+                      backgroundColor: BudgetrColors.accent,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(

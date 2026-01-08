@@ -42,7 +42,7 @@ class InvestmentSummaryCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.1)),
         boxShadow: [
           BoxShadow(
@@ -82,9 +82,8 @@ class InvestmentSummaryCard extends StatelessWidget {
                       children: [
                         Icon(
                           isProfit ? Icons.arrow_upward : Icons.arrow_downward,
-                          color: isProfit
-                              ? Colors.greenAccent
-                              : Colors.redAccent,
+                          color:
+                              isProfit ? Colors.greenAccent : Colors.redAccent,
                           size: 10,
                         ),
                         const SizedBox(width: 4),

@@ -1,3 +1,4 @@
+import 'package:budget/core/design/budgetr_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/widgets/modern_dropdown.dart';
@@ -35,9 +36,8 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
           type: f.type,
           isSumRequired: f.isSumRequired,
           currencySymbol: f.currencySymbol,
-          dropdownOptions: f.dropdownOptions != null
-              ? List.from(f.dropdownOptions!)
-              : null,
+          dropdownOptions:
+              f.dropdownOptions != null ? List.from(f.dropdownOptions!) : null,
           serialPrefix: f.serialPrefix,
           serialSuffix: f.serialSuffix,
           formulaExpression: f.formulaExpression,
@@ -173,6 +173,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'template_editor_fab',
         backgroundColor: _accentColor,
+        foregroundColor: BudgetrColors.inputFill,
         onPressed: _addField,
         label: const Text(
           'Add Field',
@@ -215,7 +216,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _cardColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
         boxShadow: [
           BoxShadow(
@@ -346,8 +347,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   }
 
   Widget _buildSerialConfig(int index) {
-    bool hasConfig =
-        _fields[index].serialPrefix != null ||
+    bool hasConfig = _fields[index].serialPrefix != null ||
         _fields[index].serialSuffix != null;
     return Padding(
       padding: const EdgeInsets.only(top: 16),

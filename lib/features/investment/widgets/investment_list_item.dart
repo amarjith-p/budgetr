@@ -26,7 +26,7 @@ class InvestmentListItem extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1B263B).withOpacity(0.6),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Column(
@@ -99,9 +99,8 @@ class InvestmentListItem extends StatelessWidget {
                   Text(
                     "Day: ${isDayProfit ? '+' : ''}${item.dayReturnPercentage.toStringAsFixed(2)}%",
                     style: TextStyle(
-                      color: isDayProfit
-                          ? Colors.greenAccent
-                          : Colors.redAccent,
+                      color:
+                          isDayProfit ? Colors.greenAccent : Colors.redAccent,
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                     ),
@@ -170,33 +169,34 @@ class InvestmentListItem extends StatelessWidget {
   }
 
   Widget _tag(String text) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      color: Colors.white10,
-      borderRadius: BorderRadius.circular(4),
-    ),
-    child: Text(
-      text,
-      style: const TextStyle(color: Colors.white70, fontSize: 10),
-    ),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(color: Colors.white70, fontSize: 10),
+        ),
+      );
 
   Widget _detailCol(String label, String val) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10),
-      ),
-      const SizedBox(height: 2),
-      Text(
-        val,
-        style: TextStyle(
-          color: Colors.white.withOpacity(0.9),
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    ],
-  );
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style:
+                TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            val,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      );
 }

@@ -36,10 +36,10 @@ class DashboardSummaryCard extends StatelessWidget {
         // --- NEW: Wrap Container in Material & InkWell for Tap ---
         Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(12),
           child: InkWell(
             onTap: onCardTap,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(12),
             splashColor: Colors.white.withOpacity(0.1),
             highlightColor: Colors.white.withOpacity(0.05),
             child: Container(
@@ -50,7 +50,7 @@ class DashboardSummaryCard extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white.withOpacity(0.05)),
                 boxShadow: const [
                   BoxShadow(

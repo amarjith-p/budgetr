@@ -66,7 +66,7 @@ class _TransactionListItemState extends State<TransactionListItem> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFF1B263B).withOpacity(0.5),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
               color: _isUnverifiedTransfer
                   ? Colors.orangeAccent.withOpacity(0.5)

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../core/widgets/modern_loader.dart';
 import '../models/expense_models.dart';
 import '../services/expense_service.dart';
 
@@ -14,9 +13,8 @@ class CashFlowCard extends StatefulWidget {
 class _CashFlowCardState extends State<CashFlowCard> {
   final ExpenseService _service = ExpenseService();
   String _selectedPeriod = 'This Month';
-  String? _selectedAccountId; // Account Filter State
+  String? _selectedAccountId;
 
-  // Helper: Filter Transactions by Date
   List<ExpenseTransactionModel> _filterTransactions(
       List<ExpenseTransactionModel> allTxns) {
     final now = DateTime.now();
@@ -32,14 +30,13 @@ class _CashFlowCardState extends State<CashFlowCard> {
       } else if (_selectedPeriod == 'Last Year') {
         return date.year == now.year - 1;
       }
-      return true; // All Time
+      return true;
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ExpenseTransactionModel>>(
-      // Uses optimized server-side filtering
       stream: _service.getTransactions(accountId: _selectedAccountId),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const SizedBox.shrink();
@@ -75,7 +72,7 @@ class _CashFlowCardState extends State<CashFlowCard> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: const Color(0xFF151D29),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.white.withOpacity(0.08)),
             boxShadow: [
               BoxShadow(
@@ -89,9 +86,6 @@ class _CashFlowCardState extends State<CashFlowCard> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- HEADER SECTION (Reorganized) ---
-
-              // 1. Title Row
               Row(
                 children: [
                   Container(
@@ -116,20 +110,14 @@ class _CashFlowCardState extends State<CashFlowCard> {
                 ],
               ),
               const SizedBox(height: 16),
-
-              // 2. Filters Row (Separate line for better visibility)
               Row(
                 children: [
-                  // Account Filter (Expanded to take available width)
                   Expanded(child: _buildAccountFilter()),
                   const SizedBox(width: 8),
-                  // Period Filter
                   _buildPeriodDropdown(),
                 ],
               ),
               const SizedBox(height: 24),
-
-              // --- VISUAL METERS ---
               _buildMeterRow(
                 label: "INCOME",
                 amount: income,
@@ -147,12 +135,9 @@ class _CashFlowCardState extends State<CashFlowCard> {
                 bgGradient: [const Color(0xFFFF4D6D), const Color(0xFFC9184A)],
                 formatter: currencyFmt,
               ),
-
               const SizedBox(height: 20),
               Divider(color: Colors.white.withOpacity(0.05), height: 1),
               const SizedBox(height: 16),
-
-              // --- NET FLOW FOOTER ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -179,8 +164,6 @@ class _CashFlowCardState extends State<CashFlowCard> {
     );
   }
 
-  // --- Widgets ---
-
   Widget _buildAccountFilter() {
     return StreamBuilder<List<ExpenseAccountModel>>(
       stream: _service.getAccounts(),
@@ -194,11 +177,11 @@ class _CashFlowCardState extends State<CashFlowCard> {
         }
 
         return Container(
-          height: 32, // Slightly taller for better touch target
+          height: 32,
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(4),
             border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
           child: DropdownButtonHideUnderline(
@@ -209,7 +192,7 @@ class _CashFlowCardState extends State<CashFlowCard> {
                   color: Colors.white54, size: 16),
               style: const TextStyle(color: Colors.white, fontSize: 12),
               isDense: true,
-              isExpanded: true, // Ensures it uses the Expanded space
+              isExpanded: true,
               hint: const Text(
                 "All Accounts",
                 style: TextStyle(color: Colors.white),
@@ -281,7 +264,7 @@ class _CashFlowCardState extends State<CashFlowCard> {
               curve: Curves.easeOutCubic,
               decoration: BoxDecoration(
                 gradient: LinearGradient(colors: bgGradient),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(2),
                 boxShadow: [
                   BoxShadow(
                     color: bgGradient.first.withOpacity(0.4),
@@ -303,7 +286,7 @@ class _CashFlowCardState extends State<CashFlowCard> {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: DropdownButtonHideUnderline(

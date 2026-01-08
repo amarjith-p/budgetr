@@ -33,7 +33,7 @@ class HomeFeatureCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: cardBaseColor,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(color: Colors.white.withOpacity(0.05)),
           boxShadow: [
             BoxShadow(

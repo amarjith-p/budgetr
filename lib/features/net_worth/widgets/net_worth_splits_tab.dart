@@ -1,3 +1,4 @@
+import 'package:budget/core/design/budgetr_colors.dart';
 import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -156,9 +157,10 @@ class _NetWorthSplitsTabState extends State<NetWorthSplitsTab> {
                       vertical: 16,
                     ),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [_accentColor, const Color(0xFF2563EB)],
-                      ),
+                      // gradient: LinearGradient(
+                      //   colors: [_accentColor, const Color(0xFF2563EB)],
+                      // ),
+                      color: BudgetrColors.accent,
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
@@ -206,7 +208,7 @@ class _NetWorthSplitsTabState extends State<NetWorthSplitsTab> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: DateFilterRow(
@@ -228,7 +230,7 @@ class _NetWorthSplitsTabState extends State<NetWorthSplitsTab> {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: _cardColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Theme(

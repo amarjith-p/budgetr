@@ -519,7 +519,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: Colors.orangeAccent.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: Colors.orangeAccent.withOpacity(
                                         0.3,

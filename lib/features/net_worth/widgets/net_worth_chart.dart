@@ -66,7 +66,7 @@ class NetWorthChart extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: BudgetrColors.cardSurface.withOpacity(0.6),
-        borderRadius: BudgetrStyles.radiusM,
+        borderRadius: BorderRadius.circular(12),
         border: BudgetrStyles.glassBorder,
       ),
       child: Column(
@@ -84,7 +84,7 @@ class NetWorthChart extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: accentColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(4),
                     border: Border.all(color: accentColor.withOpacity(0.3)),
                   ),
                   child: Row(
@@ -237,11 +237,11 @@ class NetWorthChart extends StatelessWidget {
                       show: true,
                       getDotPainter: (spot, percent, barData, index) =>
                           FlDotCirclePainter(
-                            radius: 4,
-                            color: accentColor,
-                            strokeWidth: 2,
-                            strokeColor: Colors.white,
-                          ),
+                        radius: 4,
+                        color: accentColor,
+                        strokeWidth: 2,
+                        strokeColor: Colors.white,
+                      ),
                     ),
                     belowBarData: BarAreaData(
                       show: true,
