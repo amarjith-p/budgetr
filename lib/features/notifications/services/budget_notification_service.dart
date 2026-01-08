@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/firebase_constants.dart';
 import '../../../core/models/percentage_config_model.dart';
 import '../../daily_expense/models/expense_models.dart';
+import '../../credit_tracker/models/credit_models.dart'; // Imported Credit Models
 import '../managers/budget_guardian_manager.dart';
 
 class BudgetNotificationService {
@@ -13,7 +14,19 @@ class BudgetNotificationService {
       ExpenseTransactionModel newTxn) async {
     // 1. Basic Validation
     if (newTxn.type != 'Expense') return;
+    await _analyzeBudgetHealth(newTxn.bucket);
+  }
 
+  /// Call this from your Credit Tracker UI immediately after a successful credit transaction add.
+  Future<void> checkAndTriggerCreditNotification(
+      CreditTransactionModel newTxn) async {
+    // 1. Basic Validation
+    if (newTxn.type != 'Expense') return;
+    await _analyzeBudgetHealth(newTxn.bucket);
+  }
+
+  /// Core logic to calculate budget health including both Cash and Credit expenses
+  Future<void> _analyzeBudgetHealth(String bucketName) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final isEnabled = prefs.getBool('notif_budget_enabled') ?? false;
@@ -23,8 +36,7 @@ class BudgetNotificationService {
         return;
       }
 
-      print(
-          "🔍 [Budget Service] Analyzing budget health for: ${newTxn.bucket}...");
+      print("🔍 [Budget Service] Analyzing budget health for: $bucketName...");
 
       // 2. Define Time Window (Current Month)
       final now = DateTime.now();
@@ -32,6 +44,7 @@ class BudgetNotificationService {
       final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
 
       // 3. Fetch Total Income (The Baseline)
+      // Income is generally tracked in expense_transactions (Salary, etc.)
       final incomeQuery = await _db
           .collection(FirebaseConstants.expenseTransactions)
           .where('type', isEqualTo: 'Income')
@@ -52,7 +65,6 @@ class BudgetNotificationService {
       }
 
       // 4. Fetch Config from Firestore
-      // Ensure your Firestore has collection 'settings' -> doc 'percentage_config'
       final configDoc =
           await _db.collection('settings').doc('percentages').get();
 
@@ -66,13 +78,13 @@ class BudgetNotificationService {
 
       // Find the specific bucket config (e.g., 'Lifestyle' -> 30%)
       final categoryConfig = config.categories.firstWhere(
-        (c) => c.name == newTxn.bucket,
+        (c) => c.name == bucketName,
         orElse: () => CategoryConfig(name: 'Unknown', percentage: 0),
       );
 
       if (categoryConfig.percentage <= 0) {
         print(
-            "ℹ️ [Budget Service] No budget allocated for bucket: ${newTxn.bucket}");
+            "ℹ️ [Budget Service] No budget allocated for bucket: $bucketName");
         return;
       }
 
@@ -80,11 +92,11 @@ class BudgetNotificationService {
       final double limitAmount =
           totalIncome * (categoryConfig.percentage / 100);
 
-      // 6. Fetch Current Spending in this Bucket
+      // 6. Fetch Current Spending in this Bucket (Standard Expenses)
       final expenseQuery = await _db
           .collection(FirebaseConstants.expenseTransactions)
           .where('type', isEqualTo: 'Expense')
-          .where('bucket', isEqualTo: newTxn.bucket)
+          .where('bucket', isEqualTo: bucketName)
           .where('date',
               isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
           .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
@@ -95,12 +107,26 @@ class BudgetNotificationService {
         currentSpent += (doc.data()['amount'] ?? 0.0) as double;
       }
 
-      print(
-          "📊 [Budget Service] ${newTxn.bucket}: Spent $currentSpent / Limit $limitAmount");
+      // 7. Fetch Current Spending in this Bucket (Credit Transactions) [Fix applied here]
+      final creditQuery = await _db
+          .collection(FirebaseConstants.creditTransactions) //
+          .where('type', isEqualTo: 'Expense')
+          .where('bucket', isEqualTo: bucketName)
+          .where('date',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
+          .get();
 
-      // 7. Trigger Notification Manager
+      for (var doc in creditQuery.docs) {
+        currentSpent += (doc.data()['amount'] ?? 0.0) as double;
+      }
+
+      print(
+          "📊 [Budget Service] $bucketName: Spent $currentSpent / Limit $limitAmount (Includes Credit & Cash)");
+
+      // 8. Trigger Notification Manager
       await BudgetGuardianManager().checkBudgetHealth(
-        bucketName: newTxn.bucket,
+        bucketName: bucketName,
         currentSpent: currentSpent,
         totalAllocated: limitAmount,
         isEnabled: true,
