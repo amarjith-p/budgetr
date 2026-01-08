@@ -226,9 +226,6 @@ class _AddExpenseTransactionSheetState
           icon: Icons.warning_amber_rounded,
           color: Colors.orangeAccent,
         );
-        // ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        //     content: Text(
-        //         "Error: No 'Credit Card Pool Account' found. Please create one.")));
         return;
       }
     }
@@ -266,11 +263,11 @@ class _AddExpenseTransactionSheetState
       if (isEditing) {
         final newTxn = ExpenseTransactionModel(
           id: widget.txnToEdit!.id,
-          accountId: _selectedAccount!.id, // Allows account switching
+          accountId: _selectedAccount!.id,
           amount: amount,
           date: Timestamp.fromDate(_date),
-          bucket: _selectedBucket ?? 'Unallocated', // Allow bucket update
-          type: _type, // Locked in UI if editing, but passed here
+          bucket: _selectedBucket ?? 'Unallocated',
+          type: _type,
           category: _category!,
           subCategory: _subCategory ?? 'General',
           notes: _notesCtrl.text,
@@ -280,12 +277,16 @@ class _AddExpenseTransactionSheetState
           transferAccountBankName: widget.txnToEdit!.transferAccountBankName,
         );
         await ExpenseService().updateTransaction(newTxn);
+
+        // --- NEW: Trigger Check on Update ---
+        if (mounted) {
+          await BudgetNotificationService().checkAndTriggerNotification(newTxn);
+        }
       } else {
         // Handle Add (Standard Logic)
         if (_type == 'Transfer') {
           if (_isCreditEntry) {
             // Credit Card Payment (Account -> Pool)
-            // We ONLY create the "Transfer Out" side. The Service creates "Transfer In".
             final transferOut = ExpenseTransactionModel(
               id: '',
               accountId: _selectedAccount!.id,
@@ -301,14 +302,11 @@ class _AddExpenseTransactionSheetState
               transferAccountBankName: _selectedCreditCard!.bankName,
               linkedCreditCardId: _selectedCreditCard!.id,
             );
-
-            // [CHANGED] Only add the source transaction. Service handles partner creation.
             await ExpenseService().addTransaction(transferOut);
             BudgetNotificationService()
                 .checkAndTriggerNotification(transferOut);
           } else {
             // Standard Transfer (Account -> Account)
-            // We ONLY create the "Transfer Out" side.
             final transferOut = ExpenseTransactionModel(
               id: '',
               accountId: _selectedAccount!.id,
@@ -323,8 +321,6 @@ class _AddExpenseTransactionSheetState
               transferAccountName: _toAccount!.name,
               transferAccountBankName: _toAccount!.bankName,
             );
-
-            // [CHANGED] Only add the source transaction. Service handles partner creation.
             await ExpenseService().addTransaction(transferOut);
             BudgetNotificationService()
                 .checkAndTriggerNotification(transferOut);

@@ -10,7 +10,6 @@ import '../../dashboard/services/dashboard_service.dart';
 import '../../settlement/services/settlement_service.dart';
 import '../models/credit_models.dart';
 import '../services/credit_service.dart';
-// 1. IMPORT THE NOTIFICATION SERVICE
 import '../../notifications/services/budget_notification_service.dart';
 
 class AddCreditTransactionSheet extends StatefulWidget {
@@ -171,13 +170,19 @@ class _AddCreditTransactionSheetState extends State<AddCreditTransactionSheet> {
         // Add Transaction
         await CreditService().addTransaction(txn);
 
-        // 2. TRIGGER NOTIFICATION CHECK (Only for new transactions)
         if (mounted) {
           await BudgetNotificationService()
               .checkAndTriggerCreditNotification(txn);
         }
       } else {
+        // Update Transaction
         await CreditService().updateTransaction(txn);
+
+        // --- NEW: Trigger Check on Update ---
+        if (mounted) {
+          await BudgetNotificationService()
+              .checkAndTriggerCreditNotification(txn);
+        }
       }
 
       if (mounted) Navigator.pop(context);
