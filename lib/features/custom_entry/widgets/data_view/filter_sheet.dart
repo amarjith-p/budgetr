@@ -6,7 +6,7 @@ import '../../utils/filter_engine.dart';
 class FilterSheet extends StatefulWidget {
   final CustomTemplate template;
   final List<FilterCondition> activeFilters;
-  final List<CustomRecord> sourceData; // NEW: Data for suggestions
+  final List<CustomRecord> sourceData;
   final Function(List<FilterCondition>) onApply;
 
   const FilterSheet({
@@ -62,7 +62,10 @@ class _FilterSheetState extends State<FilterSheet> {
     final double bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+      // CHANGED: Use constraints instead of fixed height
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
       decoration: BoxDecoration(
         color: _bgColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -70,6 +73,8 @@ class _FilterSheetState extends State<FilterSheet> {
       child: Padding(
         padding: EdgeInsets.only(bottom: bottomPadding),
         child: Column(
+          // CHANGED: Shrink to fit content
+          mainAxisSize: MainAxisSize.min,
           children: [
             // --- HEADER ---
             Padding(
@@ -113,8 +118,10 @@ class _FilterSheetState extends State<FilterSheet> {
             const Divider(height: 1, color: Colors.white10),
 
             // --- LIST ---
-            Expanded(
+            // CHANGED: Flexible + shrinkWrap allows it to wrap content or scroll if too big
+            Flexible(
               child: ListView.builder(
+                shrinkWrap: true,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 itemCount: widget.template.fields.length,
@@ -126,7 +133,7 @@ class _FilterSheetState extends State<FilterSheet> {
                     key: ValueKey(field.name),
                     field: field,
                     initialCondition: activeCondition,
-                    sourceData: widget.sourceData, // Pass data
+                    sourceData: widget.sourceData,
                     accentColor: _accentColor,
                     surfaceColor: _surfaceColor,
                     onChanged: _updateFilter,
@@ -138,24 +145,50 @@ class _FilterSheetState extends State<FilterSheet> {
             // --- FOOTER ---
             Padding(
               padding: const EdgeInsets.all(24),
-              child: SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: _apply,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _accentColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+              child: Row(
+                children: [
+                  // CHANGED: Added Cancel Button
+                  Expanded(
+                    child: SizedBox(
+                      height: 54,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          side:
+                              BorderSide(color: Colors.white.withOpacity(0.3)),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text("Cancel"),
+                      ),
                     ),
                   ),
-                  child: const Text(
-                    "Apply Filters",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  const SizedBox(width: 12),
+                  // Apply Button
+                  Expanded(
+                    child: SizedBox(
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: _apply,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _accentColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          "Apply",
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
@@ -165,7 +198,7 @@ class _FilterSheetState extends State<FilterSheet> {
   }
 }
 
-// --- ROW WIDGET ---
+// --- ROW WIDGET (No Changes, keep existing implementation) ---
 
 class _FilterRow extends StatefulWidget {
   final CustomFieldConfig field;
@@ -191,27 +224,23 @@ class _FilterRow extends StatefulWidget {
 
 class _FilterRowState extends State<_FilterRow> {
   late FilterCondition _condition;
-
-  // Controllers
   late TextEditingController _textCtrl;
   late TextEditingController _minCtrl;
   late TextEditingController _maxCtrl;
 
-  // Focus Nodes
   final FocusNode _textFocus = FocusNode();
   final FocusNode _minFocus = FocusNode();
   final FocusNode _maxFocus = FocusNode();
 
-  // Suggestions
-  List<String> _allUniqueValues = [];
+  List<String> _allValues = [];
   List<String> _filteredSuggestions = [];
 
   @override
   void initState() {
     super.initState();
     _initCondition();
+    _extractSuggestions();
     _initControllers();
-    _extractSuggestions(); // Pre-calculate unique values
 
     _textFocus.addListener(_onFocusChange);
     _minFocus.addListener(_onFocusChange);
@@ -255,12 +284,9 @@ class _FilterRowState extends State<_FilterRow> {
     _maxCtrl = TextEditingController(
       text: _condition.maxVal != null ? _truncateZeros(_condition.maxVal!) : '',
     );
-
-    // Initial filter of suggestions
     _filterSuggestions(_textCtrl.text);
   }
 
-  // --- NEW: Extract Unique Values ---
   void _extractSuggestions() {
     if (widget.field.type == CustomFieldType.string ||
         widget.field.type == CustomFieldType.serial) {
@@ -275,18 +301,13 @@ class _FilterRowState extends State<_FilterRow> {
     }
   }
 
-  List<String> _allValues = [];
-
-  // --- NEW: Filter Suggestions Logic ---
   void _filterSuggestions(String query) {
     if (_allValues.isEmpty) return;
 
     setState(() {
       if (query.isEmpty) {
-        // Show first 10
         _filteredSuggestions = _allValues.take(10).toList();
       } else {
-        // Show matches
         _filteredSuggestions = _allValues
             .where((s) => s.toLowerCase().contains(query.toLowerCase()))
             .take(10)
