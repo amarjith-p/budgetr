@@ -41,7 +41,7 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
   // --- LOGIC STATE ---
   bool _isCreditEntry = false;
   bool _isLinkedTransaction = false;
-  bool _attemptedSave = false; // Triggers validation highlights
+  bool _attemptedSave = false; // Triggers validation visuals
 
   // Selections
   ExpenseAccountModel? _selectedAccount;
@@ -422,6 +422,7 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
 
     // Handle Keyboard Height so sheet isn't covered
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final bool isEditing = widget.txnToEdit != null;
 
     return Padding(
       padding: EdgeInsets.only(bottom: keyboardHeight),
@@ -448,6 +449,34 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
                           color: Colors.white24,
                           borderRadius: BorderRadius.circular(2))),
                   const SizedBox(height: 16),
+
+                  // LINKED TRANSACTION WARNING
+                  if (_isLinkedTransaction)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                          color: Colors.blueAccent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: Colors.blueAccent.withOpacity(0.3))),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.link,
+                              color: Colors.blueAccent, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Linked Record: Accounts locked to maintain sync.",
+                              style: BudgetrStyles.caption.copyWith(
+                                  color: Colors.blueAccent, fontSize: 11),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   Container(
                     height: 36,
                     padding: const EdgeInsets.all(3),
@@ -456,9 +485,9 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
                         borderRadius: BorderRadius.circular(10)),
                     child: Row(
                       children: [
-                        _buildSegment("Expense", Colors.redAccent),
-                        _buildSegment("Income", Colors.greenAccent),
-                        _buildSegment("Transfer", Colors.blueAccent),
+                        _buildSegment("Expense", Colors.redAccent, isEditing),
+                        _buildSegment("Income", Colors.greenAccent, isEditing),
+                        _buildSegment("Transfer", Colors.blueAccent, isEditing),
                       ],
                     ),
                   ),
@@ -544,7 +573,7 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
               ),
             ),
 
-            // 3. Hero Amount (Highlighted on Error)
+            // 3. Hero Amount (With Validation Highlight)
             _buildHeroAmount(typeColor),
 
             // 4. MAIN FORM GRID
@@ -589,7 +618,7 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
               ),
             ),
 
-            // 5. Calculator & Save (4 Rows x 4 Cols + Specials)
+            // 5. Calculator & Save (5 Rows x 4 Cols)
             if (_showCalculator) ...[
               Container(color: Colors.white.withOpacity(0.05), height: 1),
               _EmbeddedCalculator(
@@ -638,7 +667,6 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
   // --- GRID LOGIC ---
 
   Widget _buildHeroAmount(Color typeColor) {
-    // Check validation state
     final bool hasError =
         _attemptedSave && (double.tryParse(_amountCtrl.text) ?? 0) <= 0;
     final Color displayColor = hasError ? Colors.redAccent : typeColor;
@@ -692,7 +720,7 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
             ? (_selectedCreditCard?.name ?? "Select Card")
             : (_selectedAccount?.name ?? "Select Account"),
         icon: showCredit ? Icons.credit_card : Icons.account_balance,
-        isActive: true,
+        isActive: !_isLinkedTransaction, // Disabled if linked
         hasError: sourceError,
         onTap: () {
           if (_isLinkedTransaction) return;
@@ -732,7 +760,7 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
           label: targetLabel,
           value: targetValue,
           icon: Icons.login,
-          isActive: true,
+          isActive: !_isLinkedTransaction,
           hasError: targetError,
           onTap: () {
             if (_isLinkedTransaction) return;
@@ -841,10 +869,12 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
     });
   }
 
-  Widget _buildSegment(String label, Color color) {
+  Widget _buildSegment(String label, Color color, bool isEditing) {
     final isSelected = _type == label;
-    final isDisabled = _isLinkedTransaction ||
-        (widget.txnToEdit != null && label == 'Transfer');
+    // Disabled if Linked OR (Editing AND label is Transfer)
+    final isDisabled =
+        _isLinkedTransaction || (isEditing && label == 'Transfer');
+
     return Expanded(
       child: GestureDetector(
         onTap: isDisabled
@@ -869,7 +899,9 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
           alignment: Alignment.center,
           child: Text(label,
               style: TextStyle(
-                  color: isSelected ? color : Colors.white38,
+                  color: isDisabled
+                      ? Colors.white24
+                      : (isSelected ? color : Colors.white38),
                   fontWeight: FontWeight.bold,
                   fontSize: 12)),
         ),
@@ -1004,7 +1036,7 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
 }
 
 // ===========================================================================
-// 3. 4-COLUMN CALCULATOR
+// 3. 5 COLUMNS x 4 ROWS CALCULATOR
 // ===========================================================================
 
 class _EmbeddedCalculator extends StatelessWidget {
@@ -1063,6 +1095,7 @@ class _EmbeddedCalculator extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Row 1: C, (, ), /, 7
           Row(children: [
             _key('C', color: Colors.redAccent, onTap: _onClear),
             _key('(', color: Colors.white54),
