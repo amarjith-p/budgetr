@@ -162,6 +162,10 @@ class CategoryService {
       'subs': ['Missing', 'Uncategorized'],
       'icon': Icons.add_circle_outline.codePoint,
     },
+    'Non-Calculated Expense': {
+      'subs': [],
+      'icon': Icons.cancel_sharp.codePoint,
+    },
   };
 
   // --- EXPANDED DEFAULT INCOME ---
@@ -210,6 +214,10 @@ class CategoryService {
     'Other': {
       'subs': ['Miscellaneous', 'Uncategorized'],
       'icon': Icons.add_circle_outline.codePoint,
+    },
+    'Non-Calculated Income': {
+      'subs': [],
+      'icon': Icons.cancel_sharp.codePoint,
     },
   };
 

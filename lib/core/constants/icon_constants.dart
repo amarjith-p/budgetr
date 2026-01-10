@@ -43,6 +43,12 @@ class IconConstants {
         'paisa',
         'amount',
       ]),
+      IconMetadata(Icons.cancel_sharp, [
+        'close',
+        'cancel',
+        'deny',
+        'stop',
+      ]),
       IconMetadata(Icons.account_balance_wallet, [
         'wallet',
         'purse',
