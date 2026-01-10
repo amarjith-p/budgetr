@@ -49,7 +49,7 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
 
     return Scaffold(
       backgroundColor: bgColor,
-      // 1. Extend Body allows the list to scroll behind the floating navbar
+      // 1. extendBody allows content to scroll behind the frosted bar
       extendBody: true,
       appBar: _buildAppBar(bgColor),
       body: IndexedStack(
@@ -61,8 +61,8 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
           const CategoryBreakdownScreen(), // 3: Breakdown
         ],
       ),
-      // 2. New Modern Floating Navigation
-      bottomNavigationBar: _buildModernBottomBar(),
+      // 2. Full-Width Animated Navigation
+      bottomNavigationBar: _buildFullWidthAnimatedBar(context),
     );
   }
 
@@ -152,8 +152,8 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
         row2Items.add("ALL_ACCOUNTS_CARD");
 
         return SingleChildScrollView(
-          // Padding at bottom to account for the floating nav bar
-          padding: const EdgeInsets.only(bottom: 100),
+          // Increased bottom padding to clear the full-width bar
+          padding: const EdgeInsets.only(bottom: 110),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -305,40 +305,47 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
     );
   }
 
-  // --- NEW: Modern Floating Bottom Bar ---
-  Widget _buildModernBottomBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
-      child: Container(
-        height: 70, // Slightly compact height
-        decoration: BoxDecoration(
-          // Dark frosted glass background
-          color: const Color(0xFF101825).withOpacity(0.90),
-          borderRadius: BorderRadius.circular(35),
-          border: Border.all(color: Colors.white.withOpacity(0.08), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.4),
-              blurRadius: 25,
-              offset: const Offset(0, 10),
-            ),
-          ],
+  // --- NEW: Full-Width Animated Bottom Bar ---
+  Widget _buildFullWidthAnimatedBar(BuildContext context) {
+    // Access safe area for home indicator
+    final double bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      width: double.infinity,
+      // Fixed height + safe area padding
+      height: 70 + bottomPadding,
+      decoration: BoxDecoration(
+        color: const Color(0xFF101825).withOpacity(0.90),
+        border: Border(
+          top: BorderSide(color: Colors.white.withOpacity(0.08), width: 1),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(35),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Padding(
+            // Add padding to avoid the home swipe bar
+            padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPadding + 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _buildNavBarItem(0, Icons.grid_view_rounded, "Home"),
-                _buildNavBarItem(1, Icons.receipt_long_rounded, "Transactions"),
+                _buildAnimatedNavItem(0, Icons.grid_view_rounded, "Home"),
+                _buildAnimatedNavItem(
+                    1, Icons.receipt_long_rounded, "Transactions"),
 
-                // Integrated Floating Action Button
+                // Integrated Action Button
                 _buildCenterFab(),
 
-                _buildNavBarItem(2, Icons.bar_chart_rounded, "Analytics"),
-                _buildNavBarItem(3, Icons.category_rounded, "Breakdown"),
+                _buildAnimatedNavItem(2, Icons.bar_chart_rounded, "Analytics"),
+                _buildAnimatedNavItem(3, Icons.category_rounded, "Breakdown"),
               ],
             ),
           ),
@@ -347,8 +354,8 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
     );
   }
 
-  // Animated Pill Tab
-  Widget _buildNavBarItem(int index, IconData icon, String label) {
+  // PRESERVED: The Expanding Pill Animation you liked
+  Widget _buildAnimatedNavItem(int index, IconData icon, String label) {
     final bool isSelected = _currentIndex == index;
 
     return GestureDetector(
@@ -358,8 +365,8 @@ class _DailyExpenseScreenState extends State<DailyExpenseScreen> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutQuint,
         padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 16 : 8,
-          vertical: 8,
+          horizontal: isSelected ? 16 : 10,
+          vertical: 10,
         ),
         decoration: BoxDecoration(
           color: isSelected
