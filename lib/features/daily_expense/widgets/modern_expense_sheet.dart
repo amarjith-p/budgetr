@@ -23,7 +23,12 @@ import '../services/expense_service.dart';
 
 class ModernExpenseSheet extends StatefulWidget {
   final ExpenseTransactionModel? txnToEdit;
-  const ModernExpenseSheet({super.key, this.txnToEdit});
+  final ExpenseAccountModel? preSelectedAccount;
+  const ModernExpenseSheet({
+    super.key,
+    this.txnToEdit,
+    this.preSelectedAccount,
+  });
 
   @override
   State<ModernExpenseSheet> createState() => _ModernExpenseSheetState();
@@ -158,6 +163,17 @@ class _ModernExpenseSheetState extends State<ModernExpenseSheet> {
             }
           } else {
             _type = t.type;
+          }
+        } else {
+          // [NEW] Handle Pre-selected Account
+          if (widget.preSelectedAccount != null) {
+            // Find the account in the loaded list to ensure object reference match
+            try {
+              _selectedAccount = _accounts
+                  .firstWhere((a) => a.id == widget.preSelectedAccount!.id);
+            } catch (_) {
+              // If not found (rare), leave as null
+            }
           }
         }
       });

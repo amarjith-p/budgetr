@@ -1,3 +1,5 @@
+// lib/features/daily_expense/widgets/add_expense_txn_sheet.dart
+
 import 'package:budget/core/widgets/status_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -17,7 +19,13 @@ import '../services/expense_service.dart';
 
 class AddExpenseTransactionSheet extends StatefulWidget {
   final ExpenseTransactionModel? txnToEdit;
-  const AddExpenseTransactionSheet({super.key, this.txnToEdit});
+  final ExpenseAccountModel? preSelectedAccount; // [NEW] Added Parameter
+
+  const AddExpenseTransactionSheet({
+    super.key,
+    this.txnToEdit,
+    this.preSelectedAccount, // [NEW]
+  });
 
   @override
   State<AddExpenseTransactionSheet> createState() =>
@@ -161,6 +169,17 @@ class _AddExpenseTransactionSheetState
           } else {
             _type = t.type;
           }
+        } else {
+          // [NEW] Handle Pre-selected Account
+          if (widget.preSelectedAccount != null) {
+            // Find the account in the loaded list to ensure object reference match
+            try {
+              _selectedAccount = _accounts
+                  .firstWhere((a) => a.id == widget.preSelectedAccount!.id);
+            } catch (_) {
+              // If not found (rare), leave as null
+            }
+          }
         }
       });
       await _updateBucketsForDate(_date);
@@ -278,7 +297,6 @@ class _AddExpenseTransactionSheetState
         );
         await ExpenseService().updateTransaction(newTxn);
 
-        // --- NEW: Trigger Check on Update ---
         if (mounted) {
           await BudgetNotificationService().checkAndTriggerNotification(newTxn);
         }
@@ -372,7 +390,6 @@ class _AddExpenseTransactionSheetState
     final bottomPadding =
         _showCustomKeyboard ? 0.0 : MediaQuery.of(context).viewInsets.bottom;
 
-    // Check if we are editing
     final bool isEditing = widget.txnToEdit != null;
 
     return Container(
@@ -407,9 +424,7 @@ class _AddExpenseTransactionSheetState
                               color: Colors.white,
                               fontSize: 20,
                               fontWeight: FontWeight.bold)),
-                      // Credit Card Toggle
                       Opacity(
-                        // Dim if disabled (Linked OR Editing)
                         opacity:
                             (_isLinkedTransaction || isEditing) ? 0.5 : 1.0,
                         child: Container(
@@ -441,7 +456,6 @@ class _AddExpenseTransactionSheetState
                                       fontWeight: FontWeight.bold)),
                               Switch(
                                 value: _isCreditEntry,
-                                // DISABLED ON EDIT to prevent complex state changes
                                 onChanged: (_isLinkedTransaction || isEditing)
                                     ? null
                                     : (val) {
@@ -484,7 +498,6 @@ class _AddExpenseTransactionSheetState
                       ),
                     ),
 
-                  // Type Buttons (Locked if linked, Transfer Disabled if Editing)
                   Opacity(
                     opacity: _isLinkedTransaction ? 0.5 : 1.0,
                     child: Row(children: [
@@ -496,7 +509,6 @@ class _AddExpenseTransactionSheetState
                           child: _typeBtn("Income", Colors.greenAccent,
                               _isLinkedTransaction)),
                       const SizedBox(width: 8),
-                      // DISABLE TRANSFER BUTTON IF EDITING
                       Expanded(
                           child: _typeBtn("Transfer", Colors.blueAccent,
                               _isLinkedTransaction || isEditing)),
@@ -505,7 +517,6 @@ class _AddExpenseTransactionSheetState
 
                   const SizedBox(height: 24),
 
-                  // ACCOUNTS (Locked if linked)
                   if (_type == 'Transfer') ...[
                     _buildSelectField<ExpenseAccountModel>(
                         "From Account",
@@ -560,7 +571,6 @@ class _AddExpenseTransactionSheetState
 
                   const SizedBox(height: 16),
 
-                  // Date (Editable)
                   InkWell(
                     onTap: _pickDate,
                     borderRadius: BorderRadius.circular(12),
@@ -574,7 +584,6 @@ class _AddExpenseTransactionSheetState
                   ),
                   const SizedBox(height: 16),
 
-                  // Amount (Editable)
                   Container(
                     key: _amountFieldKey,
                     child: TextFormField(
@@ -607,7 +616,6 @@ class _AddExpenseTransactionSheetState
                   ),
                   const SizedBox(height: 16),
 
-                  // Buckets & Categories
                   if (_type == 'Expense') ...[
                     _buildSelectField<String>(
                         "Bucket",
@@ -646,7 +654,6 @@ class _AddExpenseTransactionSheetState
                     const SizedBox(height: 16),
                   ],
 
-                  // Notes (Editable)
                   Container(
                     key: _notesFieldKey,
                     child: TextFormField(
@@ -660,7 +667,6 @@ class _AddExpenseTransactionSheetState
                   ),
                   const SizedBox(height: 24),
 
-                  // Save Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -723,7 +729,6 @@ class _AddExpenseTransactionSheetState
     );
   }
 
-  // --- Helpers ---
   Future<void> _pickDate() async {
     _amountNode.unfocus();
     _notesNode.unfocus();
