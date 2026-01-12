@@ -61,9 +61,9 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
       _selectedType = r.type;
       _purchaseDate = r.lastPurchasedDate;
       _searchController.text = r.name;
-      _qtyController.text = r.quantity.toString();
-      _priceController.text = r.averagePrice.toString();
-      _totalController.text = (r.quantity * r.averagePrice).toStringAsFixed(2);
+      _qtyController.text = r.quantity.toStringAsFixed(4);
+      _priceController.text = r.averagePrice.toStringAsFixed(4);
+      _totalController.text = (r.quantity * r.averagePrice).toStringAsFixed(4);
       _currentPriceController.text = r.currentPrice.toString();
       _bucketController.text = r.bucket;
       _capturedPreviousClose = r.previousClose;
@@ -212,7 +212,7 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
       double qty = double.tryParse(_qtyController.text) ?? 0;
       double price = double.tryParse(_priceController.text) ?? 0;
       if (qty > 0 && price > 0) {
-        String total = (qty * price).toStringAsFixed(2);
+        String total = (qty * price).toStringAsFixed(4);
         if (_totalController.text != total) {
           _totalController.value = TextEditingValue(
             text: total,
@@ -230,7 +230,7 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
       double price = double.tryParse(_priceController.text) ?? 0;
 
       if (qty > 0) {
-        String newPrice = (total / qty).toStringAsFixed(2);
+        String newPrice = (total / qty).toStringAsFixed(4);
         if (_priceController.text != newPrice) {
           _priceController.value = TextEditingValue(text: newPrice);
         }
@@ -325,9 +325,8 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
           double.tryParse(_currentPriceController.text) ?? 0;
     }
 
-    final bucket = _bucketController.text.isEmpty
-        ? 'General'
-        : _bucketController.text;
+    final bucket =
+        _bucketController.text.isEmpty ? 'General' : _bucketController.text;
 
     final newRecord = InvestmentRecord(
       id: widget.recordToEdit?.id ?? '',
@@ -366,9 +365,8 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
       height: MediaQuery.of(context).size.height * 0.85,
       padding: EdgeInsets.only(
         top: 20,
-        bottom: _showCustomKeyboard
-            ? 0
-            : MediaQuery.of(context).viewInsets.bottom,
+        bottom:
+            _showCustomKeyboard ? 0 : MediaQuery.of(context).viewInsets.bottom,
       ),
       decoration: BoxDecoration(
         color: const Color(0xff0D1B2A),
@@ -425,33 +423,34 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                       focusNode: _searchFocus, // ADDED: Assigned FocusNode
                       enabled: widget.recordToEdit == null,
                       style: const TextStyle(color: Colors.white),
-                      decoration: _inputDecoration("eg. Gold, Bitcoin...")
-                          .copyWith(
-                            suffixIcon: _isSearching
-                                ? Transform.scale(
-                                    scale: 0.4,
-                                    child: const CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
+                      decoration:
+                          _inputDecoration("eg. HDFCBANK, HDFC Midcap...")
+                              .copyWith(
+                        suffixIcon: _isSearching
+                            ? Transform.scale(
+                                scale: 0.4,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : (_isSelectionValid
+                                ? const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.greenAccent,
                                   )
-                                : (_isSelectionValid
-                                      ? const Icon(
-                                          Icons.check_circle,
-                                          color: Colors.greenAccent,
-                                        )
-                                      : const Icon(
-                                          Icons.search,
-                                          color: Colors.white54,
-                                        )),
-                            focusedBorder: _isSelectionValid
-                                ? OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(
-                                      color: Colors.greenAccent,
-                                    ),
-                                  )
-                                : null,
-                          ),
+                                : const Icon(
+                                    Icons.search,
+                                    color: Colors.white54,
+                                  )),
+                        focusedBorder: _isSelectionValid
+                            ? OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Colors.greenAccent,
+                                ),
+                              )
+                            : null,
+                      ),
                       onTap: () {
                         if (_showCustomKeyboard) _handleKeyboardClose();
                       },
@@ -559,8 +558,8 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                                 showCursor: true,
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
+                                  decimal: true,
+                                ),
                                 onTap: () =>
                                     _onFieldTap(_qtyController, _qtyFocus),
                                 style: const TextStyle(color: Colors.white),
@@ -583,8 +582,8 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                                 showCursor: true,
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
+                                  decimal: true,
+                                ),
                                 onTap: () =>
                                     _onFieldTap(_priceController, _priceFocus),
                                 style: const TextStyle(color: Colors.white),
@@ -612,8 +611,8 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                                 showCursor: true,
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
+                                  decimal: true,
+                                ),
                                 onTap: () =>
                                     _onFieldTap(_totalController, _totalFocus),
                                 style: const TextStyle(
@@ -638,8 +637,8 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                                 showCursor: true,
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
+                                  decimal: true,
+                                ),
                                 onTap: () => _onFieldTap(
                                   _currentPriceController,
                                   _currentPriceFocus,
@@ -648,8 +647,8 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                                 decoration: _inputDecoration("₹ 0.0"),
                                 validator: (v) =>
                                     (double.tryParse(v ?? '') ?? 0) > 0
-                                    ? null
-                                    : "Invalid",
+                                        ? null
+                                        : "Invalid",
                               ),
                             ],
                           ),
@@ -664,27 +663,27 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
                         final buckets = await _service.getUniqueBuckets();
                         return buckets.where(
                           (b) => b.toLowerCase().contains(
-                            textEditingValue.text.toLowerCase(),
-                          ),
+                                textEditingValue.text.toLowerCase(),
+                              ),
                         );
                       },
                       onSelected: (val) => _bucketController.text = val,
                       fieldViewBuilder:
                           (context, controller, focusNode, onSubmitted) {
-                            _bucketFocusNode = focusNode; // CAPTURE
-                            if (_bucketController.text.isNotEmpty &&
-                                controller.text.isEmpty) {
-                              controller.text = _bucketController.text;
-                            }
-                            return TextFormField(
-                              controller: controller,
-                              focusNode: focusNode,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: _inputDecoration("e.g. Retirement"),
-                              onTap: () => _handleKeyboardClose(),
-                              onChanged: (v) => _bucketController.text = v,
-                            );
-                          },
+                        _bucketFocusNode = focusNode; // CAPTURE
+                        if (_bucketController.text.isNotEmpty &&
+                            controller.text.isEmpty) {
+                          controller.text = _bucketController.text;
+                        }
+                        return TextFormField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _inputDecoration("e.g. Retirement"),
+                          onTap: () => _handleKeyboardClose(),
+                          onChanged: (v) => _bucketController.text = v,
+                        );
+                      },
                     ),
 
                     const SizedBox(height: 32),
@@ -773,22 +772,23 @@ class _AddInvestmentSheetState extends State<AddInvestmentSheet> {
   }
 
   Widget _buildLabel(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 8, left: 4),
-    child: Text(
-      text,
-      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
-    ),
-  );
+        padding: const EdgeInsets.only(bottom: 8, left: 4),
+        child: Text(
+          text,
+          style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+        ),
+      );
 
   InputDecoration _inputDecoration(String hint) => InputDecoration(
-    hintText: hint,
-    hintStyle: TextStyle(color: Colors.white.withOpacity(0.2)),
-    filled: true,
-    fillColor: Colors.white.withOpacity(0.05),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide.none,
-    ),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-  );
+        hintText: hint,
+        hintStyle: TextStyle(color: Colors.white.withOpacity(0.2)),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.05),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      );
 }
