@@ -1,10 +1,12 @@
+import 'package:budgetr/features/developer/views/developer_support_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/components/bento_card.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/components/modern_app_bar.dart'; 
 import '../category_manager/views/category_manager_page.dart'; 
-import '../settings/views/settings_page.dart'; 
+import '../settings/views/settings_page.dart';
+import '../budget_buckets/views/budget_buckets_page.dart'; // Added import
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -25,20 +27,29 @@ class DashboardPage extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: const ModernAppBar(
+      appBar: ModernAppBar(
         title: 'BUDGETR',
         subtitle: 'OVERVIEW',
         leadingIcon: null, 
-        trailingIcon: null, // Removed the Settings gear from the App Bar
+        trailingIcon: null,
+        onTitleLongPress: () {
+          // The secret developer backdoor
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const DeveloperSupportPage(),
+            ),
+          );
+        },
       ),
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.all(16.0),
-              sliver: SliverToBoxAdapter(
-                child: Row(
+  padding: const EdgeInsets.all(16.0),
+  sliver: SliverToBoxAdapter( // <-- Fixed
+    child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // LEFT COLUMN (Wider, Flex 5)
@@ -149,15 +160,20 @@ class DashboardPage extends ConsumerWidget {
                           
                           const SizedBox(height: 16),
                           
-                          // Card 5: Budgets (Medium)
+                          // Card 5: Budgets (Medium) -> WIRED TO BUDGET BUCKETS
                           BentoCard(
                             height: 160,
-                            onTap: () {},
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const BudgetBucketsPage()),
+                              );
+                            },
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('ACTIVE\nBUDGETS', style: labelStyle),
+                                Text('BUDGET\nBUCKETS', style: labelStyle),
                                 Text('3', style: valueStyle?.copyWith(fontSize: 32)),
                                 Container(
                                   height: 4,
@@ -185,7 +201,7 @@ class DashboardPage extends ConsumerWidget {
 
                           const SizedBox(height: 16),
 
-                          // Card 7: Settings (Short) -> NEWLY ADDED TO BALANCE GRID
+                          // Card 7: Settings (Short)
                           BentoCard(
                             height: 84,
                             onTap: () {

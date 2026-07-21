@@ -8,6 +8,10 @@ class ModernBoxyInput extends StatelessWidget {
   final String? Function(String?)? validator;
   final Widget? suffixIcon;
   final bool autofocus;
+  
+  // ─── ADDED KEYBOARD PARAMETERS ───
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
 
   const ModernBoxyInput({
     Key? key,
@@ -17,6 +21,9 @@ class ModernBoxyInput extends StatelessWidget {
     this.validator,
     this.suffixIcon,
     this.autofocus = false,
+    // ─── ADDED TO CONSTRUCTOR ───
+    this.keyboardType,
+    this.textInputAction,
   }) : super(key: key);
 
   @override
@@ -44,6 +51,9 @@ class ModernBoxyInput extends StatelessWidget {
     return TextFormField(
       controller: controller,
       autofocus: autofocus,
+      // ─── PASSED TO TEXTFORMFIELD ───
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
       style: const TextStyle(fontWeight: FontWeight.w500),
       decoration: InputDecoration(
         labelText: labelText,

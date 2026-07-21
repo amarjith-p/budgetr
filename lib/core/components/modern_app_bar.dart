@@ -9,6 +9,7 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onLeadingPressed;
   final IconData? trailingIcon;
   final VoidCallback? onTrailingPressed;
+  final VoidCallback? onTitleLongPress;
 
   const ModernAppBar({
     Key? key,
@@ -18,6 +19,7 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onLeadingPressed,
     this.trailingIcon,
     this.onTrailingPressed,
+    this.onTitleLongPress,
   }) : super(key: key);
 
   // Required to be used natively in Scaffold.appBar
@@ -55,34 +57,39 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
             const SizedBox(width: DesignTokens.spacingMd),
 
             // TITLE SECTION
+            // TITLE SECTION
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    subtitle.toUpperCase(),
-                    style: TextStyle(
-                      color: subtitleColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 2.0,
+              child: GestureDetector(
+                onLongPress: onTitleLongPress,
+                behavior: HitTestBehavior.opaque, 
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      subtitle.toUpperCase(),
+                      style: TextStyle(
+                        color: subtitleColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 2.0,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: titleColor,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
+                    const SizedBox(height: 2),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: titleColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
