@@ -73,3 +73,13 @@ class CreditTransactions extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+class TransactionCategories extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get type => text()(); // 'Expense' or 'Income'
+  TextColumn get subCategories => text()(); // Stored as JSON string list
+  IntColumn get iconCode => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/components/bento_card.dart';
 import '../../core/theme/app_theme.dart';
+import '../category_manager/views/category_manager_page.dart'; // Added import for routing
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -13,12 +14,12 @@ class DashboardPage extends ConsumerWidget {
     
     // Minimalist text styles
     final labelStyle = theme.textTheme.bodySmall?.copyWith(
-      fontWeight: FontWeight.w600, 
-      letterSpacing: 0.5, 
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.5,
       color: isDark ? Colors.white60 : Colors.black54,
     );
     final valueStyle = theme.textTheme.titleLarge?.copyWith(
-      fontWeight: FontWeight.w800, 
+      fontWeight: FontWeight.w800,
       letterSpacing: -0.5,
     );
 
@@ -33,17 +34,18 @@ class DashboardPage extends ConsumerWidget {
               backgroundColor: theme.scaffoldBackgroundColor,
               elevation: 0,
               title: Text(
-                'BUDGETR', 
+                'BUDGETR',
                 style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 1.5),
               ),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.settings_outlined),
-                  onPressed: () {},
+                  onPressed: () {
+                    // Future Settings Page Routing
+                  },
                 ),
               ],
             ),
-
             // The Masonry Grid
             SliverPadding(
               padding: const EdgeInsets.all(16.0),
@@ -60,10 +62,6 @@ class DashboardPage extends ConsumerWidget {
                           BentoCard(
                             height: 240,
                             backgroundColor: isDark ? AppTokens.surfaceLight : AppTokens.primary,
-                            // onTap: () => Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(builder: (context) => const MoneyTrackerShell()),
-                            // ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -100,7 +98,7 @@ class DashboardPage extends ConsumerWidget {
                           ),
                           
                           const SizedBox(height: 16),
-
+                          
                           // Card 2: Spending (Short)
                           BentoCard(
                             height: 140,
@@ -115,6 +113,26 @@ class DashboardPage extends ConsumerWidget {
                               ],
                             ),
                           ),
+
+                          const SizedBox(height: 16),
+                          
+                          // Card 3: Categories Menu (Short) -> NEW
+                          BentoCard(
+                            height: 84,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const CategoryManagerPage()),
+                              );
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('CATEGORIES', style: labelStyle),
+                                const Icon(Icons.category_outlined, size: 20),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -126,7 +144,7 @@ class DashboardPage extends ConsumerWidget {
                       flex: 4,
                       child: Column(
                         children: [
-                          // Card 3: Quick Action (Short)
+                          // Card 4: Quick Action (Short)
                           BentoCard(
                             height: 120,
                             onTap: () {},
@@ -141,8 +159,8 @@ class DashboardPage extends ConsumerWidget {
                           ),
                           
                           const SizedBox(height: 16),
-
-                          // Card 4: Budgets (Medium)
+                          
+                          // Card 5: Budgets (Medium)
                           BentoCard(
                             height: 160,
                             onTap: () {},
@@ -163,7 +181,7 @@ class DashboardPage extends ConsumerWidget {
                           
                           const SizedBox(height: 16),
                           
-                          // Card 5: Recent (Short)
+                          // Card 6: Recent (Short)
                           BentoCard(
                             height: 84,
                             onTap: () {},
