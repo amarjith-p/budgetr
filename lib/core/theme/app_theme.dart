@@ -29,16 +29,36 @@ class AppTheme {
   static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    colorSchemeSeed: AppTokens.primary,
     scaffoldBackgroundColor: AppTokens.backgroundLight,
+    // Explicitly mapping your custom tokens to the ColorScheme
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: AppTokens.primary,
+      brightness: Brightness.light,
+      primary: AppTokens.primary,
+      surface: AppTokens.surfaceLight,
+      onSurface: AppTokens.textLight,
+      surfaceContainerHighest: const Color(0xFFE5E5EA), // Soft grey for light mode bento blocks
+    ),
+    // Setting a crisp, professional divider color for your Boxy inputs
+    dividerColor: Colors.black.withOpacity(0.1),
     textTheme: _buildTextTheme(AppTokens.textLight),
   );
 
   static ThemeData get darkTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
-    colorSchemeSeed: AppTokens.primary,
     scaffoldBackgroundColor: AppTokens.backgroundDark,
+    // Explicitly mapping your custom tokens to the ColorScheme
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: AppTokens.primary,
+      brightness: Brightness.dark,
+      primary: Colors.white, // High contrast primary for dark mode
+      surface: AppTokens.surfaceDark,
+      onSurface: AppTokens.textDark,
+      surfaceContainerHighest: const Color(0xFF242424), // Elevated grey for dark mode bento blocks
+    ),
+    // Setting a crisp, professional divider color for your Boxy inputs
+    dividerColor: Colors.white.withOpacity(0.15),
     textTheme: _buildTextTheme(AppTokens.textDark),
   );
 }

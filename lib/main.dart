@@ -4,6 +4,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/auth_page.dart';
 import 'features/auth/auth_state.dart';
 import 'features/dashboard/dashboard_page.dart';
+import 'core/providers/theme_provider.dart'; // 1. Added Import
 
 void main() {
   runApp(const ProviderScope(child: BudgetrApp()));
@@ -44,6 +45,7 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp> with WidgetsBindingObse
   @override
   Widget build(BuildContext context) {
     final authStatus = ref.watch(authProvider);
+    final currentThemeMode = ref.watch(themeModeProvider); // 2. Watch the theme state
 
     Widget getHomeScreen() {
       switch (authStatus) {
@@ -66,7 +68,7 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp> with WidgetsBindingObse
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: currentThemeMode, // 3. Reactive theme mode
       home: getHomeScreen(),
     );
   }
