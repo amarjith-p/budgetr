@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/design_tokens.dart';
-import '../../../core/components/modern_squircle_fab.dart';
 import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../providers/account_provider.dart';
@@ -53,15 +52,11 @@ class AccountsTab extends ConsumerWidget {
                 _buildSectionHeader(context, 'CREDIT CARDS', totalCreditBalance, true),
                 _buildList(context, ref, creditCards),
               ],
-              const SliverToBoxAdapter(child: SizedBox(height: 100)), // Breathing room for FAB
+              // Add a bit of breathing room at the very bottom
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );
         },
-      ),
-      floatingActionButton: ModernSquircleFab(
-        onPressed: () => _openForm(context),
-        icon: Icons.add_card_rounded,
-        label: 'Account',
       ),
     );
   }
@@ -123,7 +118,8 @@ class AccountsTab extends ConsumerWidget {
       ),
     );
   }
-Widget _buildList(BuildContext context, WidgetRef ref, List<dynamic> items) {
+
+  Widget _buildList(BuildContext context, WidgetRef ref, List<dynamic> items) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg),
       sliver: SliverList(
@@ -132,8 +128,8 @@ Widget _buildList(BuildContext context, WidgetRef ref, List<dynamic> items) {
             final acc = items[index];
             return BoxySlidableCard(
               key: ValueKey(acc.id),
-              customBorderRadius: BorderRadius.circular(16.0),
-              customBackgroundColor: Colors.transparent,
+              customBorderRadius: BorderRadius.circular(16.0), 
+              customBackgroundColor: Colors.transparent, 
               onEdit: () => _openForm(context, existingAccount: acc),
               onDelete: () {
                 ConfirmationBottomSheet.show(

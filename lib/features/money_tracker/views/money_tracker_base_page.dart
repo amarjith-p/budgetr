@@ -1,12 +1,24 @@
-import 'package:budgetr/features/accounts/views/accounts_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_bottom_nav.dart';
+import '../../../core/theme/design_tokens.dart';
+import '../../accounts/views/accounts_tab.dart';
+import '../../accounts/components/account_form_bottom_sheet.dart';
 import '../providers/bottom_nav_provider.dart';
 
 class MoneyTrackerBasePage extends ConsumerWidget {
   const MoneyTrackerBasePage({Key? key}) : super(key: key);
+
+  void _openAddAccountForm(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: DesignTokens.bottomSheetShape,
+      builder: (ctx) => const AccountFormBottomSheet(),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,10 +35,13 @@ class MoneyTrackerBasePage extends ConsumerWidget {
     ];
 
     return Scaffold(
-      appBar: const ModernAppBar(
+      // The App Bar dynamically updates based on the active tab
+      appBar: ModernAppBar(
         title: 'Tracker',
         subtitle: 'FINANCE',
         leadingIcon: Icons.arrow_back_rounded,
+        trailingIcon: currentIndex == 2 ? Icons.add_card_rounded : null,
+        onTrailingPressed: currentIndex == 2 ? () => _openAddAccountForm(context) : null,
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
@@ -45,6 +60,7 @@ class MoneyTrackerBasePage extends ConsumerWidget {
 /// Temporary placeholder for the tabs until we build them out
 class _PlaceholderTab extends StatelessWidget {
   final String title;
+
   const _PlaceholderTab({required this.title});
 
   @override
