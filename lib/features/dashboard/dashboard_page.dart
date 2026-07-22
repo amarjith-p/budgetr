@@ -1,4 +1,5 @@
 import 'package:budgetr/features/developer/views/developer_support_page.dart';
+import 'package:budgetr/features/money_tracker/views/money_tracker_base_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/components/bento_card.dart';
@@ -62,6 +63,12 @@ class DashboardPage extends ConsumerWidget {
                           BentoCard(
                             height: 240,
                             backgroundColor: isDark ? AppTokens.surfaceLight : AppTokens.primary,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const MoneyTrackerBasePage()),
+                              );
+                            },
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -76,7 +83,7 @@ class DashboardPage extends ConsumerWidget {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('NET WORTH', style: labelStyle?.copyWith(color: isDark ? Colors.black54 : Colors.white70)),
+                                    Text('MONEY TRACKER', style: labelStyle?.copyWith(color: isDark ? Colors.black54 : Colors.white70)),
                                     const SizedBox(height: 8),
                                     Text('\$12,450.00', style: valueStyle?.copyWith(fontSize: 28, color: isDark ? Colors.black : Colors.white)),
                                     const SizedBox(height: 16),

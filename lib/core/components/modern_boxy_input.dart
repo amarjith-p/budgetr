@@ -8,10 +8,13 @@ class ModernBoxyInput extends StatelessWidget {
   final String? Function(String?)? validator;
   final Widget? suffixIcon;
   final bool autofocus;
-  
-  // ─── ADDED KEYBOARD PARAMETERS ───
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  
+  final FocusNode? focusNode;
+  final ValueChanged<String>? onFieldSubmitted;
 
   const ModernBoxyInput({
     Key? key,
@@ -21,28 +24,29 @@ class ModernBoxyInput extends StatelessWidget {
     this.validator,
     this.suffixIcon,
     this.autofocus = false,
-    // ─── ADDED TO CONSTRUCTOR ───
     this.keyboardType,
     this.textInputAction,
+    this.readOnly = false,
+    this.onTap,
+    this.focusNode,
+    this.onFieldSubmitted,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
-    // The strict Boxy aesthetic
-    final boxyRadius = BorderRadius.circular(DesignTokens.spacingXs); // 4.0 radius
-    
+    final boxyRadius = BorderRadius.circular(DesignTokens.spacingXs); 
+
     final boxyBorder = OutlineInputBorder(
       borderRadius: boxyRadius,
       borderSide: BorderSide(color: theme.dividerColor, width: 1.2),
     );
-    
+
     final focusedBoxyBorder = OutlineInputBorder(
       borderRadius: boxyRadius,
       borderSide: BorderSide(color: theme.colorScheme.primary, width: 2.0),
     );
-    
+
     final errorBoxyBorder = OutlineInputBorder(
       borderRadius: boxyRadius,
       borderSide: BorderSide(color: theme.colorScheme.error, width: 1.2),
@@ -50,10 +54,14 @@ class ModernBoxyInput extends StatelessWidget {
 
     return TextFormField(
       controller: controller,
+      focusNode: focusNode, 
       autofocus: autofocus,
-      // ─── PASSED TO TEXTFORMFIELD ───
       keyboardType: keyboardType,
       textInputAction: textInputAction,
+      readOnly: readOnly, 
+      showCursor: readOnly ? true : null, // <-- Forces blinking cursor on calc fields
+      onTap: onTap,       
+      onFieldSubmitted: onFieldSubmitted, 
       style: const TextStyle(fontWeight: FontWeight.w500),
       decoration: InputDecoration(
         labelText: labelText,

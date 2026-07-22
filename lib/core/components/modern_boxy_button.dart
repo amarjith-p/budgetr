@@ -5,9 +5,9 @@ class ModernBoxyButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final String label;
   final bool isLoading;
-  final bool isOutlined; 
-  final Color? backgroundColor; // Added
-  final Color? foregroundColor; // Added
+  final bool isOutlined;
+  final Color? backgroundColor; 
+  final Color? foregroundColor; 
 
   const ModernBoxyButton({
     Key? key,
@@ -38,9 +38,14 @@ class ModernBoxyButton extends StatelessWidget {
             foregroundColor: foregroundColor ?? theme.colorScheme.onSurface,
           ),
           onPressed: isLoading ? null : onPressed,
-          child: Text(
-            label.toUpperCase(),
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+          // Intelligent Overflow: FittedBox prevents text breaking on narrow flex layouts
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label.toUpperCase(),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+              maxLines: 1,
+            ),
           ),
         ),
       );
@@ -63,9 +68,13 @@ class ModernBoxyButton extends StatelessWidget {
                 height: 24, 
                 child: CircularProgressIndicator(strokeWidth: 2.5, color: foregroundColor ?? Colors.white)
               )
-            : Text(
-                label.toUpperCase(),
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+            : FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label.toUpperCase(),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                  maxLines: 1,
+                ),
               ),
       ),
     );

@@ -11,7 +11,8 @@ part 'app_database.g.dart';
 // Add TransactionCategories to this list!
 @DriftDatabase(tables: [
   TransactionCategories, // <-- ADDED HERE
-  BudgetBuckets
+  BudgetBuckets,
+  Accounts,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());

@@ -7,6 +7,8 @@ class BoxySlidableCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final EdgeInsetsGeometry margin;
+  final BorderRadius? customBorderRadius; // Added for Squircle compatibility
+  final Color? customBackgroundColor;     // Added for Premium Card backgrounds
 
   const BoxySlidableCard({
     Key? key, // Key is required for Slidable to track dismissals
@@ -14,11 +16,14 @@ class BoxySlidableCard extends StatelessWidget {
     this.onEdit,
     this.onDelete,
     this.margin = const EdgeInsets.only(bottom: DesignTokens.spacingMd),
+    this.customBorderRadius,
+    this.customBackgroundColor,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final boxyRadius = BorderRadius.circular(DesignTokens.spacingXs);
+    // If a custom radius is provided, use it. Otherwise, default to the strict boxy aesthetic.
+    final activeRadius = customBorderRadius ?? BorderRadius.circular(DesignTokens.spacingXs);
 
     return Padding(
       padding: margin,
@@ -39,7 +44,7 @@ class BoxySlidableCard extends StatelessWidget {
                 margin: const EdgeInsets.only(right: DesignTokens.spacingSm),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: boxyRadius,
+                  borderRadius: activeRadius, // Adapts to custom or default radius
                   border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3), width: 1.2),
                 ),
                 alignment: Alignment.center,
@@ -70,7 +75,7 @@ class BoxySlidableCard extends StatelessWidget {
                 margin: const EdgeInsets.only(left: DesignTokens.spacingSm),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.errorContainer,
-                  borderRadius: boxyRadius,
+                  borderRadius: activeRadius, // Adapts to custom or default radius
                   border: Border.all(color: Theme.of(context).colorScheme.error.withOpacity(0.3), width: 1.2),
                 ),
                 alignment: Alignment.center,
@@ -91,10 +96,16 @@ class BoxySlidableCard extends StatelessWidget {
         child: Card(
           elevation: 0,
           margin: EdgeInsets.zero,
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+          color: customBackgroundColor ?? Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
           shape: RoundedRectangleBorder(
-            borderRadius: boxyRadius,
-            side: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.6), width: 1.2),
+            borderRadius: activeRadius,
+            side: BorderSide(
+              // Completely hide the generic border if a transparent background is explicitly requested
+              color: customBackgroundColor == Colors.transparent 
+                  ? Colors.transparent 
+                  : Theme.of(context).dividerColor.withOpacity(0.6), 
+              width: 1.2
+            ),
           ),
           child: child, // The injected UI goes here
         ),
