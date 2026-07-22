@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_bottom_nav.dart';
+import '../../../core/components/modern_squircle_fab.dart'; // <-- Required for the global FAB
 import '../../../core/theme/design_tokens.dart';
 import '../../accounts/views/accounts_tab.dart';
 import '../../accounts/components/account_form_bottom_sheet.dart';
+import '../../transactions/views/transaction_form_page.dart'; // <-- Inject the Form
 import '../providers/bottom_nav_provider.dart';
 
 class MoneyTrackerBasePage extends ConsumerWidget {
@@ -20,12 +22,17 @@ class MoneyTrackerBasePage extends ConsumerWidget {
     );
   }
 
+  void _openTransactionForm(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TransactionFormPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the current tab index
     final currentIndex = ref.watch(moneyTrackerNavProvider);
 
-    // List of screens corresponding to the bottom nav tabs
     final List<Widget> pages = [
       const _PlaceholderTab(title: 'MONEY TRACKER HOME'),
       const _PlaceholderTab(title: 'TRANSACTION RECORDS'),
@@ -35,7 +42,6 @@ class MoneyTrackerBasePage extends ConsumerWidget {
     ];
 
     return Scaffold(
-      // The App Bar dynamically updates based on the active tab
       appBar: ModernAppBar(
         title: 'Tracker',
         subtitle: 'FINANCE',
@@ -47,6 +53,12 @@ class MoneyTrackerBasePage extends ConsumerWidget {
         duration: const Duration(milliseconds: 300),
         child: pages[currentIndex],
       ),
+      // GLOBAL FLOATING ACTION BUTTON
+      floatingActionButton: ModernSquircleFab(
+        onPressed: () => _openTransactionForm(context),
+        icon: Icons.add_rounded,
+        label: 'Log',
+      ),
       bottomNavigationBar: ModernBottomNav(
         selectedIndex: currentIndex,
         onDestinationSelected: (index) {
@@ -57,10 +69,8 @@ class MoneyTrackerBasePage extends ConsumerWidget {
   }
 }
 
-/// Temporary placeholder for the tabs until we build them out
 class _PlaceholderTab extends StatelessWidget {
   final String title;
-
   const _PlaceholderTab({required this.title});
 
   @override

@@ -1,3 +1,4 @@
+import 'package:budgetr/features/transactions/views/account_transactions_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/design_tokens.dart';
@@ -144,11 +145,11 @@ class AccountsTab extends ConsumerWidget {
               child: PremiumAccountCard(
                 account: acc,
                 onCardTap: () {
-                  // FUTURE WORKFLOW WIRE-UP: Open Transactions Screen
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Route to Transactions for: ${acc.name}'),
-                      behavior: SnackBarBehavior.floating,
+                  // SECURE ROUTING: Opens the ledger specifically for this account
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AccountTransactionsPage(account: acc),
                     ),
                   );
                 },

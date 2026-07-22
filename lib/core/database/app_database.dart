@@ -13,12 +13,13 @@ part 'app_database.g.dart';
   TransactionCategories, // <-- ADDED HERE
   BudgetBuckets,
   Accounts,
+  Transactions,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 }
 
 LazyDatabase _openConnection() {

@@ -33,3 +33,20 @@ class Accounts extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+@DataClassName('TransactionRecord')
+class Transactions extends Table {
+  TextColumn get id => text()();
+  TextColumn get type => text()(); // 'Expense', 'Income', 'Transfer'
+  RealColumn get amount => real()();
+  DateTimeColumn get date => dateTime()();
+  TextColumn get accountId => text()(); // Source Account
+  TextColumn get toAccountId => text().nullable()(); // Destination Account (For Transfers)
+  TextColumn get categoryId => text().nullable()(); // Relates to TransactionCategories
+  TextColumn get subCategory => text().nullable()();
+  IntColumn get bucketId => integer().nullable()(); // Relates to BudgetBuckets
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

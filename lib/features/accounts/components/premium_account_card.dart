@@ -166,7 +166,7 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
           ),
           
           Text(
-            '•••• ${widget.account.last4}',
+            '•••• •••• •••• ${widget.account.last4}',
             style: TextStyle(color: fgColor.withOpacity(0.8), fontSize: 18, fontFamily: 'monospace', letterSpacing: 2.0),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
