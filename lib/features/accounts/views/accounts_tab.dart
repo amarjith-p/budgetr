@@ -123,8 +123,7 @@ class AccountsTab extends ConsumerWidget {
       ),
     );
   }
-
-  Widget _buildList(BuildContext context, WidgetRef ref, List<dynamic> items) {
+Widget _buildList(BuildContext context, WidgetRef ref, List<dynamic> items) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg),
       sliver: SliverList(
@@ -133,8 +132,8 @@ class AccountsTab extends ConsumerWidget {
             final acc = items[index];
             return BoxySlidableCard(
               key: ValueKey(acc.id),
-              customBorderRadius: BorderRadius.circular(16.0), 
-              customBackgroundColor: Colors.transparent, 
+              customBorderRadius: BorderRadius.circular(16.0),
+              customBackgroundColor: Colors.transparent,
               onEdit: () => _openForm(context, existingAccount: acc),
               onDelete: () {
                 ConfirmationBottomSheet.show(
@@ -146,7 +145,18 @@ class AccountsTab extends ConsumerWidget {
                   onConfirm: () => ref.read(accountActionProvider.notifier).deleteAccount(acc.id),
                 );
               },
-              child: PremiumAccountCard(account: acc),
+              child: PremiumAccountCard(
+                account: acc,
+                onCardTap: () {
+                  // FUTURE WORKFLOW WIRE-UP: Open Transactions Screen
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Route to Transactions for: ${acc.name}'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
             );
           },
           childCount: items.length,
