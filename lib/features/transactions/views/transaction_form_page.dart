@@ -123,7 +123,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           }
         }
         
-        // LIMIT 1: Prevent unbounded string expansion (stops user from typing infinitely)
         if (_expression.length < 25) {
           _expression += key;
         }
@@ -135,16 +134,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       if (parsed != null) {
         if (parsed.isNaN || parsed.isInfinite) {
           _liveResult = '0.00';
-        } 
-        // LIMIT 2: Absolute Value Cap at 999 Billion to eradicate Exponential 'e' formatting
-        else if (parsed >= 1000000000000) { 
+        } else if (parsed >= 1000000000000) { 
           _liveResult = '999999999999.99';
           if (key != '⌫') _expression = '999999999999.99'; 
         } else if (parsed <= -1000000000000) {
           _liveResult = '-999999999999.99';
           if (key != '⌫') _expression = '-999999999999.99';
         } else {
-          // Strictly formats to EXACTLY 2 decimal places, always.
           _liveResult = parsed.toStringAsFixed(2);
         }
       } else {
@@ -207,7 +203,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     );
   }
 
-  // INTELLIGENT NOTES EDITOR
   void _openNotesEditor() {
     showModalBottomSheet(
       context: context,
@@ -266,8 +261,10 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final isExpense = _typeIndex == 0;
     final isTransfer = _typeIndex == 2;
     
-    // Validation ensures BOTH sides aren't external
-    if (amount <= 0 || _selectedAccountId == null || 
+    // Check for dangling operator in expression
+    final hasDanglingOperator = _expression.isNotEmpty && ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
+
+    if (amount <= 0 || hasDanglingOperator || _selectedAccountId == null || 
        (isTransfer && _selectedToAccountId == null) ||
        (isTransfer && _selectedAccountId == 'EXTERNAL' && _selectedToAccountId == 'EXTERNAL') || 
        (!isTransfer && _selectedCategoryId == null) ||
@@ -286,7 +283,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       toAccountId: _selectedToAccountId,
       categoryId: _selectedCategoryId,
       subCategory: _selectedSubCategory,
-      bucketId: _selectedBucketId == -1 ? null : _selectedBucketId, // Translates -1 back to Null
+      bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
       notes: _notesCtrl.text.trim(),
     );
 
@@ -356,19 +353,22 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
     final txColor = TransactionColors.getTypeColor(_types[_typeIndex], theme);
 
+    // --- AMOUNT VALIDATION LOGIC ---
+    final amountVal = double.tryParse(_liveResult) ?? 0.0;
+    final hasDanglingOperator = _expression.isNotEmpty && ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
+    final hasAmountError = _showValidationErrors && (amountVal <= 0 || hasDanglingOperator);
+    final displayAmountColor = hasAmountError ? theme.colorScheme.error : txColor;
+
     final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
     final rawCategories = ref.watch(categoriesStreamProvider).asData?.value ?? [];
     final rawBuckets = ref.watch(bucketsStreamProvider).asData?.value ?? [];
     
-    // --- DYNAMIC UI LIST INJECTION ---
     final accountItems = rawAccounts.map((a) => _AccountItem(a.id, a.name)).toList();
-    // Conditionally inject External Account ONLY if Transfer is selected
     if (isTransfer) {
       accountItems.add(_AccountItem('EXTERNAL', 'External Account'));
     }
 
     final bucketItems = rawBuckets.map((b) => _BucketItem(b.id, b.name)).toList();
-    // Add Out of Bucket to the END of the list instead of the top
     bucketItems.add(_BucketItem(-1, 'Out of Bucket'));
 
     final activeCategories = rawCategories.where((c) => c.type == _types[_typeIndex]).toList();
@@ -456,16 +456,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                         _typeIndex = index;
                         _selectedCategoryId = null; 
                         _selectedSubCategory = null;
-                        
-                        // Handle strict logic resets when switching tabs
-                        if (index == 1) { // If Income
-                          _selectedBucketId = null; 
-                        }
-                        if (index != 2) { // If Expense or Income
-                          // Ensure we don't accidentally keep an 'EXTERNAL' account selected
-                          if (_selectedAccountId == 'EXTERNAL') {
-                            _selectedAccountId = null;
-                          }
+                        if (index == 1) _selectedBucketId = null; 
+                        if (index != 2 && _selectedAccountId == 'EXTERNAL') {
+                          _selectedAccountId = null;
                         }
                       }),
                     ),
@@ -486,20 +479,30 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                   children: [
                                     TextSpan(
                                       text: '₹ ',
-                                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.w400, color: txColor.withOpacity(0.7)),
+                                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.w400, color: displayAmountColor.withOpacity(0.7)),
                                     ),
                                     TextSpan(
                                       text: _expression.isEmpty ? '0.00' : _expression,
-                                      style: TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: txColor, letterSpacing: -2),
+                                      style: TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: displayAmountColor, letterSpacing: -2),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                            if (_expression.isNotEmpty && _expression != _liveResult)
+                            if (_expression.isNotEmpty && _expression != _liveResult && !hasAmountError)
                               Text(
                                 '= ₹ $_liveResult',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: txColor),
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: displayAmountColor),
+                              ),
+                            if (hasAmountError)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  hasDanglingOperator
+                                      ? 'Incomplete mathematical expression'
+                                      : 'Amount must be greater than 0',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: theme.colorScheme.error),
+                                ),
                               ),
                           ],
                         ),
