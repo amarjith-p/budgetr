@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:budgetr/core/components/currency_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/database/app_database.dart';
@@ -206,13 +207,12 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerRight,
-                      child: RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(text: signText, style: TextStyle(color: fgColor.withOpacity(0.9), fontWeight: FontWeight.w500, fontSize: 20)),
-                            TextSpan(text: amountText, style: TextStyle(color: fgColor, fontWeight: FontWeight.w800, fontSize: 24, letterSpacing: -0.5)),
-                          ],
-                        ),
+                      child: CurrencyText(
+                        amount: balance,
+                        sign: signText,
+                        amountStyle: TextStyle(color: fgColor, fontWeight: FontWeight.w800, fontSize: 24, letterSpacing: -0.5),
+                        symbolStyle: TextStyle(color: fgColor.withOpacity(0.9)), 
+                      
                       ),
                     ),
                   ],

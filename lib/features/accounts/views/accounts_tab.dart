@@ -1,3 +1,4 @@
+import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/features/transactions/views/account_transactions_page.dart';
 import 'package:budgetr/features/transactions/views/credit_transaction_page.dart'; // <-- NEW IMPORT
 import 'package:flutter/material.dart';
@@ -93,27 +94,40 @@ class AccountsTab extends ConsumerWidget {
             const SizedBox(width: DesignTokens.spacingMd),
             
             // Right Side: Section Total
-            RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: signText, 
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface.withOpacity(0.8), 
-                      fontWeight: FontWeight.w600, 
-                      fontSize: 11,
-                    ),
-                  ),
-                  TextSpan(
-                    text: amountText, 
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface, 
-                      fontWeight: FontWeight.w800, 
-                      fontSize: 14, 
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ],
+            // RichText(
+            //   text: TextSpan(
+            //     children: [
+            //       TextSpan(
+            //         text: signText, 
+            //         style: TextStyle(
+            //           color: theme.colorScheme.onSurface.withOpacity(0.8), 
+            //           fontWeight: FontWeight.w600, 
+            //           fontSize: 11,
+            //         ),
+            //       ),
+            //       TextSpan(
+            //         text: amountText, 
+            //         style: TextStyle(
+            //           color: theme.colorScheme.onSurface, 
+            //           fontWeight: FontWeight.w800, 
+            //           fontSize: 14, 
+            //           letterSpacing: -0.5,
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
+            CurrencyText(
+              amount: total,
+              sign: signText,
+              amountStyle: TextStyle(
+                color: theme.colorScheme.onSurface, 
+                fontWeight: FontWeight.w800, 
+                fontSize: 14, 
+                letterSpacing: -0.5,
+              ),
+              symbolStyle: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.8), 
               ),
             ),
           ],

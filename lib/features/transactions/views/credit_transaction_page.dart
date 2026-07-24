@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/features/transactions/services/transaction_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -306,7 +307,11 @@ class _CreditSummaryCard extends StatelessWidget {
                   children: [
                     Text('UNBILLED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0, color: theme.colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 8),
-                    Text('$unbilledSign${adjustedUnbilled.abs().toStringAsFixed(2)}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1, color: theme.colorScheme.onSurface)),
+                    CurrencyText(
+                      amount: adjustedUnbilled,
+                      sign: unbilledSign,
+                      amountStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1, color: theme.colorScheme.onSurface),
+                    ),
                     const SizedBox(height: 12),
                     
                     if (cycles.isNotEmpty)
@@ -338,7 +343,11 @@ class _CreditSummaryCard extends StatelessWidget {
                   children: [
                     Text('LAST STATEMENT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0, color: theme.colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 8),
-                    Text('$statementSign${historicalNet.abs().toStringAsFixed(2)}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1, color: theme.colorScheme.onSurface)),
+                    CurrencyText(
+                      amount: historicalNet,
+                      sign: statementSign,
+                      amountStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1, color: theme.colorScheme.onSurface),
+                    ),
                     const SizedBox(height: 8),
                     
                     Container(

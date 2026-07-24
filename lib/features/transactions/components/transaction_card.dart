@@ -1,3 +1,4 @@
+import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/features/transactions/views/transaction_form_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -137,9 +138,11 @@ class TransactionCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                '$sign${tx.amount.toStringAsFixed(2)}',
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: amountColor, letterSpacing: -0.5),
+              CurrencyText(
+                amount: tx.amount,
+                sign: sign,
+                amountStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: amountColor, letterSpacing: -0.5),
+                symbolStyle: TextStyle(color: amountColor.withOpacity(0.85)), // Automatically handles the heavy stroke fix
               ),
               const SizedBox(height: 4),
               Text(compactDate, style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold)),
