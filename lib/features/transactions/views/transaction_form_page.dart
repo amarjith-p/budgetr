@@ -10,6 +10,7 @@ import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_boxy_toggle.dart';
 import '../../../core/components/docked_calculator_pad.dart';
 import '../../../core/utils/bodmas_calculator.dart';
+import '../../../core/components/confirmation_bottom_sheet.dart'; // <-- NEW IMPORT
 
 import '../../accounts/providers/account_provider.dart';
 import '../../category_manager/providers/category_provider.dart';
@@ -123,6 +124,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           }
         }
         
+        // LIMIT 1: Prevent unbounded string expansion (stops user from typing infinitely)
         if (_expression.length < 25) {
           _expression += key;
         }
@@ -134,13 +136,16 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       if (parsed != null) {
         if (parsed.isNaN || parsed.isInfinite) {
           _liveResult = '0.00';
-        } else if (parsed >= 1000000000000) { 
+        } 
+        // LIMIT 2: Absolute Value Cap at 999 Billion to eradicate Exponential 'e' formatting
+        else if (parsed >= 1000000000000) { 
           _liveResult = '999999999999.99';
           if (key != '⌫') _expression = '999999999999.99'; 
         } else if (parsed <= -1000000000000) {
           _liveResult = '-999999999999.99';
           if (key != '⌫') _expression = '-999999999999.99';
         } else {
+          // Strictly formats to EXACTLY 2 decimal places, always.
           _liveResult = parsed.toStringAsFixed(2);
         }
       } else {
@@ -203,6 +208,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     );
   }
 
+  // INTELLIGENT NOTES EDITOR
   void _openNotesEditor() {
     showModalBottomSheet(
       context: context,
@@ -259,19 +265,77 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final amount = double.tryParse(_liveResult) ?? 0.0;
     
     final isExpense = _typeIndex == 0;
+    final isIncome = _typeIndex == 1;
     final isTransfer = _typeIndex == 2;
     
     // Check for dangling operator in expression
     final hasDanglingOperator = _expression.isNotEmpty && ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
 
+    // --- IMPENETRABLE VALIDATION ---
     if (amount <= 0 || hasDanglingOperator || _selectedAccountId == null || 
        (isTransfer && _selectedToAccountId == null) ||
-       (isTransfer && _selectedAccountId == 'EXTERNAL' && _selectedToAccountId == 'EXTERNAL') || 
+       // CRITICAL FIX: Explicitly prevents identical accounts (including EXTERNAL to EXTERNAL)
+       (isTransfer && _selectedAccountId == _selectedToAccountId) || 
        (!isTransfer && _selectedCategoryId == null) ||
        (isExpense && _selectedBucketId == null)) {
       setState(() => _showValidationErrors = true);
       HapticFeedback.heavyImpact();
       return;
+    }
+
+    // --- SMART REPAYMENT DETECTION & CONFIRMATION ---
+    final rawAccounts = ref.read(accountsStreamProvider).asData?.value ?? [];
+    final rawCategories = ref.read(categoriesStreamProvider).asData?.value ?? [];
+    
+    Account? targetCC;
+    if (isTransfer && _selectedToAccountId != null && _selectedToAccountId != 'EXTERNAL') {
+      final rawTarget = rawAccounts.where((a) => a.id == _selectedToAccountId).firstOrNull;
+      if (rawTarget?.type == 'Credit Cards') targetCC = rawTarget;
+    } else if (isIncome && _selectedAccountId != null && _selectedAccountId != 'EXTERNAL') {
+      final rawTarget = rawAccounts.where((a) => a.id == _selectedAccountId).firstOrNull;
+      if (rawTarget?.type == 'Credit Cards') targetCC = rawTarget;
+    }
+
+    String? finalCategoryId = _selectedCategoryId;
+    String? finalSubCategory = _selectedSubCategory;
+    String? finalNotes = _notesCtrl.text.trim();
+
+    if (targetCC != null) {
+      final bDay = targetCC.billDate ?? 15;
+      final dDay = targetCC.dueDate ?? 5;
+      final txDate = _selectedDateTime;
+      
+      DateTime lastBillDate = DateTime(txDate.year, txDate.month, bDay);
+      if (txDate.day < bDay) {
+        lastBillDate = DateTime(txDate.year, txDate.month - 1, bDay);
+      }
+      DateTime dueDate = DateTime(lastBillDate.year, lastBillDate.month + 1, dDay);
+      if (dDay > bDay) {
+        dueDate = DateTime(lastBillDate.year, lastBillDate.month, dDay);
+      }
+
+      bool inWindow = txDate.isAfter(lastBillDate) && txDate.isBefore(dueDate.add(const Duration(days: 1)));
+      final selectedCatName = rawCategories.where((c) => c.id == _selectedCategoryId).firstOrNull?.name;
+
+      if (inWindow && selectedCatName != 'Repayment') {
+        final isRepayment = await ConfirmationBottomSheet.show(
+          context,
+          title: 'Credit Card Repayment?',
+          description: 'This transaction is between the last bill date and the due date. Is this a repayment for the previous statement?',
+          confirmText: 'YES, REPAYMENT',
+          cancelText: 'NO, NORMAL',
+          onConfirm: () {}, // <-- ADD THIS LINE
+        );
+
+        if (isRepayment == true) {
+          final repaymentCat = rawCategories.where((c) => c.name == 'Repayment' && c.type == 'Income').firstOrNull;
+          if (repaymentCat != null) {
+            finalCategoryId = repaymentCat.id;
+            finalSubCategory = isTransfer ? 'Credit Card Bill' : 'Account Adjustments';
+            finalNotes = finalNotes!.isEmpty ? 'Auto-tagged as Bill Repayment' : '$finalNotes (Bill Repayment)'; 
+          }
+        }
+      }
     }
 
     final success = await ref.read(transactionActionProvider.notifier).saveTransaction(
@@ -281,10 +345,10 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       date: _selectedDateTime,
       accountId: _selectedAccountId!,
       toAccountId: _selectedToAccountId,
-      categoryId: _selectedCategoryId,
-      subCategory: _selectedSubCategory,
+      categoryId: finalCategoryId,
+      subCategory: finalSubCategory,
       bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
-      notes: _notesCtrl.text.trim(),
+      notes: finalNotes,
     );
 
     if (success && mounted) Navigator.pop(context);
@@ -384,7 +448,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       
       _buildTableCell(
         isTransfer ? 'FROM ACCOUNT' : 'ACCOUNT', selectedAccMatch?.name, Icons.account_balance_wallet_rounded,
-        () => _showSelector<_AccountItem>(title: 'Select Account', items: accountItems, labelBuilder: (a) => a.name, onSelected: (a) => setState(() => _selectedAccountId = a.id)),
+        () => _showSelector<_AccountItem>(
+          title: 'Select Account', 
+          // CRITICAL FIX: Mutual Exclusion (Removes To Account from From list)
+          items: isTransfer ? accountItems.where((a) => a.id != _selectedToAccountId).toList() : accountItems, 
+          labelBuilder: (a) => a.name, 
+          onSelected: (a) => setState(() => _selectedAccountId = a.id)
+        ),
         _showValidationErrors && _selectedAccountId == null
       ),
     ];
@@ -392,7 +462,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     if (isTransfer) {
       cells.add(_buildTableCell(
         'TO ACCOUNT', selectedToAccMatch?.name, Icons.sync_alt_rounded,
-        () => _showSelector<_AccountItem>(title: 'Select Destination', items: accountItems.where((a) => a.id != _selectedAccountId && !(_selectedAccountId == 'EXTERNAL' && a.id == 'EXTERNAL')).toList(), labelBuilder: (a) => a.name, onSelected: (a) => setState(() => _selectedToAccountId = a.id)),
+        () => _showSelector<_AccountItem>(
+          title: 'Select Destination', 
+          // CRITICAL FIX: Mutual Exclusion (Removes From Account from To list)
+          items: accountItems.where((a) => a.id != _selectedAccountId).toList(), 
+          labelBuilder: (a) => a.name, 
+          onSelected: (a) => setState(() => _selectedToAccountId = a.id)
+        ),
         _showValidationErrors && _selectedToAccountId == null
       ));
     } else {
@@ -453,11 +529,22 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                       labels: _types,
                       selectedIndex: _typeIndex,
                       onSelected: (index) => setState(() {
+                        final oldIndex = _typeIndex; // Capture previous state
                         _typeIndex = index;
                         _selectedCategoryId = null; 
                         _selectedSubCategory = null;
-                        if (index == 1) _selectedBucketId = null; 
-                        if (index != 2 && _selectedAccountId == 'EXTERNAL') {
+                        
+                        if (index == 1) { // If Income
+                          _selectedBucketId = null; 
+                        }
+                        
+                        // CRITICAL FIX: Aggressive Account Reset logic
+                        if (oldIndex == 2 && index != 2) {
+                          // Force user to pick account when abandoning a Transfer Edit
+                          _selectedAccountId = null;
+                          _selectedToAccountId = null;
+                        } else if (index != 2 && _selectedAccountId == 'EXTERNAL') {
+                          // Backup safety reset
                           _selectedAccountId = null;
                         }
                       }),

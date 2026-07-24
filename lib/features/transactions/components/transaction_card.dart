@@ -47,7 +47,7 @@ class TransactionCard extends ConsumerWidget {
     }
     
     // Contextual Sign and Centralized Color
-    final amountColor = TransactionColors.getTypeColor(tx.type, theme);
+    Color amountColor = TransactionColors.getTypeColor(tx.type, theme);
     String sign;
 
     if (isTransfer) {
@@ -77,6 +77,13 @@ class TransactionCard extends ConsumerWidget {
       leadingIcon = IconConstants.getIconByCode(data.category!.iconCode);
       mainTitle = data.category!.name;
       subTitle = tx.subCategory ?? data.category!.type;
+    }
+    // --- NEW: EXPLICIT REPAYMENT VISUAL OVERRIDE ---
+    bool isExplicitRepayment = data.category?.name == 'Repayment';
+    if (isExplicitRepayment) {
+      mainTitle = 'Statement Repayment';
+      leadingIcon = Icons.verified_rounded; // Distinct verified icon
+      amountColor = theme.colorScheme.primary; // Force primary color to highlight it
     }
 
     // Date Formatting using Global Constants

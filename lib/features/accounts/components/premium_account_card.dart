@@ -6,8 +6,7 @@ import '../../../core/theme/design_tokens.dart';
 
 class PremiumAccountCard extends StatefulWidget {
   final Account account;
-  final VoidCallback? onCardTap; // FUTURE: Used for Transaction Routing
-
+  final VoidCallback? onCardTap;
   const PremiumAccountCard({
     Key? key, 
     required this.account, 
@@ -39,7 +38,7 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
   }
 
   void _toggleCard() {
-    HapticFeedback.lightImpact(); 
+    HapticFeedback.lightImpact();
     if (_isFront) {
       _controller.forward();
     } else {
@@ -64,30 +63,28 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isCreditCard = widget.account.type == 'Credit Cards';
-
-    final bgColor = isCreditCard 
-        ? theme.colorScheme.primary 
-        : (isDark ? const Color(0xFF141414) : const Color(0xFF1E1E1E));
-    final fgColor = isCreditCard 
-        ? theme.colorScheme.onPrimary 
-        : Colors.white;
+    
+    final bgColor = isCreditCard
+         ? theme.colorScheme.primary
+         : (isDark ? const Color(0xFF141414) : const Color(0xFF1E1E1E));
+    final fgColor = isCreditCard
+         ? theme.colorScheme.onPrimary
+         : Colors.white;
 
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
         final angle = _animation.value * pi;
         final isFrontVisible = angle <= pi / 2;
-
         return Material(
           color: Colors.transparent,
           child: InkWell(
-            // Primary Tap: Routes to the Transaction Screen
-            onTap: widget.onCardTap, 
+            onTap: widget.onCardTap,
             borderRadius: BorderRadius.circular(16.0),
             child: Transform(
               transform: Matrix4.identity()
-                ..setEntry(3, 2, 0.001) 
-                ..rotateY(angle),      
+                ..setEntry(3, 2, 0.001)
+                ..rotateY(angle),
               alignment: Alignment.center,
               child: isFrontVisible
                   ? _buildFront(bgColor, fgColor, isCreditCard)
@@ -103,12 +100,11 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
     );
   }
 
-  // ==========================================
-  // FRONT OF THE CARD
-  // ==========================================
   Widget _buildFront(Color bgColor, Color fgColor, bool isCreditCard) {
-    final signText = isCreditCard && widget.account.balance > 0 ? '- ' : '';
-    final amountText = isCreditCard && widget.account.balance <= 0 ? '0.00' : widget.account.balance.toStringAsFixed(2);
+    // --- CRITICAL FIX: TRUE LIABILITY MATH ---
+    final balance = widget.account.balance;
+    final signText = balance < 0 ? '-₹' : (balance > 0 ? '+₹' : '₹');
+    final amountText = balance.abs().toStringAsFixed(2);
     final labelText = isCreditCard ? 'OUTSTANDING BALANCE' : 'CURRENT BALANCE';
 
     return Container(
@@ -145,12 +141,11 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
               const SizedBox(width: 8),
               Row(
                 children: [
-                  // SECONDARY TAP: Smart Hitbox isolated solely for flipping the card
                   GestureDetector(
                     onTap: _toggleCard,
                     behavior: HitTestBehavior.opaque,
                     child: Container(
-                      padding: const EdgeInsets.all(4.0), // Expands the hit area for thumbs
+                      padding: const EdgeInsets.all(4.0),
                       decoration: BoxDecoration(
                         color: fgColor.withOpacity(0.1),
                         shape: BoxShape.circle,
@@ -164,14 +159,12 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
               ),
             ],
           ),
-          
           Text(
-            '•••• •••• •••• ${widget.account.last4}',
+            '**** **** **** ${widget.account.last4}',
             style: TextStyle(color: fgColor.withOpacity(0.8), fontSize: 18, fontFamily: 'monospace', letterSpacing: 2.0),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -182,14 +175,14 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.account.name.toUpperCase(), 
+                      widget.account.name.toUpperCase(),
                       style: TextStyle(color: fgColor, fontWeight: FontWeight.w600, fontSize: 13),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      widget.account.type, 
+                      widget.account.type,
                       style: TextStyle(color: fgColor.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w500),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -204,7 +197,7 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      labelText, 
+                      labelText,
                       style: TextStyle(color: fgColor.withOpacity(0.6), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1.0),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -216,7 +209,6 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
                       child: RichText(
                         text: TextSpan(
                           children: [
-                            TextSpan(text: '₹', style: TextStyle(color: fgColor.withOpacity(0.9), fontWeight: FontWeight.w500, fontSize: 20)),
                             TextSpan(text: signText, style: TextStyle(color: fgColor.withOpacity(0.9), fontWeight: FontWeight.w500, fontSize: 20)),
                             TextSpan(text: amountText, style: TextStyle(color: fgColor, fontWeight: FontWeight.w800, fontSize: 24, letterSpacing: -0.5)),
                           ],
@@ -233,9 +225,6 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
     );
   }
 
-  // ==========================================
-  // BACK OF THE CARD 
-  // ==========================================
   Widget _buildBack(Color bgColor, Color fgColor, bool isCreditCard) {
     return Container(
       height: 190,
@@ -257,16 +246,16 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
           const SizedBox(height: 16),
           Container(height: 40, color: Colors.black87),
           const SizedBox(height: 16),
-          
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg),
-            child: isCreditCard 
-               ? Row(
+            child: isCreditCard
+                ? Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildBackData(fgColor, 'BILL DATE', _getOrdinal(widget.account.billDate)),
                     _buildBackData(fgColor, 'DUE DATE', _getOrdinal(widget.account.dueDate)),
-                    _buildBackData(fgColor, 'CREDIT LIMIT', '₹${widget.account.creditLimit?.toStringAsFixed(0) ?? "0"}'),
+                    // --- STRICT 2 DECIMALS ---
+                    _buildBackData(fgColor, 'CREDIT LIMIT', '₹${widget.account.creditLimit?.toStringAsFixed(2) ?? "0.00"}'),
                   ],
                 )
               : Row(
@@ -277,9 +266,7 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
                   ],
                 ),
           ),
-          const Spacer(), 
-          
-          // SECONDARY TAP: Smart Hitbox isolated solely for flipping back to the front
+          const Spacer(),
           GestureDetector(
             onTap: _toggleCard,
             behavior: HitTestBehavior.opaque,
@@ -305,14 +292,14 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label, 
+            label,
             style: TextStyle(color: fgColor.withOpacity(0.6), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1.0),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
-            value, 
+            value,
             style: TextStyle(color: fgColor, fontSize: 13, fontWeight: FontWeight.w700),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

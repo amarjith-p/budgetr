@@ -1,4 +1,5 @@
 import 'package:budgetr/features/transactions/views/account_transactions_page.dart';
+import 'package:budgetr/features/transactions/views/credit_transaction_page.dart'; // <-- NEW IMPORT
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/design_tokens.dart';
@@ -66,8 +67,8 @@ class AccountsTab extends ConsumerWidget {
     final theme = Theme.of(context);
     
     // Formatting logic consistent with the Premium Account Card
-    final signText = isCreditCard && total > 0 ? '-₹' : '₹';
-    final amountText = isCreditCard && total <= 0 ? '0.00' : total.toStringAsFixed(2);
+    final signText = total < 0 ? '-₹' : (total > 0 && isCreditCard ? '+₹' : '₹');
+    final amountText = total.abs().toStringAsFixed(2);
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -90,6 +91,7 @@ class AccountsTab extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: DesignTokens.spacingMd),
+            
             // Right Side: Section Total
             RichText(
               text: TextSpan(
@@ -145,13 +147,22 @@ class AccountsTab extends ConsumerWidget {
               child: PremiumAccountCard(
                 account: acc,
                 onCardTap: () {
-                  // SECURE ROUTING: Opens the ledger specifically for this account
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AccountTransactionsPage(account: acc),
-                    ),
-                  );
+                  // --- CRITICAL FIX: SMART ROUTING BASED ON ACCOUNT TYPE ---
+                  if (acc.type == 'Credit Cards') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CreditTransactionPage(account: acc),
+                      ),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AccountTransactionsPage(account: acc),
+                      ),
+                    );
+                  }
                 },
               ),
             );
