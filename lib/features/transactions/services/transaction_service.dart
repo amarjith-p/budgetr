@@ -49,7 +49,6 @@ class TransactionService {
     });
   }
 
-  /// 100% ACID Compliant Creation
   Future<void> logTransaction({
     required String type,
     required double amount,
@@ -60,14 +59,15 @@ class TransactionService {
     String? subCategory,
     int? bucketId,
     String? notes,
+    bool isSpillover = false, 
+    bool isSettlementVerified = false, // <-- NEW
   }) async {
-    // SCHEMA PROTECTION: Swap External IDs so the database JOIN never crashes
     String dbAccountId = accountId;
     String? dbToAccountId = toAccountId;
     
     if (type == 'Transfer') {
       if (accountId == 'EXTERNAL') {
-        dbAccountId = toAccountId!; // The real account
+        dbAccountId = toAccountId!; 
         dbToAccountId = 'EXTERNAL_IN';
       } else if (toAccountId == 'EXTERNAL') {
         dbAccountId = accountId;
@@ -76,24 +76,23 @@ class TransactionService {
         throw Exception("Cannot transfer to the same account.");
       }
     } else {
-      dbToAccountId = null; // Sanitize non-transfers
+      dbToAccountId = null; 
     }
 
     await _db.transaction(() async {
-      // 1. Source Account Math
       final sourceAcc = await (_db.select(_db.accounts)..where((a) => a.id.equals(dbAccountId))).getSingle();
       double newSourceBalance = sourceAcc.balance;
       
       if (type == 'Expense') newSourceBalance -= amount;
       if (type == 'Income') newSourceBalance += amount;
       if (type == 'Transfer') {
-        if (dbToAccountId == 'EXTERNAL_IN') newSourceBalance += amount; // Real account received money
-        else if (dbToAccountId == 'EXTERNAL_OUT') newSourceBalance -= amount; // Real account lost money
-        else newSourceBalance -= amount; // Normal transfer
+        if (dbToAccountId == 'EXTERNAL_IN') newSourceBalance += amount; 
+        else if (dbToAccountId == 'EXTERNAL_OUT') newSourceBalance -= amount; 
+        else newSourceBalance -= amount; 
       }
+
       await _db.update(_db.accounts).replace(sourceAcc.copyWith(balance: newSourceBalance));
       
-      // 2. Destination Account Math (Only for Normal Transfers)
       if (type == 'Transfer' && dbToAccountId != null && !dbToAccountId.startsWith('EXTERNAL')) {
         final destAcc = await (_db.select(_db.accounts)..where((a) => a.id.equals(dbToAccountId!))).getSingle();
         await _db.update(_db.accounts).replace(destAcc.copyWith(balance: destAcc.balance + amount));
@@ -104,11 +103,12 @@ class TransactionService {
          accountId: dbAccountId, toAccountId: Value(dbToAccountId),
          categoryId: Value(categoryId), subCategory: Value(subCategory),
          bucketId: Value(bucketId), notes: Value(notes),
+         isSpillover: Value(isSpillover), 
+         isSettlementVerified: Value(isSettlementVerified), // <-- NEW
       ));
     });
   }
 
-  /// 100% ACID Compliant Update (The Strict Reverse & Reapply Pattern)
   Future<void> updateTransaction({
     required String id,
     required String type,
@@ -120,8 +120,9 @@ class TransactionService {
     String? subCategory,
     int? bucketId,
     String? notes,
+    bool isSpillover = false, 
+    bool isSettlementVerified = false, // <-- NEW
   }) async {
-    // SCHEMA PROTECTION
     String dbAccountId = accountId;
     String? dbToAccountId = toAccountId;
     
@@ -138,12 +139,7 @@ class TransactionService {
     }
 
     await _db.transaction(() async {
-      // 1. Get exact historical state
       final oldTx = await (_db.select(_db.transactions)..where((t) => t.id.equals(id))).getSingle();
-
-      // ==========================================
-      // PHASE 1: REVERSE OLD MATH COMPLETELY
-      // ==========================================
       var oldSourceAcc = await (_db.select(_db.accounts)..where((a) => a.id.equals(oldTx.accountId))).getSingle();
       double revSourceBalance = oldSourceAcc.balance;
       
@@ -154,6 +150,7 @@ class TransactionService {
         else if (oldTx.toAccountId == 'EXTERNAL_OUT') revSourceBalance += oldTx.amount;
         else revSourceBalance += oldTx.amount;
       }
+
       await _db.update(_db.accounts).replace(oldSourceAcc.copyWith(balance: revSourceBalance));
 
       if (oldTx.type == 'Transfer' && oldTx.toAccountId != null && !oldTx.toAccountId!.startsWith('EXTERNAL')) {
@@ -161,9 +158,6 @@ class TransactionService {
         await _db.update(_db.accounts).replace(oldDestAcc.copyWith(balance: oldDestAcc.balance - oldTx.amount));
       }
 
-      // ==========================================
-      // PHASE 2: APPLY NEW MATH
-      // ==========================================
       var newSourceAcc = await (_db.select(_db.accounts)..where((a) => a.id.equals(dbAccountId))).getSingle();
       double newSourceBalance = newSourceAcc.balance;
       
@@ -174,6 +168,7 @@ class TransactionService {
         else if (dbToAccountId == 'EXTERNAL_OUT') newSourceBalance -= amount;
         else newSourceBalance -= amount;
       }
+
       await _db.update(_db.accounts).replace(newSourceAcc.copyWith(balance: newSourceBalance));
 
       if (type == 'Transfer' && dbToAccountId != null && !dbToAccountId.startsWith('EXTERNAL')) {
@@ -181,22 +176,19 @@ class TransactionService {
         await _db.update(_db.accounts).replace(newDestAcc.copyWith(balance: newDestAcc.balance + amount));
       }
 
-      // ==========================================
-      // PHASE 3: UPDATE DATABASE RECORD
-      // ==========================================
       await _db.update(_db.transactions).replace(oldTx.copyWith(
         type: type, amount: amount, date: date, accountId: dbAccountId,
         toAccountId: Value(dbToAccountId), categoryId: Value(categoryId),
         subCategory: Value(subCategory), bucketId: Value(bucketId), notes: Value(notes),
+        isSpillover: isSpillover, 
+        isSettlementVerified: isSettlementVerified, // <-- NEW
       ));
     });
   }
 
-  /// 100% ACID Compliant Deletion
   Future<void> deleteTransaction(String transactionId) async {
     await _db.transaction(() async {
       final tx = await (_db.select(_db.transactions)..where((t) => t.id.equals(transactionId))).getSingle();
-
       final sourceAcc = await (_db.select(_db.accounts)..where((a) => a.id.equals(tx.accountId))).getSingle();
       double revSourceBalance = sourceAcc.balance;
       
@@ -207,6 +199,7 @@ class TransactionService {
         else if (tx.toAccountId == 'EXTERNAL_OUT') revSourceBalance += tx.amount;
         else revSourceBalance += tx.amount;
       }
+
       await _db.update(_db.accounts).replace(sourceAcc.copyWith(balance: revSourceBalance));
 
       if (tx.type == 'Transfer' && tx.toAccountId != null && !tx.toAccountId!.startsWith('EXTERNAL')) {
@@ -216,5 +209,28 @@ class TransactionService {
 
       await (_db.delete(_db.transactions)..where((t) => t.id.equals(transactionId))).go();
     });
+  }
+
+  Future<void> toggleSpillover(String transactionId, bool isSpillover) async {
+    final tx = await (_db.select(_db.transactions)..where((t) => t.id.equals(transactionId))).getSingle();
+    // Smart Logic: If pushed to next cycle, it can't be "Settled in current" anymore.
+    await _db.update(_db.transactions).replace(
+      tx.copyWith(
+        isSpillover: isSpillover,
+        isSettlementVerified: isSpillover ? false : tx.isSettlementVerified,
+      )
+    );
+  }
+
+  // --- NEW: Toggle the verified state ---
+  Future<void> verifySettlement(String transactionId, bool isVerified) async {
+    final tx = await (_db.select(_db.transactions)..where((t) => t.id.equals(transactionId))).getSingle();
+    // Smart Logic: If verified to stay in current, it can't be a spillover.
+    await _db.update(_db.transactions).replace(
+      tx.copyWith(
+        isSettlementVerified: isVerified,
+        isSpillover: isVerified ? false : tx.isSpillover,
+      )
+    );
   }
 }

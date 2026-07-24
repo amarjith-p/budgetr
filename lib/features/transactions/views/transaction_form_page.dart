@@ -1,3 +1,4 @@
+import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/core/models/transaction_category_model.dart';
 import 'package:budgetr/features/transactions/services/transaction_service.dart';
 import 'package:flutter/material.dart';
@@ -10,13 +11,12 @@ import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_boxy_toggle.dart';
 import '../../../core/components/docked_calculator_pad.dart';
 import '../../../core/utils/bodmas_calculator.dart';
-import '../../../core/components/confirmation_bottom_sheet.dart'; // <-- NEW IMPORT
+import '../../../core/components/confirmation_bottom_sheet.dart'; 
 
 import '../../accounts/providers/account_provider.dart';
 import '../../category_manager/providers/category_provider.dart';
 import '../providers/transaction_provider.dart';
 
-// --- UI DATA WRAPPERS ---
 class _AccountItem {
   final String id;
   final String name;
@@ -47,11 +47,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   int _typeIndex = 0;
   final List<String> _types = ['Expense', 'Income', 'Transfer'];
 
-  // Math State
   String _expression = '';
   String _liveResult = '0.00';
+  
+  bool _isSpillover = false; 
+  bool _isSettlementVerified = false; // Tracks state for editing
 
-  // Form State
   late TextEditingController _notesCtrl;
   DateTime _selectedDateTime = DateTime.now();
   String? _selectedAccountId;
@@ -75,8 +76,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       _notesCtrl = TextEditingController(text: tx.notes ?? '');
       _selectedCategoryId = tx.categoryId;
       _selectedSubCategory = tx.subCategory;
+      _isSpillover = tx.isSpillover; 
+      _isSettlementVerified = tx.isSettlementVerified; 
       
-      // Decodes External DB Mappings back to the UI state
       if (tx.type == 'Transfer') {
         if (tx.toAccountId == 'EXTERNAL_IN') {
           _selectedAccountId = 'EXTERNAL';
@@ -92,7 +94,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         _selectedAccountId = tx.accountId;
       }
       
-      // Load bucket or fallback to Out of Bucket (-1)
       _selectedBucketId = tx.bucketId ?? -1;
     } else {
       _notesCtrl = TextEditingController();
@@ -106,7 +107,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     super.dispose();
   }
 
-  // --- HARDENED MATH LOGIC ---
   void _onCalcKeyPress(String key) {
     setState(() {
       if (key == 'C') {
@@ -123,11 +123,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             _expression = _expression.substring(0, _expression.length - 1);
           }
         }
-        
-        // LIMIT 1: Prevent unbounded string expansion (stops user from typing infinitely)
-        if (_expression.length < 25) {
-          _expression += key;
-        }
+        if (_expression.length < 25) _expression += key;
       }
       
       String rawResult = BodmasCalculator.evaluate(_expression);
@@ -136,16 +132,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       if (parsed != null) {
         if (parsed.isNaN || parsed.isInfinite) {
           _liveResult = '0.00';
-        } 
-        // LIMIT 2: Absolute Value Cap at 999 Billion to eradicate Exponential 'e' formatting
-        else if (parsed >= 1000000000000) { 
+        } else if (parsed >= 1000000000000) { 
           _liveResult = '999999999999.99';
           if (key != '⌫') _expression = '999999999999.99'; 
         } else if (parsed <= -1000000000000) {
           _liveResult = '-999999999999.99';
           if (key != '⌫') _expression = '-999999999999.99';
         } else {
-          // Strictly formats to EXACTLY 2 decimal places, always.
           _liveResult = parsed.toStringAsFixed(2);
         }
       } else {
@@ -154,14 +147,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     });
   }
 
-  // --- FORMATTERS ---
   String _formatDateTime(DateTime d) {
     final time = '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${d.day.toString().padLeft(2, '0')} ${months[d.month - 1]}, $time';
   }
 
-  // --- PICKERS & DIALOGS ---
   Future<void> _pickDateTime() async {
     final date = await showDatePicker(
       context: context, initialDate: _selectedDateTime, firstDate: DateTime(2000), lastDate: DateTime(2100),
@@ -208,7 +199,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     );
   }
 
-  // INTELLIGENT NOTES EDITOR
   void _openNotesEditor() {
     showModalBottomSheet(
       context: context,
@@ -268,13 +258,10 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final isIncome = _typeIndex == 1;
     final isTransfer = _typeIndex == 2;
     
-    // Check for dangling operator in expression
     final hasDanglingOperator = _expression.isNotEmpty && ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
 
-    // --- IMPENETRABLE VALIDATION ---
     if (amount <= 0 || hasDanglingOperator || _selectedAccountId == null || 
        (isTransfer && _selectedToAccountId == null) ||
-       // CRITICAL FIX: Explicitly prevents identical accounts (including EXTERNAL to EXTERNAL)
        (isTransfer && _selectedAccountId == _selectedToAccountId) || 
        (!isTransfer && _selectedCategoryId == null) ||
        (isExpense && _selectedBucketId == null)) {
@@ -283,7 +270,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       return;
     }
 
-    // --- SMART REPAYMENT DETECTION & CONFIRMATION ---
     final rawAccounts = ref.read(accountsStreamProvider).asData?.value ?? [];
     final rawCategories = ref.read(categoriesStreamProvider).asData?.value ?? [];
     
@@ -324,15 +310,15 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           description: 'This transaction is between the last bill date and the due date. Is this a repayment for the previous statement?',
           confirmText: 'YES, REPAYMENT',
           cancelText: 'NO, NORMAL',
-          onConfirm: () {}, // <-- ADD THIS LINE
+          onConfirm: () {}, 
         );
 
         if (isRepayment == true) {
           final repaymentCat = rawCategories.where((c) => c.name == 'Repayment' && c.type == 'Income').firstOrNull;
           if (repaymentCat != null) {
             finalCategoryId = repaymentCat.id;
-            finalSubCategory = isTransfer ? 'Credit Card Bill' : 'Account Adjustments';
-            finalNotes = finalNotes!.isEmpty ? 'Auto-tagged as Bill Repayment' : '$finalNotes (Bill Repayment)'; 
+            finalSubCategory = isTransfer ? 'Credit Card Bill' : 'Account Adjustments'; 
+            finalNotes = finalNotes!.isEmpty ? 'Auto-tagged as Bill Repayment' : '$finalNotes (Bill Repayment)';
           }
         }
       }
@@ -349,12 +335,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       subCategory: finalSubCategory,
       bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
       notes: finalNotes,
+      isSpillover: _isSpillover, 
+      isSettlementVerified: _isSettlementVerified, 
     );
 
     if (success && mounted) Navigator.pop(context);
   }
 
-  // --- 2-COLUMN UNIFIED TABLE CELL ---
   Widget _buildTableCell(String label, String? value, IconData icon, VoidCallback? onTap, bool isError) {
     final theme = Theme.of(context);
     final hasValue = value != null && value.isNotEmpty;
@@ -417,7 +404,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
     final txColor = TransactionColors.getTypeColor(_types[_typeIndex], theme);
 
-    // --- AMOUNT VALIDATION LOGIC ---
     final amountVal = double.tryParse(_liveResult) ?? 0.0;
     final hasDanglingOperator = _expression.isNotEmpty && ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
     final hasAmountError = _showValidationErrors && (amountVal <= 0 || hasDanglingOperator);
@@ -450,7 +436,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         isTransfer ? 'FROM ACCOUNT' : 'ACCOUNT', selectedAccMatch?.name, Icons.account_balance_wallet_rounded,
         () => _showSelector<_AccountItem>(
           title: 'Select Account', 
-          // CRITICAL FIX: Mutual Exclusion (Removes To Account from From list)
           items: isTransfer ? accountItems.where((a) => a.id != _selectedToAccountId).toList() : accountItems, 
           labelBuilder: (a) => a.name, 
           onSelected: (a) => setState(() => _selectedAccountId = a.id)
@@ -464,7 +449,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         'TO ACCOUNT', selectedToAccMatch?.name, Icons.sync_alt_rounded,
         () => _showSelector<_AccountItem>(
           title: 'Select Destination', 
-          // CRITICAL FIX: Mutual Exclusion (Removes From Account from To list)
           items: accountItems.where((a) => a.id != _selectedAccountId).toList(), 
           labelBuilder: (a) => a.name, 
           onSelected: (a) => setState(() => _selectedToAccountId = a.id)
@@ -494,7 +478,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         ));
       }
     }
-    
+
     cells.add(_buildTableCell('NOTES', _notesCtrl.text.isEmpty ? null : _notesCtrl.text, Icons.notes_rounded, _openNotesEditor, false));
 
     if (cells.length % 2 != 0) cells.add(const SizedBox.shrink()); 
@@ -529,22 +513,17 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                       labels: _types,
                       selectedIndex: _typeIndex,
                       onSelected: (index) => setState(() {
-                        final oldIndex = _typeIndex; // Capture previous state
+                        final oldIndex = _typeIndex;
                         _typeIndex = index;
                         _selectedCategoryId = null; 
                         _selectedSubCategory = null;
                         
-                        if (index == 1) { // If Income
-                          _selectedBucketId = null; 
-                        }
+                        if (index == 1) _selectedBucketId = null; 
                         
-                        // CRITICAL FIX: Aggressive Account Reset logic
                         if (oldIndex == 2 && index != 2) {
-                          // Force user to pick account when abandoning a Transfer Edit
                           _selectedAccountId = null;
                           _selectedToAccountId = null;
                         } else if (index != 2 && _selectedAccountId == 'EXTERNAL') {
-                          // Backup safety reset
                           _selectedAccountId = null;
                         }
                       }),
@@ -561,24 +540,15 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                           children: [
                             FittedBox(
                               fit: BoxFit.scaleDown,
-                              child: RichText(
-                                text: TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: '₹ ',
-                                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.w400, color: displayAmountColor.withOpacity(0.7)),
-                                    ),
-                                    TextSpan(
-                                      text: _expression.isEmpty ? '0.00' : _expression,
-                                      style: TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: displayAmountColor, letterSpacing: -2),
-                                    ),
-                                  ],
-                                ),
+                              child: CurrencyText(
+                                amount: double.tryParse(_expression.isEmpty ? '0.00' : _expression) ?? 0.0,
+                                amountStyle: Theme.of(context).textTheme.displayLarge!.copyWith(color: displayAmountColor),
+                                symbolStyle: Theme.of(context).textTheme.displayMedium!.copyWith(color: displayAmountColor.withOpacity(0.7)),
                               ),
                             ),
                             if (_expression.isNotEmpty && _expression != _liveResult && !hasAmountError)
                               Text(
-                                '= ₹ $_liveResult',
+                                '=   $_liveResult',
                                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: displayAmountColor),
                               ),
                             if (hasAmountError)

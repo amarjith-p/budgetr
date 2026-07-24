@@ -15,6 +15,19 @@ import 'transaction_form_page.dart';
 extension CreditAccountExtensions on Account {
   int get safeBillingDay => billDate ?? 15; 
   int get safeDueDay => dueDate ?? 5;      
+  
+  // --- NEW: THE EFFECTIVE DATE ENGINE ---
+  DateTime getEffectiveDate(TransactionRecord tx) {
+    if (tx.isSpillover) {
+      final bDay = safeBillingDay;
+      DateTime nextBillDate = DateTime(tx.date.year, tx.date.month, bDay);
+      if (tx.date.day > bDay) {
+        nextBillDate = DateTime(tx.date.year, tx.date.month + 1, bDay);
+      }
+      return nextBillDate.add(const Duration(days: 1)); // Forces it into next cycle
+    }
+    return tx.date;
+  }
 }
 
 class BillingCycle {
@@ -68,9 +81,10 @@ class CreditTransactionPage extends ConsumerWidget {
       }
 
       final cycleTxs = transactions.where((t) {
-        final d = t.transaction.date;
-        return (d.isAfter(pointerStart) || d.isAtSameMomentAs(pointerStart)) && 
-               (d.isBefore(pointerEnd) || d.isAtSameMomentAs(pointerEnd));
+        // --- USES EFFECTIVE DATE INSTEAD OF RECEIPT DATE ---
+        final effectiveDate = account.getEffectiveDate(t.transaction); 
+        return (effectiveDate.isAfter(pointerStart) || effectiveDate.isAtSameMomentAs(pointerStart)) && 
+               (effectiveDate.isBefore(pointerEnd) || effectiveDate.isAtSameMomentAs(pointerEnd));
       }).toList();
 
       cycles.add(BillingCycle(
@@ -83,7 +97,6 @@ class CreditTransactionPage extends ConsumerWidget {
       pointerEnd = DateTime(pointerEnd.year, pointerEnd.month - 1, bDay);
     }
 
-    // --- STRICT VISUAL SHIFTING PASS ---
     for (int i = 0; i < cycles.length - 1; i++) {
       final currentCycle = cycles[i];
       final previousCycle = cycles[i + 1];
@@ -200,7 +213,6 @@ class CreditTransactionPage extends ConsumerWidget {
   }
 }
 
-// --- INTELLIGENT DECOUPLED SUMMARY CARD ---
 class _CreditSummaryCard extends StatelessWidget {
   final List<BillingCycle> cycles;
   final Account account;
@@ -215,58 +227,50 @@ class _CreditSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final textTheme = theme.textTheme; 
     final now = DateTime.now();
 
     BillingCycle? lastCycle = cycles.length > 1 ? cycles[1] : null;
     DateTime? lastStatementDate = lastCycle?.endDate;
 
-    // --- STRICT NET MATH ---
-    double historicalNet = 0;           // Net balance up to statement date
-    double currentCycleNet = 0;         // Normal spends/refunds in current cycle
-    double paymentsSinceStatement = 0;  // Explicit repayments in current cycle
+    double historicalNet = 0;           
+    double currentCycleNet = 0;         
+    double paymentsSinceStatement = 0;  
 
     for (var tx in allTransactions) {
       final t = tx.transaction;
       bool isExpense = t.type == 'Expense' || (t.type == 'Transfer' && t.accountId == account.id);
       bool isPayment = t.type == 'Income' || (t.type == 'Transfer' && t.toAccountId == account.id);
-      
-      // DECOUPLED MATH: Only explicitly tagged Repayments pay down the bill.
       bool isRepayment = tx.category?.name == 'Repayment';
       
       double netAmount = 0;
-      if (isExpense) netAmount = -t.amount;      // Liability is negative
-      else if (isPayment) netAmount = t.amount;  // Money entering is positive
+      if (isExpense) netAmount = -t.amount;      
+      else if (isPayment) netAmount = t.amount;  
 
-      if (lastStatementDate == null || t.date.isAfter(lastStatementDate)) {
-        // Current Window
+      // --- USES EFFECTIVE DATE FOR MATH ---
+      DateTime effectiveDate = account.getEffectiveDate(t);
+
+      if (lastStatementDate == null || effectiveDate.isAfter(lastStatementDate)) {
         if (isPayment && isRepayment) {
-          paymentsSinceStatement += netAmount; // Pays down the last statement
+          paymentsSinceStatement += netAmount; 
         } else {
-          currentCycleNet += netAmount; // Normal refunds/spends affect active unbilled balance
+          currentCycleNet += netAmount; 
         }
       } else {
-        // Historical Window
         historicalNet += netAmount;
       }
     }
 
-    // --- CARRY FORWARD LOGIC ---
     double remainingDueNet = historicalNet + paymentsSinceStatement;
-    double adjustedUnbilled = currentCycleNet + remainingDueNet; // Carries over surplus or debt
-    
-    // Formatting Strings
-    String unbilledSign = adjustedUnbilled < 0 ? '-₹' : (adjustedUnbilled > 0 ? '+₹' : '₹');
-    String statementSign = historicalNet < 0 ? '-₹' : (historicalNet > 0 ? '+₹' : '₹');
+    double adjustedUnbilled = currentCycleNet + remainingDueNet; 
 
-    // UI Status Resolution
     String statusText = 'NO DUES';
     Color statusColor = theme.colorScheme.primary;
-    
     int daysUntilDue = 0;
+    
     if (lastCycle != null) {
       daysUntilDue = lastCycle.dueDate.difference(now).inDays;
-      
-      if (remainingDueNet < 0) { // Owe Money
+      if (remainingDueNet < 0) { 
         if (daysUntilDue < 0) {
           statusText = 'OVERDUE (-₹${remainingDueNet.abs().toStringAsFixed(2)})';
           statusColor = theme.colorScheme.error;
@@ -277,7 +281,7 @@ class _CreditSummaryCard extends StatelessWidget {
           statusText = 'UNPAID';
           statusColor = theme.colorScheme.error;
         }
-      } else if (remainingDueNet > 0) { // Surplus
+      } else if (remainingDueNet > 0) { 
         statusText = 'SURPLUS (+₹${remainingDueNet.toStringAsFixed(2)})';
         statusColor = theme.colorScheme.primary;
       } else if (remainingDueNet == 0 && historicalNet < 0) {
@@ -298,26 +302,24 @@ class _CreditSummaryCard extends StatelessWidget {
       child: IntrinsicHeight(
         child: Row(
           children: [
-            // LEFT COLUMN: Unbilled
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('UNBILLED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0, color: theme.colorScheme.onSurfaceVariant)),
+                    Text('UNBILLED', style: textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 8),
                     CurrencyText(
                       amount: adjustedUnbilled,
-                      sign: unbilledSign,
-                      amountStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1, color: theme.colorScheme.onSurface),
+                      showSignForPositive: true,
+                      amountStyle: textTheme.titleLarge!,
                     ),
                     const SizedBox(height: 12),
                     
                     if (cycles.isNotEmpty)
                       _buildMiniInfo(Icons.calendar_today_rounded, 'Bills on ${cycles[0].endDate.day} ${DateTimeConstants.shortMonths[cycles[0].endDate.month - 1]}', theme),
                     
-                    // --- TEXT WRAPPING ENABLED FOR CARRY FORWARD NOTE ---
                     if (cycles.isNotEmpty && remainingDueNet != 0)
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),
@@ -331,32 +333,27 @@ class _CreditSummaryCard extends StatelessWidget {
                 ),
               ),
             ),
-            
             VerticalDivider(width: 1, thickness: 1, color: theme.dividerColor.withOpacity(0.3)),
-            
-            // RIGHT COLUMN: Last Statement
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('LAST STATEMENT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0, color: theme.colorScheme.onSurfaceVariant)),
+                    Text('LAST STATEMENT', style: textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 8),
                     CurrencyText(
                       amount: historicalNet,
-                      sign: statementSign,
-                      amountStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -1, color: theme.colorScheme.onSurface),
+                      showSignForPositive: true,
+                      amountStyle: textTheme.titleLarge!,
                     ),
                     const SizedBox(height: 8),
-                    
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                      child: Text(statusText, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: statusColor)),
+                      child: Text(statusText, style: textTheme.labelSmall?.copyWith(color: statusColor)),
                     ),
                     const SizedBox(height: 8),
-                    
                     if (lastCycle != null && remainingDueNet < 0)
                       _buildMiniInfo(
                         daysUntilDue < 0 ? Icons.warning_rounded : Icons.timer_outlined, 
@@ -376,21 +373,20 @@ class _CreditSummaryCard extends StatelessWidget {
     );
   }
 
-  // Updated to support multiline text wrapping
   Widget _buildMiniInfo(IconData icon, String text, ThemeData theme, {bool isAlert = false}) {
     final color = isAlert ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 1.0),
+          padding: const EdgeInsets.only(top: 2.0),
           child: Icon(icon, size: 12, color: color),
         ),
         const SizedBox(width: 4),
         Expanded(
           child: Text(
             text, 
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color, height: 1.3),
+            style: theme.textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w700),
           ),
         ),
       ],
