@@ -1,4 +1,3 @@
-import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/core/models/transaction_category_model.dart';
 import 'package:budgetr/features/transactions/services/transaction_service.dart';
 import 'package:flutter/material.dart';
@@ -32,13 +31,13 @@ class _BucketItem {
 class TransactionFormPage extends ConsumerStatefulWidget {
   final TransactionWithDetails? existingTransaction;
   final String? preSelectedAccountId;
-  final bool isClone; // <-- NEW: Distinguishes between editing and templating
+  final bool isClone;
 
   const TransactionFormPage({
     Key? key, 
     this.existingTransaction,
     this.preSelectedAccountId,
-    this.isClone = false, // <-- NEW
+    this.isClone = false,
   }) : super(key: key);
 
   @override
@@ -51,11 +50,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
   String _expression = '';
   String _liveResult = '0.00';
-  
   bool _isSpillover = false; 
   bool _isSettlementVerified = false; 
 
+  // --- FIX: Added specific controller for the Hero Amount Cursor Binding ---
+  late TextEditingController _amountController;
   late TextEditingController _notesCtrl;
+  
   DateTime _selectedDateTime = DateTime.now();
   String? _selectedAccountId;
   String? _selectedToAccountId;
@@ -69,13 +70,16 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   void initState() {
     super.initState();
     final txDetails = widget.existingTransaction;
+    
+    // Setup initial string amounts
+    final initialAmount = txDetails != null ? txDetails.transaction.amount.toStringAsFixed(2) : '';
+    _amountController = TextEditingController(text: initialAmount);
+    _expression = initialAmount;
+    _liveResult = initialAmount.isEmpty ? '0.00' : initialAmount;
+
     if (txDetails != null) {
       final tx = txDetails.transaction;
       _typeIndex = _types.indexOf(tx.type);
-      _expression = tx.amount.toStringAsFixed(2);
-      _liveResult = tx.amount.toStringAsFixed(2);
-      
-      // --- FIX: If cloning, reset date and backend flags ---
       _selectedDateTime = widget.isClone ? DateTime.now() : tx.date;
       _isSpillover = widget.isClone ? false : tx.isSpillover; 
       _isSettlementVerified = widget.isClone ? false : tx.isSettlementVerified; 
@@ -109,27 +113,67 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   @override
   void dispose() {
     _notesCtrl.dispose();
+    _amountController.dispose();
     super.dispose();
   }
 
+  // --- FIX: Intelligent Cursor Injection Engine ---
   void _onCalcKeyPress(String key) {
     setState(() {
+      int cursorPosition = _amountController.selection.baseOffset;
+      if (cursorPosition < 0) cursorPosition = _amountController.text.length;
+
+      String currentText = _amountController.text;
+
       if (key == 'C') {
+        _amountController.clear();
         _expression = '';
+        _liveResult = '0.00';
+        return;
       } else if (key == '⌫') {
-        if (_expression.isNotEmpty) _expression = _expression.substring(0, _expression.length - 1);
+        if (cursorPosition > 0) {
+          final newText = currentText.substring(0, cursorPosition - 1) + currentText.substring(cursorPosition);
+          _amountController.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: cursorPosition - 1),
+          );
+        }
       } else if (key == '=') {
-        _expression = _liveResult;
+        _amountController.text = _liveResult;
+        _amountController.selection = TextSelection.collapsed(offset: _liveResult.length);
       } else {
         final isOperator = ['+', '-', '×', '÷'].contains(key);
-        if (isOperator && _expression.isNotEmpty) {
-          final lastChar = _expression[_expression.length - 1];
-          if (['+', '-', '×', '÷'].contains(lastChar)) {
-            _expression = _expression.substring(0, _expression.length - 1);
+        if (isOperator && cursorPosition > 0) {
+          final prevChar = currentText[cursorPosition - 1];
+          if (['+', '-', '×', '÷'].contains(prevChar)) {
+            // Replaces consecutive operators seamlessly
+            final newText = currentText.substring(0, cursorPosition - 1) + key + currentText.substring(cursorPosition);
+            _amountController.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: cursorPosition),
+            );
+          } else {
+            if (currentText.length < 25) {
+              final newText = currentText.substring(0, cursorPosition) + key + currentText.substring(cursorPosition);
+              _amountController.value = TextEditingValue(
+                text: newText,
+                selection: TextSelection.collapsed(offset: cursorPosition + 1),
+              );
+            }
+          }
+        } else {
+          if (currentText.length < 25) {
+            final newText = currentText.substring(0, cursorPosition) + key + currentText.substring(cursorPosition);
+            _amountController.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: cursorPosition + 1),
+            );
           }
         }
-        if (_expression.length < 25) _expression += key;
       }
+
+      // Sync local expression
+      _expression = _amountController.text;
       
       String rawResult = BodmasCalculator.evaluate(_expression);
       double? parsed = double.tryParse(rawResult);
@@ -139,10 +183,18 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           _liveResult = '0.00';
         } else if (parsed >= 1000000000000) { 
           _liveResult = '999999999999.99';
-          if (key != '⌫') _expression = '999999999999.99'; 
+          if (key != '⌫') {
+            _amountController.text = '999999999999.99';
+            _amountController.selection = TextSelection.collapsed(offset: _amountController.text.length);
+            _expression = _amountController.text;
+          }
         } else if (parsed <= -1000000000000) {
           _liveResult = '-999999999999.99';
-          if (key != '⌫') _expression = '-999999999999.99';
+          if (key != '⌫') {
+            _amountController.text = '-999999999999.99';
+            _amountController.selection = TextSelection.collapsed(offset: _amountController.text.length);
+            _expression = _amountController.text;
+          }
         } else {
           _liveResult = parsed.toStringAsFixed(2);
         }
@@ -329,7 +381,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       }
     }
 
-    // --- FIX: Safely nullify the existing ID if the user is cloning so the DB saves it as new ---
     final String? safeExistingId = (widget.existingTransaction != null && !widget.isClone) 
         ? widget.existingTransaction!.transaction.id 
         : null;
@@ -498,7 +549,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       tableRows.add(TableRow(children: [cells[i], cells[i + 1]]));
     }
 
-    // --- FIX: Dynamic Title based on Editing vs Cloning ---
     String appBarTitle = 'New Log';
     if (widget.existingTransaction != null) {
       appBarTitle = widget.isClone ? 'Clone Log' : 'Edit Log';
@@ -554,17 +604,50 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            // --- FIX: Interactive Editable Math Display ---
                             FittedBox(
                               fit: BoxFit.scaleDown,
-                              child: CurrencyText(
-                                amount: double.tryParse(_expression.isEmpty ? '0.00' : _expression) ?? 0.0,
-                                amountStyle: Theme.of(context).textTheme.displayLarge!.copyWith(color: displayAmountColor),
-                                symbolStyle: Theme.of(context).textTheme.displayMedium!.copyWith(color: displayAmountColor.withOpacity(0.7)),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '₹ ', 
+                                    style: Theme.of(context).textTheme.displayMedium!.copyWith(
+                                      color: displayAmountColor.withOpacity(0.7), 
+                                      fontWeight: FontWeight.w600
+                                    )
+                                  ),
+                                  IntrinsicWidth(
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(minWidth: 40),
+                                      child: TextField(
+                                        controller: _amountController,
+                                        readOnly: true, // Hides system keyboard
+                                        showCursor: true, // Enables visual cursor tracking
+                                        autofocus: true,
+                                        cursorColor: displayAmountColor,
+                                        style: Theme.of(context).textTheme.displayLarge!.copyWith(color: displayAmountColor),
+                                        decoration: InputDecoration(
+                                          border: InputBorder.none,
+                                          focusedBorder: InputBorder.none,
+                                          enabledBorder: InputBorder.none,
+                                          errorBorder: InputBorder.none,
+                                          disabledBorder: InputBorder.none,
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.zero,
+                                          hintText: '0.00',
+                                          hintStyle: Theme.of(context).textTheme.displayLarge!.copyWith(color: displayAmountColor.withOpacity(0.3)),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             if (_expression.isNotEmpty && _expression != _liveResult && !hasAmountError)
                               Text(
-                                '= ₹ $_liveResult',
+                                '= ₹ $_liveResult', // <-- Live Preview Restored
                                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: displayAmountColor),
                               ),
                             if (hasAmountError)

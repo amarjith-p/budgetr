@@ -2,10 +2,10 @@ class BodmasCalculator {
   static String evaluate(String expr) {
     if (expr.isEmpty) return '0';
     try {
-      // 1. Sanitize the string for pure math symbols
+      // 1. Sanitize the string: Replace Unicode operators with actual math symbols
       String sanitized = expr.replaceAll('×', '*').replaceAll('÷', '/').replaceAll(' ', '');
       
-      // Handle implicit multiplication (e.g., "5(2)" becomes "5*(2)" and ")( becomes ")*(")
+      // Handle implicit multiplication (e.g., "5(2)" becomes "5*(2)" and ")(" becomes ")*(")
       sanitized = sanitized.replaceAllMapped(RegExp(r'(\d)\('), (m) => '${m[1]}*(');
       sanitized = sanitized.replaceAllMapped(RegExp(r'\)\('), (m) => ')*(');
       sanitized = sanitized.replaceAllMapped(RegExp(r'\)(\d)'), (m) => ')*${m[1]}');
@@ -59,6 +59,7 @@ class BodmasCalculator {
           ops.add(token);
         }
       }
+
       while (ops.isNotEmpty) output.add(ops.removeLast());
 
       // 3. Evaluate the Postfix stack

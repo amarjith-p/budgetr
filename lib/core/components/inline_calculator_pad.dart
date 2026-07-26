@@ -33,39 +33,61 @@ class _InlineCalculatorPadState extends State<InlineCalculatorPad> {
     _updateResult();
   }
 
+  // --- FIX: Intelligent Cursor Binding ---
   void _onKeyPress(String key) {
     HapticFeedback.selectionClick();
     setState(() {
+      int cursorPosition = widget.controller.selection.baseOffset;
+      if (cursorPosition < 0) cursorPosition = widget.controller.text.length;
+
+      String currentText = widget.controller.text;
+
       if (key == 'C') {
+        widget.controller.clear();
         _expression = '';
+        _liveResult = '0';
+        return;
       } else if (key == '⌫') {
-        if (_expression.isNotEmpty) {
-          _expression = _expression.substring(0, _expression.length - 1);
+        if (cursorPosition > 0) {
+          final newText = currentText.substring(0, cursorPosition - 1) + currentText.substring(cursorPosition);
+          widget.controller.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: cursorPosition - 1),
+          );
         }
       } else if (key == '=') {
-        // FIX: Don't lock in '0' if the user never typed anything
-        if (_expression.isEmpty) {
-          widget.controller.text = '';
-        } else {
-          _expression = _liveResult;
-          _updateResult();
-          widget.controller.text = _liveResult; 
-        }
-        widget.onSubmit(); 
-        return; 
+        widget.controller.text = _liveResult;
+        widget.controller.selection = TextSelection.collapsed(offset: _liveResult.length);
       } else {
         final isOperator = ['+', '-', '×', '÷'].contains(key);
-        if (isOperator && _expression.isNotEmpty) {
-          final lastChar = _expression[_expression.length - 1];
-          if (['+', '-', '×', '÷'].contains(lastChar)) {
-            _expression = _expression.substring(0, _expression.length - 1);
+        if (isOperator && cursorPosition > 0) {
+          final prevChar = currentText[cursorPosition - 1];
+          if (['+', '-', '×', '÷'].contains(prevChar)) {
+            // Replace existing operator
+            final newText = currentText.substring(0, cursorPosition - 1) + key + currentText.substring(cursorPosition);
+            widget.controller.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: cursorPosition),
+            );
+          } else {
+            // Insert normally
+            final newText = currentText.substring(0, cursorPosition) + key + currentText.substring(cursorPosition);
+            widget.controller.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: cursorPosition + 1),
+            );
           }
+        } else {
+          final newText = currentText.substring(0, cursorPosition) + key + currentText.substring(cursorPosition);
+          widget.controller.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: cursorPosition + 1),
+          );
         }
-        _expression += key;
       }
-      
+
+      _expression = widget.controller.text;
       _updateResult();
-      widget.controller.text = _expression; 
     });
   }
 
@@ -76,7 +98,6 @@ class _InlineCalculatorPadState extends State<InlineCalculatorPad> {
   }
 
   void _lockAndNavigate(VoidCallback action) {
-    // FIX: Preserve empty fields when navigating away
     widget.controller.text = _expression.isEmpty ? '' : _liveResult;
     action();
   }
@@ -150,16 +171,16 @@ class _InlineCalculatorPadState extends State<InlineCalculatorPad> {
                 ),
               ),
               const SizedBox(height: 12),
-
-              _buildRow(['C', '(', ')', '⌫'], theme),
+              // --- FIX: Restored Missing Unicode Operators ---
+              _buildRow(['C', '(', ')', '÷'], theme),
               const SizedBox(height: 6),
-              _buildRow(['7', '8', '9', '÷'], theme),
+              _buildRow(['7', '8', '9', '×'], theme),
               const SizedBox(height: 6),
-              _buildRow(['4', '5', '6', '×'], theme),
+              _buildRow(['4', '5', '6', '⌫'], theme),
               const SizedBox(height: 6),
               _buildRow(['1', '2', '3', '-'], theme),
               const SizedBox(height: 6),
-              _buildRow(['.', '0', '=', '+'], theme), 
+              _buildRow(['.', '0', '=', '+'], theme),
             ],
           ),
         ),

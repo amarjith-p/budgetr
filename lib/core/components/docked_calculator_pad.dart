@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 class DockedCalculatorPad extends StatelessWidget {
   final void Function(String) onKeyPress;
   final Color backgroundColor;
-  final Color actionColor; // <-- NEW: Injected color
+  final Color actionColor; 
 
   const DockedCalculatorPad({
     Key? key,
@@ -22,11 +22,12 @@ class DockedCalculatorPad extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
       child: Column(
         children: [
-          Expanded(child: _buildRow(['C', '(', ')', '⌫'], theme)),
+          // --- FIX: Restored Missing Unicode Operators ---
+          Expanded(child: _buildRow(['C', '(', ')', '÷'], theme)),
           const SizedBox(height: 6),
-          Expanded(child: _buildRow(['7', '8', '9', '÷'], theme)),
+          Expanded(child: _buildRow(['7', '8', '9', '×'], theme)),
           const SizedBox(height: 6),
-          Expanded(child: _buildRow(['4', '5', '6', '×'], theme)),
+          Expanded(child: _buildRow(['4', '5', '6', '⌫'], theme)),
           const SizedBox(height: 6),
           Expanded(child: _buildRow(['1', '2', '3', '-'], theme)),
           const SizedBox(height: 6),
@@ -46,14 +47,14 @@ class DockedCalculatorPad extends StatelessWidget {
         
         Color textColor = theme.colorScheme.onSurface;
         if (isAction) textColor = theme.colorScheme.error;
-        if (isOperator || isMathAction) textColor = actionColor; // <-- Uses active color
+        if (isOperator || isMathAction) textColor = actionColor; 
         
         if (key == '=') {
           textColor = theme.brightness == Brightness.dark ? Colors.black : Colors.white;
         }
 
         final bgColor = key == '=' 
-            ? actionColor // <-- Uses active color for the equals button
+            ? actionColor 
             : (isAction || isOperator || isMathAction
                 ? textColor.withOpacity(0.1) 
                 : theme.colorScheme.surface);
