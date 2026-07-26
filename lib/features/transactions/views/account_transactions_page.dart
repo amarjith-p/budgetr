@@ -20,7 +20,7 @@ class AccountTransactionsPage extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      backgroundColor: theme.scaffoldBackgroundColor, // CLEAN: Restored base background
       appBar: ModernAppBar(
         title: account.providerName.toUpperCase(),
         subtitle: account.name.toUpperCase(),

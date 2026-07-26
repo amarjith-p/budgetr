@@ -127,7 +127,7 @@ class CreditTransactionPage extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      backgroundColor: theme.scaffoldBackgroundColor, // CLEAN: Restored base background
       appBar: ModernAppBar(
         title: account.providerName.toUpperCase(),
         subtitle: account.name.toUpperCase(),
@@ -228,7 +228,7 @@ class _CreditSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textTheme = theme.textTheme; 
+    final textTheme = theme.textTheme;
     final now = DateTime.now();
 
     BillingCycle? lastCycle = cycles.length > 1 ? cycles[1] : null;
@@ -297,9 +297,9 @@ class _CreditSummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+        border: Border.all(color: theme.dividerColor, width: 1.0), // CLEAN: Native divider
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.2 : 0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: IntrinsicHeight(

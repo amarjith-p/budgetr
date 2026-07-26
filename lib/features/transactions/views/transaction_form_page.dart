@@ -483,9 +483,10 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     );
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
     final theme = Theme.of(context); 
+    final isDark = theme.brightness == Brightness.dark;
     
     final isExpense = _typeIndex == 0;
     final isIncome = _typeIndex == 1;
@@ -527,14 +528,11 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
     final List<Widget> cells = [
       _buildTableCell('DATE & TIME', _formatDateTime(_selectedDateTime), Icons.calendar_today_rounded, _pickDateTime, false),
-      
       _buildTableCell(
         isTransfer ? 'FROM ACCOUNT' : 'ACCOUNT', selectedAccMatch?.name, Icons.account_balance_wallet_rounded,
         () => _showSelector<_AccountItem>(
-          title: 'Select Account', 
-          items: isTransfer ? accountItems.where((a) => a.id != _selectedToAccountId).toList() : accountItems, 
-          labelBuilder: (a) => a.name, 
-          onSelected: (a) => setState(() => _selectedAccountId = a.id)
+          title: 'Select Account', items: isTransfer ? accountItems.where((a) => a.id != _selectedToAccountId).toList() : accountItems, 
+          labelBuilder: (a) => a.name, onSelected: (a) => setState(() => _selectedAccountId = a.id)
         ),
         _showValidationErrors && _selectedAccountId == null
       ),
@@ -544,10 +542,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       cells.add(_buildTableCell(
         'TO ACCOUNT', selectedToAccMatch?.name, Icons.sync_alt_rounded,
         () => _showSelector<_AccountItem>(
-          title: 'Select Destination', 
-          items: accountItems.where((a) => a.id != _selectedAccountId).toList(), 
-          labelBuilder: (a) => a.name, 
-          onSelected: (a) => setState(() => _selectedToAccountId = a.id)
+          title: 'Select Destination', items: accountItems.where((a) => a.id != _selectedAccountId).toList(), 
+          labelBuilder: (a) => a.name, onSelected: (a) => setState(() => _selectedToAccountId = a.id)
         ),
         _showValidationErrors && _selectedToAccountId == null
       ));
@@ -576,7 +572,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     }
 
     cells.add(_buildTableCell('NOTES', _notesCtrl.text.isEmpty ? null : _notesCtrl.text, Icons.notes_rounded, _openNotesEditor, false));
-
     if (cells.length % 2 != 0) cells.add(const SizedBox.shrink()); 
 
     List<TableRow> tableRows = [];
@@ -592,7 +587,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     }
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      backgroundColor: theme.scaffoldBackgroundColor, // CLEAN: Removed heavy gray opacity
       resizeToAvoidBottomInset: false, 
       appBar: ModernAppBar(
         title: appBarTitle,
@@ -620,9 +615,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                         _typeIndex = index;
                         _selectedCategoryId = null; 
                         _selectedSubCategory = null;
-                        
                         if (index == 1) _selectedBucketId = null; 
-                        
                         if (oldIndex == 2 && index != 2) {
                           _selectedAccountId = null;
                           _selectedToAccountId = null;
@@ -717,14 +710,19 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: theme.dividerColor.withOpacity(0.5), width: 1.2),
+                          // CLEAN: Soft 1.0 border and premium shadow
+                          border: Border.all(color: theme.dividerColor, width: 1.0),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.05), blurRadius: 10, offset: const Offset(0, 4))
+                          ],
                         ),
                         clipBehavior: Clip.antiAlias, 
                         child: Material(
                           color: Colors.transparent,
                           child: Table(
                             border: TableBorder.symmetric(
-                              inside: BorderSide(color: theme.dividerColor.withOpacity(0.3), width: 1.2),
+                              // CLEAN: Soft 1.0 inside border
+                              inside: BorderSide(color: theme.dividerColor, width: 1.0),
                             ),
                             children: tableRows,
                           ),
@@ -739,7 +737,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             Expanded(
               flex: 40,
               child: DockedCalculatorPad(
-                backgroundColor: theme.colorScheme.surface,
+                backgroundColor: theme.scaffoldBackgroundColor, // CLEAN: Seamless blending
                 actionColor: txColor,
                 onKeyPress: _onCalcKeyPress,
               ),
