@@ -9,6 +9,12 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onLeadingPressed;
   final IconData? trailingIcon;
   final VoidCallback? onTrailingPressed;
+  
+  // --- NEW: Optional extra action ---
+  final IconData? extraTrailingIcon;
+  final VoidCallback? onExtraTrailingPressed;
+  final Color? extraIconColor;
+
   final VoidCallback? onTitleLongPress;
 
   const ModernAppBar({
@@ -19,10 +25,12 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onLeadingPressed,
     this.trailingIcon,
     this.onTrailingPressed,
+    this.extraTrailingIcon,
+    this.onExtraTrailingPressed,
+    this.extraIconColor,
     this.onTitleLongPress,
   }) : super(key: key);
 
-  // Required to be used natively in Scaffold.appBar
   @override
   Size get preferredSize => const Size.fromHeight(80.0);
 
@@ -31,7 +39,6 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    // Theme-aware typography colors
     final titleColor = theme.colorScheme.onSurface;
     final subtitleColor = theme.colorScheme.onSurfaceVariant;
 
@@ -44,7 +51,6 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
         child: Row(
           children: [
-            // LEADING BUTTON
             if (leadingIcon != null)
               _GlassIconButton(
                 icon: leadingIcon!,
@@ -52,12 +58,9 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
                 isDark: isDark,
               )
             else
-              const SizedBox(width: 44), // Balances the row if hidden
-
+              const SizedBox(width: 44), 
             const SizedBox(width: DesignTokens.spacingMd),
-
-            // TITLE SECTION
-            // TITLE SECTION
+            
             Expanded(
               child: GestureDetector(
                 onLongPress: onTitleLongPress,
@@ -92,8 +95,18 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
             ),
+            
+            // --- NEW: EXTRA ACTION BUTTON ---
+            if (extraTrailingIcon != null) ...[
+              _GlassIconButton(
+                icon: extraTrailingIcon!,
+                onTap: onExtraTrailingPressed,
+                isDark: isDark,
+                customColor: extraIconColor,
+              ),
+              const SizedBox(width: 8),
+            ],
 
-            // TRAILING BUTTON
             if (trailingIcon != null)
               _GlassIconButton(
                 icon: trailingIcon!,
@@ -101,7 +114,7 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
                 isDark: isDark,
               )
             else
-              const SizedBox(width: 44), 
+              const SizedBox(width: 44),
           ],
         ),
       ),
@@ -109,16 +122,17 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-/// A private, self-contained frosted glass button for the App Bar
 class _GlassIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
   final bool isDark;
+  final Color? customColor; 
 
   const _GlassIconButton({
     required this.icon,
     this.onTap,
     required this.isDark,
+    this.customColor,
   });
 
   @override
@@ -130,9 +144,9 @@ class _GlassIconButton extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Material(
-          color: isDark 
-              ? Colors.white.withOpacity(0.05) 
-              : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+          color: customColor?.withOpacity(0.1) ?? (isDark 
+               ? Colors.white.withOpacity(0.05) 
+               : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5)),
           child: InkWell(
             onTap: onTap,
             child: Container(
@@ -141,7 +155,7 @@ class _GlassIconButton extends StatelessWidget {
               alignment: Alignment.center,
               child: Icon(
                 icon, 
-                color: theme.colorScheme.onSurface, 
+                color: customColor ?? theme.colorScheme.onSurface, 
                 size: 20,
               ),
             ),
