@@ -9,6 +9,9 @@ import '../providers/transaction_provider.dart';
 import '../components/transaction_card.dart';
 import 'transaction_form_page.dart';
 
+import '../providers/transaction_filter_provider.dart';
+import '../components/transaction_filter_bottom_sheet.dart';
+
 class AccountTransactionsPage extends ConsumerWidget {
   final Account account;
 
@@ -17,25 +20,27 @@ class AccountTransactionsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(accountTransactionsProvider(account.id));
+    final filterState = ref.watch(transactionFilterProvider(account.id));
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // CLEAN: Restored base background
+      backgroundColor: theme.scaffoldBackgroundColor, 
       appBar: ModernAppBar(
         title: account.providerName.toUpperCase(),
         subtitle: account.name.toUpperCase(),
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.pop(context),
+        
+        // --- FIX: Exclusively using the native trailingIcon parameter ---
+        trailingIcon: filterState.isActive ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
+        onTrailingPressed: () {
+          final txList = transactionsAsync.asData?.value ?? [];
+          TransactionFilterBottomSheet.show(context, account.id, txList);
+        },
       ),
-      // --- NEW: Contextual FAB with Pre-selection ---
       floatingActionButton: ModernSquircleFab(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TransactionFormPage(preSelectedAccountId: account.id),
-            ),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(preSelectedAccountId: account.id)));
         },
         icon: Icons.add_rounded,
         label: 'Log',
@@ -45,19 +50,19 @@ class AccountTransactionsPage extends ConsumerWidget {
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (transactions) {
           if (transactions.isEmpty) {
-            return Center(
-              child: Text(
-                'No transactions logged yet.',
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
-              )
-            );
+            return Center(child: Text('No transactions logged yet.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold)));
           }
 
-          // --- NEW: Grouping Logic by Month & Year ---
+          final filteredTransactions = TransactionFilterHelper.apply(transactions, filterState, account.id);
+
+          if (filteredTransactions.isEmpty) {
+            return Center(child: Text('No results match your filters.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold)));
+          }
+
           final groupedTransactions = <String, List<dynamic>>{};
           const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-          for (var txData in transactions) {
+          for (var txData in filteredTransactions) {
             final tx = txData.transaction;
             final groupKey = '${fullMonths[tx.date.month - 1]} ${tx.date.year}';
             groupedTransactions.putIfAbsent(groupKey, () => []).add(txData);
@@ -68,26 +73,19 @@ class AccountTransactionsPage extends ConsumerWidget {
             slivers: [
               const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
               
-              // Map through the groups and build a Sticky Header section for each
               ...groupedTransactions.entries.map((entry) {
                 return SliverMainAxisGroup(
                   slivers: [
                     SliverPersistentHeader(
-                      pinned: true, // Makes the header sticky
-                      delegate: _StickyMonthHeaderDelegate(
-                        title: entry.key,
-                        theme: theme,
-                      ),
+                      pinned: true, 
+                      delegate: _StickyMonthHeaderDelegate(title: entry.key, theme: theme),
                     ),
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd),
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
-                            return TransactionCard(
-                              data: entry.value[index],
-                              currentAccountId: account.id,
-                            );
+                            return TransactionCard(data: entry.value[index], currentAccountId: account.id);
                           },
                           childCount: entry.value.length,
                         ),
@@ -98,7 +96,6 @@ class AccountTransactionsPage extends ConsumerWidget {
                 );
               }).toList(),
               
-              // Padding for the FAB
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );

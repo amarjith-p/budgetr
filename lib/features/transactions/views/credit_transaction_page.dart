@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:budgetr/core/components/currency_text.dart';
+import 'package:budgetr/features/transactions/components/transaction_filter_bottom_sheet.dart';
+import 'package:budgetr/features/transactions/providers/transaction_filter_provider.dart';
 import 'package:budgetr/features/transactions/services/transaction_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -121,27 +123,30 @@ class CreditTransactionPage extends ConsumerWidget {
     return cycles;
   }
 
-  @override
+ @override
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(accountTransactionsProvider(account.id));
+    final filterState = ref.watch(transactionFilterProvider(account.id));
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // CLEAN: Restored base background
+      backgroundColor: theme.scaffoldBackgroundColor, 
       appBar: ModernAppBar(
         title: account.providerName.toUpperCase(),
         subtitle: account.name.toUpperCase(),
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.pop(context),
+        
+        // --- FIX: Exclusively using the native trailingIcon parameter ---
+        trailingIcon: filterState.isActive ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
+        onTrailingPressed: () {
+          final txList = transactionsAsync.asData?.value ?? [];
+          TransactionFilterBottomSheet.show(context, account.id, txList);
+        },
       ),
       floatingActionButton: ModernSquircleFab(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TransactionFormPage(preSelectedAccountId: account.id),
-            ),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(preSelectedAccountId: account.id)));
         },
         icon: Icons.add_rounded,
         label: 'Log',
@@ -150,7 +155,16 @@ class CreditTransactionPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (transactions) {
-          final cycles = _groupIntoCycles(transactions);
+          final rawCycles = _groupIntoCycles(transactions);
+          
+          final filteredCycles = rawCycles.map((cycle) {
+            return BillingCycle(
+              startDate: cycle.startDate,
+              endDate: cycle.endDate,
+              dueDate: cycle.dueDate,
+              transactions: TransactionFilterHelper.apply(cycle.transactions, filterState, account.id),
+            );
+          }).toList();
           
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
@@ -158,23 +172,21 @@ class CreditTransactionPage extends ConsumerWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(DesignTokens.spacingMd),
-                  child: _CreditSummaryCard(
-                    cycles: cycles, 
-                    account: account, 
-                    allTransactions: transactions,
-                  ),
+                  child: _CreditSummaryCard(cycles: rawCycles, account: account, allTransactions: transactions),
                 ),
               ),
               
               if (transactions.isEmpty)
                 SliverFillRemaining(
-                  child: Center(
-                    child: Text('No credit activity yet.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold)),
-                  ),
+                  child: Center(child: Text('No credit activity yet.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),
+                )
+              else if (filteredCycles.every((c) => c.transactions.isEmpty))
+                SliverFillRemaining(
+                  child: Center(child: Text('No results match your filters.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),
                 )
               else
-                ...cycles.where((c) => c.transactions.isNotEmpty || cycles.indexOf(c) <= 1).map((cycle) {
-                  final isCurrentUnbilled = cycles.indexOf(cycle) == 0;
+                ...filteredCycles.where((c) => c.transactions.isNotEmpty || filteredCycles.indexOf(c) <= 1).map((cycle) {
+                  final isCurrentUnbilled = filteredCycles.indexOf(cycle) == 0;
                   final headerTitle = isCurrentUnbilled ? 'UNBILLED (Ends ${cycle.title})' : 'STATEMENT - ${cycle.title}';
 
                   return SliverMainAxisGroup(
@@ -187,7 +199,7 @@ class CreditTransactionPage extends ConsumerWidget {
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 24.0),
-                            child: Center(child: Text('No transactions in this cycle.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12))),
+                            child: Center(child: Text(filterState.isActive ? 'No matches in this cycle' : 'No transactions in this cycle.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12))),
                           ),
                         )
                       else
