@@ -140,6 +140,15 @@ class TransactionCard extends ConsumerWidget {
           ),
         );
       },
+      onSplit: () {
+        HapticFeedback.lightImpact();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TransactionFormPage(existingTransaction: data, isSplit: true),
+          ),
+        );
+      },
       
       onEdit: () {
         Navigator.push(

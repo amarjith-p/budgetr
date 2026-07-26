@@ -5,7 +5,8 @@ import '../theme/design_tokens.dart';
 class BoxySlidableCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onEdit;
-  final VoidCallback? onClone; // <-- NEW
+  final VoidCallback? onClone; 
+  final VoidCallback? onSplit; // <-- NEW
   final VoidCallback? onDelete;
   final EdgeInsetsGeometry margin;
   final BorderRadius? customBorderRadius; 
@@ -15,7 +16,8 @@ class BoxySlidableCard extends StatelessWidget {
     Key? key, 
     required this.child,
     this.onEdit,
-    this.onClone, // <-- NEW
+    this.onClone, 
+    this.onSplit, // <-- NEW
     this.onDelete,
     this.margin = const EdgeInsets.only(bottom: DesignTokens.spacingMd),
     this.customBorderRadius,
@@ -26,9 +28,12 @@ class BoxySlidableCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeRadius = customBorderRadius ?? BorderRadius.circular(DesignTokens.spacingXs);
     
-    // Dynamically calculate the swipe width based on how many actions exist
     int startActionCount = (onEdit != null ? 1 : 0) + (onClone != null ? 1 : 0);
     double startExtent = startActionCount * 0.25;
+
+    // Dynamically calculate end swipe width
+    int endActionCount = (onDelete != null ? 1 : 0) + (onSplit != null ? 1 : 0);
+    double endExtent = endActionCount * 0.25;
 
     return Padding(
       padding: margin,
@@ -91,38 +96,64 @@ class BoxySlidableCard extends StatelessWidget {
           ],
         ),
 
-        // SWIPE LEFT (DELETE)
-        endActionPane: onDelete == null ? null : ActionPane(
+        // SWIPE LEFT (SPLIT & DELETE)
+        endActionPane: endActionCount == 0 ? null : ActionPane(
           motion: const DrawerMotion(),
-          extentRatio: 0.25,
+          extentRatio: endExtent,
           children: [
-            CustomSlidableAction(
-              onPressed: (_) => onDelete!(),
-              backgroundColor: Colors.transparent,
-              foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
-              padding: EdgeInsets.zero,
-              child: Container(
-                margin: const EdgeInsets.only(left: DesignTokens.spacingSm),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  borderRadius: activeRadius, 
-                  border: Border.all(color: Theme.of(context).colorScheme.error.withOpacity(0.3), width: 1.2),
-                ),
-                alignment: Alignment.center,
-                child: const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.delete_outline_rounded),
-                    SizedBox(height: 4),
-                    Text('Delete', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  ],
+            // --- NEW: SPLIT ACTION ---
+            if (onSplit != null)
+              CustomSlidableAction(
+                onPressed: (_) => onSplit!(),
+                backgroundColor: Colors.transparent,
+                foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,
+                padding: EdgeInsets.zero,
+                child: Container(
+                  margin: const EdgeInsets.only(left: DesignTokens.spacingSm),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.tertiaryContainer,
+                    borderRadius: activeRadius, 
+                    border: Border.all(color: Theme.of(context).colorScheme.tertiary.withOpacity(0.3), width: 1.2),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.call_split_rounded),
+                      SizedBox(height: 4),
+                      Text('Split', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ),
               ),
-            ),
+
+            if (onDelete != null)
+              CustomSlidableAction(
+                onPressed: (_) => onDelete!(),
+                backgroundColor: Colors.transparent,
+                foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+                padding: EdgeInsets.zero,
+                child: Container(
+                  margin: const EdgeInsets.only(left: DesignTokens.spacingSm),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    borderRadius: activeRadius, 
+                    border: Border.all(color: Theme.of(context).colorScheme.error.withOpacity(0.3), width: 1.2),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.delete_outline_rounded),
+                      SizedBox(height: 4),
+                      Text('Delete', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
         
-        // THE BOXY CARD CONTENT
         child: Card(
           elevation: 0,
           margin: EdgeInsets.zero,

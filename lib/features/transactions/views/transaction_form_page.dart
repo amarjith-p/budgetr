@@ -32,12 +32,14 @@ class TransactionFormPage extends ConsumerStatefulWidget {
   final TransactionWithDetails? existingTransaction;
   final String? preSelectedAccountId;
   final bool isClone;
+  final bool isSplit; // <-- NEW
 
   const TransactionFormPage({
     Key? key, 
     this.existingTransaction,
     this.preSelectedAccountId,
     this.isClone = false,
+    this.isSplit = false, // <-- NEW
   }) : super(key: key);
 
   @override
@@ -50,10 +52,10 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
   String _expression = '';
   String _liveResult = '0.00';
+  
   bool _isSpillover = false; 
   bool _isSettlementVerified = false; 
 
-  // --- FIX: Added specific controller for the Hero Amount Cursor Binding ---
   late TextEditingController _amountController;
   late TextEditingController _notesCtrl;
   
@@ -71,8 +73,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     super.initState();
     final txDetails = widget.existingTransaction;
     
-    // Setup initial string amounts
-    final initialAmount = txDetails != null ? txDetails.transaction.amount.toStringAsFixed(2) : '';
+    // --- FIX: If splitting, empty the amount field to force entry ---
+    String initialAmount = '';
+    if (txDetails != null && !widget.isSplit) {
+      initialAmount = txDetails.transaction.amount.toStringAsFixed(2);
+    }
+    
     _amountController = TextEditingController(text: initialAmount);
     _expression = initialAmount;
     _liveResult = initialAmount.isEmpty ? '0.00' : initialAmount;
@@ -81,12 +87,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       final tx = txDetails.transaction;
       _typeIndex = _types.indexOf(tx.type);
       _selectedDateTime = widget.isClone ? DateTime.now() : tx.date;
-      _isSpillover = widget.isClone ? false : tx.isSpillover; 
-      _isSettlementVerified = widget.isClone ? false : tx.isSettlementVerified; 
+      _isSpillover = widget.isClone || widget.isSplit ? false : tx.isSpillover; 
+      _isSettlementVerified = widget.isClone || widget.isSplit ? false : tx.isSettlementVerified; 
       
       _notesCtrl = TextEditingController(text: tx.notes ?? '');
-      _selectedCategoryId = tx.categoryId;
-      _selectedSubCategory = tx.subCategory;
+      
+      // If splitting, we keep the accounts but wipe the category to force re-selection
+      _selectedCategoryId = widget.isSplit ? null : tx.categoryId;
+      _selectedSubCategory = widget.isSplit ? null : tx.subCategory;
       
       if (tx.type == 'Transfer') {
         if (tx.toAccountId == 'EXTERNAL_IN') {
@@ -117,7 +125,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     super.dispose();
   }
 
-  // --- FIX: Intelligent Cursor Injection Engine ---
   void _onCalcKeyPress(String key) {
     setState(() {
       int cursorPosition = _amountController.selection.baseOffset;
@@ -146,7 +153,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         if (isOperator && cursorPosition > 0) {
           final prevChar = currentText[cursorPosition - 1];
           if (['+', '-', '×', '÷'].contains(prevChar)) {
-            // Replaces consecutive operators seamlessly
             final newText = currentText.substring(0, cursorPosition - 1) + key + currentText.substring(cursorPosition);
             _amountController.value = TextEditingValue(
               text: newText,
@@ -172,9 +178,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         }
       }
 
-      // Sync local expression
       _expression = _amountController.text;
-      
       String rawResult = BodmasCalculator.evaluate(_expression);
       double? parsed = double.tryParse(rawResult);
       
@@ -316,8 +320,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final isTransfer = _typeIndex == 2;
     
     final hasDanglingOperator = _expression.isNotEmpty && ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
+    
+    // --- FIX: Split Amount Limit Validation ---
+    final origAmount = widget.existingTransaction?.transaction.amount ?? 0.0;
+    final isOverSplit = widget.isSplit && amount >= origAmount;
 
-    if (amount <= 0 || hasDanglingOperator || _selectedAccountId == null || 
+    if (amount <= 0 || hasDanglingOperator || isOverSplit || _selectedAccountId == null || 
        (isTransfer && _selectedToAccountId == null) ||
        (isTransfer && _selectedAccountId == _selectedToAccountId) || 
        (!isTransfer && _selectedCategoryId == null) ||
@@ -379,6 +387,26 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           }
         }
       }
+    }
+
+    // --- FIX: Delegate to Split Action if required ---
+    if (widget.isSplit) {
+      final success = await ref.read(transactionActionProvider.notifier).splitTransaction(
+        originalTxId: widget.existingTransaction!.transaction.id,
+        splitAmount: amount,
+        type: _types[_typeIndex],
+        date: _selectedDateTime,
+        accountId: _selectedAccountId!,
+        toAccountId: _selectedToAccountId,
+        categoryId: finalCategoryId,
+        subCategory: finalSubCategory,
+        bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
+        notes: finalNotes,
+        isSpillover: _isSpillover, 
+        isSettlementVerified: _isSettlementVerified, 
+      );
+      if (success && mounted) Navigator.pop(context);
+      return;
     }
 
     final String? safeExistingId = (widget.existingTransaction != null && !widget.isClone) 
@@ -466,9 +494,16 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final txColor = TransactionColors.getTypeColor(_types[_typeIndex], theme);
 
     final amountVal = double.tryParse(_liveResult) ?? 0.0;
+    final origAmount = widget.existingTransaction?.transaction.amount ?? 0.0;
     final hasDanglingOperator = _expression.isNotEmpty && ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
-    final hasAmountError = _showValidationErrors && (amountVal <= 0 || hasDanglingOperator);
+    final isOverSplit = widget.isSplit && amountVal >= origAmount;
+    
+    final hasAmountError = _showValidationErrors && (amountVal <= 0 || hasDanglingOperator || isOverSplit);
     final displayAmountColor = hasAmountError ? theme.colorScheme.error : txColor;
+
+    String errorMsg = 'Amount must be greater than 0';
+    if (hasDanglingOperator) errorMsg = 'Incomplete mathematical expression';
+    if (isOverSplit) errorMsg = 'Split amount must be less than original (₹${origAmount.toStringAsFixed(2)})';
 
     final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
     final rawCategories = ref.watch(categoriesStreamProvider).asData?.value ?? [];
@@ -551,7 +586,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
     String appBarTitle = 'New Log';
     if (widget.existingTransaction != null) {
-      appBarTitle = widget.isClone ? 'Clone Log' : 'Edit Log';
+      if (widget.isClone) appBarTitle = 'Clone Log';
+      else if (widget.isSplit) appBarTitle = 'Split Log';
+      else appBarTitle = 'Edit Log';
     }
 
     return Scaffold(
@@ -604,7 +641,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // --- FIX: Interactive Editable Math Display ---
+                            if (widget.isSplit)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Text(
+                                  'SPLITTING FROM ₹${origAmount.toStringAsFixed(2)}',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: theme.colorScheme.primary, letterSpacing: 1.5),
+                                ),
+                              ),
                             FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Row(
@@ -623,8 +667,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                       constraints: const BoxConstraints(minWidth: 40),
                                       child: TextField(
                                         controller: _amountController,
-                                        readOnly: true, // Hides system keyboard
-                                        showCursor: true, // Enables visual cursor tracking
+                                        readOnly: true, 
+                                        showCursor: true, 
                                         autofocus: true,
                                         cursorColor: displayAmountColor,
                                         style: Theme.of(context).textTheme.displayLarge!.copyWith(color: displayAmountColor),
@@ -647,16 +691,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                             ),
                             if (_expression.isNotEmpty && _expression != _liveResult && !hasAmountError)
                               Text(
-                                '= ₹ $_liveResult', // <-- Live Preview Restored
+                                '= ₹ $_liveResult',
                                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: displayAmountColor),
                               ),
                             if (hasAmountError)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4.0),
                                 child: Text(
-                                  hasDanglingOperator
-                                      ? 'Incomplete mathematical expression'
-                                      : 'Amount must be greater than 0',
+                                  errorMsg,
                                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: theme.colorScheme.error),
                                 ),
                               ),

@@ -210,6 +210,63 @@ class TransactionService {
       await (_db.delete(_db.transactions)..where((t) => t.id.equals(transactionId))).go();
     });
   }
+  Future<void> splitTransaction({
+    required String originalTxId,
+    required double splitAmount,
+    required String type,
+    required DateTime date,
+    required String accountId,
+    String? toAccountId,
+    String? categoryId,
+    String? subCategory,
+    int? bucketId,
+    String? notes,
+    bool isSpillover = false, 
+    bool isSettlementVerified = false, 
+  }) async {
+    // We wrap everything in a transaction. Drift handles nested transactions perfectly via zones.
+    await _db.transaction(() async {
+      // 1. Fetch the exact state of the original transaction
+      final origTx = await (_db.select(_db.transactions)..where((t) => t.id.equals(originalTxId))).getSingle();
+      
+      // 2. Calculate the new reduced amount for the parent transaction
+      final newOrigAmount = origTx.amount - splitAmount;
+      if (newOrigAmount <= 0) {
+        throw Exception("Split amount must be strictly less than the original amount.");
+      }
+
+      // 3. Update the original transaction (This natively handles all balance reversals safely)
+      await updateTransaction(
+        id: origTx.id,
+        type: origTx.type,
+        amount: newOrigAmount,
+        date: origTx.date,
+        accountId: origTx.accountId,
+        toAccountId: origTx.toAccountId,
+        categoryId: origTx.categoryId,
+        subCategory: origTx.subCategory,
+        bucketId: origTx.bucketId,
+        notes: origTx.notes,
+        isSpillover: origTx.isSpillover,
+        isSettlementVerified: origTx.isSettlementVerified,
+      );
+
+      // 4. Log the new split-off transaction (Applies new balances seamlessly)
+      await logTransaction(
+        type: type, 
+        amount: splitAmount, 
+        date: date, 
+        accountId: accountId,
+        toAccountId: toAccountId, 
+        categoryId: categoryId, 
+        subCategory: subCategory,
+        bucketId: bucketId, 
+        notes: notes, 
+        isSpillover: isSpillover, 
+        isSettlementVerified: isSettlementVerified,
+      );
+    });
+  }
 
   Future<void> toggleSpillover(String transactionId, bool isSpillover) async {
     final tx = await (_db.select(_db.transactions)..where((t) => t.id.equals(transactionId))).getSingle();

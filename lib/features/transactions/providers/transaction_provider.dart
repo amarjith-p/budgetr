@@ -65,6 +65,33 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _service.deleteTransaction(id));
   }
+  Future<bool> splitTransaction({
+    required String originalTxId,
+    required double splitAmount,
+    required String type,
+    required DateTime date,
+    required String accountId,
+    String? toAccountId,
+    String? categoryId,
+    String? subCategory,
+    int? bucketId,
+    String? notes,
+    bool isSpillover = false, 
+    bool isSettlementVerified = false,
+  }) async {
+    state = const AsyncLoading();
+    
+    state = await AsyncValue.guard(() async {
+      await _service.splitTransaction(
+        originalTxId: originalTxId, splitAmount: splitAmount, type: type, date: date,
+        accountId: accountId, toAccountId: toAccountId, categoryId: categoryId, 
+        subCategory: subCategory, bucketId: bucketId, notes: notes, 
+        isSpillover: isSpillover, isSettlementVerified: isSettlementVerified
+      );
+    });
+
+    return !state.hasError;
+  }
 
   Future<void> toggleSpillover(String id, bool isSpillover) async {
     await AsyncValue.guard(() => _service.toggleSpillover(id, isSpillover));
