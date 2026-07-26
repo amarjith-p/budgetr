@@ -11,7 +11,6 @@ import '../providers/account_provider.dart';
 
 class AccountFormBottomSheet extends ConsumerStatefulWidget {
   final Account? existingAccount;
-
   const AccountFormBottomSheet({Key? key, this.existingAccount}) : super(key: key);
 
   @override
@@ -20,7 +19,6 @@ class AccountFormBottomSheet extends ConsumerStatefulWidget {
 
 class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet> {
   final _formKey = GlobalKey<FormState>();
-  
   late TextEditingController _nameCtrl;
   late TextEditingController _providerCtrl;
   late TextEditingController _typeCtrl;
@@ -98,7 +96,6 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
     addCalcFocusListener(_limitCtrl);
     addCalcFocusListener(_billDateCtrl);
     addCalcFocusListener(_dueDateCtrl);
-
     addNormalFocusListener(_nameCtrl);
     addNormalFocusListener(_last4Ctrl);
   }
@@ -224,7 +221,6 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
 
   Future<void> _submit() async {
     _closeCalculatorSafely();
-
     if (!_formKey.currentState!.validate()) return;
 
     final isCC = _typeCtrl.text == 'Credit Cards';
@@ -249,7 +245,7 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
   }
 
   void _openCalculatorFor(TextEditingController controller) {
-    SystemChannels.textInput.invokeMethod('TextInput.hide'); 
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
     
     if (_activeCalcController != null && _activeCalcController != controller) {
       final text = _activeCalcController!.text.trim();
@@ -281,13 +277,10 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final theme = Theme.of(context);
+
     final isCC = _typeCtrl.text == 'Credit Cards';
     final isLiquid = _typeCtrl.text == 'Liquid Money';
-
     final showCalculator = _activeCalcController != null;
-
-    // We completely removed the dangerous `bottomInset > 0` fallback from here.
-    // FocusNode listeners perfectly manage hiding/showing the respective keyboards.
 
     return SafeArea(
       child: Column(
@@ -314,8 +307,8 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                         decoration: BoxDecoration(color: theme.dividerColor, borderRadius: BorderRadius.circular(2)),
                       ),
                     ),
-                    Text(widget.existingAccount == null ? 'Add Account' : 'Edit Account', 
-                         style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+                    Text(widget.existingAccount == null ? 'Add Account' : 'Edit Account',
+                          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
                     const SizedBox(height: DesignTokens.spacingLg),
                     
                     InkWell(
@@ -374,7 +367,6 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                       validator: (v) => v!.isEmpty ? 'Req' : null, 
                       textInputAction: TextInputAction.next,
                       onTap: _closeCalculatorSafely,
-                      // EXPLICITLY intercept native "Next" and jump cleanly to the calculator
                       onFieldSubmitted: (_) => _openCalculatorFor(isCC ? _limitCtrl : _balanceCtrl), 
                     ),
                     const SizedBox(height: DesignTokens.spacingMd),
@@ -383,7 +375,7 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                       ModernBoxyInput(
                         controller: _limitCtrl, 
                         focusNode: _focusNodes[_limitCtrl],
-                        labelText: 'Credit Limit (₹)', 
+                        labelText: 'Credit Limit (₹)', // <-- RESTORED RUPEE SYMBOL
                         readOnly: true,
                         onTap: () => _openCalculatorFor(_limitCtrl), 
                         validator: (v) => v!.isEmpty ? 'Req' : null
@@ -400,7 +392,7 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                       ModernBoxyInput(
                         controller: _balanceCtrl, 
                         focusNode: _focusNodes[_balanceCtrl],
-                        labelText: 'Current Balance (₹)', 
+                        labelText: 'Current Balance (₹)', // <-- RESTORED RUPEE SYMBOL
                         readOnly: true,
                         onTap: () => _openCalculatorFor(_balanceCtrl), 
                         validator: (v) => v!.isEmpty ? 'Req' : null

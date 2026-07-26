@@ -16,15 +16,15 @@ extension CreditAccountExtensions on Account {
   int get safeBillingDay => billDate ?? 15; 
   int get safeDueDay => dueDate ?? 5;      
   
-  // --- NEW: THE EFFECTIVE DATE ENGINE ---
   DateTime getEffectiveDate(TransactionRecord tx) {
     if (tx.isSpillover) {
       final bDay = safeBillingDay;
-      DateTime nextBillDate = DateTime(tx.date.year, tx.date.month, bDay);
+      // FIX: End the boundary mathematically perfectly at midnight
+      DateTime nextBillDate = DateTime(tx.date.year, tx.date.month, bDay, 23, 59, 59);
       if (tx.date.day > bDay) {
-        nextBillDate = DateTime(tx.date.year, tx.date.month + 1, bDay);
+        nextBillDate = DateTime(tx.date.year, tx.date.month + 1, bDay, 23, 59, 59);
       }
-      return nextBillDate.add(const Duration(days: 1)); // Forces it into next cycle
+      return nextBillDate.add(const Duration(days: 1)); 
     }
     return tx.date;
   }
@@ -66,22 +66,23 @@ class CreditTransactionPage extends ConsumerWidget {
     DateTime now = DateTime.now();
     if (now.isAfter(newest)) newest = now;
 
-    DateTime currentEnd = DateTime(newest.year, newest.month, bDay);
+    // FIX: Cycles formally end precisely at the final second of the bill date
+    DateTime currentEnd = DateTime(newest.year, newest.month, bDay, 23, 59, 59);
     if (newest.day > bDay) {
-      currentEnd = DateTime(newest.year, newest.month + 1, bDay);
+      currentEnd = DateTime(newest.year, newest.month + 1, bDay, 23, 59, 59);
     }
 
     DateTime pointerEnd = currentEnd;
     while (pointerEnd.isAfter(oldest) || pointerEnd.isAtSameMomentAs(oldest)) {
-      DateTime pointerStart = DateTime(pointerEnd.year, pointerEnd.month - 1, bDay + 1);
+      // FIX: New cycle begins exactly at midnight on the next day
+      DateTime pointerStart = DateTime(pointerEnd.year, pointerEnd.month - 1, bDay + 1, 0, 0, 0);
       
-      DateTime pointerDue = DateTime(pointerEnd.year, pointerEnd.month + 1, dDay);
+      DateTime pointerDue = DateTime(pointerEnd.year, pointerEnd.month + 1, dDay, 23, 59, 59);
       if (dDay > bDay && pointerEnd.month == pointerStart.month) {
-        pointerDue = DateTime(pointerEnd.year, pointerEnd.month, dDay);
+        pointerDue = DateTime(pointerEnd.year, pointerEnd.month, dDay, 23, 59, 59);
       }
 
       final cycleTxs = transactions.where((t) {
-        // --- USES EFFECTIVE DATE INSTEAD OF RECEIPT DATE ---
         final effectiveDate = account.getEffectiveDate(t.transaction); 
         return (effectiveDate.isAfter(pointerStart) || effectiveDate.isAtSameMomentAs(pointerStart)) && 
                (effectiveDate.isBefore(pointerEnd) || effectiveDate.isAtSameMomentAs(pointerEnd));
@@ -94,7 +95,7 @@ class CreditTransactionPage extends ConsumerWidget {
         transactions: cycleTxs
       ));
 
-      pointerEnd = DateTime(pointerEnd.year, pointerEnd.month - 1, bDay);
+      pointerEnd = DateTime(pointerEnd.year, pointerEnd.month - 1, bDay, 23, 59, 59);
     }
 
     for (int i = 0; i < cycles.length - 1; i++) {
@@ -247,7 +248,6 @@ class _CreditSummaryCard extends StatelessWidget {
       if (isExpense) netAmount = -t.amount;      
       else if (isPayment) netAmount = t.amount;  
 
-      // --- USES EFFECTIVE DATE FOR MATH ---
       DateTime effectiveDate = account.getEffectiveDate(t);
 
       if (lastStatementDate == null || effectiveDate.isAfter(lastStatementDate)) {
@@ -263,6 +263,9 @@ class _CreditSummaryCard extends StatelessWidget {
 
     double remainingDueNet = historicalNet + paymentsSinceStatement;
     double adjustedUnbilled = currentCycleNet + remainingDueNet; 
+
+    String unbilledSign = adjustedUnbilled < 0 ? '-₹' : (adjustedUnbilled > 0 ? '+₹' : '₹');
+    String statementSign = historicalNet < 0 ? '-₹' : (historicalNet > 0 ? '+₹' : '₹');
 
     String statusText = 'NO DUES';
     Color statusColor = theme.colorScheme.primary;
@@ -312,7 +315,7 @@ class _CreditSummaryCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     CurrencyText(
                       amount: adjustedUnbilled,
-                      showSignForPositive: true,
+                      sign: unbilledSign,
                       amountStyle: textTheme.titleLarge!,
                     ),
                     const SizedBox(height: 12),
@@ -344,7 +347,7 @@ class _CreditSummaryCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     CurrencyText(
                       amount: historicalNet,
-                      showSignForPositive: true,
+                      sign: statementSign,
                       amountStyle: textTheme.titleLarge!,
                     ),
                     const SizedBox(height: 8),

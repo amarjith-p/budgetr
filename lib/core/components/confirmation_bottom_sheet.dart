@@ -34,7 +34,7 @@ class ConfirmationBottomSheet extends StatelessWidget {
       useSafeArea: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)), // Sleeker curve
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)), 
       ),
       builder: (ctx) => ConfirmationBottomSheet(
         title: title,
@@ -54,8 +54,8 @@ class ConfirmationBottomSheet extends StatelessWidget {
     
     // Sleek contextual colors
     final iconColor = isDestructive ? theme.colorScheme.error : theme.colorScheme.primary;
-    final iconBgColor = isDestructive 
-        ? theme.colorScheme.error.withOpacity(0.1) 
+    final iconBgColor = isDestructive
+        ? theme.colorScheme.error.withOpacity(0.1)
         : theme.colorScheme.primary.withOpacity(0.1);
         
     final confirmBgColor = isDestructive ? theme.colorScheme.error : theme.colorScheme.primary;
@@ -134,11 +134,16 @@ class ConfirmationBottomSheet extends StatelessWidget {
                       ),
                     ),
                     onPressed: () => Navigator.pop(context, false),
-                    child: Text(
-                      cancelText,
-                      style: const TextStyle(
-                        fontSize: 15, 
-                        fontWeight: FontWeight.w600,
+                    // --- FIX: Add FittedBox to auto-scale button labels ---
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        cancelText,
+                        maxLines: 1,
+                        style: const TextStyle(
+                          fontSize: 15, 
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -161,12 +166,17 @@ class ConfirmationBottomSheet extends StatelessWidget {
                       Navigator.pop(context, true);
                       onConfirm();
                     },
-                    child: Text(
-                      confirmText,
-                      style: const TextStyle(
-                        fontSize: 15, 
-                        fontWeight: FontWeight.w700, 
-                        letterSpacing: 0.3,
+                    // --- FIX: Add FittedBox to auto-scale button labels ---
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        confirmText,
+                        maxLines: 1,
+                        style: const TextStyle(
+                          fontSize: 15, 
+                          fontWeight: FontWeight.w700, 
+                          letterSpacing: 0.3,
+                        ),
                       ),
                     ),
                   ),

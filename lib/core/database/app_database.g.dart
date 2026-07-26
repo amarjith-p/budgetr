@@ -783,6 +783,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _displayOrderMeta = const VerificationMeta(
+    'displayOrder',
+  );
+  @override
+  late final GeneratedColumn<int> displayOrder = GeneratedColumn<int>(
+    'display_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -795,6 +807,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     billDate,
     dueDate,
     createdAt,
+    displayOrder,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -881,6 +894,15 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('display_order')) {
+      context.handle(
+        _displayOrderMeta,
+        displayOrder.isAcceptableOrUnknown(
+          data['display_order']!,
+          _displayOrderMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -930,6 +952,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      displayOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}display_order'],
+      )!,
     );
   }
 
@@ -950,6 +976,7 @@ class Account extends DataClass implements Insertable<Account> {
   final int? billDate;
   final int? dueDate;
   final DateTime createdAt;
+  final int displayOrder;
   const Account({
     required this.id,
     required this.name,
@@ -961,6 +988,7 @@ class Account extends DataClass implements Insertable<Account> {
     this.billDate,
     this.dueDate,
     required this.createdAt,
+    required this.displayOrder,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -981,6 +1009,7 @@ class Account extends DataClass implements Insertable<Account> {
       map['due_date'] = Variable<int>(dueDate);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['display_order'] = Variable<int>(displayOrder);
     return map;
   }
 
@@ -1002,6 +1031,7 @@ class Account extends DataClass implements Insertable<Account> {
           ? const Value.absent()
           : Value(dueDate),
       createdAt: Value(createdAt),
+      displayOrder: Value(displayOrder),
     );
   }
 
@@ -1021,6 +1051,7 @@ class Account extends DataClass implements Insertable<Account> {
       billDate: serializer.fromJson<int?>(json['billDate']),
       dueDate: serializer.fromJson<int?>(json['dueDate']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      displayOrder: serializer.fromJson<int>(json['displayOrder']),
     );
   }
   @override
@@ -1037,6 +1068,7 @@ class Account extends DataClass implements Insertable<Account> {
       'billDate': serializer.toJson<int?>(billDate),
       'dueDate': serializer.toJson<int?>(dueDate),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'displayOrder': serializer.toJson<int>(displayOrder),
     };
   }
 
@@ -1051,6 +1083,7 @@ class Account extends DataClass implements Insertable<Account> {
     Value<int?> billDate = const Value.absent(),
     Value<int?> dueDate = const Value.absent(),
     DateTime? createdAt,
+    int? displayOrder,
   }) => Account(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -1062,6 +1095,7 @@ class Account extends DataClass implements Insertable<Account> {
     billDate: billDate.present ? billDate.value : this.billDate,
     dueDate: dueDate.present ? dueDate.value : this.dueDate,
     createdAt: createdAt ?? this.createdAt,
+    displayOrder: displayOrder ?? this.displayOrder,
   );
   Account copyWithCompanion(AccountsCompanion data) {
     return Account(
@@ -1079,6 +1113,9 @@ class Account extends DataClass implements Insertable<Account> {
       billDate: data.billDate.present ? data.billDate.value : this.billDate,
       dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      displayOrder: data.displayOrder.present
+          ? data.displayOrder.value
+          : this.displayOrder,
     );
   }
 
@@ -1094,7 +1131,8 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('creditLimit: $creditLimit, ')
           ..write('billDate: $billDate, ')
           ..write('dueDate: $dueDate, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('displayOrder: $displayOrder')
           ..write(')'))
         .toString();
   }
@@ -1111,6 +1149,7 @@ class Account extends DataClass implements Insertable<Account> {
     billDate,
     dueDate,
     createdAt,
+    displayOrder,
   );
   @override
   bool operator ==(Object other) =>
@@ -1125,7 +1164,8 @@ class Account extends DataClass implements Insertable<Account> {
           other.creditLimit == this.creditLimit &&
           other.billDate == this.billDate &&
           other.dueDate == this.dueDate &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.displayOrder == this.displayOrder);
 }
 
 class AccountsCompanion extends UpdateCompanion<Account> {
@@ -1139,6 +1179,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<int?> billDate;
   final Value<int?> dueDate;
   final Value<DateTime> createdAt;
+  final Value<int> displayOrder;
   final Value<int> rowid;
   const AccountsCompanion({
     this.id = const Value.absent(),
@@ -1151,6 +1192,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.billDate = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.displayOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AccountsCompanion.insert({
@@ -1164,6 +1206,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.billDate = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.displayOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -1181,6 +1224,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<int>? billDate,
     Expression<int>? dueDate,
     Expression<DateTime>? createdAt,
+    Expression<int>? displayOrder,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1194,6 +1238,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (billDate != null) 'bill_date': billDate,
       if (dueDate != null) 'due_date': dueDate,
       if (createdAt != null) 'created_at': createdAt,
+      if (displayOrder != null) 'display_order': displayOrder,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1209,6 +1254,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<int?>? billDate,
     Value<int?>? dueDate,
     Value<DateTime>? createdAt,
+    Value<int>? displayOrder,
     Value<int>? rowid,
   }) {
     return AccountsCompanion(
@@ -1222,6 +1268,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       billDate: billDate ?? this.billDate,
       dueDate: dueDate ?? this.dueDate,
       createdAt: createdAt ?? this.createdAt,
+      displayOrder: displayOrder ?? this.displayOrder,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1259,6 +1306,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (displayOrder.present) {
+      map['display_order'] = Variable<int>(displayOrder.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1278,6 +1328,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('billDate: $billDate, ')
           ..write('dueDate: $dueDate, ')
           ..write('createdAt: $createdAt, ')
+          ..write('displayOrder: $displayOrder, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2490,6 +2541,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<int?> billDate,
       Value<int?> dueDate,
       Value<DateTime> createdAt,
+      Value<int> displayOrder,
       Value<int> rowid,
     });
 typedef $$AccountsTableUpdateCompanionBuilder =
@@ -2504,6 +2556,7 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<int?> billDate,
       Value<int?> dueDate,
       Value<DateTime> createdAt,
+      Value<int> displayOrder,
       Value<int> rowid,
     });
 
@@ -2563,6 +2616,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get displayOrder => $composableBuilder(
+    column: $table.displayOrder,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2625,6 +2683,11 @@ class $$AccountsTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get displayOrder => $composableBuilder(
+    column: $table.displayOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AccountsTableAnnotationComposer
@@ -2669,6 +2732,11 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get displayOrder => $composableBuilder(
+    column: $table.displayOrder,
+    builder: (column) => column,
+  );
 }
 
 class $$AccountsTableTableManager
@@ -2709,6 +2777,7 @@ class $$AccountsTableTableManager
                 Value<int?> billDate = const Value.absent(),
                 Value<int?> dueDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<int> displayOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion(
                 id: id,
@@ -2721,6 +2790,7 @@ class $$AccountsTableTableManager
                 billDate: billDate,
                 dueDate: dueDate,
                 createdAt: createdAt,
+                displayOrder: displayOrder,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2735,6 +2805,7 @@ class $$AccountsTableTableManager
                 Value<int?> billDate = const Value.absent(),
                 Value<int?> dueDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<int> displayOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion.insert(
                 id: id,
@@ -2747,6 +2818,7 @@ class $$AccountsTableTableManager
                 billDate: billDate,
                 dueDate: dueDate,
                 createdAt: createdAt,
+                displayOrder: displayOrder,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

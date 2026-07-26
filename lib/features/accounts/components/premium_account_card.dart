@@ -2,12 +2,14 @@ import 'dart:math';
 import 'package:budgetr/core/components/currency_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
 
-class PremiumAccountCard extends StatefulWidget {
+class PremiumAccountCard extends ConsumerStatefulWidget {
   final Account account;
   final VoidCallback? onCardTap;
+
   const PremiumAccountCard({
     Key? key, 
     required this.account, 
@@ -15,10 +17,10 @@ class PremiumAccountCard extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<PremiumAccountCard> createState() => _PremiumAccountCardState();
+  ConsumerState<PremiumAccountCard> createState() => _PremiumAccountCardState();
 }
 
-class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTickerProviderStateMixin {
+class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
   bool _isFront = true;
@@ -101,11 +103,15 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
     );
   }
 
-// ... inside _PremiumAccountCardState
   Widget _buildFront(Color bgColor, Color fgColor, bool isCreditCard) {
-    final textTheme = Theme.of(context).textTheme; // POM
-    final balance = widget.account.balance;
+    final textTheme = Theme.of(context).textTheme;
     final labelText = isCreditCard ? 'OUTSTANDING BALANCE' : 'CURRENT BALANCE';
+
+    // --- FIX: Strict Mathematical Truth ---
+    // The account.balance in the database natively tracks exact outstanding liability.
+    // If debt, it is negative. If surplus, it is positive.
+    final balance = widget.account.balance;
+    final signText = balance < 0 ? '-₹' : (balance > 0 ? '+₹' : '₹');
 
     return Container(
       height: 190,
@@ -182,10 +188,9 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerRight,
-                      // POM: Replaced messy inline formatting with Global Component
                       child: CurrencyText(
                         amount: balance,
-                        showSignForPositive: true,
+                        sign: signText,
                         amountStyle: textTheme.headlineSmall!.copyWith(color: fgColor),
                         symbolStyle: textTheme.titleMedium?.copyWith(color: fgColor.withOpacity(0.9)),
                       ),
@@ -229,7 +234,6 @@ class _PremiumAccountCardState extends State<PremiumAccountCard> with SingleTick
                   children: [
                     _buildBackData(fgColor, 'BILL DATE', _getOrdinal(widget.account.billDate)),
                     _buildBackData(fgColor, 'DUE DATE', _getOrdinal(widget.account.dueDate)),
-                    // --- STRICT 2 DECIMALS ---
                     _buildBackData(fgColor, 'CREDIT LIMIT', '₹${widget.account.creditLimit?.toStringAsFixed(2) ?? "0.00"}'),
                   ],
                 )

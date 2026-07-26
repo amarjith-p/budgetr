@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
@@ -35,6 +34,7 @@ class AccountActionNotifier extends AsyncNotifier<void> {
     int? dueDate,
   }) async {
     state = const AsyncLoading();
+    
     state = await AsyncValue.guard(() async {
       if (existingId == null) {
         await _service.addAccount(
@@ -42,7 +42,6 @@ class AccountActionNotifier extends AsyncNotifier<void> {
           balance: balance, creditLimit: creditLimit, billDate: billDate, dueDate: dueDate
         );
       } else {
-        // Fetch existing to retain createdAt, then update
         final db = ref.read(databaseProvider);
         final existing = await (db.select(db.accounts)..where((t) => t.id.equals(existingId))).getSingle();
         
@@ -53,12 +52,25 @@ class AccountActionNotifier extends AsyncNotifier<void> {
         await _service.updateAccount(updated);
       }
     });
+
     return !state.hasError;
   }
 
   Future<void> deleteAccount(String id) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _service.deleteAccount(id));
+  }
+
+  // --- NEW: REORDER UI BINDING ---
+  Future<void> reorderAccounts(List<Account> orderedList) async {
+    // Generates a map of exactly the new index values
+    final updatedAccounts = <Account>[];
+    for (int i = 0; i < orderedList.length; i++) {
+      updatedAccounts.add(orderedList[i].copyWith(displayOrder: i));
+    }
+    
+    // Executes silently in the background
+    await AsyncValue.guard(() => _service.reorderAccounts(updatedAccounts));
   }
 }
 

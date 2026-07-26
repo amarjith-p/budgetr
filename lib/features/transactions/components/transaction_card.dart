@@ -90,21 +90,20 @@ class TransactionCard extends ConsumerWidget {
     bool isSpilloverEligible = false;
     if (data.account.type == 'Credit Cards') {
       final bDay = data.account.billDate ?? 15;
-      DateTime currentBillDate = DateTime(tx.date.year, tx.date.month, bDay);
+      DateTime currentBillDate = DateTime(tx.date.year, tx.date.month, bDay, 23, 59, 59);
       if (tx.date.day > bDay) {
-        currentBillDate = DateTime(tx.date.year, tx.date.month + 1, bDay);
+        currentBillDate = DateTime(tx.date.year, tx.date.month + 1, bDay, 23, 59, 59);
       }
       
       final pureTxDate = DateTime(tx.date.year, tx.date.month, tx.date.day);
-      final diff = currentBillDate.difference(pureTxDate).inDays;
+      final pureBillDate = DateTime(currentBillDate.year, currentBillDate.month, currentBillDate.day);
+      final diff = pureBillDate.difference(pureTxDate).inDays;
       
-      // If within 2 days BEFORE or ON the bill date
       if (diff >= 0 && diff <= 2) {
         isSpilloverEligible = true;
       }
     }
 
-    // --- FIX: Safely append the warning without overwriting the actual subcategory string ---
     Color? cardBgColor; 
     if (tx.isSpillover) {
       cardBgColor = theme.colorScheme.primaryContainer.withOpacity(isDark ? 0.2 : 0.4);
@@ -130,6 +129,18 @@ class TransactionCard extends ConsumerWidget {
     return BoxySlidableCard(
       key: ValueKey(tx.id),
       customBackgroundColor: cardBgColor, 
+      
+      // --- NEW: CLONE ACTION ---
+      onClone: () {
+        HapticFeedback.lightImpact();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TransactionFormPage(existingTransaction: data, isClone: true),
+          ),
+        );
+      },
+      
       onEdit: () {
         Navigator.push(
           context,
@@ -227,37 +238,38 @@ class TransactionCard extends ConsumerWidget {
                       Text('"${tx.notes}"', style: TextStyle(fontStyle: FontStyle.italic, fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.8))),
                     ],
 
-                    // --- INLINE RECONCILIATION TOGGLE (NEW) ---
                     if (isSpilloverEligible || tx.isSpillover) ...[
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8.0),
                         child: Divider(height: 1),
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.rule_folder_outlined, size: 16, color: theme.colorScheme.primary),
-                              const SizedBox(width: 6),
-                              const Text('Push to next statement', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
-                            ],
-                          ),
-                          Switch(
-                            value: tx.isSpillover,
-                            activeColor: theme.colorScheme.primary,
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            onChanged: (val) {
-                              HapticFeedback.lightImpact();
-                              ref.read(transactionActionProvider.notifier).toggleSpillover(tx.id, val);
-                            },
-                          )
-                        ],
-                      ),
                       
-                      // Show confirmation logic ONLY if they haven't pushed it to the next statement
+                      if (!tx.isSettlementVerified) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.rule_folder_outlined, size: 16, color: theme.colorScheme.primary),
+                                const SizedBox(width: 6),
+                                const Text('Carry Forward', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+                              ],
+                            ),
+                            Switch(
+                              value: tx.isSpillover,
+                              activeColor: theme.colorScheme.primary,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              onChanged: (val) {
+                                HapticFeedback.lightImpact();
+                                ref.read(transactionActionProvider.notifier).toggleSpillover(tx.id, val);
+                              },
+                            )
+                          ],
+                        ),
+                      ],
+                      
                       if (!tx.isSpillover) ...[
-                        const SizedBox(height: 8),
+                        if (!tx.isSettlementVerified) const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [

@@ -1,6 +1,6 @@
 import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/features/transactions/views/account_transactions_page.dart';
-import 'package:budgetr/features/transactions/views/credit_transaction_page.dart'; // <-- NEW IMPORT
+import 'package:budgetr/features/transactions/views/credit_transaction_page.dart'; 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/design_tokens.dart';
@@ -9,6 +9,7 @@ import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../providers/account_provider.dart';
 import '../components/premium_account_card.dart';
 import '../components/account_form_bottom_sheet.dart';
+import '../../../core/database/app_database.dart'; // Needed for the Account type
 
 class AccountsTab extends ConsumerWidget {
   const AccountsTab({Key? key}) : super(key: key);
@@ -28,7 +29,7 @@ class AccountsTab extends ConsumerWidget {
     final accountsAsync = ref.watch(accountsStreamProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent, // Let the base page background show
+      backgroundColor: Colors.transparent, 
       body: accountsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => Center(child: Text('Error: $e')),
@@ -36,7 +37,7 @@ class AccountsTab extends ConsumerWidget {
           final creditCards = accounts.where((a) => a.type == 'Credit Cards').toList();
           final bankAccounts = accounts.where((a) => a.type != 'Credit Cards').toList();
 
-          // Calculate totals dynamically
+          // --- FIX: Restored native database sum calculations ---
           final totalBankBalance = bankAccounts.fold(0.0, (sum, acc) => sum + acc.balance);
           final totalCreditBalance = creditCards.fold(0.0, (sum, acc) => sum + acc.balance);
 
@@ -48,14 +49,13 @@ class AccountsTab extends ConsumerWidget {
             physics: const BouncingScrollPhysics(),
             slivers: [
               if (bankAccounts.isNotEmpty) ...[
-                _buildSectionHeader(context, 'BANK ACCOUNTS & WALLETS', totalBankBalance, false),
+                _buildSectionHeader(context, 'BANK ACCOUNTS & WALLETS', totalBankBalance),
                 _buildList(context, ref, bankAccounts),
               ],
               if (creditCards.isNotEmpty) ...[
-                _buildSectionHeader(context, 'CREDIT CARDS', totalCreditBalance, true),
+                _buildSectionHeader(context, 'CREDIT CARDS', totalCreditBalance),
                 _buildList(context, ref, creditCards),
               ],
-              // Add a bit of breathing room at the very bottom
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );
@@ -64,12 +64,11 @@ class AccountsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, double total, bool isCreditCard) {
+  Widget _buildSectionHeader(BuildContext context, String title, double total) {
     final theme = Theme.of(context);
     
-    // Formatting logic consistent with the Premium Account Card
-    final signText = total < 0 ? '-₹' : (total > 0 && isCreditCard ? '+₹' : '₹');
-    final amountText = total.abs().toStringAsFixed(2);
+    // Globally standardized sign
+    final signText = total < 0 ? '-₹' : (total > 0 ? '+₹' : '₹');
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -78,7 +77,6 @@ class AccountsTab extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Left Side: Section Title
             Expanded(
               child: Text(
                 title,
@@ -92,31 +90,6 @@ class AccountsTab extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: DesignTokens.spacingMd),
-            
-            // Right Side: Section Total
-            // RichText(
-            //   text: TextSpan(
-            //     children: [
-            //       TextSpan(
-            //         text: signText, 
-            //         style: TextStyle(
-            //           color: theme.colorScheme.onSurface.withOpacity(0.8), 
-            //           fontWeight: FontWeight.w600, 
-            //           fontSize: 11,
-            //         ),
-            //       ),
-            //       TextSpan(
-            //         text: amountText, 
-            //         style: TextStyle(
-            //           color: theme.colorScheme.onSurface, 
-            //           fontWeight: FontWeight.w800, 
-            //           fontSize: 14, 
-            //           letterSpacing: -0.5,
-            //         ),
-            //       ),
-            //     ],
-            //   ),
-            // ),
             CurrencyText(
               amount: total,
               sign: signText,
@@ -136,15 +109,29 @@ class AccountsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildList(BuildContext context, WidgetRef ref, List<dynamic> items) {
+  Widget _buildList(BuildContext context, WidgetRef ref, List<Account> items) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final acc = items[index];
-            return BoxySlidableCard(
-              key: ValueKey(acc.id),
+      // --- FIX: Drag-and-drop Reorderable List ---
+      sliver: SliverReorderableList(
+        itemCount: items.length,
+        onReorder: (int oldIndex, int newIndex) {
+          if (oldIndex < newIndex) {
+            newIndex -= 1; 
+          }
+          final mutableList = List<Account>.from(items);
+          final item = mutableList.removeAt(oldIndex);
+          mutableList.insert(newIndex, item);
+          
+          ref.read(accountActionProvider.notifier).reorderAccounts(mutableList);
+        },
+        itemBuilder: (context, index) {
+          final acc = items[index];
+          
+          return ReorderableDelayedDragStartListener(
+            key: ValueKey(acc.id),
+            index: index,
+            child: BoxySlidableCard(
               customBorderRadius: BorderRadius.circular(16.0), 
               customBackgroundColor: Colors.transparent, 
               onEdit: () => _openForm(context, existingAccount: acc),
@@ -161,7 +148,6 @@ class AccountsTab extends ConsumerWidget {
               child: PremiumAccountCard(
                 account: acc,
                 onCardTap: () {
-                  // --- CRITICAL FIX: SMART ROUTING BASED ON ACCOUNT TYPE ---
                   if (acc.type == 'Credit Cards') {
                     Navigator.push(
                       context,
@@ -179,10 +165,9 @@ class AccountsTab extends ConsumerWidget {
                   }
                 },
               ),
-            );
-          },
-          childCount: items.length,
-        ),
+            ),
+          );
+        },
       ),
     );
   }

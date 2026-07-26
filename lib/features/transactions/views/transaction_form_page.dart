@@ -32,11 +32,13 @@ class _BucketItem {
 class TransactionFormPage extends ConsumerStatefulWidget {
   final TransactionWithDetails? existingTransaction;
   final String? preSelectedAccountId;
+  final bool isClone; // <-- NEW: Distinguishes between editing and templating
 
   const TransactionFormPage({
     Key? key, 
     this.existingTransaction,
     this.preSelectedAccountId,
+    this.isClone = false, // <-- NEW
   }) : super(key: key);
 
   @override
@@ -51,7 +53,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   String _liveResult = '0.00';
   
   bool _isSpillover = false; 
-  bool _isSettlementVerified = false; // Tracks state for editing
+  bool _isSettlementVerified = false; 
 
   late TextEditingController _notesCtrl;
   DateTime _selectedDateTime = DateTime.now();
@@ -72,12 +74,15 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       _typeIndex = _types.indexOf(tx.type);
       _expression = tx.amount.toStringAsFixed(2);
       _liveResult = tx.amount.toStringAsFixed(2);
-      _selectedDateTime = tx.date;
+      
+      // --- FIX: If cloning, reset date and backend flags ---
+      _selectedDateTime = widget.isClone ? DateTime.now() : tx.date;
+      _isSpillover = widget.isClone ? false : tx.isSpillover; 
+      _isSettlementVerified = widget.isClone ? false : tx.isSettlementVerified; 
+      
       _notesCtrl = TextEditingController(text: tx.notes ?? '');
       _selectedCategoryId = tx.categoryId;
       _selectedSubCategory = tx.subCategory;
-      _isSpillover = tx.isSpillover; 
-      _isSettlementVerified = tx.isSettlementVerified; 
       
       if (tx.type == 'Transfer') {
         if (tx.toAccountId == 'EXTERNAL_IN') {
@@ -324,8 +329,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       }
     }
 
+    // --- FIX: Safely nullify the existing ID if the user is cloning so the DB saves it as new ---
+    final String? safeExistingId = (widget.existingTransaction != null && !widget.isClone) 
+        ? widget.existingTransaction!.transaction.id 
+        : null;
+
     final success = await ref.read(transactionActionProvider.notifier).saveTransaction(
-      existingId: widget.existingTransaction?.transaction.id,
+      existingId: safeExistingId,
       type: _types[_typeIndex],
       amount: amount,
       date: _selectedDateTime,
@@ -488,11 +498,17 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       tableRows.add(TableRow(children: [cells[i], cells[i + 1]]));
     }
 
+    // --- FIX: Dynamic Title based on Editing vs Cloning ---
+    String appBarTitle = 'New Log';
+    if (widget.existingTransaction != null) {
+      appBarTitle = widget.isClone ? 'Clone Log' : 'Edit Log';
+    }
+
     return Scaffold(
       backgroundColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
       resizeToAvoidBottomInset: false, 
       appBar: ModernAppBar(
-        title: widget.existingTransaction != null ? 'Edit Log' : 'New Log',
+        title: appBarTitle,
         subtitle: 'TRANSACTION',
         leadingIcon: Icons.close_rounded,
         onLeadingPressed: () => Navigator.pop(context),
@@ -548,7 +564,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                             ),
                             if (_expression.isNotEmpty && _expression != _liveResult && !hasAmountError)
                               Text(
-                                '=   $_liveResult',
+                                '= ₹ $_liveResult',
                                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: displayAmountColor),
                               ),
                             if (hasAmountError)

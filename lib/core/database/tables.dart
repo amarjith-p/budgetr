@@ -31,6 +31,9 @@ class Accounts extends Table {
   IntColumn get billDate => integer().nullable()(); 
   IntColumn get dueDate => integer().nullable()(); 
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  
+  // --- NEW: Custom Drag-and-Drop Order Tracking ---
+  IntColumn get displayOrder => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -51,7 +54,6 @@ class Transactions extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   
   BoolColumn get isSpillover => boolean().withDefault(const Constant(false))(); 
-  // --- NEW: Tracks if the user confirmed it stays in the current bill ---
   BoolColumn get isSettlementVerified => boolean().withDefault(const Constant(false))(); 
 
   @override

@@ -17,11 +17,10 @@ part 'app_database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
-  // --- VERSION BUMP TO 4 ---
+  // --- VERSION BUMP TO 5 ---
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
-  // --- MIGRATION STRATEGY ---
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) => m.createAll(),
@@ -31,6 +30,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 4) {
         await m.addColumn(transactions, transactions.isSettlementVerified);
+      }
+      if (from < 5) {
+        // Safely injects the new order column into existing user databases
+        await m.addColumn(accounts, accounts.displayOrder);
       }
     },
   );

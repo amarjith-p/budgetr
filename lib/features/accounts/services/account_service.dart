@@ -10,7 +10,11 @@ class AccountService {
 
   Stream<List<Account>> watchAccounts() {
     return (_db.select(_db.accounts)
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
+          // --- UPDATED: Primary sort by custom order, secondary sort by newest ---
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.displayOrder, mode: OrderingMode.asc),
+            (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
+          ]))
         .watch();
   }
 
@@ -30,12 +34,13 @@ class AccountService {
       providerName: providerName,
       type: type,
       last4: last4,
-      balance: const Value.absent(), // Explicitly trigger default or use provided below
+      balance: const Value.absent(), 
     ).copyWith(
       balance: Value(balance),
       creditLimit: Value(creditLimit),
       billDate: Value(billDate),
       dueDate: Value(dueDate),
+      // New accounts automatically default to displayOrder: 0
     ));
   }
 
@@ -45,5 +50,14 @@ class AccountService {
 
   Future<void> deleteAccount(String id) async {
     await (_db.delete(_db.accounts)..where((t) => t.id.equals(id))).go();
+  }
+
+  // --- NEW: Lightning Fast Batch Reorder ---
+  Future<void> reorderAccounts(List<Account> accounts) async {
+    await _db.batch((batch) {
+      for (final acc in accounts) {
+        batch.replace(_db.accounts, acc);
+      }
+    });
   }
 }

@@ -38,7 +38,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     int? bucketId,
     String? notes,
     bool isSpillover = false, 
-    bool isSettlementVerified = false, // <-- NEW
+    bool isSettlementVerified = false, 
   }) async {
     state = const AsyncLoading();
     
@@ -70,7 +70,6 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     await AsyncValue.guard(() => _service.toggleSpillover(id, isSpillover));
   }
 
-  // --- NEW ---
   Future<void> verifySettlement(String id, bool isVerified) async {
     await AsyncValue.guard(() => _service.verifySettlement(id, isVerified));
   }
