@@ -14,6 +14,7 @@ class TransactionFilterState {
   final Set<int> bucketIds; 
   final Set<String> categoryIds;
   final Set<String> subCategories;
+  final Set<String> accountIds; // <-- NEW: Account Filter
   final double? minAmount;
   final double? maxAmount;
 
@@ -26,6 +27,7 @@ class TransactionFilterState {
     this.bucketIds = const {},
     this.categoryIds = const {},
     this.subCategories = const {},
+    this.accountIds = const {}, // <-- NEW
     this.minAmount,
     this.maxAmount,
   });
@@ -37,6 +39,7 @@ class TransactionFilterState {
       bucketIds.isNotEmpty ||
       categoryIds.isNotEmpty ||
       subCategories.isNotEmpty ||
+      accountIds.isNotEmpty || // <-- NEW
       minAmount != null ||
       maxAmount != null;
 
@@ -49,6 +52,7 @@ class TransactionFilterState {
     Set<int>? bucketIds,
     Set<String>? categoryIds,
     Set<String>? subCategories,
+    Set<String>? accountIds, // <-- NEW
     double? minAmount,
     double? maxAmount,
     bool clearMin = false,
@@ -63,6 +67,7 @@ class TransactionFilterState {
       bucketIds: bucketIds ?? this.bucketIds,
       categoryIds: categoryIds ?? this.categoryIds,
       subCategories: subCategories ?? this.subCategories,
+      accountIds: accountIds ?? this.accountIds, // <-- NEW
       minAmount: clearMin ? null : (minAmount ?? this.minAmount),
       maxAmount: clearMax ? null : (maxAmount ?? this.maxAmount),
     );
@@ -82,7 +87,12 @@ class TransactionFilterHelper {
     var filtered = transactions.where((data) {
       final tx = data.transaction;
 
-      // 1. Timeframe
+      // 1. Account Matcher (NEW)
+      if (filter.accountIds.isNotEmpty) {
+        if (!filter.accountIds.contains(tx.accountId)) return false;
+      }
+
+      // 2. Timeframe
       if (filter.timeframe == TimeframeOption.currentMonth) {
         final now = DateTime.now();
         if (tx.date.year != now.year || tx.date.month != now.month) return false;
@@ -95,7 +105,7 @@ class TransactionFilterHelper {
         if (tx.date.isBefore(filter.customStartDate!) || tx.date.isAfter(filter.customEndDate!.add(const Duration(days: 1)))) return false;
       }
 
-      // 2. Type Matcher
+      // 3. Type Matcher
       if (filter.types.isNotEmpty) {
         final isExpense = tx.type == 'Expense';
         final isIncome = tx.type == 'Income';
@@ -103,9 +113,15 @@ class TransactionFilterHelper {
         
         bool isMoneyLeaving = isExpense;
         if (isTransfer) {
-          if (tx.toAccountId == 'EXTERNAL_IN') isMoneyLeaving = false;
-          else if (tx.toAccountId == 'EXTERNAL_OUT') isMoneyLeaving = true;
-          else isMoneyLeaving = tx.accountId == currentAccountId;
+          if (currentAccountId == 'GLOBAL') {
+             // In Global view, if user selects any Transfer option, show all transfers
+             if (!filter.types.contains('Transfer In') && !filter.types.contains('Transfer Out')) return false;
+             isMoneyLeaving = true; 
+          } else {
+            if (tx.toAccountId == 'EXTERNAL_IN') isMoneyLeaving = false;
+            else if (tx.toAccountId == 'EXTERNAL_OUT') isMoneyLeaving = true;
+            else isMoneyLeaving = tx.accountId == currentAccountId;
+          }
         }
 
         String mappedType = '';
@@ -114,14 +130,16 @@ class TransactionFilterHelper {
         else if (isTransfer && isMoneyLeaving) mappedType = 'Transfer Out';
         else if (isTransfer && !isMoneyLeaving) mappedType = 'Transfer In';
 
-        if (!filter.types.contains(mappedType)) return false;
+        if (mappedType.isNotEmpty && !filter.types.contains(mappedType)) {
+          if (currentAccountId != 'GLOBAL' || !isTransfer) return false;
+        }
       }
 
-      // 3. Amount Thresholds
+      // 4. Amount Thresholds
       if (filter.minAmount != null && tx.amount < filter.minAmount!) return false;
       if (filter.maxAmount != null && tx.amount > filter.maxAmount!) return false;
 
-      // 4. Categories & Subcategories
+      // 5. Categories & Subcategories
       if (filter.categoryIds.isNotEmpty) {
         if (tx.categoryId == null || !filter.categoryIds.contains(tx.categoryId)) return false;
       }
@@ -129,7 +147,7 @@ class TransactionFilterHelper {
         if (tx.subCategory == null || !filter.subCategories.contains(tx.subCategory)) return false;
       }
 
-      // 5. Buckets
+      // 6. Buckets
       if (filter.bucketIds.isNotEmpty) {
         int effectiveBucket = tx.bucketId ?? -1;
         if (!filter.bucketIds.contains(effectiveBucket)) return false;
@@ -138,7 +156,7 @@ class TransactionFilterHelper {
       return true;
     }).toList();
 
-    // 6. Sort Logic
+    // 7. Sort Logic
     filtered.sort((a, b) {
       switch (filter.sortBy) {
         case SortOption.newest: return b.transaction.date.compareTo(a.transaction.date);

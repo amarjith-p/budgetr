@@ -49,6 +49,31 @@ class TransactionService {
     });
   }
 
+  // --- NEW: Global Master Stream for Records Tab ---
+  Stream<List<TransactionWithDetails>> watchAllTransactions() {
+    final toAccountAlias = _db.alias(_db.accounts, 'to_account');
+
+    final query = _db.select(_db.transactions).join([
+      innerJoin(_db.accounts, _db.accounts.id.equalsExp(_db.transactions.accountId)),
+      leftOuterJoin(toAccountAlias, toAccountAlias.id.equalsExp(_db.transactions.toAccountId)),
+      leftOuterJoin(_db.transactionCategories, _db.transactionCategories.id.equalsExp(_db.transactions.categoryId)),
+      leftOuterJoin(_db.budgetBuckets, _db.budgetBuckets.id.equalsExp(_db.transactions.bucketId)),
+    ])
+    ..orderBy([OrderingTerm.desc(_db.transactions.date)]);
+
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        return TransactionWithDetails(
+          transaction: row.readTable(_db.transactions),
+          account: row.readTable(_db.accounts),
+          toAccount: row.readTableOrNull(toAccountAlias),
+          category: row.readTableOrNull(_db.transactionCategories),
+          bucket: row.readTableOrNull(_db.budgetBuckets),
+        );
+      }).toList();
+    });
+  }
+
   Future<void> logTransaction({
     required String type,
     required double amount,
@@ -60,7 +85,7 @@ class TransactionService {
     int? bucketId,
     String? notes,
     bool isSpillover = false, 
-    bool isSettlementVerified = false, // <-- NEW
+    bool isSettlementVerified = false, 
   }) async {
     String dbAccountId = accountId;
     String? dbToAccountId = toAccountId;
@@ -104,7 +129,7 @@ class TransactionService {
          categoryId: Value(categoryId), subCategory: Value(subCategory),
          bucketId: Value(bucketId), notes: Value(notes),
          isSpillover: Value(isSpillover), 
-         isSettlementVerified: Value(isSettlementVerified), // <-- NEW
+         isSettlementVerified: Value(isSettlementVerified),
       ));
     });
   }
@@ -121,7 +146,7 @@ class TransactionService {
     int? bucketId,
     String? notes,
     bool isSpillover = false, 
-    bool isSettlementVerified = false, // <-- NEW
+    bool isSettlementVerified = false, 
   }) async {
     String dbAccountId = accountId;
     String? dbToAccountId = toAccountId;
@@ -181,7 +206,7 @@ class TransactionService {
         toAccountId: Value(dbToAccountId), categoryId: Value(categoryId),
         subCategory: Value(subCategory), bucketId: Value(bucketId), notes: Value(notes),
         isSpillover: isSpillover, 
-        isSettlementVerified: isSettlementVerified, // <-- NEW
+        isSettlementVerified: isSettlementVerified,
       ));
     });
   }
@@ -210,6 +235,7 @@ class TransactionService {
       await (_db.delete(_db.transactions)..where((t) => t.id.equals(transactionId))).go();
     });
   }
+
   Future<void> splitTransaction({
     required String originalTxId,
     required double splitAmount,
@@ -224,18 +250,14 @@ class TransactionService {
     bool isSpillover = false, 
     bool isSettlementVerified = false, 
   }) async {
-    // We wrap everything in a transaction. Drift handles nested transactions perfectly via zones.
     await _db.transaction(() async {
-      // 1. Fetch the exact state of the original transaction
       final origTx = await (_db.select(_db.transactions)..where((t) => t.id.equals(originalTxId))).getSingle();
       
-      // 2. Calculate the new reduced amount for the parent transaction
       final newOrigAmount = origTx.amount - splitAmount;
       if (newOrigAmount <= 0) {
         throw Exception("Split amount must be strictly less than the original amount.");
       }
 
-      // 3. Update the original transaction (This natively handles all balance reversals safely)
       await updateTransaction(
         id: origTx.id,
         type: origTx.type,
@@ -251,7 +273,6 @@ class TransactionService {
         isSettlementVerified: origTx.isSettlementVerified,
       );
 
-      // 4. Log the new split-off transaction (Applies new balances seamlessly)
       await logTransaction(
         type: type, 
         amount: splitAmount, 
@@ -270,7 +291,6 @@ class TransactionService {
 
   Future<void> toggleSpillover(String transactionId, bool isSpillover) async {
     final tx = await (_db.select(_db.transactions)..where((t) => t.id.equals(transactionId))).getSingle();
-    // Smart Logic: If pushed to next cycle, it can't be "Settled in current" anymore.
     await _db.update(_db.transactions).replace(
       tx.copyWith(
         isSpillover: isSpillover,
@@ -279,10 +299,8 @@ class TransactionService {
     );
   }
 
-  // --- NEW: Toggle the verified state ---
   Future<void> verifySettlement(String transactionId, bool isVerified) async {
     final tx = await (_db.select(_db.transactions)..where((t) => t.id.equals(transactionId))).getSingle();
-    // Smart Logic: If verified to stay in current, it can't be a spillover.
     await _db.update(_db.transactions).replace(
       tx.copyWith(
         isSettlementVerified: isVerified,

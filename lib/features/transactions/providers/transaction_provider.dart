@@ -18,6 +18,12 @@ final accountTransactionsProvider = StreamProvider.family<List<TransactionWithDe
   return ref.watch(transactionServiceProvider).watchTransactionsForAccount(accountId);
 });
 
+// --- NEW: Global Transactions Provider for Records Tab ---
+final allTransactionsProvider = StreamProvider.autoDispose<List<TransactionWithDetails>>((ref) {
+  final service = ref.watch(transactionServiceProvider);
+  return service.watchAllTransactions(); 
+});
+
 class TransactionActionNotifier extends AsyncNotifier<void> {
   late TransactionService _service;
 
@@ -65,6 +71,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _service.deleteTransaction(id));
   }
+  
   Future<bool> splitTransaction({
     required String originalTxId,
     required double splitAmount,

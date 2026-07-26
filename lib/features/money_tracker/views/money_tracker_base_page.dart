@@ -1,3 +1,7 @@
+import 'package:budgetr/features/transactions/components/transaction_filter_bottom_sheet.dart';
+import 'package:budgetr/features/transactions/providers/transaction_filter_provider.dart';
+import 'package:budgetr/features/transactions/providers/transaction_provider.dart';
+import 'package:budgetr/features/transactions/views/records_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -33,15 +37,28 @@ class MoneyTrackerBasePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(moneyTrackerNavProvider);
-    final isSelectionMode = ref.watch(selectionModeProvider); // Watch calculator state
+    final isSelectionMode = ref.watch(selectionModeProvider); // From AccountsTab
+    final globalFilterState = ref.watch(transactionFilterProvider('GLOBAL')); // Watch filter state
 
     final List<Widget> pages = [
       const _PlaceholderTab(title: 'MONEY TRACKER HOME'),
-      const _PlaceholderTab(title: 'TRANSACTION RECORDS'),
+      const RecordsTab(), // <-- NEW: Injected Global Records Tab
       const AccountsTab(),
       const _PlaceholderTab(title: 'BUDGET MANAGEMENT'),
       const _PlaceholderTab(title: 'ANALYTICS & INSIGHTS'),
     ];
+
+    // Determine the extra trailing icon dynamically based on the active tab
+    IconData? activeExtraIcon;
+    Color? activeExtraColor;
+    
+    if (currentIndex == 2) {
+      activeExtraIcon = isSelectionMode ? Icons.close_rounded : Icons.calculate_outlined;
+      activeExtraColor = isSelectionMode ? Theme.of(context).colorScheme.primary : null;
+    } else if (currentIndex == 1) {
+      activeExtraIcon = globalFilterState.isActive ? Icons.filter_alt_rounded : Icons.filter_alt_outlined;
+      activeExtraColor = globalFilterState.isActive ? Theme.of(context).colorScheme.primary : null;
+    }
 
     return Scaffold(
       appBar: ModernAppBar(
@@ -49,18 +66,24 @@ class MoneyTrackerBasePage extends ConsumerWidget {
         subtitle: 'FINANCE',
         leadingIcon: Icons.arrow_back_rounded,
         
-        // --- NEW: CALC TOGGLE ONLY ON ACCOUNTS TAB ---
-        extraTrailingIcon: currentIndex == 2 ? (isSelectionMode ? Icons.close_rounded : Icons.calculate_outlined) : null,
-        extraIconColor: isSelectionMode ? Theme.of(context).colorScheme.primary : null,
-        onExtraTrailingPressed: currentIndex == 2 ? () {
+        extraTrailingIcon: activeExtraIcon,
+        extraIconColor: activeExtraColor,
+        onExtraTrailingPressed: () {
           HapticFeedback.lightImpact();
-          if (isSelectionMode) {
-            ref.read(selectionModeProvider.notifier).state = false;
-            ref.read(selectedAccountsProvider.notifier).state = {};
-          } else {
-            ref.read(selectionModeProvider.notifier).state = true;
+          if (currentIndex == 2) {
+            // Accounts Calculator Toggle
+            if (isSelectionMode) {
+              ref.read(selectionModeProvider.notifier).state = false;
+              ref.read(selectedAccountsProvider.notifier).state = {};
+            } else {
+              ref.read(selectionModeProvider.notifier).state = true;
+            }
+          } else if (currentIndex == 1) {
+            // Global Records Filter Sheet
+            final allTxs = ref.read(allTransactionsProvider).asData?.value ?? [];
+            TransactionFilterBottomSheet.show(context, 'GLOBAL', allTxs);
           }
-        } : null,
+        },
         
         trailingIcon: currentIndex == 2 ? Icons.add_card_rounded : null,
         onTrailingPressed: currentIndex == 2 ? () => _openAddAccountForm(context) : null,

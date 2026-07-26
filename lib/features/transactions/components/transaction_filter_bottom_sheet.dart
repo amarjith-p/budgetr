@@ -1,3 +1,4 @@
+import 'package:budgetr/features/accounts/providers/account_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -499,7 +500,27 @@ class _TransactionFilterBottomSheetState extends ConsumerState<TransactionFilter
 
                     // --- NEW: Multi-Select Dropdowns ---
                     _buildSectionTitle('DATA FILTERS'),
-                    
+                    if (widget.accountId == 'GLOBAL') ...[
+                      _buildDropdownTrigger(
+                        label: 'Accounts',
+                        count: _draft.accountIds.length,
+                        isEnabled: true,
+                        onTap: () {
+                          // Fetch accounts globally using Riverpod
+                          final rawAccounts = ref.read(accountsStreamProvider).asData?.value ?? [];
+                          _openMultiSelectSheet<String>(
+                            title: 'Select Accounts',
+                            availableItems: rawAccounts.map((a) => a.id).toSet(),
+                            selectedItems: _draft.accountIds,
+                            labelBuilder: (id) {
+                              final acc = rawAccounts.where((a) => a.id == id).firstOrNull;
+                              return acc != null ? '${acc.name} - ${acc.providerName}' : 'Unknown Account';
+                            },
+                            onApply: (val) => _updateState(_draft.copyWith(accountIds: val)),
+                          );
+                        },
+                      ),
+                    ],
                     _buildDropdownTrigger(
                       label: 'Categories',
                       count: _draft.categoryIds.length,

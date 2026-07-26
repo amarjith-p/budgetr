@@ -11,6 +11,7 @@ import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../services/transaction_service.dart';
 import '../providers/transaction_provider.dart';
+import '../../accounts/providers/account_provider.dart'; // <-- NEW: Required for global account names
 
 class TransactionCard extends ConsumerWidget {
   final TransactionWithDetails data;
@@ -77,6 +78,13 @@ class TransactionCard extends ConsumerWidget {
       subTitle = tx.subCategory ?? data.category!.type;
     }
 
+    // --- NEW: GLOBAL ACCOUNT OVERRIDE ---
+    if (currentAccountId == 'GLOBAL') {
+      final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
+      final acc = rawAccounts.where((a) => a.id == tx.accountId).firstOrNull;
+      subTitle = acc != null ? '${acc.name} - ${acc.providerName}' : 'Unknown Account';
+    }
+
     bool isExplicitRepayment = data.category?.name == 'Repayment';
     if (isExplicitRepayment) {
       mainTitle = 'Statement Repayment';
@@ -130,7 +138,6 @@ class TransactionCard extends ConsumerWidget {
       key: ValueKey(tx.id),
       customBackgroundColor: cardBgColor, 
       
-      // --- NEW: CLONE ACTION ---
       onClone: () {
         HapticFeedback.lightImpact();
         Navigator.push(
