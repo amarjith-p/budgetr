@@ -1,3 +1,4 @@
+import 'package:budgetr/features/budgets/views/budget_management_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -44,7 +45,7 @@ class MoneyTrackerBasePage extends ConsumerWidget {
       const _PlaceholderTab(title: 'MONEY TRACKER HOME'),
       const RecordsTab(), 
       const AccountsTab(),
-      const _PlaceholderTab(title: 'BUDGET MANAGEMENT'),
+      const BudgetManagementTab(),
       const _PlaceholderTab(title: 'ANALYTICS & INSIGHTS'),
     ];
 

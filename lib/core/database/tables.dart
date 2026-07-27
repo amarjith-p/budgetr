@@ -59,3 +59,16 @@ class Transactions extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+@DataClassName('MonthlyBudget')
+class MonthlyBudgets extends Table {
+  TextColumn get id => text()();
+  IntColumn get month => integer()();
+  IntColumn get year => integer()();
+  RealColumn get salaryIncome => real().withDefault(const Constant(0.0))();
+  RealColumn get extraIncome => real().withDefault(const Constant(0.0))();
+  RealColumn get deductions => real().withDefault(const Constant(0.0))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

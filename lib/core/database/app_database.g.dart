@@ -2111,6 +2111,470 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
   }
 }
 
+class $MonthlyBudgetsTable extends MonthlyBudgets
+    with TableInfo<$MonthlyBudgetsTable, MonthlyBudget> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MonthlyBudgetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _monthMeta = const VerificationMeta('month');
+  @override
+  late final GeneratedColumn<int> month = GeneratedColumn<int>(
+    'month',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _yearMeta = const VerificationMeta('year');
+  @override
+  late final GeneratedColumn<int> year = GeneratedColumn<int>(
+    'year',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _salaryIncomeMeta = const VerificationMeta(
+    'salaryIncome',
+  );
+  @override
+  late final GeneratedColumn<double> salaryIncome = GeneratedColumn<double>(
+    'salary_income',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _extraIncomeMeta = const VerificationMeta(
+    'extraIncome',
+  );
+  @override
+  late final GeneratedColumn<double> extraIncome = GeneratedColumn<double>(
+    'extra_income',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _deductionsMeta = const VerificationMeta(
+    'deductions',
+  );
+  @override
+  late final GeneratedColumn<double> deductions = GeneratedColumn<double>(
+    'deductions',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    month,
+    year,
+    salaryIncome,
+    extraIncome,
+    deductions,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'monthly_budgets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MonthlyBudget> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('month')) {
+      context.handle(
+        _monthMeta,
+        month.isAcceptableOrUnknown(data['month']!, _monthMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_monthMeta);
+    }
+    if (data.containsKey('year')) {
+      context.handle(
+        _yearMeta,
+        year.isAcceptableOrUnknown(data['year']!, _yearMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_yearMeta);
+    }
+    if (data.containsKey('salary_income')) {
+      context.handle(
+        _salaryIncomeMeta,
+        salaryIncome.isAcceptableOrUnknown(
+          data['salary_income']!,
+          _salaryIncomeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('extra_income')) {
+      context.handle(
+        _extraIncomeMeta,
+        extraIncome.isAcceptableOrUnknown(
+          data['extra_income']!,
+          _extraIncomeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('deductions')) {
+      context.handle(
+        _deductionsMeta,
+        deductions.isAcceptableOrUnknown(data['deductions']!, _deductionsMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MonthlyBudget map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MonthlyBudget(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      month: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}month'],
+      )!,
+      year: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}year'],
+      )!,
+      salaryIncome: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}salary_income'],
+      )!,
+      extraIncome: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}extra_income'],
+      )!,
+      deductions: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}deductions'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $MonthlyBudgetsTable createAlias(String alias) {
+    return $MonthlyBudgetsTable(attachedDatabase, alias);
+  }
+}
+
+class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
+  final String id;
+  final int month;
+  final int year;
+  final double salaryIncome;
+  final double extraIncome;
+  final double deductions;
+  final DateTime createdAt;
+  const MonthlyBudget({
+    required this.id,
+    required this.month,
+    required this.year,
+    required this.salaryIncome,
+    required this.extraIncome,
+    required this.deductions,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['month'] = Variable<int>(month);
+    map['year'] = Variable<int>(year);
+    map['salary_income'] = Variable<double>(salaryIncome);
+    map['extra_income'] = Variable<double>(extraIncome);
+    map['deductions'] = Variable<double>(deductions);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  MonthlyBudgetsCompanion toCompanion(bool nullToAbsent) {
+    return MonthlyBudgetsCompanion(
+      id: Value(id),
+      month: Value(month),
+      year: Value(year),
+      salaryIncome: Value(salaryIncome),
+      extraIncome: Value(extraIncome),
+      deductions: Value(deductions),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory MonthlyBudget.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MonthlyBudget(
+      id: serializer.fromJson<String>(json['id']),
+      month: serializer.fromJson<int>(json['month']),
+      year: serializer.fromJson<int>(json['year']),
+      salaryIncome: serializer.fromJson<double>(json['salaryIncome']),
+      extraIncome: serializer.fromJson<double>(json['extraIncome']),
+      deductions: serializer.fromJson<double>(json['deductions']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'month': serializer.toJson<int>(month),
+      'year': serializer.toJson<int>(year),
+      'salaryIncome': serializer.toJson<double>(salaryIncome),
+      'extraIncome': serializer.toJson<double>(extraIncome),
+      'deductions': serializer.toJson<double>(deductions),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  MonthlyBudget copyWith({
+    String? id,
+    int? month,
+    int? year,
+    double? salaryIncome,
+    double? extraIncome,
+    double? deductions,
+    DateTime? createdAt,
+  }) => MonthlyBudget(
+    id: id ?? this.id,
+    month: month ?? this.month,
+    year: year ?? this.year,
+    salaryIncome: salaryIncome ?? this.salaryIncome,
+    extraIncome: extraIncome ?? this.extraIncome,
+    deductions: deductions ?? this.deductions,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  MonthlyBudget copyWithCompanion(MonthlyBudgetsCompanion data) {
+    return MonthlyBudget(
+      id: data.id.present ? data.id.value : this.id,
+      month: data.month.present ? data.month.value : this.month,
+      year: data.year.present ? data.year.value : this.year,
+      salaryIncome: data.salaryIncome.present
+          ? data.salaryIncome.value
+          : this.salaryIncome,
+      extraIncome: data.extraIncome.present
+          ? data.extraIncome.value
+          : this.extraIncome,
+      deductions: data.deductions.present
+          ? data.deductions.value
+          : this.deductions,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MonthlyBudget(')
+          ..write('id: $id, ')
+          ..write('month: $month, ')
+          ..write('year: $year, ')
+          ..write('salaryIncome: $salaryIncome, ')
+          ..write('extraIncome: $extraIncome, ')
+          ..write('deductions: $deductions, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    month,
+    year,
+    salaryIncome,
+    extraIncome,
+    deductions,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MonthlyBudget &&
+          other.id == this.id &&
+          other.month == this.month &&
+          other.year == this.year &&
+          other.salaryIncome == this.salaryIncome &&
+          other.extraIncome == this.extraIncome &&
+          other.deductions == this.deductions &&
+          other.createdAt == this.createdAt);
+}
+
+class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
+  final Value<String> id;
+  final Value<int> month;
+  final Value<int> year;
+  final Value<double> salaryIncome;
+  final Value<double> extraIncome;
+  final Value<double> deductions;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const MonthlyBudgetsCompanion({
+    this.id = const Value.absent(),
+    this.month = const Value.absent(),
+    this.year = const Value.absent(),
+    this.salaryIncome = const Value.absent(),
+    this.extraIncome = const Value.absent(),
+    this.deductions = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MonthlyBudgetsCompanion.insert({
+    required String id,
+    required int month,
+    required int year,
+    this.salaryIncome = const Value.absent(),
+    this.extraIncome = const Value.absent(),
+    this.deductions = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       month = Value(month),
+       year = Value(year);
+  static Insertable<MonthlyBudget> custom({
+    Expression<String>? id,
+    Expression<int>? month,
+    Expression<int>? year,
+    Expression<double>? salaryIncome,
+    Expression<double>? extraIncome,
+    Expression<double>? deductions,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (month != null) 'month': month,
+      if (year != null) 'year': year,
+      if (salaryIncome != null) 'salary_income': salaryIncome,
+      if (extraIncome != null) 'extra_income': extraIncome,
+      if (deductions != null) 'deductions': deductions,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MonthlyBudgetsCompanion copyWith({
+    Value<String>? id,
+    Value<int>? month,
+    Value<int>? year,
+    Value<double>? salaryIncome,
+    Value<double>? extraIncome,
+    Value<double>? deductions,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return MonthlyBudgetsCompanion(
+      id: id ?? this.id,
+      month: month ?? this.month,
+      year: year ?? this.year,
+      salaryIncome: salaryIncome ?? this.salaryIncome,
+      extraIncome: extraIncome ?? this.extraIncome,
+      deductions: deductions ?? this.deductions,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (month.present) {
+      map['month'] = Variable<int>(month.value);
+    }
+    if (year.present) {
+      map['year'] = Variable<int>(year.value);
+    }
+    if (salaryIncome.present) {
+      map['salary_income'] = Variable<double>(salaryIncome.value);
+    }
+    if (extraIncome.present) {
+      map['extra_income'] = Variable<double>(extraIncome.value);
+    }
+    if (deductions.present) {
+      map['deductions'] = Variable<double>(deductions.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MonthlyBudgetsCompanion(')
+          ..write('id: $id, ')
+          ..write('month: $month, ')
+          ..write('year: $year, ')
+          ..write('salaryIncome: $salaryIncome, ')
+          ..write('extraIncome: $extraIncome, ')
+          ..write('deductions: $deductions, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2119,6 +2583,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $BudgetBucketsTable budgetBuckets = $BudgetBucketsTable(this);
   late final $AccountsTable accounts = $AccountsTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
+  late final $MonthlyBudgetsTable monthlyBudgets = $MonthlyBudgetsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2128,6 +2593,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     budgetBuckets,
     accounts,
     transactions,
+    monthlyBudgets,
   ];
 }
 
@@ -3209,6 +3675,252 @@ typedef $$TransactionsTableProcessedTableManager =
       TransactionRecord,
       PrefetchHooks Function()
     >;
+typedef $$MonthlyBudgetsTableCreateCompanionBuilder =
+    MonthlyBudgetsCompanion Function({
+      required String id,
+      required int month,
+      required int year,
+      Value<double> salaryIncome,
+      Value<double> extraIncome,
+      Value<double> deductions,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$MonthlyBudgetsTableUpdateCompanionBuilder =
+    MonthlyBudgetsCompanion Function({
+      Value<String> id,
+      Value<int> month,
+      Value<int> year,
+      Value<double> salaryIncome,
+      Value<double> extraIncome,
+      Value<double> deductions,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$MonthlyBudgetsTableFilterComposer
+    extends Composer<_$AppDatabase, $MonthlyBudgetsTable> {
+  $$MonthlyBudgetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get month => $composableBuilder(
+    column: $table.month,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get year => $composableBuilder(
+    column: $table.year,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get salaryIncome => $composableBuilder(
+    column: $table.salaryIncome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get extraIncome => $composableBuilder(
+    column: $table.extraIncome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get deductions => $composableBuilder(
+    column: $table.deductions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MonthlyBudgetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MonthlyBudgetsTable> {
+  $$MonthlyBudgetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get month => $composableBuilder(
+    column: $table.month,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get year => $composableBuilder(
+    column: $table.year,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get salaryIncome => $composableBuilder(
+    column: $table.salaryIncome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get extraIncome => $composableBuilder(
+    column: $table.extraIncome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get deductions => $composableBuilder(
+    column: $table.deductions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MonthlyBudgetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MonthlyBudgetsTable> {
+  $$MonthlyBudgetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get month =>
+      $composableBuilder(column: $table.month, builder: (column) => column);
+
+  GeneratedColumn<int> get year =>
+      $composableBuilder(column: $table.year, builder: (column) => column);
+
+  GeneratedColumn<double> get salaryIncome => $composableBuilder(
+    column: $table.salaryIncome,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get extraIncome => $composableBuilder(
+    column: $table.extraIncome,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get deductions => $composableBuilder(
+    column: $table.deductions,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$MonthlyBudgetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MonthlyBudgetsTable,
+          MonthlyBudget,
+          $$MonthlyBudgetsTableFilterComposer,
+          $$MonthlyBudgetsTableOrderingComposer,
+          $$MonthlyBudgetsTableAnnotationComposer,
+          $$MonthlyBudgetsTableCreateCompanionBuilder,
+          $$MonthlyBudgetsTableUpdateCompanionBuilder,
+          (
+            MonthlyBudget,
+            BaseReferences<_$AppDatabase, $MonthlyBudgetsTable, MonthlyBudget>,
+          ),
+          MonthlyBudget,
+          PrefetchHooks Function()
+        > {
+  $$MonthlyBudgetsTableTableManager(
+    _$AppDatabase db,
+    $MonthlyBudgetsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MonthlyBudgetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MonthlyBudgetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MonthlyBudgetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<int> month = const Value.absent(),
+                Value<int> year = const Value.absent(),
+                Value<double> salaryIncome = const Value.absent(),
+                Value<double> extraIncome = const Value.absent(),
+                Value<double> deductions = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MonthlyBudgetsCompanion(
+                id: id,
+                month: month,
+                year: year,
+                salaryIncome: salaryIncome,
+                extraIncome: extraIncome,
+                deductions: deductions,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required int month,
+                required int year,
+                Value<double> salaryIncome = const Value.absent(),
+                Value<double> extraIncome = const Value.absent(),
+                Value<double> deductions = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MonthlyBudgetsCompanion.insert(
+                id: id,
+                month: month,
+                year: year,
+                salaryIncome: salaryIncome,
+                extraIncome: extraIncome,
+                deductions: deductions,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MonthlyBudgetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MonthlyBudgetsTable,
+      MonthlyBudget,
+      $$MonthlyBudgetsTableFilterComposer,
+      $$MonthlyBudgetsTableOrderingComposer,
+      $$MonthlyBudgetsTableAnnotationComposer,
+      $$MonthlyBudgetsTableCreateCompanionBuilder,
+      $$MonthlyBudgetsTableUpdateCompanionBuilder,
+      (
+        MonthlyBudget,
+        BaseReferences<_$AppDatabase, $MonthlyBudgetsTable, MonthlyBudget>,
+      ),
+      MonthlyBudget,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3221,4 +3933,6 @@ class $AppDatabaseManager {
       $$AccountsTableTableManager(_db, _db.accounts);
   $$TransactionsTableTableManager get transactions =>
       $$TransactionsTableTableManager(_db, _db.transactions);
+  $$MonthlyBudgetsTableTableManager get monthlyBudgets =>
+      $$MonthlyBudgetsTableTableManager(_db, _db.monthlyBudgets);
 }
