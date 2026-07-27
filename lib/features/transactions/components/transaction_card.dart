@@ -1,4 +1,5 @@
 import 'package:budgetr/core/components/currency_text.dart';
+import 'package:budgetr/core/database/app_database.dart';
 import 'package:budgetr/features/transactions/views/transaction_form_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,16 +12,18 @@ import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../services/transaction_service.dart';
 import '../providers/transaction_provider.dart';
-import '../../accounts/providers/account_provider.dart'; // <-- NEW: Required for global account names
+import '../../accounts/providers/account_provider.dart';
 
 class TransactionCard extends ConsumerWidget {
   final TransactionWithDetails data;
   final String currentAccountId; 
+  final bool isGlobalView;
 
   const TransactionCard({
     Key? key, 
     required this.data, 
-    required this.currentAccountId
+    required this.currentAccountId,
+    this.isGlobalView = false,
   }) : super(key: key);
 
   @override
@@ -78,11 +81,10 @@ class TransactionCard extends ConsumerWidget {
       subTitle = tx.subCategory ?? data.category!.type;
     }
 
-    // --- NEW: GLOBAL ACCOUNT OVERRIDE ---
-    if (currentAccountId == 'GLOBAL') {
+    Account? globalAccount;
+    if (isGlobalView) {
       final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
-      final acc = rawAccounts.where((a) => a.id == tx.accountId).firstOrNull;
-      subTitle = acc != null ? '${acc.name} - ${acc.providerName}' : 'Unknown Account';
+      globalAccount = rawAccounts.where((a) => a.id == currentAccountId).firstOrNull;
     }
 
     bool isExplicitRepayment = data.category?.name == 'Repayment';
@@ -92,9 +94,6 @@ class TransactionCard extends ConsumerWidget {
       amountColor = theme.colorScheme.primary; 
     }
 
-    // ==========================================
-    // SMART RECONCILIATION ENGINE
-    // ==========================================
     bool isSpilloverEligible = false;
     if (data.account.type == 'Credit Cards') {
       final bDay = data.account.billDate ?? 15;
@@ -135,7 +134,7 @@ class TransactionCard extends ConsumerWidget {
     final boxyRadius = BorderRadius.circular(DesignTokens.spacingXs);
 
     return BoxySlidableCard(
-      key: ValueKey(tx.id),
+      key: ValueKey('${tx.id}_$currentAccountId'),
       customBackgroundColor: cardBgColor, 
       
       onClone: () {
@@ -189,13 +188,37 @@ class TransactionCard extends ConsumerWidget {
             child: Icon(leadingIcon, color: theme.colorScheme.primary, size: 22),
           ),
           title: Text(mainTitle, style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.2, fontSize: 15)),
-          subtitle: Text(
-            subTitle, 
-            style: TextStyle(
-              fontSize: 12, 
-              color: isSpilloverEligible && !tx.isSpillover && !tx.isSettlementVerified ? Colors.orangeAccent.shade700 : theme.colorScheme.onSurfaceVariant, 
-              fontWeight: isSpilloverEligible || tx.isSpillover ? FontWeight.w800 : FontWeight.w600
-            )
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                subTitle, 
+                style: TextStyle(
+                  fontSize: 12, 
+                  color: isSpilloverEligible && !tx.isSpillover && !tx.isSettlementVerified ? Colors.orangeAccent.shade700 : theme.colorScheme.onSurfaceVariant, 
+                  fontWeight: isSpilloverEligible || tx.isSpillover ? FontWeight.w800 : FontWeight.w600
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (isGlobalView && globalAccount != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  '${globalAccount.name} - ${globalAccount.providerName}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2,
+                    color: globalAccount.type == 'Credit Cards' 
+                        ? theme.colorScheme.error 
+                        : theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ],
           ),
           trailing: Column(
             mainAxisAlignment: MainAxisAlignment.center,

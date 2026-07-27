@@ -1,7 +1,3 @@
-import 'package:budgetr/features/transactions/components/transaction_filter_bottom_sheet.dart';
-import 'package:budgetr/features/transactions/providers/transaction_filter_provider.dart';
-import 'package:budgetr/features/transactions/providers/transaction_provider.dart';
-import 'package:budgetr/features/transactions/views/records_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -9,9 +5,13 @@ import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_bottom_nav.dart';
 import '../../../core/components/modern_squircle_fab.dart';
 import '../../../core/theme/design_tokens.dart';
-import '../../accounts/views/accounts_tab.dart'; // Gives access to selection providers
+import '../../accounts/views/accounts_tab.dart';
 import '../../accounts/components/account_form_bottom_sheet.dart';
 import '../../transactions/views/transaction_form_page.dart';
+import '../../transactions/views/records_tab.dart';
+import '../../transactions/providers/transaction_provider.dart';
+import '../../transactions/providers/transaction_filter_provider.dart';
+import '../../transactions/components/transaction_filter_bottom_sheet.dart';
 import '../providers/bottom_nav_provider.dart';
 
 class MoneyTrackerBasePage extends ConsumerWidget {
@@ -37,27 +37,49 @@ class MoneyTrackerBasePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(moneyTrackerNavProvider);
-    final isSelectionMode = ref.watch(selectionModeProvider); // From AccountsTab
-    final globalFilterState = ref.watch(transactionFilterProvider('GLOBAL')); // Watch filter state
+    final isSelectionMode = ref.watch(selectionModeProvider); 
+    final globalFilterState = ref.watch(transactionFilterProvider('GLOBAL')); 
 
     final List<Widget> pages = [
       const _PlaceholderTab(title: 'MONEY TRACKER HOME'),
-      const RecordsTab(), // <-- NEW: Injected Global Records Tab
+      const RecordsTab(), 
       const AccountsTab(),
       const _PlaceholderTab(title: 'BUDGET MANAGEMENT'),
       const _PlaceholderTab(title: 'ANALYTICS & INSIGHTS'),
     ];
 
-    // Determine the extra trailing icon dynamically based on the active tab
-    IconData? activeExtraIcon;
-    Color? activeExtraColor;
+    // --- DYNAMIC TRAILING & EXTRA TRAILING CONFIGURATION ---
+    IconData? trailingIcon;
+    VoidCallback? onTrailingPressed;
     
-    if (currentIndex == 2) {
-      activeExtraIcon = isSelectionMode ? Icons.close_rounded : Icons.calculate_outlined;
-      activeExtraColor = isSelectionMode ? Theme.of(context).colorScheme.primary : null;
-    } else if (currentIndex == 1) {
-      activeExtraIcon = globalFilterState.isActive ? Icons.filter_alt_rounded : Icons.filter_alt_outlined;
-      activeExtraColor = globalFilterState.isActive ? Theme.of(context).colorScheme.primary : null;
+    IconData? extraTrailingIcon;
+    Color? extraIconColor;
+    VoidCallback? onExtraTrailingPressed;
+
+    if (currentIndex == 1) {
+      // Records Tab: Filter is the standard Trailing icon
+      trailingIcon = globalFilterState.isActive ? Icons.filter_alt_rounded : Icons.filter_alt_outlined;
+      onTrailingPressed = () {
+        HapticFeedback.lightImpact();
+        final allTxs = ref.read(allTransactionsProvider).asData?.value ?? [];
+        TransactionFilterBottomSheet.show(context, 'GLOBAL', allTxs);
+      };
+    } else if (currentIndex == 2) {
+      // Accounts Tab: Add card is Trailing, Calculator is Extra Trailing
+      trailingIcon = Icons.add_card_rounded;
+      onTrailingPressed = () => _openAddAccountForm(context);
+
+      extraTrailingIcon = isSelectionMode ? Icons.close_rounded : Icons.calculate_outlined;
+      extraIconColor = isSelectionMode ? Theme.of(context).colorScheme.primary : null;
+      onExtraTrailingPressed = () {
+        HapticFeedback.lightImpact();
+        if (isSelectionMode) {
+          ref.read(selectionModeProvider.notifier).state = false;
+          ref.read(selectedAccountsProvider.notifier).state = {};
+        } else {
+          ref.read(selectionModeProvider.notifier).state = true;
+        }
+      };
     }
 
     return Scaffold(
@@ -65,28 +87,16 @@ class MoneyTrackerBasePage extends ConsumerWidget {
         title: 'Tracker',
         subtitle: 'FINANCE',
         leadingIcon: Icons.arrow_back_rounded,
+        onLeadingPressed: () => Navigator.maybePop(context),
         
-        extraTrailingIcon: activeExtraIcon,
-        extraIconColor: activeExtraColor,
-        onExtraTrailingPressed: () {
-          HapticFeedback.lightImpact();
-          if (currentIndex == 2) {
-            // Accounts Calculator Toggle
-            if (isSelectionMode) {
-              ref.read(selectionModeProvider.notifier).state = false;
-              ref.read(selectedAccountsProvider.notifier).state = {};
-            } else {
-              ref.read(selectionModeProvider.notifier).state = true;
-            }
-          } else if (currentIndex == 1) {
-            // Global Records Filter Sheet
-            final allTxs = ref.read(allTransactionsProvider).asData?.value ?? [];
-            TransactionFilterBottomSheet.show(context, 'GLOBAL', allTxs);
-          }
-        },
+        // Standard Trailing Icon (Filter on Records tab, Add Card on Accounts tab)
+        trailingIcon: trailingIcon,
+        onTrailingPressed: onTrailingPressed,
         
-        trailingIcon: currentIndex == 2 ? Icons.add_card_rounded : null,
-        onTrailingPressed: currentIndex == 2 ? () => _openAddAccountForm(context) : null,
+        // Extra Trailing Icon (Calculator on Accounts tab)
+        extraTrailingIcon: extraTrailingIcon,
+        extraIconColor: extraIconColor,
+        onExtraTrailingPressed: onExtraTrailingPressed,
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),

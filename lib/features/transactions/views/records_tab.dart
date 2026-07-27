@@ -27,21 +27,21 @@ class RecordsTab extends ConsumerWidget {
             );
           }
 
-          final filteredTransactions = TransactionFilterHelper.apply(transactions, filterState, 'GLOBAL');
+          final filteredRecords = TransactionFilterHelper.applyForRecords(transactions, filterState);
 
-          if (filteredTransactions.isEmpty) {
+          if (filteredRecords.isEmpty) {
             return Center(
               child: Text('No results match your filters.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))
             );
           }
 
-          final groupedTransactions = <String, List<dynamic>>{};
+          final groupedRecords = <String, List<RecordItem>>{};
           const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-          for (var txData in filteredTransactions) {
-            final tx = txData.transaction;
+          for (var record in filteredRecords) {
+            final tx = record.data.transaction;
             final groupKey = '${fullMonths[tx.date.month - 1]} ${tx.date.year}';
-            groupedTransactions.putIfAbsent(groupKey, () => []).add(txData);
+            groupedRecords.putIfAbsent(groupKey, () => []).add(record);
           }
 
           return CustomScrollView(
@@ -49,7 +49,7 @@ class RecordsTab extends ConsumerWidget {
             slivers: [
               const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
               
-              ...groupedTransactions.entries.map((entry) {
+              ...groupedRecords.entries.map((entry) {
                 return SliverMainAxisGroup(
                   slivers: [
                     SliverPersistentHeader(
@@ -61,9 +61,11 @@ class RecordsTab extends ConsumerWidget {
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
+                            final record = entry.value[index];
                             return TransactionCard(
-                              data: entry.value[index], 
-                              currentAccountId: 'GLOBAL', // Forces Global formatting
+                              data: record.data, 
+                              currentAccountId: record.perspectiveAccountId,
+                              isGlobalView: true,
                             );
                           },
                           childCount: entry.value.length,

@@ -5,6 +5,17 @@ import '../services/transaction_service.dart';
 enum SortOption { newest, oldest, highestAmount, lowestAmount }
 enum TimeframeOption { allTime, currentMonth, lastMonth, custom }
 
+/// Wrapper for Global Records to handle both perspective legs of an internal transfer
+class RecordItem {
+  final TransactionWithDetails data;
+  final String perspectiveAccountId;
+
+  const RecordItem({
+    required this.data,
+    required this.perspectiveAccountId,
+  });
+}
+
 class TransactionFilterState {
   final SortOption sortBy;
   final TimeframeOption timeframe;
@@ -14,7 +25,7 @@ class TransactionFilterState {
   final Set<int> bucketIds; 
   final Set<String> categoryIds;
   final Set<String> subCategories;
-  final Set<String> accountIds; // <-- NEW: Account Filter
+  final Set<String> accountIds; 
   final double? minAmount;
   final double? maxAmount;
 
@@ -27,7 +38,7 @@ class TransactionFilterState {
     this.bucketIds = const {},
     this.categoryIds = const {},
     this.subCategories = const {},
-    this.accountIds = const {}, // <-- NEW
+    this.accountIds = const {}, 
     this.minAmount,
     this.maxAmount,
   });
@@ -39,7 +50,7 @@ class TransactionFilterState {
       bucketIds.isNotEmpty ||
       categoryIds.isNotEmpty ||
       subCategories.isNotEmpty ||
-      accountIds.isNotEmpty || // <-- NEW
+      accountIds.isNotEmpty || 
       minAmount != null ||
       maxAmount != null;
 
@@ -52,7 +63,7 @@ class TransactionFilterState {
     Set<int>? bucketIds,
     Set<String>? categoryIds,
     Set<String>? subCategories,
-    Set<String>? accountIds, // <-- NEW
+    Set<String>? accountIds, 
     double? minAmount,
     double? maxAmount,
     bool clearMin = false,
@@ -67,7 +78,7 @@ class TransactionFilterState {
       bucketIds: bucketIds ?? this.bucketIds,
       categoryIds: categoryIds ?? this.categoryIds,
       subCategories: subCategories ?? this.subCategories,
-      accountIds: accountIds ?? this.accountIds, // <-- NEW
+      accountIds: accountIds ?? this.accountIds, 
       minAmount: clearMin ? null : (minAmount ?? this.minAmount),
       maxAmount: clearMax ? null : (maxAmount ?? this.maxAmount),
     );
@@ -79,6 +90,7 @@ final transactionFilterProvider = StateProvider.autoDispose.family<TransactionFi
 });
 
 class TransactionFilterHelper {
+  /// Standard filter for individual account ledgers
   static List<TransactionWithDetails> apply(
     List<TransactionWithDetails> transactions,
     TransactionFilterState filter,
@@ -87,12 +99,10 @@ class TransactionFilterHelper {
     var filtered = transactions.where((data) {
       final tx = data.transaction;
 
-      // 1. Account Matcher (NEW)
       if (filter.accountIds.isNotEmpty) {
         if (!filter.accountIds.contains(tx.accountId)) return false;
       }
 
-      // 2. Timeframe
       if (filter.timeframe == TimeframeOption.currentMonth) {
         final now = DateTime.now();
         if (tx.date.year != now.year || tx.date.month != now.month) return false;
@@ -105,7 +115,6 @@ class TransactionFilterHelper {
         if (tx.date.isBefore(filter.customStartDate!) || tx.date.isAfter(filter.customEndDate!.add(const Duration(days: 1)))) return false;
       }
 
-      // 3. Type Matcher
       if (filter.types.isNotEmpty) {
         final isExpense = tx.type == 'Expense';
         final isIncome = tx.type == 'Income';
@@ -113,15 +122,9 @@ class TransactionFilterHelper {
         
         bool isMoneyLeaving = isExpense;
         if (isTransfer) {
-          if (currentAccountId == 'GLOBAL') {
-             // In Global view, if user selects any Transfer option, show all transfers
-             if (!filter.types.contains('Transfer In') && !filter.types.contains('Transfer Out')) return false;
-             isMoneyLeaving = true; 
-          } else {
-            if (tx.toAccountId == 'EXTERNAL_IN') isMoneyLeaving = false;
-            else if (tx.toAccountId == 'EXTERNAL_OUT') isMoneyLeaving = true;
-            else isMoneyLeaving = tx.accountId == currentAccountId;
-          }
+          if (tx.toAccountId == 'EXTERNAL_IN') isMoneyLeaving = false;
+          else if (tx.toAccountId == 'EXTERNAL_OUT') isMoneyLeaving = true;
+          else isMoneyLeaving = tx.accountId == currentAccountId;
         }
 
         String mappedType = '';
@@ -130,24 +133,18 @@ class TransactionFilterHelper {
         else if (isTransfer && isMoneyLeaving) mappedType = 'Transfer Out';
         else if (isTransfer && !isMoneyLeaving) mappedType = 'Transfer In';
 
-        if (mappedType.isNotEmpty && !filter.types.contains(mappedType)) {
-          if (currentAccountId != 'GLOBAL' || !isTransfer) return false;
-        }
+        if (mappedType.isNotEmpty && !filter.types.contains(mappedType)) return false;
       }
 
-      // 4. Amount Thresholds
       if (filter.minAmount != null && tx.amount < filter.minAmount!) return false;
       if (filter.maxAmount != null && tx.amount > filter.maxAmount!) return false;
 
-      // 5. Categories & Subcategories
       if (filter.categoryIds.isNotEmpty) {
         if (tx.categoryId == null || !filter.categoryIds.contains(tx.categoryId)) return false;
       }
       if (filter.subCategories.isNotEmpty) {
         if (tx.subCategory == null || !filter.subCategories.contains(tx.subCategory)) return false;
       }
-
-      // 6. Buckets
       if (filter.bucketIds.isNotEmpty) {
         int effectiveBucket = tx.bucketId ?? -1;
         if (!filter.bucketIds.contains(effectiveBucket)) return false;
@@ -156,13 +153,100 @@ class TransactionFilterHelper {
       return true;
     }).toList();
 
-    // 7. Sort Logic
     filtered.sort((a, b) {
       switch (filter.sortBy) {
         case SortOption.newest: return b.transaction.date.compareTo(a.transaction.date);
         case SortOption.oldest: return a.transaction.date.compareTo(b.transaction.date);
         case SortOption.highestAmount: return b.transaction.amount.compareTo(a.transaction.amount);
         case SortOption.lowestAmount: return a.transaction.amount.compareTo(b.transaction.amount);
+      }
+    });
+
+    return filtered;
+  }
+
+  /// Global Records filter that expands internal transfers into two distinct perspective legs
+  static List<RecordItem> applyForRecords(
+    List<TransactionWithDetails> transactions,
+    TransactionFilterState filter,
+  ) {
+    List<RecordItem> expanded = [];
+    
+    for (var data in transactions) {
+      final tx = data.transaction;
+      // Primary leg
+      expanded.add(RecordItem(data: data, perspectiveAccountId: tx.accountId));
+      
+      // Secondary leg for internal transfers
+      if (tx.type == 'Transfer' && tx.toAccountId != null && !tx.toAccountId!.startsWith('EXTERNAL')) {
+        expanded.add(RecordItem(data: data, perspectiveAccountId: tx.toAccountId!));
+      }
+    }
+
+    var filtered = expanded.where((item) {
+      final tx = item.data.transaction;
+      final perspective = item.perspectiveAccountId;
+
+      if (filter.accountIds.isNotEmpty) {
+        if (!filter.accountIds.contains(perspective)) return false;
+      }
+
+      if (filter.timeframe == TimeframeOption.currentMonth) {
+        final now = DateTime.now();
+        if (tx.date.year != now.year || tx.date.month != now.month) return false;
+      } else if (filter.timeframe == TimeframeOption.lastMonth) {
+        final now = DateTime.now();
+        int targetYear = now.month == 1 ? now.year - 1 : now.year;
+        int targetMonth = now.month == 1 ? 12 : now.month - 1;
+        if (tx.date.year != targetYear || tx.date.month != targetMonth) return false;
+      } else if (filter.timeframe == TimeframeOption.custom && filter.customStartDate != null && filter.customEndDate != null) {
+        if (tx.date.isBefore(filter.customStartDate!) || tx.date.isAfter(filter.customEndDate!.add(const Duration(days: 1)))) return false;
+      }
+
+      if (filter.types.isNotEmpty) {
+        final isExpense = tx.type == 'Expense';
+        final isIncome = tx.type == 'Income';
+        final isTransfer = tx.type == 'Transfer';
+        
+        bool isMoneyLeaving = isExpense;
+        if (isTransfer) {
+          if (tx.toAccountId == 'EXTERNAL_IN') isMoneyLeaving = false;
+          else if (tx.toAccountId == 'EXTERNAL_OUT') isMoneyLeaving = true;
+          else isMoneyLeaving = tx.accountId == perspective;
+        }
+
+        String mappedType = '';
+        if (isExpense) mappedType = 'Expense';
+        else if (isIncome) mappedType = 'Income';
+        else if (isTransfer && isMoneyLeaving) mappedType = 'Transfer Out';
+        else if (isTransfer && !isMoneyLeaving) mappedType = 'Transfer In';
+
+        if (mappedType.isNotEmpty && !filter.types.contains(mappedType)) return false;
+      }
+
+      if (filter.minAmount != null && tx.amount < filter.minAmount!) return false;
+      if (filter.maxAmount != null && tx.amount > filter.maxAmount!) return false;
+
+      if (filter.categoryIds.isNotEmpty) {
+        if (tx.categoryId == null || !filter.categoryIds.contains(tx.categoryId)) return false;
+      }
+      if (filter.subCategories.isNotEmpty) {
+        if (tx.subCategory == null || !filter.subCategories.contains(tx.subCategory)) return false;
+      }
+      if (filter.bucketIds.isNotEmpty) {
+        int effectiveBucket = tx.bucketId ?? -1;
+        if (!filter.bucketIds.contains(effectiveBucket)) return false;
+      }
+
+      return true;
+    }).toList();
+
+    filtered.sort((a, b) {
+      switch (filter.sortBy) {
+        case SortOption.newest: return b.data.transaction.date.compareTo(a.data.transaction.date);
+        case SortOption.oldest: return a.data.transaction.date.compareTo(b.data.transaction.date);
+        case SortOption.highestAmount: return b.data.transaction.amount.compareTo(a.data.transaction.amount);
+        case SortOption.lowestAmount: return a.data.transaction.amount.compareTo(b.data.transaction.amount);
       }
     });
 
