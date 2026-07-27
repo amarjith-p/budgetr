@@ -5,6 +5,7 @@ import '../../../core/theme/design_tokens.dart';
 import '../providers/transaction_provider.dart';
 import '../providers/transaction_filter_provider.dart';
 import '../components/transaction_card.dart';
+import '../components/active_filter_banner.dart'; // <-- NEW
 
 class RecordsTab extends ConsumerWidget {
   const RecordsTab({Key? key}) : super(key: key);
@@ -29,12 +30,6 @@ class RecordsTab extends ConsumerWidget {
 
           final filteredRecords = TransactionFilterHelper.applyForRecords(transactions, filterState);
 
-          if (filteredRecords.isEmpty) {
-            return Center(
-              child: Text('No results match your filters.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))
-            );
-          }
-
           final groupedRecords = <String, List<RecordItem>>{};
           const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -47,35 +42,51 @@ class RecordsTab extends ConsumerWidget {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
+              // --- FIX: Dynamic Active Filter Banner ---
+              if (filterState.isActive)
+                SliverToBoxAdapter(
+                  child: ActiveFilterBanner(
+                    filterState: filterState, // <-- PASSED IN HERE
+                    onClear: () => ref.read(transactionFilterProvider('GLOBAL').notifier).state = const TransactionFilterState(),
+                  ),
+                ),
+                
               const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
               
-              ...groupedRecords.entries.map((entry) {
-                return SliverMainAxisGroup(
-                  slivers: [
-                    SliverPersistentHeader(
-                      pinned: true, 
-                      delegate: _StickyGlobalMonthHeaderDelegate(title: entry.key, theme: theme),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final record = entry.value[index];
-                            return TransactionCard(
-                              data: record.data, 
-                              currentAccountId: record.perspectiveAccountId,
-                              isGlobalView: true,
-                            );
-                          },
-                          childCount: entry.value.length,
+              // --- FIX: Scrollable Empty State ---
+              if (filteredRecords.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: Text('No results match your filters.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),
+                )
+              else
+                ...groupedRecords.entries.map((entry) {
+                  return SliverMainAxisGroup(
+                    slivers: [
+                      SliverPersistentHeader(
+                        pinned: true, 
+                        delegate: _StickyGlobalMonthHeaderDelegate(title: entry.key, theme: theme),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final record = entry.value[index];
+                              return TransactionCard(
+                                data: record.data, 
+                                currentAccountId: record.perspectiveAccountId,
+                                isGlobalView: true,
+                              );
+                            },
+                            childCount: entry.value.length,
+                          ),
                         ),
                       ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
-                  ],
-                );
-              }).toList(),
+                      const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
+                    ],
+                  );
+                }).toList(),
               
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
@@ -85,6 +96,8 @@ class RecordsTab extends ConsumerWidget {
     );
   }
 }
+
+// ... [Keep _StickyGlobalMonthHeaderDelegate unchanged]
 
 class _StickyGlobalMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;

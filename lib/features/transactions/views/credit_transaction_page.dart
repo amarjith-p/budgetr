@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:budgetr/core/components/currency_text.dart';
+import 'package:budgetr/features/transactions/components/active_filter_banner.dart';
 import 'package:budgetr/features/transactions/components/transaction_filter_bottom_sheet.dart';
 import 'package:budgetr/features/transactions/providers/transaction_filter_provider.dart';
 import 'package:budgetr/features/transactions/services/transaction_service.dart';
@@ -176,12 +177,23 @@ class CreditTransactionPage extends ConsumerWidget {
                 ),
               ),
               
+              // --- FIX: Dynamic Active Filter Banner ---
+              if (filterState.isActive)
+                SliverToBoxAdapter(
+                  child: ActiveFilterBanner(
+                    filterState: filterState, // <-- PASSED IN HERE
+                    onClear: () => ref.read(transactionFilterProvider(account.id).notifier).state = const TransactionFilterState(),
+                  ),
+                ),
+              
               if (transactions.isEmpty)
                 SliverFillRemaining(
+                  hasScrollBody: false,
                   child: Center(child: Text('No credit activity yet.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),
                 )
               else if (filteredCycles.every((c) => c.transactions.isEmpty))
                 SliverFillRemaining(
+                  hasScrollBody: false,
                   child: Center(child: Text('No results match your filters.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),
                 )
               else

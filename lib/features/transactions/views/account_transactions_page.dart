@@ -11,6 +11,7 @@ import 'transaction_form_page.dart';
 
 import '../providers/transaction_filter_provider.dart';
 import '../components/transaction_filter_bottom_sheet.dart';
+import '../components/active_filter_banner.dart'; // <-- NEW
 
 class AccountTransactionsPage extends ConsumerWidget {
   final Account account;
@@ -31,7 +32,6 @@ class AccountTransactionsPage extends ConsumerWidget {
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.pop(context),
         
-        // --- FIX: Exclusively using the native trailingIcon parameter ---
         trailingIcon: filterState.isActive ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
         onTrailingPressed: () {
           final txList = transactionsAsync.asData?.value ?? [];
@@ -55,10 +55,6 @@ class AccountTransactionsPage extends ConsumerWidget {
 
           final filteredTransactions = TransactionFilterHelper.apply(transactions, filterState, account.id);
 
-          if (filteredTransactions.isEmpty) {
-            return Center(child: Text('No results match your filters.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold)));
-          }
-
           final groupedTransactions = <String, List<dynamic>>{};
           const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -71,30 +67,46 @@ class AccountTransactionsPage extends ConsumerWidget {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
+              // --- FIX: Dynamic Active Filter Banner ---
+              if (filterState.isActive)
+                SliverToBoxAdapter(
+                  child: ActiveFilterBanner(
+                    filterState: filterState, // <-- PASSED IN HERE
+                    onClear: () => ref.read(transactionFilterProvider(account.id).notifier).state = const TransactionFilterState(),
+                  ),
+                ),
+                
               const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
               
-              ...groupedTransactions.entries.map((entry) {
-                return SliverMainAxisGroup(
-                  slivers: [
-                    SliverPersistentHeader(
-                      pinned: true, 
-                      delegate: _StickyMonthHeaderDelegate(title: entry.key, theme: theme),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            return TransactionCard(data: entry.value[index], currentAccountId: account.id);
-                          },
-                          childCount: entry.value.length,
+              // --- FIX: Scrollable Empty State ---
+              if (filteredTransactions.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: Text('No results match your filters.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),
+                )
+              else
+                ...groupedTransactions.entries.map((entry) {
+                  return SliverMainAxisGroup(
+                    slivers: [
+                      SliverPersistentHeader(
+                        pinned: true, 
+                        delegate: _StickyMonthHeaderDelegate(title: entry.key, theme: theme),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              return TransactionCard(data: entry.value[index], currentAccountId: account.id);
+                            },
+                            childCount: entry.value.length,
+                          ),
                         ),
                       ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
-                  ],
-                );
-              }).toList(),
+                      const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
+                    ],
+                  );
+                }).toList(),
               
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
@@ -104,6 +116,8 @@ class AccountTransactionsPage extends ConsumerWidget {
     );
   }
 }
+
+// ... [Keep _StickyMonthHeaderDelegate unchanged]
 
 // --- NEW: Sticky Header Delegate with iOS Frosted Glass Effect ---
 class _StickyMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
