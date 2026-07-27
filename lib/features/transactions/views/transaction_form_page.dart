@@ -1,9 +1,12 @@
+import 'dart:convert';
 import 'package:budgetr/core/models/transaction_category_model.dart';
 import 'package:budgetr/features/transactions/services/transaction_service.dart';
+import 'package:drift/drift.dart' hide Column, Table;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/database/database_provider.dart' as db_prov;
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/theme/transaction_colors.dart';
 import '../../../core/components/modern_app_bar.dart';
@@ -28,18 +31,26 @@ class _BucketItem {
   _BucketItem(this.id, this.name);
 }
 
+// --- NEW: Localized provider to fetch the budget for the selected date ---
+final _formBudgetProvider = StreamProvider.family.autoDispose<MonthlyBudget?, DateTime>((ref, date) {
+  final db = ref.watch(db_prov.databaseProvider);
+  return (db.select(db.monthlyBudgets)
+        ..where((t) => t.month.equals(date.month) & t.year.equals(date.year)))
+      .watchSingleOrNull();
+});
+
 class TransactionFormPage extends ConsumerStatefulWidget {
   final TransactionWithDetails? existingTransaction;
   final String? preSelectedAccountId;
   final bool isClone;
-  final bool isSplit; // <-- NEW
+  final bool isSplit;
 
   const TransactionFormPage({
     Key? key, 
     this.existingTransaction,
     this.preSelectedAccountId,
     this.isClone = false,
-    this.isSplit = false, // <-- NEW
+    this.isSplit = false,
   }) : super(key: key);
 
   @override
@@ -483,7 +494,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     );
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context); 
     final isDark = theme.brightness == Brightness.dark;
@@ -508,15 +519,32 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
     final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
     final rawCategories = ref.watch(categoriesStreamProvider).asData?.value ?? [];
-    final rawBuckets = ref.watch(bucketsStreamProvider).asData?.value ?? [];
+    
+    // --- NEW: SNAPSHOT LOADING LOGIC ---
+    final budgetDate = DateTime(_selectedDateTime.year, _selectedDateTime.month);
+    final budgetAsync = ref.watch(_formBudgetProvider(budgetDate));
+    
+    final List<_BucketItem> bucketItems = [];
+    final activeBudget = budgetAsync.asData?.value;
+    
+    if (activeBudget != null && activeBudget.bucketsSnapshot != null) {
+      try {
+        final List<dynamic> decoded = jsonDecode(activeBudget.bucketsSnapshot!);
+        for (var b in decoded) {
+          bucketItems.add(_BucketItem(b['id'] as int, b['name'] as String));
+        }
+      } catch (e) {
+        // Fallback: leave empty, will just append 'Out of Bucket'
+      }
+    }
+    
+    // Fallback: Always add the Out of Bucket option
+    bucketItems.add(_BucketItem(-1, 'Out of Bucket'));
     
     final accountItems = rawAccounts.map((a) => _AccountItem(a.id, a.name)).toList();
     if (isTransfer) {
       accountItems.add(_AccountItem('EXTERNAL', 'External Account'));
     }
-
-    final bucketItems = rawBuckets.map((b) => _BucketItem(b.id, b.name)).toList();
-    bucketItems.add(_BucketItem(-1, 'Out of Bucket'));
 
     final activeCategories = rawCategories.where((c) => c.type == _types[_typeIndex]).toList();
     final selectedCatMatch = rawCategories.where((c) => c.id == _selectedCategoryId).firstOrNull;
@@ -524,6 +552,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     
     final selectedAccMatch = accountItems.where((a) => a.id == _selectedAccountId).firstOrNull;
     final selectedToAccMatch = accountItems.where((a) => a.id == _selectedToAccountId).firstOrNull;
+    
+    // Validates against the parsed snapshot buckets
     final selectedBucketMatch = bucketItems.where((b) => b.id == _selectedBucketId).firstOrNull;
 
     final List<Widget> cells = [
@@ -587,7 +617,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     }
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // CLEAN: Removed heavy gray opacity
+      backgroundColor: theme.scaffoldBackgroundColor, 
       resizeToAvoidBottomInset: false, 
       appBar: ModernAppBar(
         title: appBarTitle,
@@ -710,7 +740,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(16),
-                          // CLEAN: Soft 1.0 border and premium shadow
                           border: Border.all(color: theme.dividerColor, width: 1.0),
                           boxShadow: [
                             BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.05), blurRadius: 10, offset: const Offset(0, 4))
@@ -721,7 +750,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                           color: Colors.transparent,
                           child: Table(
                             border: TableBorder.symmetric(
-                              // CLEAN: Soft 1.0 inside border
                               inside: BorderSide(color: theme.dividerColor, width: 1.0),
                             ),
                             children: tableRows,
@@ -737,7 +765,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             Expanded(
               flex: 40,
               child: DockedCalculatorPad(
-                backgroundColor: theme.scaffoldBackgroundColor, // CLEAN: Seamless blending
+                backgroundColor: theme.scaffoldBackgroundColor, 
                 actionColor: txColor,
                 onKeyPress: _onCalcKeyPress,
               ),

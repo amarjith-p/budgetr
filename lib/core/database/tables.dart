@@ -67,6 +67,10 @@ class MonthlyBudgets extends Table {
   RealColumn get salaryIncome => real().withDefault(const Constant(0.0))();
   RealColumn get extraIncome => real().withDefault(const Constant(0.0))();
   RealColumn get deductions => real().withDefault(const Constant(0.0))();
+  
+  // --- NEW: JSON Snapshot Column ---
+  TextColumn get bucketsSnapshot => text().nullable()(); 
+  
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override

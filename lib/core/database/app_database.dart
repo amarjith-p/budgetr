@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- VERSION BUMP TO 6 ---
   @override
-  int get schemaVersion => 6; 
+  int get schemaVersion => 7; 
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -28,9 +28,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 3) await m.addColumn(transactions, transactions.isSpillover);
       if (from < 4) await m.addColumn(transactions, transactions.isSettlementVerified);
       if (from < 5) await m.addColumn(accounts, accounts.displayOrder);
-      if (from < 6) {
-        // --- NEW: MIGRATION FOR BUDGETS ---
-        await m.createTable(monthlyBudgets);
+      if (from < 6) await m.createTable(monthlyBudgets);
+      if (from < 7) {
+        // --- NEW: MIGRATION FOR BUDGET SNAPSHOT ---
+        await m.addColumn(monthlyBudgets, monthlyBudgets.bucketsSnapshot);
       }
     },
   );

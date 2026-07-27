@@ -2180,6 +2180,17 @@ class $MonthlyBudgetsTable extends MonthlyBudgets
     requiredDuringInsert: false,
     defaultValue: const Constant(0.0),
   );
+  static const VerificationMeta _bucketsSnapshotMeta = const VerificationMeta(
+    'bucketsSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> bucketsSnapshot = GeneratedColumn<String>(
+    'buckets_snapshot',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2200,6 +2211,7 @@ class $MonthlyBudgetsTable extends MonthlyBudgets
     salaryIncome,
     extraIncome,
     deductions,
+    bucketsSnapshot,
     createdAt,
   ];
   @override
@@ -2259,6 +2271,15 @@ class $MonthlyBudgetsTable extends MonthlyBudgets
         deductions.isAcceptableOrUnknown(data['deductions']!, _deductionsMeta),
       );
     }
+    if (data.containsKey('buckets_snapshot')) {
+      context.handle(
+        _bucketsSnapshotMeta,
+        bucketsSnapshot.isAcceptableOrUnknown(
+          data['buckets_snapshot']!,
+          _bucketsSnapshotMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2298,6 +2319,10 @@ class $MonthlyBudgetsTable extends MonthlyBudgets
         DriftSqlType.double,
         data['${effectivePrefix}deductions'],
       )!,
+      bucketsSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}buckets_snapshot'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2318,6 +2343,7 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
   final double salaryIncome;
   final double extraIncome;
   final double deductions;
+  final String? bucketsSnapshot;
   final DateTime createdAt;
   const MonthlyBudget({
     required this.id,
@@ -2326,6 +2352,7 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
     required this.salaryIncome,
     required this.extraIncome,
     required this.deductions,
+    this.bucketsSnapshot,
     required this.createdAt,
   });
   @override
@@ -2337,6 +2364,9 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
     map['salary_income'] = Variable<double>(salaryIncome);
     map['extra_income'] = Variable<double>(extraIncome);
     map['deductions'] = Variable<double>(deductions);
+    if (!nullToAbsent || bucketsSnapshot != null) {
+      map['buckets_snapshot'] = Variable<String>(bucketsSnapshot);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -2349,6 +2379,9 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
       salaryIncome: Value(salaryIncome),
       extraIncome: Value(extraIncome),
       deductions: Value(deductions),
+      bucketsSnapshot: bucketsSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bucketsSnapshot),
       createdAt: Value(createdAt),
     );
   }
@@ -2365,6 +2398,7 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
       salaryIncome: serializer.fromJson<double>(json['salaryIncome']),
       extraIncome: serializer.fromJson<double>(json['extraIncome']),
       deductions: serializer.fromJson<double>(json['deductions']),
+      bucketsSnapshot: serializer.fromJson<String?>(json['bucketsSnapshot']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2378,6 +2412,7 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
       'salaryIncome': serializer.toJson<double>(salaryIncome),
       'extraIncome': serializer.toJson<double>(extraIncome),
       'deductions': serializer.toJson<double>(deductions),
+      'bucketsSnapshot': serializer.toJson<String?>(bucketsSnapshot),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2389,6 +2424,7 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
     double? salaryIncome,
     double? extraIncome,
     double? deductions,
+    Value<String?> bucketsSnapshot = const Value.absent(),
     DateTime? createdAt,
   }) => MonthlyBudget(
     id: id ?? this.id,
@@ -2397,6 +2433,9 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
     salaryIncome: salaryIncome ?? this.salaryIncome,
     extraIncome: extraIncome ?? this.extraIncome,
     deductions: deductions ?? this.deductions,
+    bucketsSnapshot: bucketsSnapshot.present
+        ? bucketsSnapshot.value
+        : this.bucketsSnapshot,
     createdAt: createdAt ?? this.createdAt,
   );
   MonthlyBudget copyWithCompanion(MonthlyBudgetsCompanion data) {
@@ -2413,6 +2452,9 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
       deductions: data.deductions.present
           ? data.deductions.value
           : this.deductions,
+      bucketsSnapshot: data.bucketsSnapshot.present
+          ? data.bucketsSnapshot.value
+          : this.bucketsSnapshot,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2426,6 +2468,7 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
           ..write('salaryIncome: $salaryIncome, ')
           ..write('extraIncome: $extraIncome, ')
           ..write('deductions: $deductions, ')
+          ..write('bucketsSnapshot: $bucketsSnapshot, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -2439,6 +2482,7 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
     salaryIncome,
     extraIncome,
     deductions,
+    bucketsSnapshot,
     createdAt,
   );
   @override
@@ -2451,6 +2495,7 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
           other.salaryIncome == this.salaryIncome &&
           other.extraIncome == this.extraIncome &&
           other.deductions == this.deductions &&
+          other.bucketsSnapshot == this.bucketsSnapshot &&
           other.createdAt == this.createdAt);
 }
 
@@ -2461,6 +2506,7 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
   final Value<double> salaryIncome;
   final Value<double> extraIncome;
   final Value<double> deductions;
+  final Value<String?> bucketsSnapshot;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const MonthlyBudgetsCompanion({
@@ -2470,6 +2516,7 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
     this.salaryIncome = const Value.absent(),
     this.extraIncome = const Value.absent(),
     this.deductions = const Value.absent(),
+    this.bucketsSnapshot = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2480,6 +2527,7 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
     this.salaryIncome = const Value.absent(),
     this.extraIncome = const Value.absent(),
     this.deductions = const Value.absent(),
+    this.bucketsSnapshot = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -2492,6 +2540,7 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
     Expression<double>? salaryIncome,
     Expression<double>? extraIncome,
     Expression<double>? deductions,
+    Expression<String>? bucketsSnapshot,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -2502,6 +2551,7 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
       if (salaryIncome != null) 'salary_income': salaryIncome,
       if (extraIncome != null) 'extra_income': extraIncome,
       if (deductions != null) 'deductions': deductions,
+      if (bucketsSnapshot != null) 'buckets_snapshot': bucketsSnapshot,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2514,6 +2564,7 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
     Value<double>? salaryIncome,
     Value<double>? extraIncome,
     Value<double>? deductions,
+    Value<String?>? bucketsSnapshot,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -2524,6 +2575,7 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
       salaryIncome: salaryIncome ?? this.salaryIncome,
       extraIncome: extraIncome ?? this.extraIncome,
       deductions: deductions ?? this.deductions,
+      bucketsSnapshot: bucketsSnapshot ?? this.bucketsSnapshot,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2550,6 +2602,9 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
     if (deductions.present) {
       map['deductions'] = Variable<double>(deductions.value);
     }
+    if (bucketsSnapshot.present) {
+      map['buckets_snapshot'] = Variable<String>(bucketsSnapshot.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2568,6 +2623,7 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
           ..write('salaryIncome: $salaryIncome, ')
           ..write('extraIncome: $extraIncome, ')
           ..write('deductions: $deductions, ')
+          ..write('bucketsSnapshot: $bucketsSnapshot, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3683,6 +3739,7 @@ typedef $$MonthlyBudgetsTableCreateCompanionBuilder =
       Value<double> salaryIncome,
       Value<double> extraIncome,
       Value<double> deductions,
+      Value<String?> bucketsSnapshot,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -3694,6 +3751,7 @@ typedef $$MonthlyBudgetsTableUpdateCompanionBuilder =
       Value<double> salaryIncome,
       Value<double> extraIncome,
       Value<double> deductions,
+      Value<String?> bucketsSnapshot,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -3734,6 +3792,11 @@ class $$MonthlyBudgetsTableFilterComposer
 
   ColumnFilters<double> get deductions => $composableBuilder(
     column: $table.deductions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bucketsSnapshot => $composableBuilder(
+    column: $table.bucketsSnapshot,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3782,6 +3845,11 @@ class $$MonthlyBudgetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get bucketsSnapshot => $composableBuilder(
+    column: $table.bucketsSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3818,6 +3886,11 @@ class $$MonthlyBudgetsTableAnnotationComposer
 
   GeneratedColumn<double> get deductions => $composableBuilder(
     column: $table.deductions,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bucketsSnapshot => $composableBuilder(
+    column: $table.bucketsSnapshot,
     builder: (column) => column,
   );
 
@@ -3864,6 +3937,7 @@ class $$MonthlyBudgetsTableTableManager
                 Value<double> salaryIncome = const Value.absent(),
                 Value<double> extraIncome = const Value.absent(),
                 Value<double> deductions = const Value.absent(),
+                Value<String?> bucketsSnapshot = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MonthlyBudgetsCompanion(
@@ -3873,6 +3947,7 @@ class $$MonthlyBudgetsTableTableManager
                 salaryIncome: salaryIncome,
                 extraIncome: extraIncome,
                 deductions: deductions,
+                bucketsSnapshot: bucketsSnapshot,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -3884,6 +3959,7 @@ class $$MonthlyBudgetsTableTableManager
                 Value<double> salaryIncome = const Value.absent(),
                 Value<double> extraIncome = const Value.absent(),
                 Value<double> deductions = const Value.absent(),
+                Value<String?> bucketsSnapshot = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MonthlyBudgetsCompanion.insert(
@@ -3893,6 +3969,7 @@ class $$MonthlyBudgetsTableTableManager
                 salaryIncome: salaryIncome,
                 extraIncome: extraIncome,
                 deductions: deductions,
+                bucketsSnapshot: bucketsSnapshot,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
