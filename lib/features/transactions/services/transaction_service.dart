@@ -26,7 +26,6 @@ class TransactionService {
 
   Stream<List<TransactionWithDetails>> watchTransactionsForAccount(String accountId) {
     final toAccountAlias = _db.alias(_db.accounts, 'to_account');
-
     final query = _db.select(_db.transactions).join([
       innerJoin(_db.accounts, _db.accounts.id.equalsExp(_db.transactions.accountId)),
       leftOuterJoin(toAccountAlias, toAccountAlias.id.equalsExp(_db.transactions.toAccountId)),
@@ -49,10 +48,8 @@ class TransactionService {
     });
   }
 
-  // --- NEW: Global Master Stream for Records Tab ---
   Stream<List<TransactionWithDetails>> watchAllTransactions() {
     final toAccountAlias = _db.alias(_db.accounts, 'to_account');
-
     final query = _db.select(_db.transactions).join([
       innerJoin(_db.accounts, _db.accounts.id.equalsExp(_db.transactions.accountId)),
       leftOuterJoin(toAccountAlias, toAccountAlias.id.equalsExp(_db.transactions.toAccountId)),
@@ -83,6 +80,7 @@ class TransactionService {
     String? categoryId,
     String? subCategory,
     int? bucketId,
+    String? bucketName, // <-- RULE 7
     String? notes,
     bool isSpillover = false, 
     bool isSettlementVerified = false, 
@@ -127,8 +125,8 @@ class TransactionService {
          id: _uuid.v4(), type: type, amount: amount, date: date,
          accountId: dbAccountId, toAccountId: Value(dbToAccountId),
          categoryId: Value(categoryId), subCategory: Value(subCategory),
-         bucketId: Value(bucketId), notes: Value(notes),
-         isSpillover: Value(isSpillover), 
+         bucketId: Value(bucketId), bucketName: Value(bucketName), // <-- RULE 7
+         notes: Value(notes), isSpillover: Value(isSpillover), 
          isSettlementVerified: Value(isSettlementVerified),
       ));
     });
@@ -144,6 +142,7 @@ class TransactionService {
     String? categoryId,
     String? subCategory,
     int? bucketId,
+    String? bucketName, // <-- RULE 7
     String? notes,
     bool isSpillover = false, 
     bool isSettlementVerified = false, 
@@ -204,9 +203,9 @@ class TransactionService {
       await _db.update(_db.transactions).replace(oldTx.copyWith(
         type: type, amount: amount, date: date, accountId: dbAccountId,
         toAccountId: Value(dbToAccountId), categoryId: Value(categoryId),
-        subCategory: Value(subCategory), bucketId: Value(bucketId), notes: Value(notes),
-        isSpillover: isSpillover, 
-        isSettlementVerified: isSettlementVerified,
+        subCategory: Value(subCategory), bucketId: Value(bucketId), 
+        bucketName: Value(bucketName), notes: Value(notes), // <-- RULE 7
+        isSpillover: isSpillover, isSettlementVerified: isSettlementVerified,
       ));
     });
   }
@@ -246,6 +245,7 @@ class TransactionService {
     String? categoryId,
     String? subCategory,
     int? bucketId,
+    String? bucketName, // <-- RULE 7
     String? notes,
     bool isSpillover = false, 
     bool isSettlementVerified = false, 
@@ -259,32 +259,17 @@ class TransactionService {
       }
 
       await updateTransaction(
-        id: origTx.id,
-        type: origTx.type,
-        amount: newOrigAmount,
-        date: origTx.date,
-        accountId: origTx.accountId,
-        toAccountId: origTx.toAccountId,
-        categoryId: origTx.categoryId,
-        subCategory: origTx.subCategory,
-        bucketId: origTx.bucketId,
-        notes: origTx.notes,
-        isSpillover: origTx.isSpillover,
-        isSettlementVerified: origTx.isSettlementVerified,
+        id: origTx.id, type: origTx.type, amount: newOrigAmount, date: origTx.date,
+        accountId: origTx.accountId, toAccountId: origTx.toAccountId, categoryId: origTx.categoryId,
+        subCategory: origTx.subCategory, bucketId: origTx.bucketId, bucketName: origTx.bucketName,
+        notes: origTx.notes, isSpillover: origTx.isSpillover, isSettlementVerified: origTx.isSettlementVerified,
       );
 
       await logTransaction(
-        type: type, 
-        amount: splitAmount, 
-        date: date, 
-        accountId: accountId,
-        toAccountId: toAccountId, 
-        categoryId: categoryId, 
-        subCategory: subCategory,
-        bucketId: bucketId, 
-        notes: notes, 
-        isSpillover: isSpillover, 
-        isSettlementVerified: isSettlementVerified,
+        type: type, amount: splitAmount, date: date, accountId: accountId,
+        toAccountId: toAccountId, categoryId: categoryId, subCategory: subCategory,
+        bucketId: bucketId, bucketName: bucketName, notes: notes, 
+        isSpillover: isSpillover, isSettlementVerified: isSettlementVerified,
       );
     });
   }
@@ -292,20 +277,14 @@ class TransactionService {
   Future<void> toggleSpillover(String transactionId, bool isSpillover) async {
     final tx = await (_db.select(_db.transactions)..where((t) => t.id.equals(transactionId))).getSingle();
     await _db.update(_db.transactions).replace(
-      tx.copyWith(
-        isSpillover: isSpillover,
-        isSettlementVerified: isSpillover ? false : tx.isSettlementVerified,
-      )
+      tx.copyWith(isSpillover: isSpillover, isSettlementVerified: isSpillover ? false : tx.isSettlementVerified)
     );
   }
 
   Future<void> verifySettlement(String transactionId, bool isVerified) async {
     final tx = await (_db.select(_db.transactions)..where((t) => t.id.equals(transactionId))).getSingle();
     await _db.update(_db.transactions).replace(
-      tx.copyWith(
-        isSettlementVerified: isVerified,
-        isSpillover: isVerified ? false : tx.isSpillover,
-      )
+      tx.copyWith(isSettlementVerified: isVerified, isSpillover: isVerified ? false : tx.isSpillover)
     );
   }
 }

@@ -1,12 +1,14 @@
-import 'dart:convert';
+import 'dart:convert'; 
 import 'package:budgetr/core/models/transaction_category_model.dart';
 import 'package:budgetr/features/transactions/services/transaction_service.dart';
-import 'package:drift/drift.dart' hide Column, Table;
+import 'package:drift/drift.dart' show BooleanExpressionOperators;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/database/app_database.dart';
+
+import '../../../core/database/app_database.dart' hide Column, Table;
 import '../../../core/database/database_provider.dart' as db_prov;
+
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/theme/transaction_colors.dart';
 import '../../../core/components/modern_app_bar.dart';
@@ -31,7 +33,6 @@ class _BucketItem {
   _BucketItem(this.id, this.name);
 }
 
-// --- NEW: Localized provider to fetch the budget for the selected date ---
 final _formBudgetProvider = StreamProvider.family.autoDispose<MonthlyBudget?, DateTime>((ref, date) {
   final db = ref.watch(db_prov.databaseProvider);
   return (db.select(db.monthlyBudgets)
@@ -76,6 +77,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   String? _selectedCategoryId;
   String? _selectedSubCategory;
   int? _selectedBucketId;
+  String? _historicalBucketName; 
   
   bool _showValidationErrors = false;
 
@@ -84,7 +86,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     super.initState();
     final txDetails = widget.existingTransaction;
     
-    // --- FIX: If splitting, empty the amount field to force entry ---
     String initialAmount = '';
     if (txDetails != null && !widget.isSplit) {
       initialAmount = txDetails.transaction.amount.toStringAsFixed(2);
@@ -103,7 +104,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       
       _notesCtrl = TextEditingController(text: tx.notes ?? '');
       
-      // If splitting, we keep the accounts but wipe the category to force re-selection
       _selectedCategoryId = widget.isSplit ? null : tx.categoryId;
       _selectedSubCategory = widget.isSplit ? null : tx.subCategory;
       
@@ -123,6 +123,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       }
       
       _selectedBucketId = tx.bucketId ?? -1;
+      _historicalBucketName = tx.bucketName ?? txDetails.bucket?.name;
+      
     } else {
       _notesCtrl = TextEditingController();
       _selectedAccountId = widget.preSelectedAccountId;
@@ -323,7 +325,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     );
   }
 
-  Future<void> _submit() async {
+  // Resolves to the exact string recorded, no artificial names.
+  String? _resolveBucketName(List<_BucketItem> items, int? selectedId) {
+    if (selectedId == null || selectedId == -1) return null;
+    final match = items.where((b) => b.id == selectedId).firstOrNull;
+    return match?.name ?? _historicalBucketName;
+  }
+
+  Future<void> _submit(List<_BucketItem> activeBucketItems) async {
     final amount = double.tryParse(_liveResult) ?? 0.0;
     
     final isExpense = _typeIndex == 0;
@@ -332,7 +341,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     
     final hasDanglingOperator = _expression.isNotEmpty && ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
     
-    // --- FIX: Split Amount Limit Validation ---
     final origAmount = widget.existingTransaction?.transaction.amount ?? 0.0;
     final isOverSplit = widget.isSplit && amount >= origAmount;
 
@@ -361,6 +369,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     String? finalCategoryId = _selectedCategoryId;
     String? finalSubCategory = _selectedSubCategory;
     String? finalNotes = _notesCtrl.text.trim();
+    
+    // --- RULE 7 EXECUTION ---
+    String? finalBucketName = _resolveBucketName(activeBucketItems, _selectedBucketId);
 
     if (targetCC != null) {
       final bDay = targetCC.billDate ?? 15;
@@ -400,7 +411,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       }
     }
 
-    // --- FIX: Delegate to Split Action if required ---
     if (widget.isSplit) {
       final success = await ref.read(transactionActionProvider.notifier).splitTransaction(
         originalTxId: widget.existingTransaction!.transaction.id,
@@ -412,6 +422,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         categoryId: finalCategoryId,
         subCategory: finalSubCategory,
         bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
+        bucketName: finalBucketName, 
         notes: finalNotes,
         isSpillover: _isSpillover, 
         isSettlementVerified: _isSettlementVerified, 
@@ -434,6 +445,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       categoryId: finalCategoryId,
       subCategory: finalSubCategory,
       bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
+      bucketName: finalBucketName, 
       notes: finalNotes,
       isSpillover: _isSpillover, 
       isSettlementVerified: _isSettlementVerified, 
@@ -520,27 +532,60 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
     final rawCategories = ref.watch(categoriesStreamProvider).asData?.value ?? [];
     
-    // --- NEW: SNAPSHOT LOADING LOGIC ---
     final budgetDate = DateTime(_selectedDateTime.year, _selectedDateTime.month);
     final budgetAsync = ref.watch(_formBudgetProvider(budgetDate));
     
     final List<_BucketItem> bucketItems = [];
     final activeBudget = budgetAsync.asData?.value;
     
-    // BUSINESS RULE: If the budget exists, has a snapshot, AND is NOT closed.
-    if (activeBudget != null && !activeBudget.isClosed && activeBudget.bucketsSnapshot != null) {
-      try {
-        final List<dynamic> decoded = jsonDecode(activeBudget.bucketsSnapshot!);
-        for (var b in decoded) {
-          bucketItems.add(_BucketItem(b['id'] as int, b['name'] as String));
-        }
-      } catch (e) {
-        // Fallback
+    bool isBudgetLocked = activeBudget == null || activeBudget.isClosed;
+    String lockedReason = activeBudget == null 
+        ? 'No active budget exists for this month.'
+        : 'This month\'s budget is permanently closed.';
+
+    final bool isEditingExisting = widget.existingTransaction != null && !widget.isClone && !widget.isSplit;
+
+    if (isBudgetLocked) {
+      if (isEditingExisting && _selectedBucketId != null && _selectedBucketId != -1) {
+         // RULE 7: Protect exactly what was saved in the historical record
+         bucketItems.add(_BucketItem(_selectedBucketId!, _historicalBucketName ?? ''));
+      } else {
+         // RULE 1/2 WIPE: If they cloned/split to a locked month, explicitly drop the invalid bucket ID
+         if (_selectedBucketId != null && _selectedBucketId != -1) {
+            _selectedBucketId = null; 
+         }
       }
+      bucketItems.add(_BucketItem(-1, 'Out of Bucket'));
+    } else {
+      if (activeBudget.bucketsSnapshot != null) {
+        try {
+          final List<dynamic> decoded = jsonDecode(activeBudget.bucketsSnapshot!);
+          for (var b in decoded) {
+            bucketItems.add(_BucketItem(b['id'] as int, b['name'] as String));
+          }
+        } catch (e) {
+          // Fallback
+        }
+      }
+      
+      if (isEditingExisting && _selectedBucketId != null && _selectedBucketId != -1) {
+        if (!bucketItems.any((b) => b.id == _selectedBucketId)) {
+          // RULE 7: Re-inject the historical item with its EXACT name to prevent 'Unknown' text
+          String displayLabel = _historicalBucketName ?? '';
+          if (bucketItems.any((b) => b.name == displayLabel)) displayLabel = '$displayLabel (Legacy)';
+          bucketItems.add(_BucketItem(_selectedBucketId!, displayLabel));
+        }
+      } else {
+         // RULE 1/2 WIPE: Cloning/Splitting into an active budget where the old bucket no longer exists
+         if (_selectedBucketId != null && _selectedBucketId != -1) {
+             if (!bucketItems.any((b) => b.id == _selectedBucketId)) {
+                 _selectedBucketId = null; // Forces validation drop so user must select a valid active bucket
+             }
+         }
+      }
+
+      bucketItems.add(_BucketItem(-1, 'Out of Bucket'));
     }
-    
-    // Fallback: Always add the Out of Bucket option
-    bucketItems.add(_BucketItem(-1, 'Out of Bucket'));
     
     final accountItems = rawAccounts.map((a) => _AccountItem(a.id, a.name)).toList();
     if (isTransfer) {
@@ -554,7 +599,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final selectedAccMatch = accountItems.where((a) => a.id == _selectedAccountId).firstOrNull;
     final selectedToAccMatch = accountItems.where((a) => a.id == _selectedToAccountId).firstOrNull;
     
-    // Validates against the parsed snapshot buckets
     final selectedBucketMatch = bucketItems.where((b) => b.id == _selectedBucketId).firstOrNull;
 
     final List<Widget> cells = [
@@ -595,7 +639,10 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       
       if (!isIncome) {
         cells.add(_buildTableCell(
-          'BUDGET BUCKET', selectedBucketMatch?.name, Icons.donut_small_rounded,
+          'BUDGET BUCKET', 
+          selectedBucketMatch?.name, 
+          Icons.donut_small_rounded,
+          // Always enabled so they can manually explicitly tap Out of Bucket if locked
           () => _showSelector<_BucketItem>(title: 'Assign to Bucket', items: bucketItems, labelBuilder: (b) => b.name, onSelected: (b) => setState(() => _selectedBucketId = b.id)),
           _showValidationErrors && isExpense && _selectedBucketId == null 
         ));
@@ -626,7 +673,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         leadingIcon: Icons.close_rounded,
         onLeadingPressed: () => Navigator.pop(context),
         trailingIcon: Icons.done_all_rounded, 
-        onTrailingPressed: _submit,
+        onTrailingPressed: () => _submit(bucketItems),
       ),
       
       body: SafeArea(
@@ -736,26 +783,56 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                     flex: 5,
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
-                      child: Container(
-                        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: theme.dividerColor, width: 1.0),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.05), blurRadius: 10, offset: const Offset(0, 4))
-                          ],
-                        ),
-                        clipBehavior: Clip.antiAlias, 
-                        child: Material(
-                          color: Colors.transparent,
-                          child: Table(
-                            border: TableBorder.symmetric(
-                              inside: BorderSide(color: theme.dividerColor, width: 1.0),
+                      child: Column(
+                        children: [
+                          // --- RULE 6: WARNING UI BANNER FOR NEW/CLONE/SPLIT ---
+                          if (isExpense && isBudgetLocked && !isEditingExisting)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.error.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.info_outline_rounded, color: theme.colorScheme.error, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Only "Out of Bucket" is available because $lockedReason',
+                                        style: TextStyle(fontSize: 11, color: theme.colorScheme.error, fontWeight: FontWeight.w700),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                            children: tableRows,
+                            
+                          Container(
+                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: theme.dividerColor, width: 1.0),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.05), blurRadius: 10, offset: const Offset(0, 4))
+                              ],
+                            ),
+                            clipBehavior: Clip.antiAlias, 
+                            child: Material(
+                              color: Colors.transparent,
+                              child: Table(
+                                border: TableBorder.symmetric(
+                                  inside: BorderSide(color: theme.dividerColor, width: 1.0),
+                                ),
+                                children: tableRows,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),

@@ -25,28 +25,27 @@ class _BudgetBucketsPageState extends ConsumerState<BudgetBucketsPage> {
   final LocalAuthentication auth = LocalAuthentication();
 
   Future<void> _handleUnlockAttempt() async {
+    // --- RULE 1: STRICT WARNING ---
     final shouldProceed = await ConfirmationBottomSheet.show(
       context,
-      title: 'Unlock Core Allocations',
-      description: 'These Bucket Allocation percentages are crucial. Modifying them changes how your Budget Buckets are distributed. Are you sure you want to edit?',
-      confirmText: 'PROCEED',
+      title: 'Unlock Global Allocations',
+      description: 'STRICT WARNING: Updating these percentages will NOT recalculate or affect any active or past budgets. Changes apply ONLY to new budgets created in the future. Proceed?',
+      confirmText: 'I UNDERSTAND',
       onConfirm: () {}, 
     );
 
     if (shouldProceed != true) return;
-
+    
     bool authenticated = false;
     try {
       bool canCheck = await auth.canCheckBiometrics;
       bool isSupported = await auth.isDeviceSupported();
-
       if (!canCheck && !isSupported) {
         setState(() => _isEditing = true);
         return;
       }
-
       authenticated = await auth.authenticate(
-        localizedReason: 'Authenticate to modify core budget allocations',
+        localizedReason: 'Authenticate to modify global budget allocations',
       );
     } on PlatformException catch (e) {
       if (mounted) {
@@ -56,7 +55,7 @@ class _BudgetBucketsPageState extends ConsumerState<BudgetBucketsPage> {
       }
       return;
     }
-
+    
     if (mounted && authenticated) {
       setState(() => _isEditing = true);
     }
@@ -248,36 +247,34 @@ class _BudgetBucketsPageState extends ConsumerState<BudgetBucketsPage> {
                               width: double.infinity,
                               height: 56, 
                               child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: canSave ? successColor : (isDark ? Colors.white : Colors.black), 
-                                  foregroundColor: canSave ? Colors.white : (isDark ? Colors.black : Colors.white),
-                                  disabledBackgroundColor: isDark ? Colors.white12 : Colors.black12,
-                                  disabledForegroundColor: isDark ? Colors.white38 : Colors.black38,
-                                  elevation: 0, 
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8), 
-                                  ),
-                                ),
-                                onPressed: canSave
+                                 style: ElevatedButton.styleFrom(
+                                   backgroundColor: canSave ? successColor : (isDark ? Colors.white : Colors.black), 
+                                   foregroundColor: canSave ? Colors.white : (isDark ? Colors.black : Colors.white),
+                                   disabledBackgroundColor: isDark ? Colors.white12 : Colors.black12,
+                                   disabledForegroundColor: isDark ? Colors.white38 : Colors.black38,
+                                   elevation: 0, 
+                                   shape: RoundedRectangleBorder(
+                                     borderRadius: BorderRadius.circular(8), 
+                                   ),
+                                 ),
+                                 onPressed: canSave
     ? () async {
-        // 1. Pause and ask for confirmation
+        // --- RULE 1: STRICT CONFIRMATION ---
         final shouldProceed = await ConfirmationBottomSheet.show(
           context,
           title: 'Confirm Allocation',
-          description: 'This will replace all of your existing budget buckets with the new allocations. Do you want to proceed?',
+          description: 'Are you sure? This strictly replaces global buckets for FUTURE budgets only. Active and closed budgets remain mathematically locked to their original state.',
           confirmText: 'CONFIRM',
-          onConfirm: () {}, // Handled by the boolean return
+          onConfirm: () {}, 
         );
 
-        // 2. If the user dismisses the sheet or clicks cancel, stop here
         if (shouldProceed != true) return;
 
-        // 3. Proceed with the database save
         final success = await ref.read(bucketDraftProvider.notifier).saveBuckets();
         
         if (context.mounted) {
           if (success) {
-            CustomSnackbars.showSuccess(context, message: 'Allocations saved successfully!');
+            CustomSnackbars.showSuccess(context, message: 'Global Allocations saved successfully!');
             Navigator.pop(context); 
           } else {
             CustomSnackbars.showError(context, message: 'Failed to save allocations.');

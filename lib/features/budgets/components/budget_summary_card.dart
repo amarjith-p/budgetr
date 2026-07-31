@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../core/components/currency_text.dart';
+import '../../../core/theme/design_tokens.dart';
 
 class BudgetSummaryCard extends StatelessWidget {
   final double salaryIncome;
@@ -29,184 +30,205 @@ class BudgetSummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final effectiveIncome = (salaryIncome + extraIncome) - deductions;
+    final activeRadius = BorderRadius.circular(16.0);
 
     return Slidable(
+      key: const ValueKey('budget_summary_card'),
       enabled: !isClosed, 
-      endActionPane: ActionPane(
-        motion: const BehindMotion(),
-        extentRatio: 0.65, 
+      
+      // SWIPE RIGHT (EDIT) - Matches BoxySlidableCard startActionPane
+      startActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.25, 
         children: [
-          // --- PERFECTED BOXY SLIDABLE ACTIONS ---
-          _buildBoxyAction(
-            label: 'Edit',
-            icon: Icons.edit_rounded,
-            color: Colors.blueAccent.shade700,
-            onTap: onEdit,
-          ),
-          _buildBoxyAction(
-            label: 'Close',
-            icon: Icons.lock_rounded,
-            color: Colors.orangeAccent.shade700,
-            onTap: onClose,
-          ),
-          _buildBoxyAction(
-            label: 'Delete',
-            icon: Icons.delete_rounded,
-            color: theme.colorScheme.error,
-            onTap: onDelete,
+          CustomSlidableAction(
+            onPressed: (_) => onEdit(),
+            backgroundColor: Colors.transparent,
+            foregroundColor: theme.colorScheme.onPrimaryContainer,
+            padding: EdgeInsets.zero,
+            child: Container(
+              margin: const EdgeInsets.only(right: DesignTokens.spacingSm),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                borderRadius: activeRadius, 
+                border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3), width: 1.2),
+              ),
+              alignment: Alignment.center,
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.edit_rounded),
+                  SizedBox(height: 4),
+                  Text('Edit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            )
-          ],
-        ),
-        child: Material(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: theme.dividerColor, width: 1.0),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: IntrinsicHeight(
-                child: Row(
-                  children: [
-                    // --- LEFT COLUMN: HERO METRIC ---
-                    Expanded(
-                      flex: 5,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // --- FIX: INTEGRATED CLOSED BADGE ---
-                          if (isClosed)
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.error.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: theme.colorScheme.error.withOpacity(0.5)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.lock_rounded, size: 10, color: theme.colorScheme.error),
-                                  const SizedBox(width: 4),
-                                  Text('CLOSED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: theme.colorScheme.error, letterSpacing: 1.0)),
-                                ],
-                              ),
-                            ),
-                          
-                          Row(
-                            children: [
-                              Text(
-                                'EFFECTIVE INCOME',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.0,
-                                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(Icons.open_in_new_rounded, size: 10, color: theme.colorScheme.primary.withOpacity(0.5)),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          CurrencyText(
-                            amount: effectiveIncome,
-                            sign: '₹',
-                            amountStyle: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
-                              color: isClosed ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary, 
-                            ),
-                            symbolStyle: TextStyle(
-                              fontSize: 14,
-                              color: (isClosed ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary).withOpacity(0.8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    // --- VERTICAL DIVIDER ---
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: VerticalDivider(
-                        width: 1, 
-                        thickness: 1, 
-                        color: theme.dividerColor.withOpacity(0.5),
-                      ),
-                    ),
 
-                    // --- RIGHT COLUMN: DENSE BREAKDOWN ---
-                    Expanded(
-                      flex: 6,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildMiniRow('Salary', salaryIncome, Icons.work_outline_rounded, theme.colorScheme.primary, theme),
-                          const SizedBox(height: 8),
-                          _buildMiniRow('Extra', extraIncome, Icons.add_card_rounded, Colors.blueAccent.shade400, theme),
-                          const SizedBox(height: 8),
-                          _buildMiniRow('Deductions', deductions, Icons.remove_circle_outline_rounded, theme.colorScheme.error, theme, isDeduction: true),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+      // SWIPE LEFT (CLOSE & DELETE) - Matches BoxySlidableCard endActionPane
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.50, 
+        children: [
+          CustomSlidableAction(
+            onPressed: (_) => onClose(),
+            backgroundColor: Colors.transparent,
+            foregroundColor: theme.colorScheme.onTertiaryContainer,
+            padding: EdgeInsets.zero,
+            child: Container(
+              margin: const EdgeInsets.only(left: DesignTokens.spacingSm),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.tertiaryContainer,
+                borderRadius: activeRadius, 
+                border: Border.all(color: theme.colorScheme.tertiary.withOpacity(0.3), width: 1.2),
+              ),
+              alignment: Alignment.center,
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.lock_rounded),
+                  SizedBox(height: 4),
+                  Text('Close', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  // --- FIX: MARGIN PADDING TO MATCH BOXY SLIDABLE CARD ---
-  Widget _buildBoxyAction({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return CustomSlidableAction(
-      onPressed: (_) => onTap(),
-      backgroundColor: Colors.transparent,
-      padding: EdgeInsets.zero, 
-      child: Container(
-        margin: const EdgeInsets.only(left: 8), 
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(16), 
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(height: 6),
-            Text(
-              label, 
-              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5)
+          CustomSlidableAction(
+            onPressed: (_) => onDelete(),
+            backgroundColor: Colors.transparent,
+            foregroundColor: theme.colorScheme.onErrorContainer,
+            padding: EdgeInsets.zero,
+            child: Container(
+              margin: const EdgeInsets.only(left: DesignTokens.spacingSm),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer,
+                borderRadius: activeRadius, 
+                border: Border.all(color: theme.colorScheme.error.withOpacity(0.3), width: 1.2),
+              ),
+              alignment: Alignment.center,
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.delete_outline_rounded),
+                  SizedBox(height: 4),
+                  Text('Delete', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
             ),
-          ],
+          ),
+        ],
+      ),
+
+      // CARD DESIGN - Exactly matches BoxySlidableCard
+      child: Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        shape: RoundedRectangleBorder(
+          borderRadius: activeRadius,
+          side: BorderSide(
+            color: theme.dividerColor.withOpacity(0.6), 
+            width: 1.2
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: activeRadius,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: IntrinsicHeight(
+              child: Row(
+                children: [
+                  // --- LEFT COLUMN: HERO METRIC ---
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (isClosed)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.error.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: theme.colorScheme.error.withOpacity(0.5)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.lock_rounded, size: 10, color: theme.colorScheme.error),
+                                const SizedBox(width: 4),
+                                Text('CLOSED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: theme.colorScheme.error, letterSpacing: 1.0)),
+                              ],
+                            ),
+                          ),
+                        
+                        Row(
+                          children: [
+                            Text(
+                              'EFFECTIVE INCOME',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.0,
+                                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.open_in_new_rounded, size: 10, color: theme.colorScheme.primary.withOpacity(0.5)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        CurrencyText(
+                          amount: effectiveIncome,
+                          sign: '₹',
+                          amountStyle: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                            color: isClosed ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary, 
+                          ),
+                          symbolStyle: TextStyle(
+                            fontSize: 14,
+                            color: (isClosed ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary).withOpacity(0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // --- VERTICAL DIVIDER ---
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: VerticalDivider(
+                      width: 1, 
+                      thickness: 1, 
+                      color: theme.dividerColor.withOpacity(0.5),
+                    ),
+                  ),
+
+                  // --- RIGHT COLUMN: DENSE BREAKDOWN ---
+                  Expanded(
+                    flex: 6,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildMiniRow('Salary', salaryIncome, Icons.work_outline_rounded, theme.colorScheme.primary, theme),
+                        const SizedBox(height: 8),
+                        _buildMiniRow('Extra', extraIncome, Icons.add_card_rounded, Colors.blueAccent.shade400, theme),
+                        const SizedBox(height: 8),
+                        _buildMiniRow('Deductions', deductions, Icons.remove_circle_outline_rounded, theme.colorScheme.error, theme, isDeduction: true),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

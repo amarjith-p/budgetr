@@ -18,7 +18,6 @@ final accountTransactionsProvider = StreamProvider.family<List<TransactionWithDe
   return ref.watch(transactionServiceProvider).watchTransactionsForAccount(accountId);
 });
 
-// --- NEW: Global Transactions Provider for Records Tab ---
 final allTransactionsProvider = StreamProvider.autoDispose<List<TransactionWithDetails>>((ref) {
   final service = ref.watch(transactionServiceProvider);
   return service.watchAllTransactions(); 
@@ -42,6 +41,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     String? categoryId,
     String? subCategory,
     int? bucketId,
+    String? bucketName, // <-- RULE 7
     String? notes,
     bool isSpillover = false, 
     bool isSettlementVerified = false, 
@@ -53,13 +53,15 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
         await _service.logTransaction(
           type: type, amount: amount, date: date, accountId: accountId,
           toAccountId: toAccountId, categoryId: categoryId, subCategory: subCategory,
-          bucketId: bucketId, notes: notes, isSpillover: isSpillover, isSettlementVerified: isSettlementVerified,
+          bucketId: bucketId, bucketName: bucketName, notes: notes, 
+          isSpillover: isSpillover, isSettlementVerified: isSettlementVerified,
         );
       } else {
         await _service.updateTransaction(
           id: existingId, type: type, amount: amount, date: date, accountId: accountId,
           toAccountId: toAccountId, categoryId: categoryId, subCategory: subCategory,
-          bucketId: bucketId, notes: notes, isSpillover: isSpillover, isSettlementVerified: isSettlementVerified,
+          bucketId: bucketId, bucketName: bucketName, notes: notes, 
+          isSpillover: isSpillover, isSettlementVerified: isSettlementVerified,
         );
       }
     });
@@ -71,7 +73,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _service.deleteTransaction(id));
   }
-  
+
   Future<bool> splitTransaction({
     required String originalTxId,
     required double splitAmount,
@@ -82,6 +84,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     String? categoryId,
     String? subCategory,
     int? bucketId,
+    String? bucketName, // <-- RULE 7
     String? notes,
     bool isSpillover = false, 
     bool isSettlementVerified = false,
@@ -92,7 +95,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
       await _service.splitTransaction(
         originalTxId: originalTxId, splitAmount: splitAmount, type: type, date: date,
         accountId: accountId, toAccountId: toAccountId, categoryId: categoryId, 
-        subCategory: subCategory, bucketId: bucketId, notes: notes, 
+        subCategory: subCategory, bucketId: bucketId, bucketName: bucketName, notes: notes, 
         isSpillover: isSpillover, isSettlementVerified: isSettlementVerified
       );
     });

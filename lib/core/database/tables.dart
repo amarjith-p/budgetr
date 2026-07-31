@@ -42,19 +42,21 @@ class Accounts extends Table {
 @DataClassName('TransactionRecord')
 class Transactions extends Table {
   TextColumn get id => text()();
-  TextColumn get type => text()(); 
+  TextColumn get type => text()();
   RealColumn get amount => real()();
   DateTimeColumn get date => dateTime()();
-  TextColumn get accountId => text()(); 
-  TextColumn get toAccountId => text().nullable()(); 
-  TextColumn get categoryId => text().nullable()(); 
+  TextColumn get accountId => text()();
+  TextColumn get toAccountId => text().nullable()();
+  TextColumn get categoryId => text().nullable()();
   TextColumn get subCategory => text().nullable()();
-  IntColumn get bucketId => integer().nullable()(); 
+  IntColumn get bucketId => integer().nullable()();
   TextColumn get notes => text().nullable()();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   
-  BoolColumn get isSpillover => boolean().withDefault(const Constant(false))(); 
-  BoolColumn get isSettlementVerified => boolean().withDefault(const Constant(false))(); 
+  BoolColumn get isSpillover => boolean().withDefault(const Constant(false))();
+  BoolColumn get isSettlementVerified => boolean().withDefault(const Constant(false))();
+
+  // --- RULE 7: FROZEN HISTORICAL BUCKET NAME ---
+  TextColumn get bucketName => text().nullable()(); 
 
   @override
   Set<Column> get primaryKey => {id};
@@ -76,6 +78,28 @@ class MonthlyBudgets extends Table {
   RealColumn get closedRemaining => real().nullable()();
   
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+@DataClassName('ClosedBudgetSnapshot')
+class ClosedBudgetSnapshots extends Table {
+  TextColumn get id => text()();
+  TextColumn get budgetId => text()(); 
+  
+  RealColumn get salaryIncome => real()();
+  RealColumn get extraIncome => real()();
+  RealColumn get deductions => real()();
+  RealColumn get effectiveIncome => real()();
+  
+  RealColumn get totalSpent => real()();
+  RealColumn get totalOutOfBucket => real()();
+  RealColumn get totalRemaining => real()();
+  RealColumn get budgetedRemaining => real()(); 
+  
+  TextColumn get bucketDetailsJson => text()(); 
+  
+  DateTimeColumn get closedAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
   Set<Column> get primaryKey => {id};

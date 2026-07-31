@@ -17,9 +17,8 @@ part 'app_database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
-  // --- VERSION BUMP TO 6 ---
   @override
-  int get schemaVersion => 9; 
+  int get schemaVersion => 10; 
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -32,10 +31,13 @@ class AppDatabase extends _$AppDatabase {
       if (from < 7) await m.addColumn(monthlyBudgets, monthlyBudgets.bucketsSnapshot);
       if (from < 8) await m.addColumn(monthlyBudgets, monthlyBudgets.isClosed);
       if (from < 9) {
-        // --- NEW: MIGRATION FOR FROZEN CLOSED MATH ---
         await m.addColumn(monthlyBudgets, monthlyBudgets.closedTotalSpent);
         await m.addColumn(monthlyBudgets, monthlyBudgets.closedOutOfBucket);
         await m.addColumn(monthlyBudgets, monthlyBudgets.closedRemaining);
+      }
+      if (from < 10) {
+        // --- RULE 7: MIGRATION FOR FROZEN BUCKET NAME ---
+        await m.addColumn(transactions, transactions.bucketName);
       }
     },
   );

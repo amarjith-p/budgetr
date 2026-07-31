@@ -1441,18 +1441,6 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-    defaultValue: currentDateAndTime,
-  );
   static const VerificationMeta _isSpilloverMeta = const VerificationMeta(
     'isSpillover',
   );
@@ -1482,6 +1470,17 @@ class $TransactionsTable extends Transactions
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _bucketNameMeta = const VerificationMeta(
+    'bucketName',
+  );
+  @override
+  late final GeneratedColumn<String> bucketName = GeneratedColumn<String>(
+    'bucket_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1494,9 +1493,9 @@ class $TransactionsTable extends Transactions
     subCategory,
     bucketId,
     notes,
-    createdAt,
     isSpillover,
     isSettlementVerified,
+    bucketName,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1583,12 +1582,6 @@ class $TransactionsTable extends Transactions
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
-    if (data.containsKey('created_at')) {
-      context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
-      );
-    }
     if (data.containsKey('is_spillover')) {
       context.handle(
         _isSpilloverMeta,
@@ -1605,6 +1598,12 @@ class $TransactionsTable extends Transactions
           data['is_settlement_verified']!,
           _isSettlementVerifiedMeta,
         ),
+      );
+    }
+    if (data.containsKey('bucket_name')) {
+      context.handle(
+        _bucketNameMeta,
+        bucketName.isAcceptableOrUnknown(data['bucket_name']!, _bucketNameMeta),
       );
     }
     return context;
@@ -1656,10 +1655,6 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
-      createdAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
-      )!,
       isSpillover: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_spillover'],
@@ -1668,6 +1663,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.bool,
         data['${effectivePrefix}is_settlement_verified'],
       )!,
+      bucketName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bucket_name'],
+      ),
     );
   }
 
@@ -1689,9 +1688,9 @@ class TransactionRecord extends DataClass
   final String? subCategory;
   final int? bucketId;
   final String? notes;
-  final DateTime createdAt;
   final bool isSpillover;
   final bool isSettlementVerified;
+  final String? bucketName;
   const TransactionRecord({
     required this.id,
     required this.type,
@@ -1703,9 +1702,9 @@ class TransactionRecord extends DataClass
     this.subCategory,
     this.bucketId,
     this.notes,
-    required this.createdAt,
     required this.isSpillover,
     required this.isSettlementVerified,
+    this.bucketName,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1730,9 +1729,11 @@ class TransactionRecord extends DataClass
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
-    map['created_at'] = Variable<DateTime>(createdAt);
     map['is_spillover'] = Variable<bool>(isSpillover);
     map['is_settlement_verified'] = Variable<bool>(isSettlementVerified);
+    if (!nullToAbsent || bucketName != null) {
+      map['bucket_name'] = Variable<String>(bucketName);
+    }
     return map;
   }
 
@@ -1758,9 +1759,11 @@ class TransactionRecord extends DataClass
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
-      createdAt: Value(createdAt),
       isSpillover: Value(isSpillover),
       isSettlementVerified: Value(isSettlementVerified),
+      bucketName: bucketName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bucketName),
     );
   }
 
@@ -1780,11 +1783,11 @@ class TransactionRecord extends DataClass
       subCategory: serializer.fromJson<String?>(json['subCategory']),
       bucketId: serializer.fromJson<int?>(json['bucketId']),
       notes: serializer.fromJson<String?>(json['notes']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       isSpillover: serializer.fromJson<bool>(json['isSpillover']),
       isSettlementVerified: serializer.fromJson<bool>(
         json['isSettlementVerified'],
       ),
+      bucketName: serializer.fromJson<String?>(json['bucketName']),
     );
   }
   @override
@@ -1801,9 +1804,9 @@ class TransactionRecord extends DataClass
       'subCategory': serializer.toJson<String?>(subCategory),
       'bucketId': serializer.toJson<int?>(bucketId),
       'notes': serializer.toJson<String?>(notes),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
       'isSpillover': serializer.toJson<bool>(isSpillover),
       'isSettlementVerified': serializer.toJson<bool>(isSettlementVerified),
+      'bucketName': serializer.toJson<String?>(bucketName),
     };
   }
 
@@ -1818,9 +1821,9 @@ class TransactionRecord extends DataClass
     Value<String?> subCategory = const Value.absent(),
     Value<int?> bucketId = const Value.absent(),
     Value<String?> notes = const Value.absent(),
-    DateTime? createdAt,
     bool? isSpillover,
     bool? isSettlementVerified,
+    Value<String?> bucketName = const Value.absent(),
   }) => TransactionRecord(
     id: id ?? this.id,
     type: type ?? this.type,
@@ -1832,9 +1835,9 @@ class TransactionRecord extends DataClass
     subCategory: subCategory.present ? subCategory.value : this.subCategory,
     bucketId: bucketId.present ? bucketId.value : this.bucketId,
     notes: notes.present ? notes.value : this.notes,
-    createdAt: createdAt ?? this.createdAt,
     isSpillover: isSpillover ?? this.isSpillover,
     isSettlementVerified: isSettlementVerified ?? this.isSettlementVerified,
+    bucketName: bucketName.present ? bucketName.value : this.bucketName,
   );
   TransactionRecord copyWithCompanion(TransactionsCompanion data) {
     return TransactionRecord(
@@ -1854,13 +1857,15 @@ class TransactionRecord extends DataClass
           : this.subCategory,
       bucketId: data.bucketId.present ? data.bucketId.value : this.bucketId,
       notes: data.notes.present ? data.notes.value : this.notes,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       isSpillover: data.isSpillover.present
           ? data.isSpillover.value
           : this.isSpillover,
       isSettlementVerified: data.isSettlementVerified.present
           ? data.isSettlementVerified.value
           : this.isSettlementVerified,
+      bucketName: data.bucketName.present
+          ? data.bucketName.value
+          : this.bucketName,
     );
   }
 
@@ -1877,9 +1882,9 @@ class TransactionRecord extends DataClass
           ..write('subCategory: $subCategory, ')
           ..write('bucketId: $bucketId, ')
           ..write('notes: $notes, ')
-          ..write('createdAt: $createdAt, ')
           ..write('isSpillover: $isSpillover, ')
-          ..write('isSettlementVerified: $isSettlementVerified')
+          ..write('isSettlementVerified: $isSettlementVerified, ')
+          ..write('bucketName: $bucketName')
           ..write(')'))
         .toString();
   }
@@ -1896,9 +1901,9 @@ class TransactionRecord extends DataClass
     subCategory,
     bucketId,
     notes,
-    createdAt,
     isSpillover,
     isSettlementVerified,
+    bucketName,
   );
   @override
   bool operator ==(Object other) =>
@@ -1914,9 +1919,9 @@ class TransactionRecord extends DataClass
           other.subCategory == this.subCategory &&
           other.bucketId == this.bucketId &&
           other.notes == this.notes &&
-          other.createdAt == this.createdAt &&
           other.isSpillover == this.isSpillover &&
-          other.isSettlementVerified == this.isSettlementVerified);
+          other.isSettlementVerified == this.isSettlementVerified &&
+          other.bucketName == this.bucketName);
 }
 
 class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
@@ -1930,9 +1935,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
   final Value<String?> subCategory;
   final Value<int?> bucketId;
   final Value<String?> notes;
-  final Value<DateTime> createdAt;
   final Value<bool> isSpillover;
   final Value<bool> isSettlementVerified;
+  final Value<String?> bucketName;
   final Value<int> rowid;
   const TransactionsCompanion({
     this.id = const Value.absent(),
@@ -1945,9 +1950,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     this.subCategory = const Value.absent(),
     this.bucketId = const Value.absent(),
     this.notes = const Value.absent(),
-    this.createdAt = const Value.absent(),
     this.isSpillover = const Value.absent(),
     this.isSettlementVerified = const Value.absent(),
+    this.bucketName = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TransactionsCompanion.insert({
@@ -1961,9 +1966,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     this.subCategory = const Value.absent(),
     this.bucketId = const Value.absent(),
     this.notes = const Value.absent(),
-    this.createdAt = const Value.absent(),
     this.isSpillover = const Value.absent(),
     this.isSettlementVerified = const Value.absent(),
+    this.bucketName = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        type = Value(type),
@@ -1981,9 +1986,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Expression<String>? subCategory,
     Expression<int>? bucketId,
     Expression<String>? notes,
-    Expression<DateTime>? createdAt,
     Expression<bool>? isSpillover,
     Expression<bool>? isSettlementVerified,
+    Expression<String>? bucketName,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1997,10 +2002,10 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       if (subCategory != null) 'sub_category': subCategory,
       if (bucketId != null) 'bucket_id': bucketId,
       if (notes != null) 'notes': notes,
-      if (createdAt != null) 'created_at': createdAt,
       if (isSpillover != null) 'is_spillover': isSpillover,
       if (isSettlementVerified != null)
         'is_settlement_verified': isSettlementVerified,
+      if (bucketName != null) 'bucket_name': bucketName,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2016,9 +2021,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Value<String?>? subCategory,
     Value<int?>? bucketId,
     Value<String?>? notes,
-    Value<DateTime>? createdAt,
     Value<bool>? isSpillover,
     Value<bool>? isSettlementVerified,
+    Value<String?>? bucketName,
     Value<int>? rowid,
   }) {
     return TransactionsCompanion(
@@ -2032,9 +2037,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       subCategory: subCategory ?? this.subCategory,
       bucketId: bucketId ?? this.bucketId,
       notes: notes ?? this.notes,
-      createdAt: createdAt ?? this.createdAt,
       isSpillover: isSpillover ?? this.isSpillover,
       isSettlementVerified: isSettlementVerified ?? this.isSettlementVerified,
+      bucketName: bucketName ?? this.bucketName,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2072,9 +2077,6 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
     if (isSpillover.present) {
       map['is_spillover'] = Variable<bool>(isSpillover.value);
     }
@@ -2082,6 +2084,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       map['is_settlement_verified'] = Variable<bool>(
         isSettlementVerified.value,
       );
+    }
+    if (bucketName.present) {
+      map['bucket_name'] = Variable<String>(bucketName.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -2102,9 +2107,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
           ..write('subCategory: $subCategory, ')
           ..write('bucketId: $bucketId, ')
           ..write('notes: $notes, ')
-          ..write('createdAt: $createdAt, ')
           ..write('isSpillover: $isSpillover, ')
           ..write('isSettlementVerified: $isSettlementVerified, ')
+          ..write('bucketName: $bucketName, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3597,9 +3602,9 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<String?> subCategory,
       Value<int?> bucketId,
       Value<String?> notes,
-      Value<DateTime> createdAt,
       Value<bool> isSpillover,
       Value<bool> isSettlementVerified,
+      Value<String?> bucketName,
       Value<int> rowid,
     });
 typedef $$TransactionsTableUpdateCompanionBuilder =
@@ -3614,9 +3619,9 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String?> subCategory,
       Value<int?> bucketId,
       Value<String?> notes,
-      Value<DateTime> createdAt,
       Value<bool> isSpillover,
       Value<bool> isSettlementVerified,
+      Value<String?> bucketName,
       Value<int> rowid,
     });
 
@@ -3679,11 +3684,6 @@ class $$TransactionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<bool> get isSpillover => $composableBuilder(
     column: $table.isSpillover,
     builder: (column) => ColumnFilters(column),
@@ -3691,6 +3691,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<bool> get isSettlementVerified => $composableBuilder(
     column: $table.isSettlementVerified,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bucketName => $composableBuilder(
+    column: $table.bucketName,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3754,11 +3759,6 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<bool> get isSpillover => $composableBuilder(
     column: $table.isSpillover,
     builder: (column) => ColumnOrderings(column),
@@ -3766,6 +3766,11 @@ class $$TransactionsTableOrderingComposer
 
   ColumnOrderings<bool> get isSettlementVerified => $composableBuilder(
     column: $table.isSettlementVerified,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bucketName => $composableBuilder(
+    column: $table.bucketName,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -3815,9 +3820,6 @@ class $$TransactionsTableAnnotationComposer
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
   GeneratedColumn<bool> get isSpillover => $composableBuilder(
     column: $table.isSpillover,
     builder: (column) => column,
@@ -3825,6 +3827,11 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<bool> get isSettlementVerified => $composableBuilder(
     column: $table.isSettlementVerified,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bucketName => $composableBuilder(
+    column: $table.bucketName,
     builder: (column) => column,
   );
 }
@@ -3874,9 +3881,9 @@ class $$TransactionsTableTableManager
                 Value<String?> subCategory = const Value.absent(),
                 Value<int?> bucketId = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
                 Value<bool> isSpillover = const Value.absent(),
                 Value<bool> isSettlementVerified = const Value.absent(),
+                Value<String?> bucketName = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion(
                 id: id,
@@ -3889,9 +3896,9 @@ class $$TransactionsTableTableManager
                 subCategory: subCategory,
                 bucketId: bucketId,
                 notes: notes,
-                createdAt: createdAt,
                 isSpillover: isSpillover,
                 isSettlementVerified: isSettlementVerified,
+                bucketName: bucketName,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3906,9 +3913,9 @@ class $$TransactionsTableTableManager
                 Value<String?> subCategory = const Value.absent(),
                 Value<int?> bucketId = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
                 Value<bool> isSpillover = const Value.absent(),
                 Value<bool> isSettlementVerified = const Value.absent(),
+                Value<String?> bucketName = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion.insert(
                 id: id,
@@ -3921,9 +3928,9 @@ class $$TransactionsTableTableManager
                 subCategory: subCategory,
                 bucketId: bucketId,
                 notes: notes,
-                createdAt: createdAt,
                 isSpillover: isSpillover,
                 isSettlementVerified: isSettlementVerified,
+                bucketName: bucketName,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -54,11 +54,11 @@ class TransactionCard extends ConsumerWidget {
     Color amountColor = TransactionColors.getTypeColor(tx.type, theme);
     String sign;
     if (isTransfer) {
-      sign = isMoneyLeaving ? '-₹' : '+₹';
+      sign = isMoneyLeaving ? '- ' : '+ ';
     } else if (isExpense) {
-      sign = '-₹';
+      sign = '- ';
     } else {
-      sign = '+₹';
+      sign = '+ ';
     }
 
     IconData leadingIcon = Icons.sync_alt_rounded;
@@ -114,12 +114,12 @@ class TransactionCard extends ConsumerWidget {
     Color? cardBgColor; 
     if (tx.isSpillover) {
       cardBgColor = theme.colorScheme.primaryContainer.withOpacity(isDark ? 0.2 : 0.4);
-      subTitle = subTitle.isEmpty ? '→ Carry Forwarded' : '$subTitle • Carry Forwarded';
+      subTitle = subTitle.isEmpty ? '  Carry Forwarded' : '$subTitle • Carry Forwarded';
     } else if (isSpilloverEligible && !tx.isSettlementVerified) {
       cardBgColor = Colors.orangeAccent.withOpacity(isDark ? 0.1 : 0.15);
-      subTitle = subTitle.isEmpty ? '⚠️ Verify Settlement' : '$subTitle • ⚠️ Verify';
+      subTitle = subTitle.isEmpty ? '  Verify Settlement' : '$subTitle • Verify';
     } else if (isSpilloverEligible && tx.isSettlementVerified) {
-      subTitle = subTitle.isEmpty ? '✓ Settled' : '$subTitle • ✓ Settled';
+      subTitle = subTitle.isEmpty ? '  Settled' : '$subTitle • Settled';
     }
 
     final dayStr = tx.date.day.toString().padLeft(2, '0');
@@ -127,7 +127,7 @@ class TransactionCard extends ConsumerWidget {
     final fullMonthStr = DateTimeConstants.fullMonths[tx.date.month - 1];
     final weekdayStr = DateTimeConstants.shortDays[tx.date.weekday - 1];
     final timeStr = '${tx.date.hour.toString().padLeft(2, '0')}:${tx.date.minute.toString().padLeft(2, '0')}';
-
+    
     final compactDate = '$dayStr/$shortMonthStr';
     final expandedDate = '$dayStr $fullMonthStr ${tx.date.year}, $weekdayStr : $timeStr';
 
@@ -248,12 +248,13 @@ class TransactionCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (data.bucket != null) ...[
+                    if (tx.bucketId != null && tx.bucketId != -1) ...[
                       Row(
                         children: [
                           Icon(Icons.donut_small_rounded, size: 14, color: theme.colorScheme.primary),
                           const SizedBox(width: 6),
-                          Text('Bucket: ${data.bucket!.name}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          // EXACT DISPLAY PRESERVATION
+                          Text('Bucket: ${tx.bucketName ?? data.bucket?.name ?? ""}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -338,7 +339,6 @@ class TransactionCard extends ConsumerWidget {
                         )
                       ]
                     ],
-
                   ],
                 ),
               ),

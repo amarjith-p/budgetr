@@ -79,7 +79,8 @@ class BudgetDashboardView extends ConsumerWidget {
               final confirm = await ConfirmationBottomSheet.show(
                 context,
                 title: 'Delete Budget?',
-                description: 'WARNING: Existing transactions will NOT be deleted, but they will instantly lose their bucket assignments and become "Out of Bucket".',
+                // --- RULE 7: REWRITTEN TO CONFIRM HISTORICAL SAFETY ---
+                description: 'This budget will be permanently removed. Your logged transactions will remain entirely safe and mathematically intact with their historical bucket assignments.',
                 confirmText: 'DELETE BUDGET',
                 cancelText: 'CANCEL',
                 isDestructive: true,
