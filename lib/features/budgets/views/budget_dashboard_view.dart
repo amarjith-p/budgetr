@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/design_tokens.dart';
@@ -9,9 +10,11 @@ import '../../../core/components/modern_boxy_input.dart';
 import '../../../core/components/modern_boxy_button.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../../transactions/providers/transaction_provider.dart';
+
 import '../services/budget_service.dart';
 import '../components/budget_summary_card.dart';
 import '../components/budget_progress_card.dart';
+import '../components/close_budget_confirmation_sheet.dart'; // <-- POM COMPONENT IMPORT
 import 'budget_transactions_page.dart';
 import 'monthly_budget_transactions_page.dart';
 
@@ -23,14 +26,9 @@ class BudgetDashboardView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    
-    // --- FIX: Removed the global bucketsStreamProvider entirely ---
-    // We strictly rely on the frozen snapshot for this specific month.
     final transactionsAsync = ref.watch(allTransactionsProvider);
-    
     final effectiveIncome = (budget.salaryIncome + budget.extraIncome) - budget.deductions;
 
-    // --- FIX: Decode the historical snapshot ---
     final List<BudgetBucket> snapshotBuckets = [];
     if (budget.bucketsSnapshot != null) {
       try {
@@ -40,11 +38,11 @@ class BudgetDashboardView extends ConsumerWidget {
             id: b['id'] as int,
             name: b['name'] as String,
             percentage: (b['percentage'] as num).toDouble(),
-            createdAt: DateTime.now(), // Dummy date, not used in the UI logic
+            createdAt: DateTime.now(), 
           ));
         }
       } catch (e) {
-        // Fallback for corrupted JSON
+        // Fallback
       }
     }
 
@@ -54,7 +52,6 @@ class BudgetDashboardView extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // --- POM COMPONENT: SUMMARY CARD ---
           BudgetSummaryCard(
             salaryIncome: budget.salaryIncome,
             extraIncome: budget.extraIncome,
@@ -79,7 +76,6 @@ class BudgetDashboardView extends ConsumerWidget {
               final confirm = await ConfirmationBottomSheet.show(
                 context,
                 title: 'Delete Budget?',
-                // --- RULE 7: REWRITTEN TO CONFIRM HISTORICAL SAFETY ---
                 description: 'This budget will be permanently removed. Your logged transactions will remain entirely safe and mathematically intact with their historical bucket assignments.',
                 confirmText: 'DELETE BUDGET',
                 cancelText: 'CANCEL',
@@ -99,38 +95,72 @@ class BudgetDashboardView extends ConsumerWidget {
               final txs = transactionsAsync.asData?.value ?? [];
               final monthlyExpenses = txs.where((data) => data.transaction.type == 'Expense' && data.transaction.date.month == budget.month && data.transaction.date.year == budget.year).toList();
               
-              double totalSpend = 0.0;
+              double totalSpent = 0.0;
               double outOfBucket = 0.0;
+              Map<int, double> bucketSpends = {};
+
               for(var e in monthlyExpenses) {
-                totalSpend += e.transaction.amount;
-                if(e.transaction.bucketId == null || e.transaction.bucketId == -1) {
+                totalSpent += e.transaction.amount;
+                final bId = e.transaction.bucketId;
+                if(bId == null || bId == -1) {
                   outOfBucket += e.transaction.amount;
+                } else {
+                  bucketSpends[bId] = (bucketSpends[bId] ?? 0.0) + e.transaction.amount;
                 }
               }
-              final remaining = effectiveIncome - totalSpend;
               
-              final summaryText = '''
-Income Set: ₹${effectiveIncome.toStringAsFixed(0)}
-Total Spent: ₹${totalSpend.toStringAsFixed(0)}
-Out of Bucket: ₹${outOfBucket.toStringAsFixed(0)}
-Remaining: ₹${remaining.toStringAsFixed(0)}
+              final totalRemaining = effectiveIncome - totalSpent;
+              final budgetedSpends = totalSpent - outOfBucket;
+              final budgetedRemaining = effectiveIncome - budgetedSpends;
 
-Closing this budget is permanent. It will lock these stats for historical view, and future logs for this month will default to "Out of Bucket".
-''';
+              List<Map<String, dynamic>> bucketDetailsList = [];
+              for (var b in snapshotBuckets) {
+                final allocated = effectiveIncome * (b.percentage / 100);
+                final spent = bucketSpends[b.id] ?? 0.0;
+                final remaining = allocated - spent;
+                bucketDetailsList.add({
+                  'name': b.name,
+                  'allocated': allocated,
+                  'spent': spent,
+                  'remaining': remaining,
+                });
+              }
+              final bucketDetailsJson = jsonEncode(bucketDetailsList);
 
-              final confirm = await ConfirmationBottomSheet.show(
-                context,
-                title: 'Lock & Close Budget?',
-                description: summaryText,
-                confirmText: 'LOCK BUDGET',
-                cancelText: 'CANCEL',
-                onConfirm: () {},
+              // --- POM INVOCATION: Use the new globally extracted sheet ---
+              final confirm = await showModalBottomSheet<bool>(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                shape: DesignTokens.bottomSheetShape,
+                builder: (ctx) => CloseBudgetConfirmationSheet(
+                  salaryIncome: budget.salaryIncome,
+                  extraIncome: budget.extraIncome,
+                  deductions: budget.deductions,
+                  effectiveIncome: effectiveIncome,
+                  totalSpent: totalSpent,
+                  outOfBucket: outOfBucket,
+                  totalRemaining: totalRemaining,
+                  budgetedRemaining: budgetedRemaining,
+                  bucketDetails: bucketDetailsList,
+                ),
               );
               
               if (confirm == true) {
                 final db = ref.read(databaseProvider);
                 final budgetService = BudgetService(db);
-                await budgetService.closeBudget(budget.id, totalSpend, outOfBucket, remaining);
+                await budgetService.closeBudget(
+                  budgetId: budget.id,
+                  salaryIncome: budget.salaryIncome,
+                  extraIncome: budget.extraIncome,
+                  deductions: budget.deductions,
+                  effectiveIncome: effectiveIncome,
+                  totalSpent: totalSpent,
+                  outOfBucket: outOfBucket,
+                  totalRemaining: totalRemaining,
+                  budgetedRemaining: budgetedRemaining,
+                  bucketDetailsJson: bucketDetailsJson,
+                );
               }
             },
           ),
@@ -139,7 +169,6 @@ Closing this budget is permanent. It will lock these stats for historical view, 
           Text('Bucket Allocations', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: theme.colorScheme.primary)),
           const SizedBox(height: 16),
 
-          // --- FIX: RENDER STRICTLY FROM THE SNAPSHOT ---
           if (snapshotBuckets.isEmpty)
             Center(
               child: Padding(
@@ -155,11 +184,7 @@ Closing this budget is permanent. It will lock these stats for historical view, 
             Builder(
               builder: (context) {
                 final txs = transactionsAsync.asData?.value ?? [];
-                
-                final monthlyExpenses = txs.where((data) {
-                  final tx = data.transaction;
-                  return tx.type == 'Expense' && tx.date.month == budget.month && tx.date.year == budget.year;
-                }).toList();
+                final monthlyExpenses = txs.where((data) => data.transaction.type == 'Expense' && data.transaction.date.month == budget.month && data.transaction.date.year == budget.year).toList();
 
                 Map<int, double> spentPerBucket = {};
                 for (var txData in monthlyExpenses) {

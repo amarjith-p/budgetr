@@ -2856,6 +2856,751 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
   }
 }
 
+class $ClosedBudgetSnapshotsTable extends ClosedBudgetSnapshots
+    with TableInfo<$ClosedBudgetSnapshotsTable, ClosedBudgetSnapshot> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ClosedBudgetSnapshotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _budgetIdMeta = const VerificationMeta(
+    'budgetId',
+  );
+  @override
+  late final GeneratedColumn<String> budgetId = GeneratedColumn<String>(
+    'budget_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _salaryIncomeMeta = const VerificationMeta(
+    'salaryIncome',
+  );
+  @override
+  late final GeneratedColumn<double> salaryIncome = GeneratedColumn<double>(
+    'salary_income',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _extraIncomeMeta = const VerificationMeta(
+    'extraIncome',
+  );
+  @override
+  late final GeneratedColumn<double> extraIncome = GeneratedColumn<double>(
+    'extra_income',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deductionsMeta = const VerificationMeta(
+    'deductions',
+  );
+  @override
+  late final GeneratedColumn<double> deductions = GeneratedColumn<double>(
+    'deductions',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _effectiveIncomeMeta = const VerificationMeta(
+    'effectiveIncome',
+  );
+  @override
+  late final GeneratedColumn<double> effectiveIncome = GeneratedColumn<double>(
+    'effective_income',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalSpentMeta = const VerificationMeta(
+    'totalSpent',
+  );
+  @override
+  late final GeneratedColumn<double> totalSpent = GeneratedColumn<double>(
+    'total_spent',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalOutOfBucketMeta = const VerificationMeta(
+    'totalOutOfBucket',
+  );
+  @override
+  late final GeneratedColumn<double> totalOutOfBucket = GeneratedColumn<double>(
+    'total_out_of_bucket',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalRemainingMeta = const VerificationMeta(
+    'totalRemaining',
+  );
+  @override
+  late final GeneratedColumn<double> totalRemaining = GeneratedColumn<double>(
+    'total_remaining',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _budgetedRemainingMeta = const VerificationMeta(
+    'budgetedRemaining',
+  );
+  @override
+  late final GeneratedColumn<double> budgetedRemaining =
+      GeneratedColumn<double>(
+        'budgeted_remaining',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _bucketDetailsJsonMeta = const VerificationMeta(
+    'bucketDetailsJson',
+  );
+  @override
+  late final GeneratedColumn<String> bucketDetailsJson =
+      GeneratedColumn<String>(
+        'bucket_details_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _closedAtMeta = const VerificationMeta(
+    'closedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> closedAt = GeneratedColumn<DateTime>(
+    'closed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    budgetId,
+    salaryIncome,
+    extraIncome,
+    deductions,
+    effectiveIncome,
+    totalSpent,
+    totalOutOfBucket,
+    totalRemaining,
+    budgetedRemaining,
+    bucketDetailsJson,
+    closedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'closed_budget_snapshots';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ClosedBudgetSnapshot> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('budget_id')) {
+      context.handle(
+        _budgetIdMeta,
+        budgetId.isAcceptableOrUnknown(data['budget_id']!, _budgetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_budgetIdMeta);
+    }
+    if (data.containsKey('salary_income')) {
+      context.handle(
+        _salaryIncomeMeta,
+        salaryIncome.isAcceptableOrUnknown(
+          data['salary_income']!,
+          _salaryIncomeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_salaryIncomeMeta);
+    }
+    if (data.containsKey('extra_income')) {
+      context.handle(
+        _extraIncomeMeta,
+        extraIncome.isAcceptableOrUnknown(
+          data['extra_income']!,
+          _extraIncomeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_extraIncomeMeta);
+    }
+    if (data.containsKey('deductions')) {
+      context.handle(
+        _deductionsMeta,
+        deductions.isAcceptableOrUnknown(data['deductions']!, _deductionsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deductionsMeta);
+    }
+    if (data.containsKey('effective_income')) {
+      context.handle(
+        _effectiveIncomeMeta,
+        effectiveIncome.isAcceptableOrUnknown(
+          data['effective_income']!,
+          _effectiveIncomeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_effectiveIncomeMeta);
+    }
+    if (data.containsKey('total_spent')) {
+      context.handle(
+        _totalSpentMeta,
+        totalSpent.isAcceptableOrUnknown(data['total_spent']!, _totalSpentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_totalSpentMeta);
+    }
+    if (data.containsKey('total_out_of_bucket')) {
+      context.handle(
+        _totalOutOfBucketMeta,
+        totalOutOfBucket.isAcceptableOrUnknown(
+          data['total_out_of_bucket']!,
+          _totalOutOfBucketMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_totalOutOfBucketMeta);
+    }
+    if (data.containsKey('total_remaining')) {
+      context.handle(
+        _totalRemainingMeta,
+        totalRemaining.isAcceptableOrUnknown(
+          data['total_remaining']!,
+          _totalRemainingMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_totalRemainingMeta);
+    }
+    if (data.containsKey('budgeted_remaining')) {
+      context.handle(
+        _budgetedRemainingMeta,
+        budgetedRemaining.isAcceptableOrUnknown(
+          data['budgeted_remaining']!,
+          _budgetedRemainingMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_budgetedRemainingMeta);
+    }
+    if (data.containsKey('bucket_details_json')) {
+      context.handle(
+        _bucketDetailsJsonMeta,
+        bucketDetailsJson.isAcceptableOrUnknown(
+          data['bucket_details_json']!,
+          _bucketDetailsJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_bucketDetailsJsonMeta);
+    }
+    if (data.containsKey('closed_at')) {
+      context.handle(
+        _closedAtMeta,
+        closedAt.isAcceptableOrUnknown(data['closed_at']!, _closedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ClosedBudgetSnapshot map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ClosedBudgetSnapshot(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      budgetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}budget_id'],
+      )!,
+      salaryIncome: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}salary_income'],
+      )!,
+      extraIncome: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}extra_income'],
+      )!,
+      deductions: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}deductions'],
+      )!,
+      effectiveIncome: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}effective_income'],
+      )!,
+      totalSpent: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_spent'],
+      )!,
+      totalOutOfBucket: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_out_of_bucket'],
+      )!,
+      totalRemaining: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_remaining'],
+      )!,
+      budgetedRemaining: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}budgeted_remaining'],
+      )!,
+      bucketDetailsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bucket_details_json'],
+      )!,
+      closedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}closed_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ClosedBudgetSnapshotsTable createAlias(String alias) {
+    return $ClosedBudgetSnapshotsTable(attachedDatabase, alias);
+  }
+}
+
+class ClosedBudgetSnapshot extends DataClass
+    implements Insertable<ClosedBudgetSnapshot> {
+  final String id;
+  final String budgetId;
+  final double salaryIncome;
+  final double extraIncome;
+  final double deductions;
+  final double effectiveIncome;
+  final double totalSpent;
+  final double totalOutOfBucket;
+  final double totalRemaining;
+  final double budgetedRemaining;
+  final String bucketDetailsJson;
+  final DateTime closedAt;
+  const ClosedBudgetSnapshot({
+    required this.id,
+    required this.budgetId,
+    required this.salaryIncome,
+    required this.extraIncome,
+    required this.deductions,
+    required this.effectiveIncome,
+    required this.totalSpent,
+    required this.totalOutOfBucket,
+    required this.totalRemaining,
+    required this.budgetedRemaining,
+    required this.bucketDetailsJson,
+    required this.closedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['budget_id'] = Variable<String>(budgetId);
+    map['salary_income'] = Variable<double>(salaryIncome);
+    map['extra_income'] = Variable<double>(extraIncome);
+    map['deductions'] = Variable<double>(deductions);
+    map['effective_income'] = Variable<double>(effectiveIncome);
+    map['total_spent'] = Variable<double>(totalSpent);
+    map['total_out_of_bucket'] = Variable<double>(totalOutOfBucket);
+    map['total_remaining'] = Variable<double>(totalRemaining);
+    map['budgeted_remaining'] = Variable<double>(budgetedRemaining);
+    map['bucket_details_json'] = Variable<String>(bucketDetailsJson);
+    map['closed_at'] = Variable<DateTime>(closedAt);
+    return map;
+  }
+
+  ClosedBudgetSnapshotsCompanion toCompanion(bool nullToAbsent) {
+    return ClosedBudgetSnapshotsCompanion(
+      id: Value(id),
+      budgetId: Value(budgetId),
+      salaryIncome: Value(salaryIncome),
+      extraIncome: Value(extraIncome),
+      deductions: Value(deductions),
+      effectiveIncome: Value(effectiveIncome),
+      totalSpent: Value(totalSpent),
+      totalOutOfBucket: Value(totalOutOfBucket),
+      totalRemaining: Value(totalRemaining),
+      budgetedRemaining: Value(budgetedRemaining),
+      bucketDetailsJson: Value(bucketDetailsJson),
+      closedAt: Value(closedAt),
+    );
+  }
+
+  factory ClosedBudgetSnapshot.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ClosedBudgetSnapshot(
+      id: serializer.fromJson<String>(json['id']),
+      budgetId: serializer.fromJson<String>(json['budgetId']),
+      salaryIncome: serializer.fromJson<double>(json['salaryIncome']),
+      extraIncome: serializer.fromJson<double>(json['extraIncome']),
+      deductions: serializer.fromJson<double>(json['deductions']),
+      effectiveIncome: serializer.fromJson<double>(json['effectiveIncome']),
+      totalSpent: serializer.fromJson<double>(json['totalSpent']),
+      totalOutOfBucket: serializer.fromJson<double>(json['totalOutOfBucket']),
+      totalRemaining: serializer.fromJson<double>(json['totalRemaining']),
+      budgetedRemaining: serializer.fromJson<double>(json['budgetedRemaining']),
+      bucketDetailsJson: serializer.fromJson<String>(json['bucketDetailsJson']),
+      closedAt: serializer.fromJson<DateTime>(json['closedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'budgetId': serializer.toJson<String>(budgetId),
+      'salaryIncome': serializer.toJson<double>(salaryIncome),
+      'extraIncome': serializer.toJson<double>(extraIncome),
+      'deductions': serializer.toJson<double>(deductions),
+      'effectiveIncome': serializer.toJson<double>(effectiveIncome),
+      'totalSpent': serializer.toJson<double>(totalSpent),
+      'totalOutOfBucket': serializer.toJson<double>(totalOutOfBucket),
+      'totalRemaining': serializer.toJson<double>(totalRemaining),
+      'budgetedRemaining': serializer.toJson<double>(budgetedRemaining),
+      'bucketDetailsJson': serializer.toJson<String>(bucketDetailsJson),
+      'closedAt': serializer.toJson<DateTime>(closedAt),
+    };
+  }
+
+  ClosedBudgetSnapshot copyWith({
+    String? id,
+    String? budgetId,
+    double? salaryIncome,
+    double? extraIncome,
+    double? deductions,
+    double? effectiveIncome,
+    double? totalSpent,
+    double? totalOutOfBucket,
+    double? totalRemaining,
+    double? budgetedRemaining,
+    String? bucketDetailsJson,
+    DateTime? closedAt,
+  }) => ClosedBudgetSnapshot(
+    id: id ?? this.id,
+    budgetId: budgetId ?? this.budgetId,
+    salaryIncome: salaryIncome ?? this.salaryIncome,
+    extraIncome: extraIncome ?? this.extraIncome,
+    deductions: deductions ?? this.deductions,
+    effectiveIncome: effectiveIncome ?? this.effectiveIncome,
+    totalSpent: totalSpent ?? this.totalSpent,
+    totalOutOfBucket: totalOutOfBucket ?? this.totalOutOfBucket,
+    totalRemaining: totalRemaining ?? this.totalRemaining,
+    budgetedRemaining: budgetedRemaining ?? this.budgetedRemaining,
+    bucketDetailsJson: bucketDetailsJson ?? this.bucketDetailsJson,
+    closedAt: closedAt ?? this.closedAt,
+  );
+  ClosedBudgetSnapshot copyWithCompanion(ClosedBudgetSnapshotsCompanion data) {
+    return ClosedBudgetSnapshot(
+      id: data.id.present ? data.id.value : this.id,
+      budgetId: data.budgetId.present ? data.budgetId.value : this.budgetId,
+      salaryIncome: data.salaryIncome.present
+          ? data.salaryIncome.value
+          : this.salaryIncome,
+      extraIncome: data.extraIncome.present
+          ? data.extraIncome.value
+          : this.extraIncome,
+      deductions: data.deductions.present
+          ? data.deductions.value
+          : this.deductions,
+      effectiveIncome: data.effectiveIncome.present
+          ? data.effectiveIncome.value
+          : this.effectiveIncome,
+      totalSpent: data.totalSpent.present
+          ? data.totalSpent.value
+          : this.totalSpent,
+      totalOutOfBucket: data.totalOutOfBucket.present
+          ? data.totalOutOfBucket.value
+          : this.totalOutOfBucket,
+      totalRemaining: data.totalRemaining.present
+          ? data.totalRemaining.value
+          : this.totalRemaining,
+      budgetedRemaining: data.budgetedRemaining.present
+          ? data.budgetedRemaining.value
+          : this.budgetedRemaining,
+      bucketDetailsJson: data.bucketDetailsJson.present
+          ? data.bucketDetailsJson.value
+          : this.bucketDetailsJson,
+      closedAt: data.closedAt.present ? data.closedAt.value : this.closedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ClosedBudgetSnapshot(')
+          ..write('id: $id, ')
+          ..write('budgetId: $budgetId, ')
+          ..write('salaryIncome: $salaryIncome, ')
+          ..write('extraIncome: $extraIncome, ')
+          ..write('deductions: $deductions, ')
+          ..write('effectiveIncome: $effectiveIncome, ')
+          ..write('totalSpent: $totalSpent, ')
+          ..write('totalOutOfBucket: $totalOutOfBucket, ')
+          ..write('totalRemaining: $totalRemaining, ')
+          ..write('budgetedRemaining: $budgetedRemaining, ')
+          ..write('bucketDetailsJson: $bucketDetailsJson, ')
+          ..write('closedAt: $closedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    budgetId,
+    salaryIncome,
+    extraIncome,
+    deductions,
+    effectiveIncome,
+    totalSpent,
+    totalOutOfBucket,
+    totalRemaining,
+    budgetedRemaining,
+    bucketDetailsJson,
+    closedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ClosedBudgetSnapshot &&
+          other.id == this.id &&
+          other.budgetId == this.budgetId &&
+          other.salaryIncome == this.salaryIncome &&
+          other.extraIncome == this.extraIncome &&
+          other.deductions == this.deductions &&
+          other.effectiveIncome == this.effectiveIncome &&
+          other.totalSpent == this.totalSpent &&
+          other.totalOutOfBucket == this.totalOutOfBucket &&
+          other.totalRemaining == this.totalRemaining &&
+          other.budgetedRemaining == this.budgetedRemaining &&
+          other.bucketDetailsJson == this.bucketDetailsJson &&
+          other.closedAt == this.closedAt);
+}
+
+class ClosedBudgetSnapshotsCompanion
+    extends UpdateCompanion<ClosedBudgetSnapshot> {
+  final Value<String> id;
+  final Value<String> budgetId;
+  final Value<double> salaryIncome;
+  final Value<double> extraIncome;
+  final Value<double> deductions;
+  final Value<double> effectiveIncome;
+  final Value<double> totalSpent;
+  final Value<double> totalOutOfBucket;
+  final Value<double> totalRemaining;
+  final Value<double> budgetedRemaining;
+  final Value<String> bucketDetailsJson;
+  final Value<DateTime> closedAt;
+  final Value<int> rowid;
+  const ClosedBudgetSnapshotsCompanion({
+    this.id = const Value.absent(),
+    this.budgetId = const Value.absent(),
+    this.salaryIncome = const Value.absent(),
+    this.extraIncome = const Value.absent(),
+    this.deductions = const Value.absent(),
+    this.effectiveIncome = const Value.absent(),
+    this.totalSpent = const Value.absent(),
+    this.totalOutOfBucket = const Value.absent(),
+    this.totalRemaining = const Value.absent(),
+    this.budgetedRemaining = const Value.absent(),
+    this.bucketDetailsJson = const Value.absent(),
+    this.closedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ClosedBudgetSnapshotsCompanion.insert({
+    required String id,
+    required String budgetId,
+    required double salaryIncome,
+    required double extraIncome,
+    required double deductions,
+    required double effectiveIncome,
+    required double totalSpent,
+    required double totalOutOfBucket,
+    required double totalRemaining,
+    required double budgetedRemaining,
+    required String bucketDetailsJson,
+    this.closedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       budgetId = Value(budgetId),
+       salaryIncome = Value(salaryIncome),
+       extraIncome = Value(extraIncome),
+       deductions = Value(deductions),
+       effectiveIncome = Value(effectiveIncome),
+       totalSpent = Value(totalSpent),
+       totalOutOfBucket = Value(totalOutOfBucket),
+       totalRemaining = Value(totalRemaining),
+       budgetedRemaining = Value(budgetedRemaining),
+       bucketDetailsJson = Value(bucketDetailsJson);
+  static Insertable<ClosedBudgetSnapshot> custom({
+    Expression<String>? id,
+    Expression<String>? budgetId,
+    Expression<double>? salaryIncome,
+    Expression<double>? extraIncome,
+    Expression<double>? deductions,
+    Expression<double>? effectiveIncome,
+    Expression<double>? totalSpent,
+    Expression<double>? totalOutOfBucket,
+    Expression<double>? totalRemaining,
+    Expression<double>? budgetedRemaining,
+    Expression<String>? bucketDetailsJson,
+    Expression<DateTime>? closedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (budgetId != null) 'budget_id': budgetId,
+      if (salaryIncome != null) 'salary_income': salaryIncome,
+      if (extraIncome != null) 'extra_income': extraIncome,
+      if (deductions != null) 'deductions': deductions,
+      if (effectiveIncome != null) 'effective_income': effectiveIncome,
+      if (totalSpent != null) 'total_spent': totalSpent,
+      if (totalOutOfBucket != null) 'total_out_of_bucket': totalOutOfBucket,
+      if (totalRemaining != null) 'total_remaining': totalRemaining,
+      if (budgetedRemaining != null) 'budgeted_remaining': budgetedRemaining,
+      if (bucketDetailsJson != null) 'bucket_details_json': bucketDetailsJson,
+      if (closedAt != null) 'closed_at': closedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ClosedBudgetSnapshotsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? budgetId,
+    Value<double>? salaryIncome,
+    Value<double>? extraIncome,
+    Value<double>? deductions,
+    Value<double>? effectiveIncome,
+    Value<double>? totalSpent,
+    Value<double>? totalOutOfBucket,
+    Value<double>? totalRemaining,
+    Value<double>? budgetedRemaining,
+    Value<String>? bucketDetailsJson,
+    Value<DateTime>? closedAt,
+    Value<int>? rowid,
+  }) {
+    return ClosedBudgetSnapshotsCompanion(
+      id: id ?? this.id,
+      budgetId: budgetId ?? this.budgetId,
+      salaryIncome: salaryIncome ?? this.salaryIncome,
+      extraIncome: extraIncome ?? this.extraIncome,
+      deductions: deductions ?? this.deductions,
+      effectiveIncome: effectiveIncome ?? this.effectiveIncome,
+      totalSpent: totalSpent ?? this.totalSpent,
+      totalOutOfBucket: totalOutOfBucket ?? this.totalOutOfBucket,
+      totalRemaining: totalRemaining ?? this.totalRemaining,
+      budgetedRemaining: budgetedRemaining ?? this.budgetedRemaining,
+      bucketDetailsJson: bucketDetailsJson ?? this.bucketDetailsJson,
+      closedAt: closedAt ?? this.closedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (budgetId.present) {
+      map['budget_id'] = Variable<String>(budgetId.value);
+    }
+    if (salaryIncome.present) {
+      map['salary_income'] = Variable<double>(salaryIncome.value);
+    }
+    if (extraIncome.present) {
+      map['extra_income'] = Variable<double>(extraIncome.value);
+    }
+    if (deductions.present) {
+      map['deductions'] = Variable<double>(deductions.value);
+    }
+    if (effectiveIncome.present) {
+      map['effective_income'] = Variable<double>(effectiveIncome.value);
+    }
+    if (totalSpent.present) {
+      map['total_spent'] = Variable<double>(totalSpent.value);
+    }
+    if (totalOutOfBucket.present) {
+      map['total_out_of_bucket'] = Variable<double>(totalOutOfBucket.value);
+    }
+    if (totalRemaining.present) {
+      map['total_remaining'] = Variable<double>(totalRemaining.value);
+    }
+    if (budgetedRemaining.present) {
+      map['budgeted_remaining'] = Variable<double>(budgetedRemaining.value);
+    }
+    if (bucketDetailsJson.present) {
+      map['bucket_details_json'] = Variable<String>(bucketDetailsJson.value);
+    }
+    if (closedAt.present) {
+      map['closed_at'] = Variable<DateTime>(closedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ClosedBudgetSnapshotsCompanion(')
+          ..write('id: $id, ')
+          ..write('budgetId: $budgetId, ')
+          ..write('salaryIncome: $salaryIncome, ')
+          ..write('extraIncome: $extraIncome, ')
+          ..write('deductions: $deductions, ')
+          ..write('effectiveIncome: $effectiveIncome, ')
+          ..write('totalSpent: $totalSpent, ')
+          ..write('totalOutOfBucket: $totalOutOfBucket, ')
+          ..write('totalRemaining: $totalRemaining, ')
+          ..write('budgetedRemaining: $budgetedRemaining, ')
+          ..write('bucketDetailsJson: $bucketDetailsJson, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2865,6 +3610,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AccountsTable accounts = $AccountsTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $MonthlyBudgetsTable monthlyBudgets = $MonthlyBudgetsTable(this);
+  late final $ClosedBudgetSnapshotsTable closedBudgetSnapshots =
+      $ClosedBudgetSnapshotsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2875,6 +3622,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     accounts,
     transactions,
     monthlyBudgets,
+    closedBudgetSnapshots,
   ];
 }
 
@@ -4307,6 +5055,376 @@ typedef $$MonthlyBudgetsTableProcessedTableManager =
       MonthlyBudget,
       PrefetchHooks Function()
     >;
+typedef $$ClosedBudgetSnapshotsTableCreateCompanionBuilder =
+    ClosedBudgetSnapshotsCompanion Function({
+      required String id,
+      required String budgetId,
+      required double salaryIncome,
+      required double extraIncome,
+      required double deductions,
+      required double effectiveIncome,
+      required double totalSpent,
+      required double totalOutOfBucket,
+      required double totalRemaining,
+      required double budgetedRemaining,
+      required String bucketDetailsJson,
+      Value<DateTime> closedAt,
+      Value<int> rowid,
+    });
+typedef $$ClosedBudgetSnapshotsTableUpdateCompanionBuilder =
+    ClosedBudgetSnapshotsCompanion Function({
+      Value<String> id,
+      Value<String> budgetId,
+      Value<double> salaryIncome,
+      Value<double> extraIncome,
+      Value<double> deductions,
+      Value<double> effectiveIncome,
+      Value<double> totalSpent,
+      Value<double> totalOutOfBucket,
+      Value<double> totalRemaining,
+      Value<double> budgetedRemaining,
+      Value<String> bucketDetailsJson,
+      Value<DateTime> closedAt,
+      Value<int> rowid,
+    });
+
+class $$ClosedBudgetSnapshotsTableFilterComposer
+    extends Composer<_$AppDatabase, $ClosedBudgetSnapshotsTable> {
+  $$ClosedBudgetSnapshotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get budgetId => $composableBuilder(
+    column: $table.budgetId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get salaryIncome => $composableBuilder(
+    column: $table.salaryIncome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get extraIncome => $composableBuilder(
+    column: $table.extraIncome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get deductions => $composableBuilder(
+    column: $table.deductions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get effectiveIncome => $composableBuilder(
+    column: $table.effectiveIncome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalSpent => $composableBuilder(
+    column: $table.totalSpent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalOutOfBucket => $composableBuilder(
+    column: $table.totalOutOfBucket,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalRemaining => $composableBuilder(
+    column: $table.totalRemaining,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get budgetedRemaining => $composableBuilder(
+    column: $table.budgetedRemaining,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bucketDetailsJson => $composableBuilder(
+    column: $table.bucketDetailsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ClosedBudgetSnapshotsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ClosedBudgetSnapshotsTable> {
+  $$ClosedBudgetSnapshotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get budgetId => $composableBuilder(
+    column: $table.budgetId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get salaryIncome => $composableBuilder(
+    column: $table.salaryIncome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get extraIncome => $composableBuilder(
+    column: $table.extraIncome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get deductions => $composableBuilder(
+    column: $table.deductions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get effectiveIncome => $composableBuilder(
+    column: $table.effectiveIncome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalSpent => $composableBuilder(
+    column: $table.totalSpent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalOutOfBucket => $composableBuilder(
+    column: $table.totalOutOfBucket,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalRemaining => $composableBuilder(
+    column: $table.totalRemaining,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get budgetedRemaining => $composableBuilder(
+    column: $table.budgetedRemaining,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bucketDetailsJson => $composableBuilder(
+    column: $table.bucketDetailsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ClosedBudgetSnapshotsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ClosedBudgetSnapshotsTable> {
+  $$ClosedBudgetSnapshotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get budgetId =>
+      $composableBuilder(column: $table.budgetId, builder: (column) => column);
+
+  GeneratedColumn<double> get salaryIncome => $composableBuilder(
+    column: $table.salaryIncome,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get extraIncome => $composableBuilder(
+    column: $table.extraIncome,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get deductions => $composableBuilder(
+    column: $table.deductions,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get effectiveIncome => $composableBuilder(
+    column: $table.effectiveIncome,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get totalSpent => $composableBuilder(
+    column: $table.totalSpent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get totalOutOfBucket => $composableBuilder(
+    column: $table.totalOutOfBucket,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get totalRemaining => $composableBuilder(
+    column: $table.totalRemaining,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get budgetedRemaining => $composableBuilder(
+    column: $table.budgetedRemaining,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bucketDetailsJson => $composableBuilder(
+    column: $table.bucketDetailsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get closedAt =>
+      $composableBuilder(column: $table.closedAt, builder: (column) => column);
+}
+
+class $$ClosedBudgetSnapshotsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ClosedBudgetSnapshotsTable,
+          ClosedBudgetSnapshot,
+          $$ClosedBudgetSnapshotsTableFilterComposer,
+          $$ClosedBudgetSnapshotsTableOrderingComposer,
+          $$ClosedBudgetSnapshotsTableAnnotationComposer,
+          $$ClosedBudgetSnapshotsTableCreateCompanionBuilder,
+          $$ClosedBudgetSnapshotsTableUpdateCompanionBuilder,
+          (
+            ClosedBudgetSnapshot,
+            BaseReferences<
+              _$AppDatabase,
+              $ClosedBudgetSnapshotsTable,
+              ClosedBudgetSnapshot
+            >,
+          ),
+          ClosedBudgetSnapshot,
+          PrefetchHooks Function()
+        > {
+  $$ClosedBudgetSnapshotsTableTableManager(
+    _$AppDatabase db,
+    $ClosedBudgetSnapshotsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ClosedBudgetSnapshotsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ClosedBudgetSnapshotsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ClosedBudgetSnapshotsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> budgetId = const Value.absent(),
+                Value<double> salaryIncome = const Value.absent(),
+                Value<double> extraIncome = const Value.absent(),
+                Value<double> deductions = const Value.absent(),
+                Value<double> effectiveIncome = const Value.absent(),
+                Value<double> totalSpent = const Value.absent(),
+                Value<double> totalOutOfBucket = const Value.absent(),
+                Value<double> totalRemaining = const Value.absent(),
+                Value<double> budgetedRemaining = const Value.absent(),
+                Value<String> bucketDetailsJson = const Value.absent(),
+                Value<DateTime> closedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ClosedBudgetSnapshotsCompanion(
+                id: id,
+                budgetId: budgetId,
+                salaryIncome: salaryIncome,
+                extraIncome: extraIncome,
+                deductions: deductions,
+                effectiveIncome: effectiveIncome,
+                totalSpent: totalSpent,
+                totalOutOfBucket: totalOutOfBucket,
+                totalRemaining: totalRemaining,
+                budgetedRemaining: budgetedRemaining,
+                bucketDetailsJson: bucketDetailsJson,
+                closedAt: closedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String budgetId,
+                required double salaryIncome,
+                required double extraIncome,
+                required double deductions,
+                required double effectiveIncome,
+                required double totalSpent,
+                required double totalOutOfBucket,
+                required double totalRemaining,
+                required double budgetedRemaining,
+                required String bucketDetailsJson,
+                Value<DateTime> closedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ClosedBudgetSnapshotsCompanion.insert(
+                id: id,
+                budgetId: budgetId,
+                salaryIncome: salaryIncome,
+                extraIncome: extraIncome,
+                deductions: deductions,
+                effectiveIncome: effectiveIncome,
+                totalSpent: totalSpent,
+                totalOutOfBucket: totalOutOfBucket,
+                totalRemaining: totalRemaining,
+                budgetedRemaining: budgetedRemaining,
+                bucketDetailsJson: bucketDetailsJson,
+                closedAt: closedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ClosedBudgetSnapshotsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ClosedBudgetSnapshotsTable,
+      ClosedBudgetSnapshot,
+      $$ClosedBudgetSnapshotsTableFilterComposer,
+      $$ClosedBudgetSnapshotsTableOrderingComposer,
+      $$ClosedBudgetSnapshotsTableAnnotationComposer,
+      $$ClosedBudgetSnapshotsTableCreateCompanionBuilder,
+      $$ClosedBudgetSnapshotsTableUpdateCompanionBuilder,
+      (
+        ClosedBudgetSnapshot,
+        BaseReferences<
+          _$AppDatabase,
+          $ClosedBudgetSnapshotsTable,
+          ClosedBudgetSnapshot
+        >,
+      ),
+      ClosedBudgetSnapshot,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4321,4 +5439,6 @@ class $AppDatabaseManager {
       $$TransactionsTableTableManager(_db, _db.transactions);
   $$MonthlyBudgetsTableTableManager get monthlyBudgets =>
       $$MonthlyBudgetsTableTableManager(_db, _db.monthlyBudgets);
+  $$ClosedBudgetSnapshotsTableTableManager get closedBudgetSnapshots =>
+      $$ClosedBudgetSnapshotsTableTableManager(_db, _db.closedBudgetSnapshots);
 }

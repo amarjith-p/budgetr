@@ -12,13 +12,15 @@ part 'app_database.g.dart';
   BudgetBuckets,
   Accounts,
   Transactions,
-  MonthlyBudgets, // <-- NEW TABLE ADDED
+  MonthlyBudgets, 
+  ClosedBudgetSnapshots, // <-- NEW TABLE ADDED
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  // --- BUMP TO VERSION 11 ---
   @override
-  int get schemaVersion => 10; 
+  int get schemaVersion => 11; 
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -35,9 +37,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(monthlyBudgets, monthlyBudgets.closedOutOfBucket);
         await m.addColumn(monthlyBudgets, monthlyBudgets.closedRemaining);
       }
-      if (from < 10) {
-        // --- RULE 7: MIGRATION FOR FROZEN BUCKET NAME ---
-        await m.addColumn(transactions, transactions.bucketName);
+      if (from < 10) await m.addColumn(transactions, transactions.bucketName);
+      if (from < 11) {
+        // --- NEW: MIGRATION FOR DETAILED CLOSING SNAPSHOTS ---
+        await m.createTable(closedBudgetSnapshots);
       }
     },
   );
