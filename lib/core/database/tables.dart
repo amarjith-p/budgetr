@@ -67,9 +67,13 @@ class MonthlyBudgets extends Table {
   RealColumn get salaryIncome => real().withDefault(const Constant(0.0))();
   RealColumn get extraIncome => real().withDefault(const Constant(0.0))();
   RealColumn get deductions => real().withDefault(const Constant(0.0))();
-  
-  // --- NEW: JSON Snapshot Column ---
   TextColumn get bucketsSnapshot => text().nullable()(); 
+  
+  // --- LIFECYCLE & FROZEN MATH COLUMNS ---
+  BoolColumn get isClosed => boolean().withDefault(const Constant(false))(); 
+  RealColumn get closedTotalSpent => real().nullable()();
+  RealColumn get closedOutOfBucket => real().nullable()();
+  RealColumn get closedRemaining => real().nullable()();
   
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 

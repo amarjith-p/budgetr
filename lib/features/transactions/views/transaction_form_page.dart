@@ -527,14 +527,15 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final List<_BucketItem> bucketItems = [];
     final activeBudget = budgetAsync.asData?.value;
     
-    if (activeBudget != null && activeBudget.bucketsSnapshot != null) {
+    // BUSINESS RULE: If the budget exists, has a snapshot, AND is NOT closed.
+    if (activeBudget != null && !activeBudget.isClosed && activeBudget.bucketsSnapshot != null) {
       try {
         final List<dynamic> decoded = jsonDecode(activeBudget.bucketsSnapshot!);
         for (var b in decoded) {
           bucketItems.add(_BucketItem(b['id'] as int, b['name'] as String));
         }
       } catch (e) {
-        // Fallback: leave empty, will just append 'Out of Bucket'
+        // Fallback
       }
     }
     

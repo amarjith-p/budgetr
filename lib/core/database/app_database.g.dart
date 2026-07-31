@@ -2191,6 +2191,55 @@ class $MonthlyBudgetsTable extends MonthlyBudgets
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isClosedMeta = const VerificationMeta(
+    'isClosed',
+  );
+  @override
+  late final GeneratedColumn<bool> isClosed = GeneratedColumn<bool>(
+    'is_closed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_closed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _closedTotalSpentMeta = const VerificationMeta(
+    'closedTotalSpent',
+  );
+  @override
+  late final GeneratedColumn<double> closedTotalSpent = GeneratedColumn<double>(
+    'closed_total_spent',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _closedOutOfBucketMeta = const VerificationMeta(
+    'closedOutOfBucket',
+  );
+  @override
+  late final GeneratedColumn<double> closedOutOfBucket =
+      GeneratedColumn<double>(
+        'closed_out_of_bucket',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _closedRemainingMeta = const VerificationMeta(
+    'closedRemaining',
+  );
+  @override
+  late final GeneratedColumn<double> closedRemaining = GeneratedColumn<double>(
+    'closed_remaining',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2212,6 +2261,10 @@ class $MonthlyBudgetsTable extends MonthlyBudgets
     extraIncome,
     deductions,
     bucketsSnapshot,
+    isClosed,
+    closedTotalSpent,
+    closedOutOfBucket,
+    closedRemaining,
     createdAt,
   ];
   @override
@@ -2280,6 +2333,39 @@ class $MonthlyBudgetsTable extends MonthlyBudgets
         ),
       );
     }
+    if (data.containsKey('is_closed')) {
+      context.handle(
+        _isClosedMeta,
+        isClosed.isAcceptableOrUnknown(data['is_closed']!, _isClosedMeta),
+      );
+    }
+    if (data.containsKey('closed_total_spent')) {
+      context.handle(
+        _closedTotalSpentMeta,
+        closedTotalSpent.isAcceptableOrUnknown(
+          data['closed_total_spent']!,
+          _closedTotalSpentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('closed_out_of_bucket')) {
+      context.handle(
+        _closedOutOfBucketMeta,
+        closedOutOfBucket.isAcceptableOrUnknown(
+          data['closed_out_of_bucket']!,
+          _closedOutOfBucketMeta,
+        ),
+      );
+    }
+    if (data.containsKey('closed_remaining')) {
+      context.handle(
+        _closedRemainingMeta,
+        closedRemaining.isAcceptableOrUnknown(
+          data['closed_remaining']!,
+          _closedRemainingMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2323,6 +2409,22 @@ class $MonthlyBudgetsTable extends MonthlyBudgets
         DriftSqlType.string,
         data['${effectivePrefix}buckets_snapshot'],
       ),
+      isClosed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_closed'],
+      )!,
+      closedTotalSpent: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}closed_total_spent'],
+      ),
+      closedOutOfBucket: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}closed_out_of_bucket'],
+      ),
+      closedRemaining: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}closed_remaining'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2344,6 +2446,10 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
   final double extraIncome;
   final double deductions;
   final String? bucketsSnapshot;
+  final bool isClosed;
+  final double? closedTotalSpent;
+  final double? closedOutOfBucket;
+  final double? closedRemaining;
   final DateTime createdAt;
   const MonthlyBudget({
     required this.id,
@@ -2353,6 +2459,10 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
     required this.extraIncome,
     required this.deductions,
     this.bucketsSnapshot,
+    required this.isClosed,
+    this.closedTotalSpent,
+    this.closedOutOfBucket,
+    this.closedRemaining,
     required this.createdAt,
   });
   @override
@@ -2366,6 +2476,16 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
     map['deductions'] = Variable<double>(deductions);
     if (!nullToAbsent || bucketsSnapshot != null) {
       map['buckets_snapshot'] = Variable<String>(bucketsSnapshot);
+    }
+    map['is_closed'] = Variable<bool>(isClosed);
+    if (!nullToAbsent || closedTotalSpent != null) {
+      map['closed_total_spent'] = Variable<double>(closedTotalSpent);
+    }
+    if (!nullToAbsent || closedOutOfBucket != null) {
+      map['closed_out_of_bucket'] = Variable<double>(closedOutOfBucket);
+    }
+    if (!nullToAbsent || closedRemaining != null) {
+      map['closed_remaining'] = Variable<double>(closedRemaining);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -2382,6 +2502,16 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
       bucketsSnapshot: bucketsSnapshot == null && nullToAbsent
           ? const Value.absent()
           : Value(bucketsSnapshot),
+      isClosed: Value(isClosed),
+      closedTotalSpent: closedTotalSpent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedTotalSpent),
+      closedOutOfBucket: closedOutOfBucket == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedOutOfBucket),
+      closedRemaining: closedRemaining == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedRemaining),
       createdAt: Value(createdAt),
     );
   }
@@ -2399,6 +2529,12 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
       extraIncome: serializer.fromJson<double>(json['extraIncome']),
       deductions: serializer.fromJson<double>(json['deductions']),
       bucketsSnapshot: serializer.fromJson<String?>(json['bucketsSnapshot']),
+      isClosed: serializer.fromJson<bool>(json['isClosed']),
+      closedTotalSpent: serializer.fromJson<double?>(json['closedTotalSpent']),
+      closedOutOfBucket: serializer.fromJson<double?>(
+        json['closedOutOfBucket'],
+      ),
+      closedRemaining: serializer.fromJson<double?>(json['closedRemaining']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2413,6 +2549,10 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
       'extraIncome': serializer.toJson<double>(extraIncome),
       'deductions': serializer.toJson<double>(deductions),
       'bucketsSnapshot': serializer.toJson<String?>(bucketsSnapshot),
+      'isClosed': serializer.toJson<bool>(isClosed),
+      'closedTotalSpent': serializer.toJson<double?>(closedTotalSpent),
+      'closedOutOfBucket': serializer.toJson<double?>(closedOutOfBucket),
+      'closedRemaining': serializer.toJson<double?>(closedRemaining),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2425,6 +2565,10 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
     double? extraIncome,
     double? deductions,
     Value<String?> bucketsSnapshot = const Value.absent(),
+    bool? isClosed,
+    Value<double?> closedTotalSpent = const Value.absent(),
+    Value<double?> closedOutOfBucket = const Value.absent(),
+    Value<double?> closedRemaining = const Value.absent(),
     DateTime? createdAt,
   }) => MonthlyBudget(
     id: id ?? this.id,
@@ -2436,6 +2580,16 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
     bucketsSnapshot: bucketsSnapshot.present
         ? bucketsSnapshot.value
         : this.bucketsSnapshot,
+    isClosed: isClosed ?? this.isClosed,
+    closedTotalSpent: closedTotalSpent.present
+        ? closedTotalSpent.value
+        : this.closedTotalSpent,
+    closedOutOfBucket: closedOutOfBucket.present
+        ? closedOutOfBucket.value
+        : this.closedOutOfBucket,
+    closedRemaining: closedRemaining.present
+        ? closedRemaining.value
+        : this.closedRemaining,
     createdAt: createdAt ?? this.createdAt,
   );
   MonthlyBudget copyWithCompanion(MonthlyBudgetsCompanion data) {
@@ -2455,6 +2609,16 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
       bucketsSnapshot: data.bucketsSnapshot.present
           ? data.bucketsSnapshot.value
           : this.bucketsSnapshot,
+      isClosed: data.isClosed.present ? data.isClosed.value : this.isClosed,
+      closedTotalSpent: data.closedTotalSpent.present
+          ? data.closedTotalSpent.value
+          : this.closedTotalSpent,
+      closedOutOfBucket: data.closedOutOfBucket.present
+          ? data.closedOutOfBucket.value
+          : this.closedOutOfBucket,
+      closedRemaining: data.closedRemaining.present
+          ? data.closedRemaining.value
+          : this.closedRemaining,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2469,6 +2633,10 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
           ..write('extraIncome: $extraIncome, ')
           ..write('deductions: $deductions, ')
           ..write('bucketsSnapshot: $bucketsSnapshot, ')
+          ..write('isClosed: $isClosed, ')
+          ..write('closedTotalSpent: $closedTotalSpent, ')
+          ..write('closedOutOfBucket: $closedOutOfBucket, ')
+          ..write('closedRemaining: $closedRemaining, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -2483,6 +2651,10 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
     extraIncome,
     deductions,
     bucketsSnapshot,
+    isClosed,
+    closedTotalSpent,
+    closedOutOfBucket,
+    closedRemaining,
     createdAt,
   );
   @override
@@ -2496,6 +2668,10 @@ class MonthlyBudget extends DataClass implements Insertable<MonthlyBudget> {
           other.extraIncome == this.extraIncome &&
           other.deductions == this.deductions &&
           other.bucketsSnapshot == this.bucketsSnapshot &&
+          other.isClosed == this.isClosed &&
+          other.closedTotalSpent == this.closedTotalSpent &&
+          other.closedOutOfBucket == this.closedOutOfBucket &&
+          other.closedRemaining == this.closedRemaining &&
           other.createdAt == this.createdAt);
 }
 
@@ -2507,6 +2683,10 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
   final Value<double> extraIncome;
   final Value<double> deductions;
   final Value<String?> bucketsSnapshot;
+  final Value<bool> isClosed;
+  final Value<double?> closedTotalSpent;
+  final Value<double?> closedOutOfBucket;
+  final Value<double?> closedRemaining;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const MonthlyBudgetsCompanion({
@@ -2517,6 +2697,10 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
     this.extraIncome = const Value.absent(),
     this.deductions = const Value.absent(),
     this.bucketsSnapshot = const Value.absent(),
+    this.isClosed = const Value.absent(),
+    this.closedTotalSpent = const Value.absent(),
+    this.closedOutOfBucket = const Value.absent(),
+    this.closedRemaining = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2528,6 +2712,10 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
     this.extraIncome = const Value.absent(),
     this.deductions = const Value.absent(),
     this.bucketsSnapshot = const Value.absent(),
+    this.isClosed = const Value.absent(),
+    this.closedTotalSpent = const Value.absent(),
+    this.closedOutOfBucket = const Value.absent(),
+    this.closedRemaining = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -2541,6 +2729,10 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
     Expression<double>? extraIncome,
     Expression<double>? deductions,
     Expression<String>? bucketsSnapshot,
+    Expression<bool>? isClosed,
+    Expression<double>? closedTotalSpent,
+    Expression<double>? closedOutOfBucket,
+    Expression<double>? closedRemaining,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -2552,6 +2744,10 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
       if (extraIncome != null) 'extra_income': extraIncome,
       if (deductions != null) 'deductions': deductions,
       if (bucketsSnapshot != null) 'buckets_snapshot': bucketsSnapshot,
+      if (isClosed != null) 'is_closed': isClosed,
+      if (closedTotalSpent != null) 'closed_total_spent': closedTotalSpent,
+      if (closedOutOfBucket != null) 'closed_out_of_bucket': closedOutOfBucket,
+      if (closedRemaining != null) 'closed_remaining': closedRemaining,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2565,6 +2761,10 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
     Value<double>? extraIncome,
     Value<double>? deductions,
     Value<String?>? bucketsSnapshot,
+    Value<bool>? isClosed,
+    Value<double?>? closedTotalSpent,
+    Value<double?>? closedOutOfBucket,
+    Value<double?>? closedRemaining,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -2576,6 +2776,10 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
       extraIncome: extraIncome ?? this.extraIncome,
       deductions: deductions ?? this.deductions,
       bucketsSnapshot: bucketsSnapshot ?? this.bucketsSnapshot,
+      isClosed: isClosed ?? this.isClosed,
+      closedTotalSpent: closedTotalSpent ?? this.closedTotalSpent,
+      closedOutOfBucket: closedOutOfBucket ?? this.closedOutOfBucket,
+      closedRemaining: closedRemaining ?? this.closedRemaining,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2605,6 +2809,18 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
     if (bucketsSnapshot.present) {
       map['buckets_snapshot'] = Variable<String>(bucketsSnapshot.value);
     }
+    if (isClosed.present) {
+      map['is_closed'] = Variable<bool>(isClosed.value);
+    }
+    if (closedTotalSpent.present) {
+      map['closed_total_spent'] = Variable<double>(closedTotalSpent.value);
+    }
+    if (closedOutOfBucket.present) {
+      map['closed_out_of_bucket'] = Variable<double>(closedOutOfBucket.value);
+    }
+    if (closedRemaining.present) {
+      map['closed_remaining'] = Variable<double>(closedRemaining.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2624,6 +2840,10 @@ class MonthlyBudgetsCompanion extends UpdateCompanion<MonthlyBudget> {
           ..write('extraIncome: $extraIncome, ')
           ..write('deductions: $deductions, ')
           ..write('bucketsSnapshot: $bucketsSnapshot, ')
+          ..write('isClosed: $isClosed, ')
+          ..write('closedTotalSpent: $closedTotalSpent, ')
+          ..write('closedOutOfBucket: $closedOutOfBucket, ')
+          ..write('closedRemaining: $closedRemaining, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3740,6 +3960,10 @@ typedef $$MonthlyBudgetsTableCreateCompanionBuilder =
       Value<double> extraIncome,
       Value<double> deductions,
       Value<String?> bucketsSnapshot,
+      Value<bool> isClosed,
+      Value<double?> closedTotalSpent,
+      Value<double?> closedOutOfBucket,
+      Value<double?> closedRemaining,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -3752,6 +3976,10 @@ typedef $$MonthlyBudgetsTableUpdateCompanionBuilder =
       Value<double> extraIncome,
       Value<double> deductions,
       Value<String?> bucketsSnapshot,
+      Value<bool> isClosed,
+      Value<double?> closedTotalSpent,
+      Value<double?> closedOutOfBucket,
+      Value<double?> closedRemaining,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -3797,6 +4025,26 @@ class $$MonthlyBudgetsTableFilterComposer
 
   ColumnFilters<String> get bucketsSnapshot => $composableBuilder(
     column: $table.bucketsSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isClosed => $composableBuilder(
+    column: $table.isClosed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get closedTotalSpent => $composableBuilder(
+    column: $table.closedTotalSpent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get closedOutOfBucket => $composableBuilder(
+    column: $table.closedOutOfBucket,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get closedRemaining => $composableBuilder(
+    column: $table.closedRemaining,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3850,6 +4098,26 @@ class $$MonthlyBudgetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isClosed => $composableBuilder(
+    column: $table.isClosed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get closedTotalSpent => $composableBuilder(
+    column: $table.closedTotalSpent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get closedOutOfBucket => $composableBuilder(
+    column: $table.closedOutOfBucket,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get closedRemaining => $composableBuilder(
+    column: $table.closedRemaining,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3891,6 +4159,24 @@ class $$MonthlyBudgetsTableAnnotationComposer
 
   GeneratedColumn<String> get bucketsSnapshot => $composableBuilder(
     column: $table.bucketsSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isClosed =>
+      $composableBuilder(column: $table.isClosed, builder: (column) => column);
+
+  GeneratedColumn<double> get closedTotalSpent => $composableBuilder(
+    column: $table.closedTotalSpent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get closedOutOfBucket => $composableBuilder(
+    column: $table.closedOutOfBucket,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get closedRemaining => $composableBuilder(
+    column: $table.closedRemaining,
     builder: (column) => column,
   );
 
@@ -3938,6 +4224,10 @@ class $$MonthlyBudgetsTableTableManager
                 Value<double> extraIncome = const Value.absent(),
                 Value<double> deductions = const Value.absent(),
                 Value<String?> bucketsSnapshot = const Value.absent(),
+                Value<bool> isClosed = const Value.absent(),
+                Value<double?> closedTotalSpent = const Value.absent(),
+                Value<double?> closedOutOfBucket = const Value.absent(),
+                Value<double?> closedRemaining = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MonthlyBudgetsCompanion(
@@ -3948,6 +4238,10 @@ class $$MonthlyBudgetsTableTableManager
                 extraIncome: extraIncome,
                 deductions: deductions,
                 bucketsSnapshot: bucketsSnapshot,
+                isClosed: isClosed,
+                closedTotalSpent: closedTotalSpent,
+                closedOutOfBucket: closedOutOfBucket,
+                closedRemaining: closedRemaining,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -3960,6 +4254,10 @@ class $$MonthlyBudgetsTableTableManager
                 Value<double> extraIncome = const Value.absent(),
                 Value<double> deductions = const Value.absent(),
                 Value<String?> bucketsSnapshot = const Value.absent(),
+                Value<bool> isClosed = const Value.absent(),
+                Value<double?> closedTotalSpent = const Value.absent(),
+                Value<double?> closedOutOfBucket = const Value.absent(),
+                Value<double?> closedRemaining = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MonthlyBudgetsCompanion.insert(
@@ -3970,6 +4268,10 @@ class $$MonthlyBudgetsTableTableManager
                 extraIncome: extraIncome,
                 deductions: deductions,
                 bucketsSnapshot: bucketsSnapshot,
+                isClosed: isClosed,
+                closedTotalSpent: closedTotalSpent,
+                closedOutOfBucket: closedOutOfBucket,
+                closedRemaining: closedRemaining,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

@@ -27,8 +27,6 @@ class BudgetService {
         .getSingleOrNull();
 
     if (existing != null) {
-      // RULE: If editing an existing budget, ONLY update values. 
-      // Do NOT overwrite the historical bucketsSnapshot.
       await _db.update(_db.monthlyBudgets).replace(
         existing.copyWith(
           salaryIncome: salary, 
@@ -37,14 +35,11 @@ class BudgetService {
         ),
       );
     } else {
-      // RULE: If creating a fresh budget, take a hard JSON snapshot of the current global buckets.
       final currentBuckets = await _db.select(_db.budgetBuckets).get();
-      
       final snapshotList = currentBuckets.map((b) => {
         'id': b.id,
         'name': b.name,
         'percentage': b.percentage,
-        // FIX: Removed the non-existent iconCode reference
       }).toList();
       
       final snapshotJson = jsonEncode(snapshotList);
@@ -57,6 +52,24 @@ class BudgetService {
         extraIncome: Value(extra),
         deductions: Value(deductions),
         bucketsSnapshot: Value(snapshotJson),
+        isClosed: const Value(false),
+      ));
+    }
+  }
+
+  Future<void> deleteBudget(String budgetId) async {
+    await (_db.delete(_db.monthlyBudgets)..where((t) => t.id.equals(budgetId))).go();
+  }
+
+  // --- UPDATED: Save the frozen mathematical state ---
+  Future<void> closeBudget(String budgetId, double totalSpent, double outOfBucket, double remaining) async {
+    final existing = await (_db.select(_db.monthlyBudgets)..where((t) => t.id.equals(budgetId))).getSingleOrNull();
+    if (existing != null) {
+      await _db.update(_db.monthlyBudgets).replace(existing.copyWith(
+        isClosed: true,
+        closedTotalSpent: Value(totalSpent),
+        closedOutOfBucket: Value(outOfBucket),
+        closedRemaining: Value(remaining),
       ));
     }
   }
