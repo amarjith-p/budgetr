@@ -6,9 +6,15 @@ import '../app_database.dart' as db;
 import '../../models/transaction_category_model.dart';
 
 class CategoryService {
-  final db.AppDatabase _db; // 1. Remove the = db.AppDatabase.instance;
+  final db.AppDatabase _db;
   final _uuid = const Uuid();
-  CategoryService(this._db);
+  
+  CategoryService(this._db) {
+    // FIX: Trigger the initialization check the moment the service is created.
+    // Because getCategories() is a Stream, the UI will automatically update 
+    // as soon as this async function finishes inserting the defaults.
+    init(); 
+  }
 
   // --- EXPANDED DEFAULT EXPENSES (Now using dynamic Icons.codePoint) ---
   final Map<String, dynamic> _defaultExpense = {
@@ -19,6 +25,7 @@ class CategoryService {
         'Fruits/Vegetables',
         'Online Mart Delivery',
         'Bakery/Snacks',
+        'Sweets/Desserts',
         'Supplements',
         'Baby Food',
         'Other Food & Grocery'
@@ -176,7 +183,7 @@ class CategoryService {
         'Family Support',
         'Domestic Help',
         'Baby Supplies',
-        'Toys'
+        'Toys', // Removed missing comma here based on context
         'Family Gifts',
       ],
       'icon': Icons.family_restroom.codePoint,
@@ -259,7 +266,6 @@ class CategoryService {
         'Product Sales',
         'Service Income',
         'Other Business Income'
-
       ],
       'icon': Icons.store.codePoint,
     },
@@ -370,7 +376,7 @@ class CategoryService {
     });
   }
 
-Future<void> _seedDefaults() async {
+  Future<void> _seedDefaults() async {
     await _db.batch((batch) {
       _defaultExpense.forEach((key, value) {
         batch.insert(
