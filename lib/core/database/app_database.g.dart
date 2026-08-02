@@ -1481,6 +1481,39 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _locationNameMeta = const VerificationMeta(
+    'locationName',
+  );
+  @override
+  late final GeneratedColumn<String> locationName = GeneratedColumn<String>(
+    'location_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _latitudeMeta = const VerificationMeta(
+    'latitude',
+  );
+  @override
+  late final GeneratedColumn<double> latitude = GeneratedColumn<double>(
+    'latitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _longitudeMeta = const VerificationMeta(
+    'longitude',
+  );
+  @override
+  late final GeneratedColumn<double> longitude = GeneratedColumn<double>(
+    'longitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1496,6 +1529,9 @@ class $TransactionsTable extends Transactions
     isSpillover,
     isSettlementVerified,
     bucketName,
+    locationName,
+    latitude,
+    longitude,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1606,6 +1642,27 @@ class $TransactionsTable extends Transactions
         bucketName.isAcceptableOrUnknown(data['bucket_name']!, _bucketNameMeta),
       );
     }
+    if (data.containsKey('location_name')) {
+      context.handle(
+        _locationNameMeta,
+        locationName.isAcceptableOrUnknown(
+          data['location_name']!,
+          _locationNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('latitude')) {
+      context.handle(
+        _latitudeMeta,
+        latitude.isAcceptableOrUnknown(data['latitude']!, _latitudeMeta),
+      );
+    }
+    if (data.containsKey('longitude')) {
+      context.handle(
+        _longitudeMeta,
+        longitude.isAcceptableOrUnknown(data['longitude']!, _longitudeMeta),
+      );
+    }
     return context;
   }
 
@@ -1667,6 +1724,18 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}bucket_name'],
       ),
+      locationName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location_name'],
+      ),
+      latitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}latitude'],
+      ),
+      longitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}longitude'],
+      ),
     );
   }
 
@@ -1691,6 +1760,9 @@ class TransactionRecord extends DataClass
   final bool isSpillover;
   final bool isSettlementVerified;
   final String? bucketName;
+  final String? locationName;
+  final double? latitude;
+  final double? longitude;
   const TransactionRecord({
     required this.id,
     required this.type,
@@ -1705,6 +1777,9 @@ class TransactionRecord extends DataClass
     required this.isSpillover,
     required this.isSettlementVerified,
     this.bucketName,
+    this.locationName,
+    this.latitude,
+    this.longitude,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1733,6 +1808,15 @@ class TransactionRecord extends DataClass
     map['is_settlement_verified'] = Variable<bool>(isSettlementVerified);
     if (!nullToAbsent || bucketName != null) {
       map['bucket_name'] = Variable<String>(bucketName);
+    }
+    if (!nullToAbsent || locationName != null) {
+      map['location_name'] = Variable<String>(locationName);
+    }
+    if (!nullToAbsent || latitude != null) {
+      map['latitude'] = Variable<double>(latitude);
+    }
+    if (!nullToAbsent || longitude != null) {
+      map['longitude'] = Variable<double>(longitude);
     }
     return map;
   }
@@ -1764,6 +1848,15 @@ class TransactionRecord extends DataClass
       bucketName: bucketName == null && nullToAbsent
           ? const Value.absent()
           : Value(bucketName),
+      locationName: locationName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locationName),
+      latitude: latitude == null && nullToAbsent
+          ? const Value.absent()
+          : Value(latitude),
+      longitude: longitude == null && nullToAbsent
+          ? const Value.absent()
+          : Value(longitude),
     );
   }
 
@@ -1788,6 +1881,9 @@ class TransactionRecord extends DataClass
         json['isSettlementVerified'],
       ),
       bucketName: serializer.fromJson<String?>(json['bucketName']),
+      locationName: serializer.fromJson<String?>(json['locationName']),
+      latitude: serializer.fromJson<double?>(json['latitude']),
+      longitude: serializer.fromJson<double?>(json['longitude']),
     );
   }
   @override
@@ -1807,6 +1903,9 @@ class TransactionRecord extends DataClass
       'isSpillover': serializer.toJson<bool>(isSpillover),
       'isSettlementVerified': serializer.toJson<bool>(isSettlementVerified),
       'bucketName': serializer.toJson<String?>(bucketName),
+      'locationName': serializer.toJson<String?>(locationName),
+      'latitude': serializer.toJson<double?>(latitude),
+      'longitude': serializer.toJson<double?>(longitude),
     };
   }
 
@@ -1824,6 +1923,9 @@ class TransactionRecord extends DataClass
     bool? isSpillover,
     bool? isSettlementVerified,
     Value<String?> bucketName = const Value.absent(),
+    Value<String?> locationName = const Value.absent(),
+    Value<double?> latitude = const Value.absent(),
+    Value<double?> longitude = const Value.absent(),
   }) => TransactionRecord(
     id: id ?? this.id,
     type: type ?? this.type,
@@ -1838,6 +1940,9 @@ class TransactionRecord extends DataClass
     isSpillover: isSpillover ?? this.isSpillover,
     isSettlementVerified: isSettlementVerified ?? this.isSettlementVerified,
     bucketName: bucketName.present ? bucketName.value : this.bucketName,
+    locationName: locationName.present ? locationName.value : this.locationName,
+    latitude: latitude.present ? latitude.value : this.latitude,
+    longitude: longitude.present ? longitude.value : this.longitude,
   );
   TransactionRecord copyWithCompanion(TransactionsCompanion data) {
     return TransactionRecord(
@@ -1866,6 +1971,11 @@ class TransactionRecord extends DataClass
       bucketName: data.bucketName.present
           ? data.bucketName.value
           : this.bucketName,
+      locationName: data.locationName.present
+          ? data.locationName.value
+          : this.locationName,
+      latitude: data.latitude.present ? data.latitude.value : this.latitude,
+      longitude: data.longitude.present ? data.longitude.value : this.longitude,
     );
   }
 
@@ -1884,7 +1994,10 @@ class TransactionRecord extends DataClass
           ..write('notes: $notes, ')
           ..write('isSpillover: $isSpillover, ')
           ..write('isSettlementVerified: $isSettlementVerified, ')
-          ..write('bucketName: $bucketName')
+          ..write('bucketName: $bucketName, ')
+          ..write('locationName: $locationName, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude')
           ..write(')'))
         .toString();
   }
@@ -1904,6 +2017,9 @@ class TransactionRecord extends DataClass
     isSpillover,
     isSettlementVerified,
     bucketName,
+    locationName,
+    latitude,
+    longitude,
   );
   @override
   bool operator ==(Object other) =>
@@ -1921,7 +2037,10 @@ class TransactionRecord extends DataClass
           other.notes == this.notes &&
           other.isSpillover == this.isSpillover &&
           other.isSettlementVerified == this.isSettlementVerified &&
-          other.bucketName == this.bucketName);
+          other.bucketName == this.bucketName &&
+          other.locationName == this.locationName &&
+          other.latitude == this.latitude &&
+          other.longitude == this.longitude);
 }
 
 class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
@@ -1938,6 +2057,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
   final Value<bool> isSpillover;
   final Value<bool> isSettlementVerified;
   final Value<String?> bucketName;
+  final Value<String?> locationName;
+  final Value<double?> latitude;
+  final Value<double?> longitude;
   final Value<int> rowid;
   const TransactionsCompanion({
     this.id = const Value.absent(),
@@ -1953,6 +2075,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     this.isSpillover = const Value.absent(),
     this.isSettlementVerified = const Value.absent(),
     this.bucketName = const Value.absent(),
+    this.locationName = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TransactionsCompanion.insert({
@@ -1969,6 +2094,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     this.isSpillover = const Value.absent(),
     this.isSettlementVerified = const Value.absent(),
     this.bucketName = const Value.absent(),
+    this.locationName = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        type = Value(type),
@@ -1989,6 +2117,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Expression<bool>? isSpillover,
     Expression<bool>? isSettlementVerified,
     Expression<String>? bucketName,
+    Expression<String>? locationName,
+    Expression<double>? latitude,
+    Expression<double>? longitude,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2006,6 +2137,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       if (isSettlementVerified != null)
         'is_settlement_verified': isSettlementVerified,
       if (bucketName != null) 'bucket_name': bucketName,
+      if (locationName != null) 'location_name': locationName,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2024,6 +2158,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Value<bool>? isSpillover,
     Value<bool>? isSettlementVerified,
     Value<String?>? bucketName,
+    Value<String?>? locationName,
+    Value<double?>? latitude,
+    Value<double?>? longitude,
     Value<int>? rowid,
   }) {
     return TransactionsCompanion(
@@ -2040,6 +2177,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       isSpillover: isSpillover ?? this.isSpillover,
       isSettlementVerified: isSettlementVerified ?? this.isSettlementVerified,
       bucketName: bucketName ?? this.bucketName,
+      locationName: locationName ?? this.locationName,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2088,6 +2228,15 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     if (bucketName.present) {
       map['bucket_name'] = Variable<String>(bucketName.value);
     }
+    if (locationName.present) {
+      map['location_name'] = Variable<String>(locationName.value);
+    }
+    if (latitude.present) {
+      map['latitude'] = Variable<double>(latitude.value);
+    }
+    if (longitude.present) {
+      map['longitude'] = Variable<double>(longitude.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2110,6 +2259,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
           ..write('isSpillover: $isSpillover, ')
           ..write('isSettlementVerified: $isSettlementVerified, ')
           ..write('bucketName: $bucketName, ')
+          ..write('locationName: $locationName, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4353,6 +4505,9 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<bool> isSpillover,
       Value<bool> isSettlementVerified,
       Value<String?> bucketName,
+      Value<String?> locationName,
+      Value<double?> latitude,
+      Value<double?> longitude,
       Value<int> rowid,
     });
 typedef $$TransactionsTableUpdateCompanionBuilder =
@@ -4370,6 +4525,9 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<bool> isSpillover,
       Value<bool> isSettlementVerified,
       Value<String?> bucketName,
+      Value<String?> locationName,
+      Value<double?> latitude,
+      Value<double?> longitude,
       Value<int> rowid,
     });
 
@@ -4444,6 +4602,21 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get bucketName => $composableBuilder(
     column: $table.bucketName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locationName => $composableBuilder(
+    column: $table.locationName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get latitude => $composableBuilder(
+    column: $table.latitude,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get longitude => $composableBuilder(
+    column: $table.longitude,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4521,6 +4694,21 @@ class $$TransactionsTableOrderingComposer
     column: $table.bucketName,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get locationName => $composableBuilder(
+    column: $table.locationName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get latitude => $composableBuilder(
+    column: $table.latitude,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get longitude => $composableBuilder(
+    column: $table.longitude,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -4582,6 +4770,17 @@ class $$TransactionsTableAnnotationComposer
     column: $table.bucketName,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get locationName => $composableBuilder(
+    column: $table.locationName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get latitude =>
+      $composableBuilder(column: $table.latitude, builder: (column) => column);
+
+  GeneratedColumn<double> get longitude =>
+      $composableBuilder(column: $table.longitude, builder: (column) => column);
 }
 
 class $$TransactionsTableTableManager
@@ -4632,6 +4831,9 @@ class $$TransactionsTableTableManager
                 Value<bool> isSpillover = const Value.absent(),
                 Value<bool> isSettlementVerified = const Value.absent(),
                 Value<String?> bucketName = const Value.absent(),
+                Value<String?> locationName = const Value.absent(),
+                Value<double?> latitude = const Value.absent(),
+                Value<double?> longitude = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion(
                 id: id,
@@ -4647,6 +4849,9 @@ class $$TransactionsTableTableManager
                 isSpillover: isSpillover,
                 isSettlementVerified: isSettlementVerified,
                 bucketName: bucketName,
+                locationName: locationName,
+                latitude: latitude,
+                longitude: longitude,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4664,6 +4869,9 @@ class $$TransactionsTableTableManager
                 Value<bool> isSpillover = const Value.absent(),
                 Value<bool> isSettlementVerified = const Value.absent(),
                 Value<String?> bucketName = const Value.absent(),
+                Value<String?> locationName = const Value.absent(),
+                Value<double?> latitude = const Value.absent(),
+                Value<double?> longitude = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion.insert(
                 id: id,
@@ -4679,6 +4887,9 @@ class $$TransactionsTableTableManager
                 isSpillover: isSpillover,
                 isSettlementVerified: isSettlementVerified,
                 bucketName: bucketName,
+                locationName: locationName,
+                latitude: latitude,
+                longitude: longitude,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

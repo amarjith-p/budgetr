@@ -57,6 +57,9 @@ class Transactions extends Table {
 
   // --- RULE 7: FROZEN HISTORICAL BUCKET NAME ---
   TextColumn get bucketName => text().nullable()(); 
+  TextColumn get locationName => text().nullable()();
+  RealColumn get latitude => real().nullable()();
+  RealColumn get longitude => real().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

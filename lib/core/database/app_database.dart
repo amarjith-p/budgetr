@@ -20,7 +20,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMP TO VERSION 11 ---
   @override
-  int get schemaVersion => 11; 
+  int get schemaVersion => 12; 
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -41,6 +41,11 @@ class AppDatabase extends _$AppDatabase {
       if (from < 11) {
         // --- NEW: MIGRATION FOR DETAILED CLOSING SNAPSHOTS ---
         await m.createTable(closedBudgetSnapshots);
+      }
+      if (from < 12) {
+        await m.addColumn(transactions, transactions.locationName);
+        await m.addColumn(transactions, transactions.latitude);
+        await m.addColumn(transactions, transactions.longitude);
       }
     },
   );
