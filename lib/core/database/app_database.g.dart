@@ -795,6 +795,36 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _isHiddenMeta = const VerificationMeta(
+    'isHidden',
+  );
+  @override
+  late final GeneratedColumn<bool> isHidden = GeneratedColumn<bool>(
+    'is_hidden',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_hidden" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isCreditPayableMeta = const VerificationMeta(
+    'isCreditPayable',
+  );
+  @override
+  late final GeneratedColumn<bool> isCreditPayable = GeneratedColumn<bool>(
+    'is_credit_payable',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_credit_payable" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -808,6 +838,8 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     dueDate,
     createdAt,
     displayOrder,
+    isHidden,
+    isCreditPayable,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -903,6 +935,21 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         ),
       );
     }
+    if (data.containsKey('is_hidden')) {
+      context.handle(
+        _isHiddenMeta,
+        isHidden.isAcceptableOrUnknown(data['is_hidden']!, _isHiddenMeta),
+      );
+    }
+    if (data.containsKey('is_credit_payable')) {
+      context.handle(
+        _isCreditPayableMeta,
+        isCreditPayable.isAcceptableOrUnknown(
+          data['is_credit_payable']!,
+          _isCreditPayableMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -956,6 +1003,14 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.int,
         data['${effectivePrefix}display_order'],
       )!,
+      isHidden: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_hidden'],
+      )!,
+      isCreditPayable: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_credit_payable'],
+      )!,
     );
   }
 
@@ -977,6 +1032,8 @@ class Account extends DataClass implements Insertable<Account> {
   final int? dueDate;
   final DateTime createdAt;
   final int displayOrder;
+  final bool isHidden;
+  final bool isCreditPayable;
   const Account({
     required this.id,
     required this.name,
@@ -989,6 +1046,8 @@ class Account extends DataClass implements Insertable<Account> {
     this.dueDate,
     required this.createdAt,
     required this.displayOrder,
+    required this.isHidden,
+    required this.isCreditPayable,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1010,6 +1069,8 @@ class Account extends DataClass implements Insertable<Account> {
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['display_order'] = Variable<int>(displayOrder);
+    map['is_hidden'] = Variable<bool>(isHidden);
+    map['is_credit_payable'] = Variable<bool>(isCreditPayable);
     return map;
   }
 
@@ -1032,6 +1093,8 @@ class Account extends DataClass implements Insertable<Account> {
           : Value(dueDate),
       createdAt: Value(createdAt),
       displayOrder: Value(displayOrder),
+      isHidden: Value(isHidden),
+      isCreditPayable: Value(isCreditPayable),
     );
   }
 
@@ -1052,6 +1115,8 @@ class Account extends DataClass implements Insertable<Account> {
       dueDate: serializer.fromJson<int?>(json['dueDate']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       displayOrder: serializer.fromJson<int>(json['displayOrder']),
+      isHidden: serializer.fromJson<bool>(json['isHidden']),
+      isCreditPayable: serializer.fromJson<bool>(json['isCreditPayable']),
     );
   }
   @override
@@ -1069,6 +1134,8 @@ class Account extends DataClass implements Insertable<Account> {
       'dueDate': serializer.toJson<int?>(dueDate),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'displayOrder': serializer.toJson<int>(displayOrder),
+      'isHidden': serializer.toJson<bool>(isHidden),
+      'isCreditPayable': serializer.toJson<bool>(isCreditPayable),
     };
   }
 
@@ -1084,6 +1151,8 @@ class Account extends DataClass implements Insertable<Account> {
     Value<int?> dueDate = const Value.absent(),
     DateTime? createdAt,
     int? displayOrder,
+    bool? isHidden,
+    bool? isCreditPayable,
   }) => Account(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -1096,6 +1165,8 @@ class Account extends DataClass implements Insertable<Account> {
     dueDate: dueDate.present ? dueDate.value : this.dueDate,
     createdAt: createdAt ?? this.createdAt,
     displayOrder: displayOrder ?? this.displayOrder,
+    isHidden: isHidden ?? this.isHidden,
+    isCreditPayable: isCreditPayable ?? this.isCreditPayable,
   );
   Account copyWithCompanion(AccountsCompanion data) {
     return Account(
@@ -1116,6 +1187,10 @@ class Account extends DataClass implements Insertable<Account> {
       displayOrder: data.displayOrder.present
           ? data.displayOrder.value
           : this.displayOrder,
+      isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
+      isCreditPayable: data.isCreditPayable.present
+          ? data.isCreditPayable.value
+          : this.isCreditPayable,
     );
   }
 
@@ -1132,7 +1207,9 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('billDate: $billDate, ')
           ..write('dueDate: $dueDate, ')
           ..write('createdAt: $createdAt, ')
-          ..write('displayOrder: $displayOrder')
+          ..write('displayOrder: $displayOrder, ')
+          ..write('isHidden: $isHidden, ')
+          ..write('isCreditPayable: $isCreditPayable')
           ..write(')'))
         .toString();
   }
@@ -1150,6 +1227,8 @@ class Account extends DataClass implements Insertable<Account> {
     dueDate,
     createdAt,
     displayOrder,
+    isHidden,
+    isCreditPayable,
   );
   @override
   bool operator ==(Object other) =>
@@ -1165,7 +1244,9 @@ class Account extends DataClass implements Insertable<Account> {
           other.billDate == this.billDate &&
           other.dueDate == this.dueDate &&
           other.createdAt == this.createdAt &&
-          other.displayOrder == this.displayOrder);
+          other.displayOrder == this.displayOrder &&
+          other.isHidden == this.isHidden &&
+          other.isCreditPayable == this.isCreditPayable);
 }
 
 class AccountsCompanion extends UpdateCompanion<Account> {
@@ -1180,6 +1261,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<int?> dueDate;
   final Value<DateTime> createdAt;
   final Value<int> displayOrder;
+  final Value<bool> isHidden;
+  final Value<bool> isCreditPayable;
   final Value<int> rowid;
   const AccountsCompanion({
     this.id = const Value.absent(),
@@ -1193,6 +1276,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.dueDate = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.displayOrder = const Value.absent(),
+    this.isHidden = const Value.absent(),
+    this.isCreditPayable = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AccountsCompanion.insert({
@@ -1207,6 +1292,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.dueDate = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.displayOrder = const Value.absent(),
+    this.isHidden = const Value.absent(),
+    this.isCreditPayable = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -1225,6 +1312,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<int>? dueDate,
     Expression<DateTime>? createdAt,
     Expression<int>? displayOrder,
+    Expression<bool>? isHidden,
+    Expression<bool>? isCreditPayable,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1239,6 +1328,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (dueDate != null) 'due_date': dueDate,
       if (createdAt != null) 'created_at': createdAt,
       if (displayOrder != null) 'display_order': displayOrder,
+      if (isHidden != null) 'is_hidden': isHidden,
+      if (isCreditPayable != null) 'is_credit_payable': isCreditPayable,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1255,6 +1346,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<int?>? dueDate,
     Value<DateTime>? createdAt,
     Value<int>? displayOrder,
+    Value<bool>? isHidden,
+    Value<bool>? isCreditPayable,
     Value<int>? rowid,
   }) {
     return AccountsCompanion(
@@ -1269,6 +1362,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       dueDate: dueDate ?? this.dueDate,
       createdAt: createdAt ?? this.createdAt,
       displayOrder: displayOrder ?? this.displayOrder,
+      isHidden: isHidden ?? this.isHidden,
+      isCreditPayable: isCreditPayable ?? this.isCreditPayable,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1309,6 +1404,12 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (displayOrder.present) {
       map['display_order'] = Variable<int>(displayOrder.value);
     }
+    if (isHidden.present) {
+      map['is_hidden'] = Variable<bool>(isHidden.value);
+    }
+    if (isCreditPayable.present) {
+      map['is_credit_payable'] = Variable<bool>(isCreditPayable.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1329,6 +1430,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('dueDate: $dueDate, ')
           ..write('createdAt: $createdAt, ')
           ..write('displayOrder: $displayOrder, ')
+          ..write('isHidden: $isHidden, ')
+          ..write('isCreditPayable: $isCreditPayable, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4189,6 +4292,8 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<int?> dueDate,
       Value<DateTime> createdAt,
       Value<int> displayOrder,
+      Value<bool> isHidden,
+      Value<bool> isCreditPayable,
       Value<int> rowid,
     });
 typedef $$AccountsTableUpdateCompanionBuilder =
@@ -4204,6 +4309,8 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<int?> dueDate,
       Value<DateTime> createdAt,
       Value<int> displayOrder,
+      Value<bool> isHidden,
+      Value<bool> isCreditPayable,
       Value<int> rowid,
     });
 
@@ -4268,6 +4375,16 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<int> get displayOrder => $composableBuilder(
     column: $table.displayOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isHidden => $composableBuilder(
+    column: $table.isHidden,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCreditPayable => $composableBuilder(
+    column: $table.isCreditPayable,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4335,6 +4452,16 @@ class $$AccountsTableOrderingComposer
     column: $table.displayOrder,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isHidden => $composableBuilder(
+    column: $table.isHidden,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCreditPayable => $composableBuilder(
+    column: $table.isCreditPayable,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AccountsTableAnnotationComposer
@@ -4384,6 +4511,14 @@ class $$AccountsTableAnnotationComposer
     column: $table.displayOrder,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isHidden =>
+      $composableBuilder(column: $table.isHidden, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCreditPayable => $composableBuilder(
+    column: $table.isCreditPayable,
+    builder: (column) => column,
+  );
 }
 
 class $$AccountsTableTableManager
@@ -4425,6 +4560,8 @@ class $$AccountsTableTableManager
                 Value<int?> dueDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> displayOrder = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
+                Value<bool> isCreditPayable = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion(
                 id: id,
@@ -4438,6 +4575,8 @@ class $$AccountsTableTableManager
                 dueDate: dueDate,
                 createdAt: createdAt,
                 displayOrder: displayOrder,
+                isHidden: isHidden,
+                isCreditPayable: isCreditPayable,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4453,6 +4592,8 @@ class $$AccountsTableTableManager
                 Value<int?> dueDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> displayOrder = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
+                Value<bool> isCreditPayable = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion.insert(
                 id: id,
@@ -4466,6 +4607,8 @@ class $$AccountsTableTableManager
                 dueDate: dueDate,
                 createdAt: createdAt,
                 displayOrder: displayOrder,
+                isHidden: isHidden,
+                isCreditPayable: isCreditPayable,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

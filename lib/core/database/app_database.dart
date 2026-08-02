@@ -20,7 +20,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMP TO VERSION 11 ---
   @override
-  int get schemaVersion => 12; 
+  int get schemaVersion => 14; 
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -46,6 +46,13 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(transactions, transactions.locationName);
         await m.addColumn(transactions, transactions.latitude);
         await m.addColumn(transactions, transactions.longitude);
+      }
+      if (from < 13) {
+        await m.addColumn(accounts, accounts.isHidden);
+       }
+       if (from < 14) {
+        // --- NEW MIGRATION FOR PAYABLE ACCOUNTS ---
+        await m.addColumn(accounts, accounts.isCreditPayable);
       }
     },
   );

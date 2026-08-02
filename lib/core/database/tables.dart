@@ -34,6 +34,8 @@ class Accounts extends Table {
   
   // --- NEW: Custom Drag-and-Drop Order Tracking ---
   IntColumn get displayOrder => integer().withDefault(const Constant(0))();
+  BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
+  BoolColumn get isCreditPayable => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};

@@ -11,8 +11,8 @@ class PremiumAccountCard extends ConsumerStatefulWidget {
   final VoidCallback? onCardTap;
 
   const PremiumAccountCard({
-    Key? key, 
-    required this.account, 
+    Key? key,
+    required this.account,
     this.onCardTap
   }) : super(key: key);
 
@@ -66,13 +66,13 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isCreditCard = widget.account.type == 'Credit Cards';
-    
+
     final bgColor = isCreditCard
-         ? theme.colorScheme.primary
-         : (isDark ? const Color(0xFF141414) : const Color(0xFF1E1E1E));
+        ? theme.colorScheme.primary
+        : (isDark ? const Color(0xFF141414) : const Color(0xFF1E1E1E));
     final fgColor = isCreditCard
-         ? theme.colorScheme.onPrimary
-         : Colors.white;
+        ? theme.colorScheme.onPrimary
+        : Colors.white;
 
     return AnimatedBuilder(
       animation: _animation,
@@ -104,14 +104,10 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
   }
 
   Widget _buildFront(Color bgColor, Color fgColor, bool isCreditCard) {
-    final textTheme = Theme.of(context).textTheme;
     final labelText = isCreditCard ? 'OUTSTANDING BALANCE' : 'CURRENT BALANCE';
-
-    // --- FIX: Strict Mathematical Truth ---
-    // The account.balance in the database natively tracks exact outstanding liability.
-    // If debt, it is negative. If surplus, it is positive.
     final balance = widget.account.balance;
-    final signText = balance < 0 ? '-₹' : (balance > 0 ? '+₹' : '₹');
+    // Explicit Rupee formatting logic
+    final signText = balance < 0 ? '-₹' : '₹';
 
     return Container(
       height: 190,
@@ -132,12 +128,25 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  widget.account.providerName.toUpperCase(),
-                  style: textTheme.titleMedium?.copyWith(color: fgColor),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              // --- PROVIDER NAME PILL ---
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: fgColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    widget.account.providerName.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                      color: fgColor.withOpacity(0.9),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -167,32 +176,65 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                flex: 3,
+                flex: 4, // More flex priority for the name
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.account.name.toUpperCase(), style: textTheme.bodySmall?.copyWith(color: fgColor), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    // --- ACCOUNT NAME FITTED BOX ---
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        widget.account.name.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: fgColor,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(widget.account.type, style: textTheme.bodySmall?.copyWith(color: fgColor.withOpacity(0.6), fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      widget.account.type,
+                      style: TextStyle(fontSize: 10, color: fgColor.withOpacity(0.6), fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                flex: 4,
+                flex: 3,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(labelText, style: textTheme.labelSmall?.copyWith(color: fgColor.withOpacity(0.6)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      labelText,
+                      style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: fgColor.withOpacity(0.6), letterSpacing: 0.5),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: 2),
+                    
+                    // --- BALANCE TEXT (Font Size Reduced slightly) ---
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerRight,
                       child: CurrencyText(
-                        amount: balance,
+                        amount: balance.abs(), // Abs guarantees no duplicate minus signs
                         sign: signText,
-                        amountStyle: textTheme.headlineSmall!.copyWith(color: fgColor),
-                        symbolStyle: textTheme.titleMedium?.copyWith(color: fgColor.withOpacity(0.9)),
+                        amountStyle: TextStyle(
+                          fontSize: 22, // Shrunk from 24
+                          fontWeight: FontWeight.w900, 
+                          color: fgColor, 
+                          letterSpacing: -0.5
+                        ),
+                        symbolStyle: TextStyle(
+                          fontSize: 14, 
+                          color: fgColor.withOpacity(0.9)
+                        ),
                       ),
                     ),
                   ],
@@ -230,20 +272,21 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
             padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg),
             child: isCreditCard
                 ? Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildBackData(fgColor, 'BILL DATE', _getOrdinal(widget.account.billDate)),
-                    _buildBackData(fgColor, 'DUE DATE', _getOrdinal(widget.account.dueDate)),
-                    _buildBackData(fgColor, 'CREDIT LIMIT', '₹${widget.account.creditLimit?.toStringAsFixed(2) ?? "0.00"}'),
-                  ],
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildBackData(fgColor, 'ACCOUNT TYPE', widget.account.type),
-                    _buildBackData(fgColor, 'ADDED ON', '${widget.account.createdAt.day}/${widget.account.createdAt.month}/${widget.account.createdAt.year}'),
-                  ],
-                ),
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildBackData(fgColor, 'BILL DATE', _getOrdinal(widget.account.billDate)),
+                      _buildBackData(fgColor, 'DUE DATE', _getOrdinal(widget.account.dueDate)),
+                      // Inserted the correct Rupee symbol into the credit limit
+                      _buildBackData(fgColor, 'CREDIT LIMIT', '₹${widget.account.creditLimit?.toStringAsFixed(2) ?? "0.00"}'),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildBackData(fgColor, 'ACCOUNT TYPE', widget.account.type),
+                      _buildBackData(fgColor, 'ADDED ON', '${widget.account.createdAt.day}/${widget.account.createdAt.month}/${widget.account.createdAt.year}'),
+                    ],
+                  ),
           ),
           const Spacer(),
           GestureDetector(
