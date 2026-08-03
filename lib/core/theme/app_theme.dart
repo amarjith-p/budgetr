@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTokens {
   static const Color primary = Color(0xFF1E1E1E); 
   static const Color primaryLight = Color(0xFF4CAF50); 
   static const Color backgroundLight = Color(0xFFF9FAFB);
-  static const Color backgroundDark = Color(0xFF09090B);
+  
+  // --- UPDATED NAVY DARK TOKENS ---
+  static const Color backgroundDark = Color(0xFF0B1121); // Deepest Midnight Navy
   static const Color surfaceLight = Colors.white;
-  static const Color surfaceDark = Color(0xFF18181B);
+  static const Color surfaceDark = Color(0xFF131C35);    // Elevated Navy Surface
   static const Color textLight = Color(0xFF121212);
   static const Color textDark = Color(0xFFF5F5F5);
 
@@ -57,14 +60,33 @@ class AppTheme {
     brightness: Brightness.dark,
     scaffoldBackgroundColor: AppTokens.backgroundDark,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppTokens.primary,
+      seedColor: const Color(0xFF3B82F6), // Vibrant Electric Blue accent
       brightness: Brightness.dark,
-      primary: Colors.white, 
+      primary: const Color.fromARGB(255, 184, 184, 184), 
       surface: AppTokens.surfaceDark,
       onSurface: AppTokens.textDark,
-      surfaceContainerHighest: const Color(0xFF242424), 
+      surfaceContainerHighest: const Color(0xFF1E294B), // Highest Navy for inputs/highlights
+      onSurfaceVariant: const Color(0xFF94A3B8), // Soft slate secondary text
+      error: const Color(0xFFEF4444),
+      outline: const Color(0xFF2A3655), // Soft Navy Border
     ),
-    dividerColor: Colors.white.withOpacity(0.15),
+    dividerColor: const Color(0xFF2A3655),
     textTheme: _buildTextTheme(AppTokens.textDark),
+    
+    appBarTheme: const AppBarTheme(
+      backgroundColor: AppTokens.backgroundDark,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      centerTitle: true,
+    ),
+    
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: AppTokens.surfaceDark,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+    ),
   );
 }
