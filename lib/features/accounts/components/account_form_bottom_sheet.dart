@@ -6,6 +6,7 @@ import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/modern_boxy_input.dart';
 import '../../../core/components/modern_boxy_button.dart';
 import '../../../core/components/inline_calculator_pad.dart';
+import '../../../core/components/global_selection_sheet.dart'; 
 import '../../../core/utils/bodmas_calculator.dart';
 import '../providers/account_provider.dart';
 
@@ -33,23 +34,23 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
 
   final List<String> _accountTypes = [
     'Savings Account', 'Current Account', 'Salary Account', 
-    'Digital Wallets', 'Liquid Money', 'Credit Cards'
+    'Digital/Payment Banks', 'Liquid Money', 'Credit Cards'
   ];
 
   final Map<String, List<String>> _providerGroups = {
-    'Commercial Banks': [
-      'Axis Bank', 'Bank of Baroda', 'Bank of India', 'Canara Bank',
-      'Central Bank of India', 'Federal Bank', 'HDFC Bank', 'ICICI Bank',
-      'IDFC First Bank', 'Indian Bank', 'IndusInd Bank', 'Kotak Mahindra Bank',
-      'Punjab National Bank (PNB)', 'South Indian Bank', 'State Bank of India (SBI)',
-      'Union Bank of India', 'Yes Bank', 'Other'
+    'Commercial/Foreign Banks': [
+      'Axis Bank', 'Bandhan Bank', 'Bank of Baroda', 'Bank of India', 'Bank of Maharashtra', 'Canara Bank',
+      'Central Bank of India', 'City Union Bank', 'CSB Bank', 'DBS Bank', 'DCB Bank', 'Deutsche Bank', 'Dhanalakshmi Bank', 'Doha Bank' 'Federal Bank', 'HSBC Bank' 'HDFC Bank', 'ICICI Bank',
+      'IDBI Bank', 'IDFC First Bank', 'Indian Bank', 'Indian Overseas Bank', 'IndusInd Bank', 'Jammu & Kashmir Bank', 'Karnataka Bank', 'Karur Vysya Bank',
+      'Kerala Gramin Bank', 'Kotak Mahindra Bank', 'Nainital Bank', 'Punjab & Sind Bank', 'Punjab National Bank (PNB)', 'RBL Bank', 'SBM Bank', 'South Indian Bank', 'Standard Chartered Bank', 'State Bank of India (SBI)',
+      'Tamilnad Mercantile Bank', 'UCO Bank', 'Union Bank of India', 'Yes Bank', 'Other'
     ],
     'Small Finance Banks': [
-      'AU Small Finance Bank', 'Equitas Small Finance Bank',
-      'Ujjivan Small Finance Bank'
+      'AU Small Finance Bank', 'Capital Small Finance Bank', 'Equitas Small Finance Bank', 'ESAF Small Finance Bank', 'Jana Small Finance Bank', 'Suryoday Small Finance Bank', 'Ujjivan Small Finance Bank',
+      'Slice Small Finance Bank', 'Shivalik Small Finance Bank', 'Unity Small Finance Bank', 'Utkarsh Small Finance Bank', 'Other'
     ],
-    'Digital Wallets': [
-      'Airtel Payments Bank', 'Amazon Pay', 'Cred', 'Freecharge',
+    'Digital/Payment Banks': [
+      'Airtel Payments Bank', 'Fino Payments Bank', 'India Post Payments Bank', 'Jio Payments Bank', 'NSDL Payments Bank', 'Amazon Pay', 'Cred', 'Freecharge',
       'Google Pay', 'Jio Payments Bank', 'MobiKwik', 'Paytm', 'PhonePe', 'Other'
     ],
   };
@@ -98,6 +99,36 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
     addCalcFocusListener(_dueDateCtrl);
     addNormalFocusListener(_nameCtrl);
     addNormalFocusListener(_last4Ctrl);
+
+    _last4Ctrl.addListener(() {
+      final text = _last4Ctrl.text;
+      String numbersOnly = text.replaceAll(RegExp(r'[^0-9]'), '');
+      if (numbersOnly.length > 4) {
+        numbersOnly = numbersOnly.substring(0, 4);
+      }
+      if (text != numbersOnly) {
+        _last4Ctrl.text = numbersOnly;
+        _last4Ctrl.selection = TextSelection.collapsed(offset: numbersOnly.length);
+      }
+      setState(() {}); 
+    });
+
+    _billDateCtrl.addListener(() => _enforceDateLimits(_billDateCtrl));
+    _dueDateCtrl.addListener(() => _enforceDateLimits(_dueDateCtrl));
+  }
+
+  void _enforceDateLimits(TextEditingController ctrl) {
+    if (ctrl.text.isEmpty) return;
+    final val = int.tryParse(ctrl.text);
+    if (val != null) {
+      if (val > 31) {
+        ctrl.text = '31';
+        ctrl.selection = TextSelection.collapsed(offset: 2);
+      } else if (val < 1 && ctrl.text != '0') {
+        ctrl.text = '1';
+        ctrl.selection = TextSelection.collapsed(offset: 1);
+      }
+    }
   }
 
   @override
@@ -119,104 +150,45 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
     }
   }
 
-  void _showTypePicker() {
+  void _showTypePicker() async {
     _closeCalculatorSafely();
-    showModalBottomSheet(
+    final selected = await GlobalSelectionSheet.showSimple(
       context: context,
-      shape: DesignTokens.bottomSheetShape,
-      builder: (ctx) => ListView.builder(
-        shrinkWrap: true,
-        itemCount: _accountTypes.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(_accountTypes[index], style: const TextStyle(fontWeight: FontWeight.w600)),
-            onTap: () {
-              setState(() {
-                _typeCtrl.text = _accountTypes[index];
-                _providerCtrl.clear();
-              });
-              Navigator.pop(ctx);
-            },
-          );
-        },
-      ),
+      title: 'Select Account Type',
+      items: _accountTypes,
+      selectedValue: _typeCtrl.text,
     );
+    
+    if (selected != null && mounted) {
+      setState(() {
+        _typeCtrl.text = selected;
+        _providerCtrl.clear();
+      });
+    }
   }
 
-  void _showProviderPicker() {
+  void _showProviderPicker() async {
     _closeCalculatorSafely();
-    final isWallet = _typeCtrl.text == 'Digital Wallets';
+    final isWallet = _typeCtrl.text == 'Digital/Payment Banks';
     final Map<String, List<String>> filteredGroups = {};
 
     if (isWallet) {
-      filteredGroups['Digital Wallets'] = _providerGroups['Digital Wallets']!;
+      filteredGroups['Digital/Payment Banks'] = _providerGroups['Digital/Payment Banks']!;
     } else {
-      filteredGroups['Commercial Banks'] = _providerGroups['Commercial Banks']!;
+      filteredGroups['Commercial/Foreign Banks'] = _providerGroups['Commercial/Foreign Banks']!;
       filteredGroups['Small Finance Banks'] = _providerGroups['Small Finance Banks']!;
     }
 
-    showModalBottomSheet(
+    final selected = await GlobalSelectionSheet.showGrouped(
       context: context,
-      isScrollControlled: true,
-      shape: DesignTokens.bottomSheetShape,
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.9,
-        minChildSize: 0.5,
-        expand: false,
-        builder: (context, scrollController) {
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(DesignTokens.spacingMd),
-                child: Text('Select Provider', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: filteredGroups.length,
-                  itemBuilder: (context, index) {
-                    final groupName = filteredGroups.keys.elementAt(index);
-                    final providers = filteredGroups[groupName]!;
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg, vertical: DesignTokens.spacingSm),
-                          child: Text(
-                            groupName.toUpperCase(),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ),
-                        ...providers.map((provider) => ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg),
-                          title: Text(provider, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                          trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                          onTap: () {
-                            setState(() => _providerCtrl.text = provider);
-                            Navigator.pop(ctx);
-                          },
-                        )).toList(),
-                        
-                        if (index < filteredGroups.length - 1)
-                          Divider(height: 32, color: Theme.of(context).dividerColor),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+      title: 'Select Provider',
+      groupedItems: filteredGroups,
+      selectedValue: _providerCtrl.text,
     );
+
+    if (selected != null && mounted) {
+      setState(() => _providerCtrl.text = selected);
+    }
   }
 
   Future<void> _submit() async {
@@ -337,7 +309,8 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                                   focusNode: _focusNodes[_providerCtrl],
                                   labelText: 'Provider Name', 
                                   suffixIcon: const Icon(Icons.arrow_drop_down_rounded),
-                                  validator: (v) => v!.isEmpty ? 'Req' : null
+                                  // Updated to professional validation string
+                                  validator: (v) => v == null || v.isEmpty ? 'Required' : null
                                 ),
                               ),
                             ),
@@ -350,7 +323,26 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                               focusNode: _focusNodes[_last4Ctrl],
                               labelText: 'Last 4 Digits', 
                               keyboardType: TextInputType.number,
-                              validator: (v) => v!.length != 4 ? 'Must be 4' : null,
+                              suffixIcon: Padding(
+                                padding: const EdgeInsets.only(right: 16.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '${_last4Ctrl.text.length}/4',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: _last4Ctrl.text.length == 4 
+                                            ? theme.colorScheme.primary 
+                                            : theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Updated to professional validation string
+                              validator: (v) => v == null || v.length != 4 ? 'Must be 4 digits' : null,
                               textInputAction: TextInputAction.next,
                               onTap: _closeCalculatorSafely,
                             )
@@ -364,7 +356,8 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                       controller: _nameCtrl, 
                       focusNode: _focusNodes[_nameCtrl],
                       labelText: 'Custom Account Name', 
-                      validator: (v) => v!.isEmpty ? 'Req' : null, 
+                      // Updated to professional validation string
+                      validator: (v) => v == null || v.isEmpty ? 'Required' : null, 
                       textInputAction: TextInputAction.next,
                       onTap: _closeCalculatorSafely,
                       onFieldSubmitted: (_) => _openCalculatorFor(isCC ? _limitCtrl : _balanceCtrl), 
@@ -375,27 +368,53 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                       ModernBoxyInput(
                         controller: _limitCtrl, 
                         focusNode: _focusNodes[_limitCtrl],
-                        labelText: 'Credit Limit (₹)', // <-- RESTORED RUPEE SYMBOL
+                        labelText: 'Credit Limit (₹)', 
                         readOnly: true,
                         onTap: () => _openCalculatorFor(_limitCtrl), 
-                        validator: (v) => v!.isEmpty ? 'Req' : null
+                        // Updated to professional validation string
+                        validator: (v) => v == null || v.isEmpty ? 'Required' : null
                       ),
                       const SizedBox(height: DesignTokens.spacingMd),
                       Row(
                         children: [
-                          Expanded(child: ModernBoxyInput(controller: _billDateCtrl, focusNode: _focusNodes[_billDateCtrl], labelText: 'Bill Date (1-31)', readOnly: true, onTap: () => _openCalculatorFor(_billDateCtrl), validator: (v) => (int.tryParse(v!) ?? 0) > 31 ? 'Inv' : null)),
+                          Expanded(
+                            child: ModernBoxyInput(
+                              controller: _billDateCtrl, 
+                              focusNode: _focusNodes[_billDateCtrl], 
+                              labelText: 'Bill Date (1-31)', 
+                              readOnly: true, 
+                              onTap: () => _openCalculatorFor(_billDateCtrl), 
+                              // Updated to professional validation string
+                              validator: (v) => v == null || v.isEmpty 
+                                  ? 'Required' 
+                                  : ((int.tryParse(v) ?? 0) < 1 || (int.tryParse(v) ?? 0) > 31 ? 'Invalid date' : null)
+                            )
+                          ),
                           const SizedBox(width: DesignTokens.spacingMd),
-                          Expanded(child: ModernBoxyInput(controller: _dueDateCtrl, focusNode: _focusNodes[_dueDateCtrl], labelText: 'Due Date (1-31)', readOnly: true, onTap: () => _openCalculatorFor(_dueDateCtrl), validator: (v) => (int.tryParse(v!) ?? 0) > 31 ? 'Inv' : null)),
+                          Expanded(
+                            child: ModernBoxyInput(
+                              controller: _dueDateCtrl, 
+                              focusNode: _focusNodes[_dueDateCtrl], 
+                              labelText: 'Due Date (1-31)', 
+                              readOnly: true, 
+                              onTap: () => _openCalculatorFor(_dueDateCtrl), 
+                              // Updated to professional validation string
+                              validator: (v) => v == null || v.isEmpty 
+                                  ? 'Required' 
+                                  : ((int.tryParse(v) ?? 0) < 1 || (int.tryParse(v) ?? 0) > 31 ? 'Invalid date' : null)
+                            )
+                          ),
                         ],
                       ),
                     ] else ...[
                       ModernBoxyInput(
                         controller: _balanceCtrl, 
                         focusNode: _focusNodes[_balanceCtrl],
-                        labelText: 'Current Balance (₹)', // <-- RESTORED RUPEE SYMBOL
+                        labelText: 'Current Balance (₹)', 
                         readOnly: true,
                         onTap: () => _openCalculatorFor(_balanceCtrl), 
-                        validator: (v) => v!.isEmpty ? 'Req' : null
+                        // Updated to professional validation string
+                        validator: (v) => v == null || v.isEmpty ? 'Required' : null
                       ),
                     ],
                     

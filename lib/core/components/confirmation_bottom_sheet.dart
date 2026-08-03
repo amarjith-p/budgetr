@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/design_tokens.dart';
+import 'modern_boxy_button.dart';
 
 class ConfirmationBottomSheet extends StatelessWidget {
   final String title;
@@ -28,14 +30,12 @@ class ConfirmationBottomSheet extends StatelessWidget {
     String cancelText = 'CANCEL',
     bool isDestructive = false,
   }) {
+    HapticFeedback.lightImpact();
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)), 
-      ),
+      backgroundColor: Colors.transparent, // Ensures the custom shape corner radius shows
       builder: (ctx) => ConfirmationBottomSheet(
         title: title,
         description: description,
@@ -61,31 +61,33 @@ class ConfirmationBottomSheet extends StatelessWidget {
     final confirmBgColor = isDestructive ? theme.colorScheme.error : theme.colorScheme.primary;
     final confirmFgColor = isDestructive ? theme.colorScheme.onError : theme.colorScheme.onPrimary;
 
-    return Padding(
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(DesignTokens.radiusLg)),
+      ),
       padding: EdgeInsets.only(
-        left: DesignTokens.spacingXl,
-        right: DesignTokens.spacingXl,
+        left: DesignTokens.spacingLg,
+        right: DesignTokens.spacingLg,
         top: DesignTokens.spacingSm,
-        bottom: bottomPadding > 0 ? bottomPadding : DesignTokens.spacingXl,
+        bottom: bottomPadding > 0 ? bottomPadding : DesignTokens.spacingLg,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center, // Centered for a premium feel
         children: [
-          // Subtle Drag Handle
-          Container(
-            width: 36,
-            height: 4,
-            margin: const EdgeInsets.only(bottom: DesignTokens.spacingXl),
-            decoration: BoxDecoration(
-              color: theme.dividerColor,
-              borderRadius: BorderRadius.circular(2),
+          // Standard Custom Drag Handle
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: DesignTokens.spacingLg, top: DesignTokens.spacingSm),
+              decoration: BoxDecoration(color: theme.dividerColor, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           
           // Sleek Circular Icon
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: iconBgColor,
               shape: BoxShape.circle,
@@ -93,7 +95,7 @@ class ConfirmationBottomSheet extends StatelessWidget {
             child: Icon(
               isDestructive ? Icons.delete_outline_rounded : Icons.info_outline_rounded,
               color: iconColor,
-              size: 32,
+              size: 36,
             ),
           ),
           const SizedBox(height: DesignTokens.spacingLg),
@@ -102,9 +104,9 @@ class ConfirmationBottomSheet extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.3,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
             ),
           ),
           const SizedBox(height: DesignTokens.spacingSm),
@@ -115,71 +117,36 @@ class ConfirmationBottomSheet extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
               height: 1.5,
               fontSize: 15,
+              fontWeight: FontWeight.w500,
             ),
           ),
           
-          const SizedBox(height: 32),
+          const SizedBox(height: DesignTokens.spacingXl),
 
-          // Independent Sleek Actions
+          // Replaced with ModernBoxyButton
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: theme.colorScheme.onSurface,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                      ),
-                    ),
-                    onPressed: () => Navigator.pop(context, false),
-                    // --- FIX: Add FittedBox to auto-scale button labels ---
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        cancelText,
-                        maxLines: 1,
-                        style: const TextStyle(
-                          fontSize: 15, 
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
+                child: ModernBoxyButton(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pop(context, false);
+                  },
+                  label: cancelText,
+                  isOutlined: true,
                 ),
               ),
               const SizedBox(width: DesignTokens.spacingMd),
               Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: confirmBgColor,
-                      foregroundColor: confirmFgColor,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context, true);
-                      onConfirm();
-                    },
-                    // --- FIX: Add FittedBox to auto-scale button labels ---
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        confirmText,
-                        maxLines: 1,
-                        style: const TextStyle(
-                          fontSize: 15, 
-                          fontWeight: FontWeight.w700, 
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ),
+                child: ModernBoxyButton(
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    Navigator.pop(context, true);
+                    onConfirm();
+                  },
+                  label: confirmText,
+                  backgroundColor: confirmBgColor,
+                  foregroundColor: confirmFgColor,
                 ),
               ),
             ],

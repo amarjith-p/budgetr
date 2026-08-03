@@ -73,9 +73,6 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // REMOVED the SizedBox that was pushing the layout down to pull it closer to the AppBar
-              
-              // --- TOP HEADER: SUMMARY PILL & COMPACT MANAGE BUTTON ---
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(DesignTokens.spacingLg, DesignTokens.spacingSm, DesignTokens.spacingLg, DesignTokens.spacingSm),
@@ -94,7 +91,6 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                       
                       const SizedBox(width: 12),
 
-                      // Explicitly reduced constraints to make the button distinctly small
                       SizedBox(
                         width: 36,
                         height: 36,
@@ -106,7 +102,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                           style: IconButton.styleFrom(
                             backgroundColor: theme.colorScheme.surface,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10), // Tighter radius for the small button
+                              borderRadius: BorderRadius.circular(10),
                               side: BorderSide(color: theme.dividerColor, width: 1.0),
                             ),
                           ),
@@ -164,9 +160,17 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
   Widget _buildSummaryPill(BuildContext context, double drBalance, double crBalance, double difference, List<Account> bankAccounts, ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
     
+    // --- DYNAMIC LABEL FIX ---
     Color diffColor = Colors.blueAccent.shade700;
-    if (difference > 0) diffColor = Colors.green.shade600;
-    else if (difference < 0) diffColor = theme.colorScheme.error;
+    String diffLabel = 'Tally:'; // Default state if difference is exactly 0.0
+
+    if (difference > 0) {
+      diffColor = Colors.green.shade600;
+      diffLabel = 'Surplus:'; // Replaces "Net" when they have more than enough
+    } else if (difference < 0) {
+      diffColor = theme.colorScheme.error;
+      diffLabel = 'Short:'; // Replaces "Net" when they are falling behind
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -191,15 +195,16 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildPillMetric('Dr', drBalance, theme.colorScheme.primary, theme),
+                _buildPillMetric('Dr:', drBalance, theme.colorScheme.primary, theme),
                 
                 Container(margin: const EdgeInsets.symmetric(horizontal: 10), height: 14, width: 1.5, color: theme.dividerColor),
                 
-                _buildPillMetric('Cr', crBalance, theme.colorScheme.error, theme),
+                _buildPillMetric('Cr:', crBalance, theme.colorScheme.error, theme),
 
                 Container(margin: const EdgeInsets.symmetric(horizontal: 10), height: 14, width: 1.5, color: theme.dividerColor),
                 
-                _buildPillMetric('Net', difference, diffColor, theme, showPlus: difference > 0),
+                // Now explicitly passes the dynamic status label instead of 'Net'
+                _buildPillMetric(diffLabel, difference, diffColor, theme, showPlus: difference > 0),
               ],
             ),
           ),

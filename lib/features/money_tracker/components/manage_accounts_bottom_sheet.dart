@@ -174,7 +174,7 @@ class _ManageAccountsBottomSheetState extends ConsumerState<ManageAccountsBottom
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(DesignTokens.spacingLg, DesignTokens.spacingLg, DesignTokens.spacingLg, DesignTokens.spacingSm),
                           child: Text(
-                            'BANK ACCOUNTS & WALLETS', 
+                            'Accounts', 
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: theme.colorScheme.primary)
                           ),
                         ),

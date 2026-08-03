@@ -76,7 +76,7 @@ class AccountsTab extends ConsumerWidget {
                 ),
 
               if (bankAccounts.isNotEmpty) ...[
-                _buildSectionHeader(context, 'BANK ACCOUNTS & WALLETS', totalBankBalance),
+                _buildSectionHeader(context, 'ACCOUNTS', totalBankBalance),
                 _buildList(context, ref, bankAccounts, isSelectionMode, selectedIds),
               ],
               if (creditCards.isNotEmpty) ...[
