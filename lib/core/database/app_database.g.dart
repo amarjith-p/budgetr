@@ -3856,6 +3856,779 @@ class ClosedBudgetSnapshotsCompanion
   }
 }
 
+class $CustomBudgetsTable extends CustomBudgets
+    with TableInfo<$CustomBudgetsTable, CustomBudget> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CustomBudgetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountLimitMeta = const VerificationMeta(
+    'amountLimit',
+  );
+  @override
+  late final GeneratedColumn<double> amountLimit = GeneratedColumn<double>(
+    'amount_limit',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _timeFrameMeta = const VerificationMeta(
+    'timeFrame',
+  );
+  @override
+  late final GeneratedColumn<String> timeFrame = GeneratedColumn<String>(
+    'time_frame',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startDateMeta = const VerificationMeta(
+    'startDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startDate = GeneratedColumn<DateTime>(
+    'start_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endDateMeta = const VerificationMeta(
+    'endDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> endDate = GeneratedColumn<DateTime>(
+    'end_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subCategoryMeta = const VerificationMeta(
+    'subCategory',
+  );
+  @override
+  late final GeneratedColumn<String> subCategory = GeneratedColumn<String>(
+    'sub_category',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bucketIdMeta = const VerificationMeta(
+    'bucketId',
+  );
+  @override
+  late final GeneratedColumn<int> bucketId = GeneratedColumn<int>(
+    'bucket_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
+  @override
+  late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
+    'account_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isSettledMeta = const VerificationMeta(
+    'isSettled',
+  );
+  @override
+  late final GeneratedColumn<bool> isSettled = GeneratedColumn<bool>(
+    'is_settled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_settled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _settledAmountMeta = const VerificationMeta(
+    'settledAmount',
+  );
+  @override
+  late final GeneratedColumn<double> settledAmount = GeneratedColumn<double>(
+    'settled_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    amountLimit,
+    timeFrame,
+    startDate,
+    endDate,
+    categoryId,
+    subCategory,
+    bucketId,
+    accountId,
+    isSettled,
+    settledAmount,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'custom_budgets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CustomBudget> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('amount_limit')) {
+      context.handle(
+        _amountLimitMeta,
+        amountLimit.isAcceptableOrUnknown(
+          data['amount_limit']!,
+          _amountLimitMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_amountLimitMeta);
+    }
+    if (data.containsKey('time_frame')) {
+      context.handle(
+        _timeFrameMeta,
+        timeFrame.isAcceptableOrUnknown(data['time_frame']!, _timeFrameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timeFrameMeta);
+    }
+    if (data.containsKey('start_date')) {
+      context.handle(
+        _startDateMeta,
+        startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startDateMeta);
+    }
+    if (data.containsKey('end_date')) {
+      context.handle(
+        _endDateMeta,
+        endDate.isAcceptableOrUnknown(data['end_date']!, _endDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endDateMeta);
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    }
+    if (data.containsKey('sub_category')) {
+      context.handle(
+        _subCategoryMeta,
+        subCategory.isAcceptableOrUnknown(
+          data['sub_category']!,
+          _subCategoryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('bucket_id')) {
+      context.handle(
+        _bucketIdMeta,
+        bucketId.isAcceptableOrUnknown(data['bucket_id']!, _bucketIdMeta),
+      );
+    }
+    if (data.containsKey('account_id')) {
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta),
+      );
+    }
+    if (data.containsKey('is_settled')) {
+      context.handle(
+        _isSettledMeta,
+        isSettled.isAcceptableOrUnknown(data['is_settled']!, _isSettledMeta),
+      );
+    }
+    if (data.containsKey('settled_amount')) {
+      context.handle(
+        _settledAmountMeta,
+        settledAmount.isAcceptableOrUnknown(
+          data['settled_amount']!,
+          _settledAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CustomBudget map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CustomBudget(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      amountLimit: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount_limit'],
+      )!,
+      timeFrame: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}time_frame'],
+      )!,
+      startDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_date'],
+      )!,
+      endDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}end_date'],
+      )!,
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      ),
+      subCategory: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sub_category'],
+      ),
+      bucketId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}bucket_id'],
+      ),
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_id'],
+      ),
+      isSettled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_settled'],
+      )!,
+      settledAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}settled_amount'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CustomBudgetsTable createAlias(String alias) {
+    return $CustomBudgetsTable(attachedDatabase, alias);
+  }
+}
+
+class CustomBudget extends DataClass implements Insertable<CustomBudget> {
+  final String id;
+  final String name;
+  final double amountLimit;
+  final String timeFrame;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String? categoryId;
+  final String? subCategory;
+  final int? bucketId;
+  final String? accountId;
+  final bool isSettled;
+  final double? settledAmount;
+  final DateTime createdAt;
+  const CustomBudget({
+    required this.id,
+    required this.name,
+    required this.amountLimit,
+    required this.timeFrame,
+    required this.startDate,
+    required this.endDate,
+    this.categoryId,
+    this.subCategory,
+    this.bucketId,
+    this.accountId,
+    required this.isSettled,
+    this.settledAmount,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['amount_limit'] = Variable<double>(amountLimit);
+    map['time_frame'] = Variable<String>(timeFrame);
+    map['start_date'] = Variable<DateTime>(startDate);
+    map['end_date'] = Variable<DateTime>(endDate);
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
+    }
+    if (!nullToAbsent || subCategory != null) {
+      map['sub_category'] = Variable<String>(subCategory);
+    }
+    if (!nullToAbsent || bucketId != null) {
+      map['bucket_id'] = Variable<int>(bucketId);
+    }
+    if (!nullToAbsent || accountId != null) {
+      map['account_id'] = Variable<String>(accountId);
+    }
+    map['is_settled'] = Variable<bool>(isSettled);
+    if (!nullToAbsent || settledAmount != null) {
+      map['settled_amount'] = Variable<double>(settledAmount);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CustomBudgetsCompanion toCompanion(bool nullToAbsent) {
+    return CustomBudgetsCompanion(
+      id: Value(id),
+      name: Value(name),
+      amountLimit: Value(amountLimit),
+      timeFrame: Value(timeFrame),
+      startDate: Value(startDate),
+      endDate: Value(endDate),
+      categoryId: categoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryId),
+      subCategory: subCategory == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subCategory),
+      bucketId: bucketId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bucketId),
+      accountId: accountId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accountId),
+      isSettled: Value(isSettled),
+      settledAmount: settledAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(settledAmount),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CustomBudget.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CustomBudget(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      amountLimit: serializer.fromJson<double>(json['amountLimit']),
+      timeFrame: serializer.fromJson<String>(json['timeFrame']),
+      startDate: serializer.fromJson<DateTime>(json['startDate']),
+      endDate: serializer.fromJson<DateTime>(json['endDate']),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
+      subCategory: serializer.fromJson<String?>(json['subCategory']),
+      bucketId: serializer.fromJson<int?>(json['bucketId']),
+      accountId: serializer.fromJson<String?>(json['accountId']),
+      isSettled: serializer.fromJson<bool>(json['isSettled']),
+      settledAmount: serializer.fromJson<double?>(json['settledAmount']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'amountLimit': serializer.toJson<double>(amountLimit),
+      'timeFrame': serializer.toJson<String>(timeFrame),
+      'startDate': serializer.toJson<DateTime>(startDate),
+      'endDate': serializer.toJson<DateTime>(endDate),
+      'categoryId': serializer.toJson<String?>(categoryId),
+      'subCategory': serializer.toJson<String?>(subCategory),
+      'bucketId': serializer.toJson<int?>(bucketId),
+      'accountId': serializer.toJson<String?>(accountId),
+      'isSettled': serializer.toJson<bool>(isSettled),
+      'settledAmount': serializer.toJson<double?>(settledAmount),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CustomBudget copyWith({
+    String? id,
+    String? name,
+    double? amountLimit,
+    String? timeFrame,
+    DateTime? startDate,
+    DateTime? endDate,
+    Value<String?> categoryId = const Value.absent(),
+    Value<String?> subCategory = const Value.absent(),
+    Value<int?> bucketId = const Value.absent(),
+    Value<String?> accountId = const Value.absent(),
+    bool? isSettled,
+    Value<double?> settledAmount = const Value.absent(),
+    DateTime? createdAt,
+  }) => CustomBudget(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    amountLimit: amountLimit ?? this.amountLimit,
+    timeFrame: timeFrame ?? this.timeFrame,
+    startDate: startDate ?? this.startDate,
+    endDate: endDate ?? this.endDate,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    subCategory: subCategory.present ? subCategory.value : this.subCategory,
+    bucketId: bucketId.present ? bucketId.value : this.bucketId,
+    accountId: accountId.present ? accountId.value : this.accountId,
+    isSettled: isSettled ?? this.isSettled,
+    settledAmount: settledAmount.present
+        ? settledAmount.value
+        : this.settledAmount,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CustomBudget copyWithCompanion(CustomBudgetsCompanion data) {
+    return CustomBudget(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      amountLimit: data.amountLimit.present
+          ? data.amountLimit.value
+          : this.amountLimit,
+      timeFrame: data.timeFrame.present ? data.timeFrame.value : this.timeFrame,
+      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      endDate: data.endDate.present ? data.endDate.value : this.endDate,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      subCategory: data.subCategory.present
+          ? data.subCategory.value
+          : this.subCategory,
+      bucketId: data.bucketId.present ? data.bucketId.value : this.bucketId,
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
+      isSettled: data.isSettled.present ? data.isSettled.value : this.isSettled,
+      settledAmount: data.settledAmount.present
+          ? data.settledAmount.value
+          : this.settledAmount,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CustomBudget(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('amountLimit: $amountLimit, ')
+          ..write('timeFrame: $timeFrame, ')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('subCategory: $subCategory, ')
+          ..write('bucketId: $bucketId, ')
+          ..write('accountId: $accountId, ')
+          ..write('isSettled: $isSettled, ')
+          ..write('settledAmount: $settledAmount, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    amountLimit,
+    timeFrame,
+    startDate,
+    endDate,
+    categoryId,
+    subCategory,
+    bucketId,
+    accountId,
+    isSettled,
+    settledAmount,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CustomBudget &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.amountLimit == this.amountLimit &&
+          other.timeFrame == this.timeFrame &&
+          other.startDate == this.startDate &&
+          other.endDate == this.endDate &&
+          other.categoryId == this.categoryId &&
+          other.subCategory == this.subCategory &&
+          other.bucketId == this.bucketId &&
+          other.accountId == this.accountId &&
+          other.isSettled == this.isSettled &&
+          other.settledAmount == this.settledAmount &&
+          other.createdAt == this.createdAt);
+}
+
+class CustomBudgetsCompanion extends UpdateCompanion<CustomBudget> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<double> amountLimit;
+  final Value<String> timeFrame;
+  final Value<DateTime> startDate;
+  final Value<DateTime> endDate;
+  final Value<String?> categoryId;
+  final Value<String?> subCategory;
+  final Value<int?> bucketId;
+  final Value<String?> accountId;
+  final Value<bool> isSettled;
+  final Value<double?> settledAmount;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CustomBudgetsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.amountLimit = const Value.absent(),
+    this.timeFrame = const Value.absent(),
+    this.startDate = const Value.absent(),
+    this.endDate = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.subCategory = const Value.absent(),
+    this.bucketId = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.isSettled = const Value.absent(),
+    this.settledAmount = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CustomBudgetsCompanion.insert({
+    required String id,
+    required String name,
+    required double amountLimit,
+    required String timeFrame,
+    required DateTime startDate,
+    required DateTime endDate,
+    this.categoryId = const Value.absent(),
+    this.subCategory = const Value.absent(),
+    this.bucketId = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.isSettled = const Value.absent(),
+    this.settledAmount = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       amountLimit = Value(amountLimit),
+       timeFrame = Value(timeFrame),
+       startDate = Value(startDate),
+       endDate = Value(endDate);
+  static Insertable<CustomBudget> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<double>? amountLimit,
+    Expression<String>? timeFrame,
+    Expression<DateTime>? startDate,
+    Expression<DateTime>? endDate,
+    Expression<String>? categoryId,
+    Expression<String>? subCategory,
+    Expression<int>? bucketId,
+    Expression<String>? accountId,
+    Expression<bool>? isSettled,
+    Expression<double>? settledAmount,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (amountLimit != null) 'amount_limit': amountLimit,
+      if (timeFrame != null) 'time_frame': timeFrame,
+      if (startDate != null) 'start_date': startDate,
+      if (endDate != null) 'end_date': endDate,
+      if (categoryId != null) 'category_id': categoryId,
+      if (subCategory != null) 'sub_category': subCategory,
+      if (bucketId != null) 'bucket_id': bucketId,
+      if (accountId != null) 'account_id': accountId,
+      if (isSettled != null) 'is_settled': isSettled,
+      if (settledAmount != null) 'settled_amount': settledAmount,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CustomBudgetsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<double>? amountLimit,
+    Value<String>? timeFrame,
+    Value<DateTime>? startDate,
+    Value<DateTime>? endDate,
+    Value<String?>? categoryId,
+    Value<String?>? subCategory,
+    Value<int?>? bucketId,
+    Value<String?>? accountId,
+    Value<bool>? isSettled,
+    Value<double?>? settledAmount,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return CustomBudgetsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      amountLimit: amountLimit ?? this.amountLimit,
+      timeFrame: timeFrame ?? this.timeFrame,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      categoryId: categoryId ?? this.categoryId,
+      subCategory: subCategory ?? this.subCategory,
+      bucketId: bucketId ?? this.bucketId,
+      accountId: accountId ?? this.accountId,
+      isSettled: isSettled ?? this.isSettled,
+      settledAmount: settledAmount ?? this.settledAmount,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (amountLimit.present) {
+      map['amount_limit'] = Variable<double>(amountLimit.value);
+    }
+    if (timeFrame.present) {
+      map['time_frame'] = Variable<String>(timeFrame.value);
+    }
+    if (startDate.present) {
+      map['start_date'] = Variable<DateTime>(startDate.value);
+    }
+    if (endDate.present) {
+      map['end_date'] = Variable<DateTime>(endDate.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (subCategory.present) {
+      map['sub_category'] = Variable<String>(subCategory.value);
+    }
+    if (bucketId.present) {
+      map['bucket_id'] = Variable<int>(bucketId.value);
+    }
+    if (accountId.present) {
+      map['account_id'] = Variable<String>(accountId.value);
+    }
+    if (isSettled.present) {
+      map['is_settled'] = Variable<bool>(isSettled.value);
+    }
+    if (settledAmount.present) {
+      map['settled_amount'] = Variable<double>(settledAmount.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CustomBudgetsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('amountLimit: $amountLimit, ')
+          ..write('timeFrame: $timeFrame, ')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('subCategory: $subCategory, ')
+          ..write('bucketId: $bucketId, ')
+          ..write('accountId: $accountId, ')
+          ..write('isSettled: $isSettled, ')
+          ..write('settledAmount: $settledAmount, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3867,6 +4640,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $MonthlyBudgetsTable monthlyBudgets = $MonthlyBudgetsTable(this);
   late final $ClosedBudgetSnapshotsTable closedBudgetSnapshots =
       $ClosedBudgetSnapshotsTable(this);
+  late final $CustomBudgetsTable customBudgets = $CustomBudgetsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3878,6 +4652,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactions,
     monthlyBudgets,
     closedBudgetSnapshots,
+    customBudgets,
   ];
 }
 
@@ -5779,6 +6554,366 @@ typedef $$ClosedBudgetSnapshotsTableProcessedTableManager =
       ClosedBudgetSnapshot,
       PrefetchHooks Function()
     >;
+typedef $$CustomBudgetsTableCreateCompanionBuilder =
+    CustomBudgetsCompanion Function({
+      required String id,
+      required String name,
+      required double amountLimit,
+      required String timeFrame,
+      required DateTime startDate,
+      required DateTime endDate,
+      Value<String?> categoryId,
+      Value<String?> subCategory,
+      Value<int?> bucketId,
+      Value<String?> accountId,
+      Value<bool> isSettled,
+      Value<double?> settledAmount,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$CustomBudgetsTableUpdateCompanionBuilder =
+    CustomBudgetsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<double> amountLimit,
+      Value<String> timeFrame,
+      Value<DateTime> startDate,
+      Value<DateTime> endDate,
+      Value<String?> categoryId,
+      Value<String?> subCategory,
+      Value<int?> bucketId,
+      Value<String?> accountId,
+      Value<bool> isSettled,
+      Value<double?> settledAmount,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$CustomBudgetsTableFilterComposer
+    extends Composer<_$AppDatabase, $CustomBudgetsTable> {
+  $$CustomBudgetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amountLimit => $composableBuilder(
+    column: $table.amountLimit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timeFrame => $composableBuilder(
+    column: $table.timeFrame,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endDate => $composableBuilder(
+    column: $table.endDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subCategory => $composableBuilder(
+    column: $table.subCategory,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get bucketId => $composableBuilder(
+    column: $table.bucketId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSettled => $composableBuilder(
+    column: $table.isSettled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CustomBudgetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CustomBudgetsTable> {
+  $$CustomBudgetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amountLimit => $composableBuilder(
+    column: $table.amountLimit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get timeFrame => $composableBuilder(
+    column: $table.timeFrame,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get endDate => $composableBuilder(
+    column: $table.endDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subCategory => $composableBuilder(
+    column: $table.subCategory,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get bucketId => $composableBuilder(
+    column: $table.bucketId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSettled => $composableBuilder(
+    column: $table.isSettled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CustomBudgetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CustomBudgetsTable> {
+  $$CustomBudgetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get amountLimit => $composableBuilder(
+    column: $table.amountLimit,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get timeFrame =>
+      $composableBuilder(column: $table.timeFrame, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endDate =>
+      $composableBuilder(column: $table.endDate, builder: (column) => column);
+
+  GeneratedColumn<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get subCategory => $composableBuilder(
+    column: $table.subCategory,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get bucketId =>
+      $composableBuilder(column: $table.bucketId, builder: (column) => column);
+
+  GeneratedColumn<String> get accountId =>
+      $composableBuilder(column: $table.accountId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSettled =>
+      $composableBuilder(column: $table.isSettled, builder: (column) => column);
+
+  GeneratedColumn<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$CustomBudgetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CustomBudgetsTable,
+          CustomBudget,
+          $$CustomBudgetsTableFilterComposer,
+          $$CustomBudgetsTableOrderingComposer,
+          $$CustomBudgetsTableAnnotationComposer,
+          $$CustomBudgetsTableCreateCompanionBuilder,
+          $$CustomBudgetsTableUpdateCompanionBuilder,
+          (
+            CustomBudget,
+            BaseReferences<_$AppDatabase, $CustomBudgetsTable, CustomBudget>,
+          ),
+          CustomBudget,
+          PrefetchHooks Function()
+        > {
+  $$CustomBudgetsTableTableManager(_$AppDatabase db, $CustomBudgetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CustomBudgetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CustomBudgetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CustomBudgetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<double> amountLimit = const Value.absent(),
+                Value<String> timeFrame = const Value.absent(),
+                Value<DateTime> startDate = const Value.absent(),
+                Value<DateTime> endDate = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> subCategory = const Value.absent(),
+                Value<int?> bucketId = const Value.absent(),
+                Value<String?> accountId = const Value.absent(),
+                Value<bool> isSettled = const Value.absent(),
+                Value<double?> settledAmount = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CustomBudgetsCompanion(
+                id: id,
+                name: name,
+                amountLimit: amountLimit,
+                timeFrame: timeFrame,
+                startDate: startDate,
+                endDate: endDate,
+                categoryId: categoryId,
+                subCategory: subCategory,
+                bucketId: bucketId,
+                accountId: accountId,
+                isSettled: isSettled,
+                settledAmount: settledAmount,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required double amountLimit,
+                required String timeFrame,
+                required DateTime startDate,
+                required DateTime endDate,
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> subCategory = const Value.absent(),
+                Value<int?> bucketId = const Value.absent(),
+                Value<String?> accountId = const Value.absent(),
+                Value<bool> isSettled = const Value.absent(),
+                Value<double?> settledAmount = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CustomBudgetsCompanion.insert(
+                id: id,
+                name: name,
+                amountLimit: amountLimit,
+                timeFrame: timeFrame,
+                startDate: startDate,
+                endDate: endDate,
+                categoryId: categoryId,
+                subCategory: subCategory,
+                bucketId: bucketId,
+                accountId: accountId,
+                isSettled: isSettled,
+                settledAmount: settledAmount,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CustomBudgetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CustomBudgetsTable,
+      CustomBudget,
+      $$CustomBudgetsTableFilterComposer,
+      $$CustomBudgetsTableOrderingComposer,
+      $$CustomBudgetsTableAnnotationComposer,
+      $$CustomBudgetsTableCreateCompanionBuilder,
+      $$CustomBudgetsTableUpdateCompanionBuilder,
+      (
+        CustomBudget,
+        BaseReferences<_$AppDatabase, $CustomBudgetsTable, CustomBudget>,
+      ),
+      CustomBudget,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5795,4 +6930,6 @@ class $AppDatabaseManager {
       $$MonthlyBudgetsTableTableManager(_db, _db.monthlyBudgets);
   $$ClosedBudgetSnapshotsTableTableManager get closedBudgetSnapshots =>
       $$ClosedBudgetSnapshotsTableTableManager(_db, _db.closedBudgetSnapshots);
+  $$CustomBudgetsTableTableManager get customBudgets =>
+      $$CustomBudgetsTableTableManager(_db, _db.customBudgets);
 }

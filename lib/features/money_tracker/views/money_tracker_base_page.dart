@@ -1,3 +1,5 @@
+// features/money_tracker/views/money_tracker_base_page.dart
+
 import 'package:budgetr/features/budgets/views/budget_management_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +16,9 @@ import '../../transactions/providers/transaction_filter_provider.dart';
 import '../../transactions/components/transaction_filter_bottom_sheet.dart';
 import '../providers/bottom_nav_provider.dart';
 import 'money_tracker_home_tab.dart';
+
+// --- NEW IMPORT FOR CUSTOM BUDGETS ENTRY POINT ---
+import '../../custom_budgets/views/custom_budget_dashboard_page.dart';
 
 class MoneyTrackerBasePage extends ConsumerWidget {
   const MoneyTrackerBasePage({Key? key}) : super(key: key);
@@ -41,7 +46,6 @@ class MoneyTrackerBasePage extends ConsumerWidget {
     final isSelectionMode = ref.watch(selectionModeProvider);
     final globalFilterState = ref.watch(transactionFilterProvider('GLOBAL'));
 
-    // --- FULL 6-TAB PAGES ARRAY ---
     final List<Widget> pages = [
       const MoneyTrackerHomeTab(),
       const RecordsTab(),
@@ -51,7 +55,24 @@ class MoneyTrackerBasePage extends ConsumerWidget {
       const _PlaceholderTab(title: 'INSIGHTS'),
     ];
 
-    // --- DYNAMIC TRAILING & EXTRA TRAILING CONFIGURATION ---
+    final List<String> tabTitles = [
+      'Home', 
+      'Records', 
+      'Accounts', 
+      'Planning', 
+      'Metrics', 
+      'Cash Flow'
+    ];
+    
+    final List<String> tabSubtitles = [
+      'OVERVIEW', 
+      'TRANSACTIONS', 
+      'PORTFOLIO', 
+      'BUDGETS', 
+      'ANALYTICS', 
+      'INSIGHTS'
+    ];
+
     IconData? trailingIcon;
     VoidCallback? onTrailingPressed;
 
@@ -80,13 +101,23 @@ class MoneyTrackerBasePage extends ConsumerWidget {
           ref.read(selectionModeProvider.notifier).state = true;
         }
       };
+    } else if (currentIndex == 3) {
+      // --- NEW LOGIC: Entry point for Custom Budgets on the Planning tab ---
+      trailingIcon = Icons.tune_rounded;
+      onTrailingPressed = () {
+        HapticFeedback.lightImpact();
+        Navigator.push(
+          context, 
+          MaterialPageRoute(builder: (_) => const CustomBudgetDashboardPage()),
+        );
+      };
     }
 
     return Scaffold(
-      extendBody: true, 
+      extendBody: true,
       appBar: ModernAppBar(
-        title: 'Tracker',
-        subtitle: 'FINANCE',
+        title: tabTitles[currentIndex],
+        subtitle: tabSubtitles[currentIndex],
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.maybePop(context),
         trailingIcon: trailingIcon,
@@ -110,7 +141,6 @@ class MoneyTrackerBasePage extends ConsumerWidget {
   }
 }
 
-// --- PLACEHOLDER UI FOR UPCOMING FEATURES ---
 class _PlaceholderTab extends StatelessWidget {
   final String title;
   const _PlaceholderTab({required this.title});

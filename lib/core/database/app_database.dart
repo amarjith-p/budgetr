@@ -1,3 +1,5 @@
+// core/database/app_database.dart
+
 import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -12,15 +14,16 @@ part 'app_database.g.dart';
   BudgetBuckets,
   Accounts,
   Transactions,
-  MonthlyBudgets, 
-  ClosedBudgetSnapshots, // <-- NEW TABLE ADDED
+  MonthlyBudgets,
+  ClosedBudgetSnapshots,
+  CustomBudgets, // <-- NEW TABLE
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
-  // --- BUMP TO VERSION 11 ---
+  // --- BUMP TO VERSION 15 ---
   @override
-  int get schemaVersion => 14; 
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -38,21 +41,18 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(monthlyBudgets, monthlyBudgets.closedRemaining);
       }
       if (from < 10) await m.addColumn(transactions, transactions.bucketName);
-      if (from < 11) {
-        // --- NEW: MIGRATION FOR DETAILED CLOSING SNAPSHOTS ---
-        await m.createTable(closedBudgetSnapshots);
-      }
+      if (from < 11) await m.createTable(closedBudgetSnapshots);
       if (from < 12) {
         await m.addColumn(transactions, transactions.locationName);
         await m.addColumn(transactions, transactions.latitude);
         await m.addColumn(transactions, transactions.longitude);
       }
-      if (from < 13) {
-        await m.addColumn(accounts, accounts.isHidden);
-       }
-       if (from < 14) {
-        // --- NEW MIGRATION FOR PAYABLE ACCOUNTS ---
-        await m.addColumn(accounts, accounts.isCreditPayable);
+      if (from < 13) await m.addColumn(accounts, accounts.isHidden);
+      if (from < 14) await m.addColumn(accounts, accounts.isCreditPayable);
+      if (from < 15) await m.createTable(customBudgets);
+      if (from < 16) {
+        // --- NEW MIGRATION FOR SETTLED AMOUNT FREEZING ---
+        await m.addColumn(customBudgets, customBudgets.settledAmount);
       }
     },
   );
@@ -65,3 +65,6 @@ LazyDatabase _openConnection() {
     return NativeDatabase.createInBackground(file);
   });
 }
+
+// NOTE: Please run `flutter pub run build_runner build --delete-conflicting-outputs`
+// in your terminal to regenerate `app_database.g.dart` with the new CustomBudgets table.
