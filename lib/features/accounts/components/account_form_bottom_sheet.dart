@@ -29,18 +29,27 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
   late TextEditingController _billDateCtrl;
   late TextEditingController _dueDateCtrl;
 
+  // New Loan Controllers
+  late TextEditingController _purposeCtrl;
+  late TextEditingController _loanAmtCtrl;
+  late TextEditingController _interestCtrl;
+  late TextEditingController _tenureCtrl;
+  late TextEditingController _startDateCtrl;
+  late TextEditingController _emiDateCtrl;
+  late TextEditingController _endDateCtrl;
+
   final Map<TextEditingController, FocusNode> _focusNodes = {};
   TextEditingController? _activeCalcController;
 
   final List<String> _accountTypes = [
     'Savings Account', 'Current Account', 'Salary Account', 
-    'Digital/Payment Banks', 'Liquid Money', 'Credit Cards'
+    'Digital/Payment Banks', 'Liquid Money', 'Credit Cards', 'Loan'
   ];
 
   final Map<String, List<String>> _providerGroups = {
     'Commercial/Foreign Banks': [
       'Axis Bank', 'Bandhan Bank', 'Bank of Baroda', 'Bank of India', 'Bank of Maharashtra', 'Canara Bank',
-      'Central Bank of India', 'City Union Bank', 'CSB Bank', 'DBS Bank', 'DCB Bank', 'Deutsche Bank', 'Dhanalakshmi Bank', 'Doha Bank' 'Federal Bank', 'HSBC Bank' 'HDFC Bank', 'ICICI Bank',
+      'Central Bank of India', 'City Union Bank', 'CSB Bank', 'DBS Bank', 'DCB Bank', 'Deutsche Bank', 'Dhanalakshmi Bank', 'Doha Bank', 'Federal Bank', 'HSBC Bank', 'HDFC Bank', 'ICICI Bank',
       'IDBI Bank', 'IDFC First Bank', 'Indian Bank', 'Indian Overseas Bank', 'IndusInd Bank', 'Jammu & Kashmir Bank', 'Karnataka Bank', 'Karur Vysya Bank',
       'Kerala Gramin Bank', 'Kotak Mahindra Bank', 'Nainital Bank', 'Punjab & Sind Bank', 'Punjab National Bank (PNB)', 'RBL Bank', 'SBM Bank', 'South Indian Bank', 'Standard Chartered Bank', 'State Bank of India (SBI)',
       'Tamilnad Mercantile Bank', 'UCO Bank', 'Union Bank of India', 'Yes Bank', 'Other'
@@ -69,6 +78,14 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
     _billDateCtrl = TextEditingController(text: acc?.billDate?.toString() ?? '');
     _dueDateCtrl = TextEditingController(text: acc?.dueDate?.toString() ?? '');
 
+    _purposeCtrl = TextEditingController(text: acc?.loanPurpose ?? '');
+    _loanAmtCtrl = TextEditingController(text: acc?.loanPrincipal?.toString() ?? '');
+    _interestCtrl = TextEditingController(text: acc?.interestRate?.toString() ?? '');
+    _tenureCtrl = TextEditingController(text: acc?.tenureMonths?.toString() ?? '');
+    _startDateCtrl = TextEditingController(text: acc?.loanStartDate?.toIso8601String().split('T').first ?? '');
+    _emiDateCtrl = TextEditingController(text: acc?.emiDate?.toIso8601String().split('T').first ?? '');
+    _endDateCtrl = TextEditingController(text: acc?.loanEndDate?.toIso8601String().split('T').first ?? '');
+
     _focusNodes[_nameCtrl] = FocusNode();
     _focusNodes[_providerCtrl] = FocusNode();
     _focusNodes[_last4Ctrl] = FocusNode();
@@ -76,6 +93,9 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
     _focusNodes[_limitCtrl] = FocusNode();
     _focusNodes[_billDateCtrl] = FocusNode();
     _focusNodes[_dueDateCtrl] = FocusNode();
+    _focusNodes[_loanAmtCtrl] = FocusNode();
+    _focusNodes[_interestCtrl] = FocusNode();
+    _focusNodes[_purposeCtrl] = FocusNode();
 
     void addCalcFocusListener(TextEditingController ctrl) {
       _focusNodes[ctrl]!.addListener(() {
@@ -97,8 +117,12 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
     addCalcFocusListener(_limitCtrl);
     addCalcFocusListener(_billDateCtrl);
     addCalcFocusListener(_dueDateCtrl);
+    addCalcFocusListener(_loanAmtCtrl);
+    addCalcFocusListener(_interestCtrl);
+
     addNormalFocusListener(_nameCtrl);
     addNormalFocusListener(_last4Ctrl);
+    addNormalFocusListener(_purposeCtrl);
 
     _last4Ctrl.addListener(() {
       final text = _last4Ctrl.text;
@@ -139,6 +163,8 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
     _nameCtrl.dispose(); _providerCtrl.dispose(); _typeCtrl.dispose();
     _last4Ctrl.dispose(); _balanceCtrl.dispose(); _limitCtrl.dispose();
     _billDateCtrl.dispose(); _dueDateCtrl.dispose();
+    _purposeCtrl.dispose(); _loanAmtCtrl.dispose(); _interestCtrl.dispose();
+    _tenureCtrl.dispose(); _startDateCtrl.dispose(); _emiDateCtrl.dispose(); _endDateCtrl.dispose();
     super.dispose();
   }
 
@@ -191,15 +217,31 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
     }
   }
 
+  Future<void> _pickDate(TextEditingController controller) async {
+    _closeCalculatorSafely();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null && mounted) {
+      setState(() => controller.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}");
+    }
+  }
+
   Future<void> _submit() async {
     _closeCalculatorSafely();
     if (!_formKey.currentState!.validate()) return;
 
     final isCC = _typeCtrl.text == 'Credit Cards';
     final isLiquid = _typeCtrl.text == 'Liquid Money';
+    final isLoan = _typeCtrl.text == 'Loan';
     
     final providerName = isLiquid ? 'Cash' : _providerCtrl.text.trim();
     final last4 = isLiquid ? 'CASH' : _last4Ctrl.text.trim();
+    
+    final balance = isCC ? 0.0 : (isLoan ? (double.tryParse(_loanAmtCtrl.text) ?? 0.0) : (double.tryParse(_balanceCtrl.text) ?? 0.0));
 
     final success = await ref.read(accountActionProvider.notifier).saveAccount(
       existingId: widget.existingAccount?.id,
@@ -207,10 +249,17 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
       providerName: providerName,
       type: _typeCtrl.text,
       last4: last4,
-      balance: isCC ? 0.0 : (double.tryParse(_balanceCtrl.text) ?? 0.0),
+      balance: balance,
       creditLimit: isCC ? double.tryParse(_limitCtrl.text) : null,
       billDate: isCC ? int.tryParse(_billDateCtrl.text) : null,
       dueDate: isCC ? int.tryParse(_dueDateCtrl.text) : null,
+      loanPurpose: isLoan ? _purposeCtrl.text.trim() : null,
+      loanPrincipal: isLoan ? (double.tryParse(_loanAmtCtrl.text) ?? 0.0) : null,
+      interestRate: isLoan ? (double.tryParse(_interestCtrl.text) ?? 0.0) : null,
+      tenureMonths: isLoan ? (int.tryParse(_tenureCtrl.text) ?? 0) : null,
+      emiDate: isLoan ? DateTime.tryParse(_emiDateCtrl.text) : null,
+      loanStartDate: isLoan ? DateTime.tryParse(_startDateCtrl.text) : null,
+      loanEndDate: isLoan ? DateTime.tryParse(_endDateCtrl.text) : null,
     );
 
     if (success && mounted) Navigator.pop(context);
@@ -234,14 +283,20 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
   void _handleCalcNext() {
     if (_activeCalcController == _limitCtrl) _openCalculatorFor(_billDateCtrl);
     else if (_activeCalcController == _billDateCtrl) _openCalculatorFor(_dueDateCtrl);
+    else if (_activeCalcController == _loanAmtCtrl) _openCalculatorFor(_interestCtrl);
   }
 
   void _handleCalcPrev() {
     if (_activeCalcController == _dueDateCtrl) _openCalculatorFor(_billDateCtrl);
     else if (_activeCalcController == _billDateCtrl) _openCalculatorFor(_limitCtrl);
+    else if (_activeCalcController == _interestCtrl) _openCalculatorFor(_loanAmtCtrl);
     else if (_activeCalcController == _limitCtrl || _activeCalcController == _balanceCtrl) {
       _closeCalculatorSafely();
       _focusNodes[_nameCtrl]!.requestFocus(); 
+    }
+    else if (_activeCalcController == _loanAmtCtrl) {
+      _closeCalculatorSafely();
+      _focusNodes[_purposeCtrl]!.requestFocus();
     }
   }
 
@@ -252,6 +307,7 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
 
     final isCC = _typeCtrl.text == 'Credit Cards';
     final isLiquid = _typeCtrl.text == 'Liquid Money';
+    final isLoan = _typeCtrl.text == 'Loan';
     final showCalculator = _activeCalcController != null;
 
     return SafeArea(
@@ -309,7 +365,6 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                                   focusNode: _focusNodes[_providerCtrl],
                                   labelText: 'Provider Name', 
                                   suffixIcon: const Icon(Icons.arrow_drop_down_rounded),
-                                  // Updated to professional validation string
                                   validator: (v) => v == null || v.isEmpty ? 'Required' : null
                                 ),
                               ),
@@ -341,7 +396,6 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                                   ],
                                 ),
                               ),
-                              // Updated to professional validation string
                               validator: (v) => v == null || v.length != 4 ? 'Must be 4 digits' : null,
                               textInputAction: TextInputAction.next,
                               onTap: _closeCalculatorSafely,
@@ -356,22 +410,119 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                       controller: _nameCtrl, 
                       focusNode: _focusNodes[_nameCtrl],
                       labelText: 'Custom Account Name', 
-                      // Updated to professional validation string
                       validator: (v) => v == null || v.isEmpty ? 'Required' : null, 
                       textInputAction: TextInputAction.next,
                       onTap: _closeCalculatorSafely,
-                      onFieldSubmitted: (_) => _openCalculatorFor(isCC ? _limitCtrl : _balanceCtrl), 
+                      onFieldSubmitted: (_) {
+                        if (isCC) _openCalculatorFor(_limitCtrl);
+                        else if (isLoan) _focusNodes[_purposeCtrl]!.requestFocus();
+                        else _openCalculatorFor(_balanceCtrl);
+                      }, 
                     ),
                     const SizedBox(height: DesignTokens.spacingMd),
 
-                    if (isCC) ...[
+                    if (isLoan) ...[
+                      ModernBoxyInput(
+                        controller: _purposeCtrl,
+                        focusNode: _focusNodes[_purposeCtrl],
+                        labelText: 'Purpose of Loan',
+                        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                        textInputAction: TextInputAction.next,
+                        onTap: _closeCalculatorSafely,
+                        onFieldSubmitted: (_) => _openCalculatorFor(_loanAmtCtrl),
+                      ),
+                      const SizedBox(height: DesignTokens.spacingMd),
+                      
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: ModernBoxyInput(
+                              controller: _loanAmtCtrl,
+                              focusNode: _focusNodes[_loanAmtCtrl],
+                              labelText: 'Principal Amount (₹)',
+                              readOnly: true,
+                              onTap: () => _openCalculatorFor(_loanAmtCtrl),
+                              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                            ),
+                          ),
+                          const SizedBox(width: DesignTokens.spacingMd),
+                          Expanded(
+                            child: ModernBoxyInput(
+                              controller: _interestCtrl,
+                              focusNode: _focusNodes[_interestCtrl],
+                              labelText: 'Interest %',
+                              readOnly: true,
+                              onTap: () => _openCalculatorFor(_interestCtrl),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: DesignTokens.spacingMd),
+                      
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ModernBoxyInput(
+                              controller: _tenureCtrl,
+                              labelText: 'Tenure (Months)',
+                              keyboardType: TextInputType.number,
+                              onTap: _closeCalculatorSafely,
+                            ),
+                          ),
+                          const SizedBox(width: DesignTokens.spacingMd),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _pickDate(_emiDateCtrl),
+                              child: AbsorbPointer(
+                                child: ModernBoxyInput(
+                                  controller: _emiDateCtrl,
+                                  labelText: 'EMI Start Date',
+                                  suffixIcon: const Icon(Icons.calendar_today_rounded, size: 16),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: DesignTokens.spacingMd),
+                      
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _pickDate(_startDateCtrl),
+                              child: AbsorbPointer(
+                                child: ModernBoxyInput(
+                                  controller: _startDateCtrl,
+                                  labelText: 'Start Date',
+                                  suffixIcon: const Icon(Icons.calendar_today_rounded, size: 16),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: DesignTokens.spacingMd),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _pickDate(_endDateCtrl),
+                              child: AbsorbPointer(
+                                child: ModernBoxyInput(
+                                  controller: _endDateCtrl,
+                                  labelText: 'End Date',
+                                  suffixIcon: const Icon(Icons.calendar_today_rounded, size: 16),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else if (isCC) ...[
                       ModernBoxyInput(
                         controller: _limitCtrl, 
                         focusNode: _focusNodes[_limitCtrl],
                         labelText: 'Credit Limit (₹)', 
                         readOnly: true,
                         onTap: () => _openCalculatorFor(_limitCtrl), 
-                        // Updated to professional validation string
                         validator: (v) => v == null || v.isEmpty ? 'Required' : null
                       ),
                       const SizedBox(height: DesignTokens.spacingMd),
@@ -384,7 +535,6 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                               labelText: 'Bill Date (1-31)', 
                               readOnly: true, 
                               onTap: () => _openCalculatorFor(_billDateCtrl), 
-                              // Updated to professional validation string
                               validator: (v) => v == null || v.isEmpty 
                                   ? 'Required' 
                                   : ((int.tryParse(v) ?? 0) < 1 || (int.tryParse(v) ?? 0) > 31 ? 'Invalid date' : null)
@@ -398,7 +548,6 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                               labelText: 'Due Date (1-31)', 
                               readOnly: true, 
                               onTap: () => _openCalculatorFor(_dueDateCtrl), 
-                              // Updated to professional validation string
                               validator: (v) => v == null || v.isEmpty 
                                   ? 'Required' 
                                   : ((int.tryParse(v) ?? 0) < 1 || (int.tryParse(v) ?? 0) > 31 ? 'Invalid date' : null)
@@ -413,7 +562,6 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
                         labelText: 'Current Balance (₹)', 
                         readOnly: true,
                         onTap: () => _openCalculatorFor(_balanceCtrl), 
-                        // Updated to professional validation string
                         validator: (v) => v == null || v.isEmpty ? 'Required' : null
                       ),
                     ],
@@ -436,7 +584,7 @@ class _AccountFormBottomSheetState extends ConsumerState<AccountFormBottomSheet>
             InlineCalculatorPad(
               key: ValueKey(_activeCalcController.hashCode), 
               controller: _activeCalcController!, 
-              onNext: isCC && _activeCalcController != _dueDateCtrl ? _handleCalcNext : null,
+              onNext: (isCC && _activeCalcController != _dueDateCtrl) || (isLoan && _activeCalcController != _interestCtrl) ? _handleCalcNext : null,
               onPrevious: _handleCalcPrev,
               onSubmit: _closeCalculatorSafely,
               onClose: _closeCalculatorSafely,

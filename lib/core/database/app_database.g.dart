@@ -718,13 +718,9 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
   late final GeneratedColumn<String> last4 = GeneratedColumn<String>(
     'last4',
     aliasedName,
-    false,
-    additionalChecks: GeneratedColumn.checkTextLength(
-      minTextLength: 4,
-      maxTextLength: 4,
-    ),
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _balanceMeta = const VerificationMeta(
     'balance',
@@ -735,8 +731,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     aliasedName,
     false,
     type: DriftSqlType.double,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0.0),
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _creditLimitMeta = const VerificationMeta(
     'creditLimit',
@@ -771,29 +766,120 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
+  static const VerificationMeta _isCreditPayableMeta = const VerificationMeta(
+    'isCreditPayable',
   );
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
+  late final GeneratedColumn<bool> isCreditPayable = GeneratedColumn<bool>(
+    'is_credit_payable',
     aliasedName,
     false,
-    type: DriftSqlType.dateTime,
+    type: DriftSqlType.bool,
     requiredDuringInsert: false,
-    defaultValue: currentDateAndTime,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_credit_payable" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
   );
-  static const VerificationMeta _displayOrderMeta = const VerificationMeta(
-    'displayOrder',
+  static const VerificationMeta _loanPurposeMeta = const VerificationMeta(
+    'loanPurpose',
   );
   @override
-  late final GeneratedColumn<int> displayOrder = GeneratedColumn<int>(
-    'display_order',
+  late final GeneratedColumn<String> loanPurpose = GeneratedColumn<String>(
+    'loan_purpose',
     aliasedName,
-    false,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _loanPrincipalMeta = const VerificationMeta(
+    'loanPrincipal',
+  );
+  @override
+  late final GeneratedColumn<double> loanPrincipal = GeneratedColumn<double>(
+    'loan_principal',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _interestRateMeta = const VerificationMeta(
+    'interestRate',
+  );
+  @override
+  late final GeneratedColumn<double> interestRate = GeneratedColumn<double>(
+    'interest_rate',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tenureMonthsMeta = const VerificationMeta(
+    'tenureMonths',
+  );
+  @override
+  late final GeneratedColumn<int> tenureMonths = GeneratedColumn<int>(
+    'tenure_months',
+    aliasedName,
+    true,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _emiDateMeta = const VerificationMeta(
+    'emiDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> emiDate = GeneratedColumn<DateTime>(
+    'emi_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _loanStartDateMeta = const VerificationMeta(
+    'loanStartDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> loanStartDate =
+      GeneratedColumn<DateTime>(
+        'loan_start_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _loanEndDateMeta = const VerificationMeta(
+    'loanEndDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> loanEndDate = GeneratedColumn<DateTime>(
+    'loan_end_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalInterestPayableMeta =
+      const VerificationMeta('totalInterestPayable');
+  @override
+  late final GeneratedColumn<double> totalInterestPayable =
+      GeneratedColumn<double>(
+        'total_interest_payable',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _totalTaxPayableMeta = const VerificationMeta(
+    'totalTaxPayable',
+  );
+  @override
+  late final GeneratedColumn<double> totalTaxPayable = GeneratedColumn<double>(
+    'total_tax_payable',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _isHiddenMeta = const VerificationMeta(
     'isHidden',
@@ -810,20 +896,28 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     ),
     defaultValue: const Constant(false),
   );
-  static const VerificationMeta _isCreditPayableMeta = const VerificationMeta(
-    'isCreditPayable',
+  static const VerificationMeta _displayOrderMeta = const VerificationMeta(
+    'displayOrder',
   );
   @override
-  late final GeneratedColumn<bool> isCreditPayable = GeneratedColumn<bool>(
-    'is_credit_payable',
+  late final GeneratedColumn<int> displayOrder = GeneratedColumn<int>(
+    'display_order',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
     aliasedName,
     false,
-    type: DriftSqlType.bool,
+    type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_credit_payable" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
+    defaultValue: currentDateAndTime,
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -836,10 +930,19 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     creditLimit,
     billDate,
     dueDate,
-    createdAt,
-    displayOrder,
-    isHidden,
     isCreditPayable,
+    loanPurpose,
+    loanPrincipal,
+    interestRate,
+    tenureMonths,
+    emiDate,
+    loanStartDate,
+    loanEndDate,
+    totalInterestPayable,
+    totalTaxPayable,
+    isHidden,
+    displayOrder,
+    createdAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -890,14 +993,14 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         _last4Meta,
         last4.isAcceptableOrUnknown(data['last4']!, _last4Meta),
       );
-    } else if (isInserting) {
-      context.missing(_last4Meta);
     }
     if (data.containsKey('balance')) {
       context.handle(
         _balanceMeta,
         balance.isAcceptableOrUnknown(data['balance']!, _balanceMeta),
       );
+    } else if (isInserting) {
+      context.missing(_balanceMeta);
     }
     if (data.containsKey('credit_limit')) {
       context.handle(
@@ -920,10 +1023,97 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         dueDate.isAcceptableOrUnknown(data['due_date']!, _dueDateMeta),
       );
     }
-    if (data.containsKey('created_at')) {
+    if (data.containsKey('is_credit_payable')) {
       context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+        _isCreditPayableMeta,
+        isCreditPayable.isAcceptableOrUnknown(
+          data['is_credit_payable']!,
+          _isCreditPayableMeta,
+        ),
+      );
+    }
+    if (data.containsKey('loan_purpose')) {
+      context.handle(
+        _loanPurposeMeta,
+        loanPurpose.isAcceptableOrUnknown(
+          data['loan_purpose']!,
+          _loanPurposeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('loan_principal')) {
+      context.handle(
+        _loanPrincipalMeta,
+        loanPrincipal.isAcceptableOrUnknown(
+          data['loan_principal']!,
+          _loanPrincipalMeta,
+        ),
+      );
+    }
+    if (data.containsKey('interest_rate')) {
+      context.handle(
+        _interestRateMeta,
+        interestRate.isAcceptableOrUnknown(
+          data['interest_rate']!,
+          _interestRateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tenure_months')) {
+      context.handle(
+        _tenureMonthsMeta,
+        tenureMonths.isAcceptableOrUnknown(
+          data['tenure_months']!,
+          _tenureMonthsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('emi_date')) {
+      context.handle(
+        _emiDateMeta,
+        emiDate.isAcceptableOrUnknown(data['emi_date']!, _emiDateMeta),
+      );
+    }
+    if (data.containsKey('loan_start_date')) {
+      context.handle(
+        _loanStartDateMeta,
+        loanStartDate.isAcceptableOrUnknown(
+          data['loan_start_date']!,
+          _loanStartDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('loan_end_date')) {
+      context.handle(
+        _loanEndDateMeta,
+        loanEndDate.isAcceptableOrUnknown(
+          data['loan_end_date']!,
+          _loanEndDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_interest_payable')) {
+      context.handle(
+        _totalInterestPayableMeta,
+        totalInterestPayable.isAcceptableOrUnknown(
+          data['total_interest_payable']!,
+          _totalInterestPayableMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_tax_payable')) {
+      context.handle(
+        _totalTaxPayableMeta,
+        totalTaxPayable.isAcceptableOrUnknown(
+          data['total_tax_payable']!,
+          _totalTaxPayableMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_hidden')) {
+      context.handle(
+        _isHiddenMeta,
+        isHidden.isAcceptableOrUnknown(data['is_hidden']!, _isHiddenMeta),
       );
     }
     if (data.containsKey('display_order')) {
@@ -935,19 +1125,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         ),
       );
     }
-    if (data.containsKey('is_hidden')) {
+    if (data.containsKey('created_at')) {
       context.handle(
-        _isHiddenMeta,
-        isHidden.isAcceptableOrUnknown(data['is_hidden']!, _isHiddenMeta),
-      );
-    }
-    if (data.containsKey('is_credit_payable')) {
-      context.handle(
-        _isCreditPayableMeta,
-        isCreditPayable.isAcceptableOrUnknown(
-          data['is_credit_payable']!,
-          _isCreditPayableMeta,
-        ),
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
     return context;
@@ -978,7 +1159,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       last4: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}last4'],
-      )!,
+      ),
       balance: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}balance'],
@@ -995,21 +1176,57 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.int,
         data['${effectivePrefix}due_date'],
       ),
-      createdAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
+      isCreditPayable: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_credit_payable'],
       )!,
-      displayOrder: attachedDatabase.typeMapping.read(
+      loanPurpose: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}loan_purpose'],
+      ),
+      loanPrincipal: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}loan_principal'],
+      ),
+      interestRate: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}interest_rate'],
+      ),
+      tenureMonths: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
-        data['${effectivePrefix}display_order'],
-      )!,
+        data['${effectivePrefix}tenure_months'],
+      ),
+      emiDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}emi_date'],
+      ),
+      loanStartDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}loan_start_date'],
+      ),
+      loanEndDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}loan_end_date'],
+      ),
+      totalInterestPayable: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_interest_payable'],
+      ),
+      totalTaxPayable: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_tax_payable'],
+      ),
       isHidden: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_hidden'],
       )!,
-      isCreditPayable: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_credit_payable'],
+      displayOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}display_order'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
       )!,
     );
   }
@@ -1025,29 +1242,47 @@ class Account extends DataClass implements Insertable<Account> {
   final String name;
   final String providerName;
   final String type;
-  final String last4;
+  final String? last4;
   final double balance;
   final double? creditLimit;
   final int? billDate;
   final int? dueDate;
-  final DateTime createdAt;
-  final int displayOrder;
-  final bool isHidden;
   final bool isCreditPayable;
+  final String? loanPurpose;
+  final double? loanPrincipal;
+  final double? interestRate;
+  final int? tenureMonths;
+  final DateTime? emiDate;
+  final DateTime? loanStartDate;
+  final DateTime? loanEndDate;
+  final double? totalInterestPayable;
+  final double? totalTaxPayable;
+  final bool isHidden;
+  final int? displayOrder;
+  final DateTime createdAt;
   const Account({
     required this.id,
     required this.name,
     required this.providerName,
     required this.type,
-    required this.last4,
+    this.last4,
     required this.balance,
     this.creditLimit,
     this.billDate,
     this.dueDate,
-    required this.createdAt,
-    required this.displayOrder,
-    required this.isHidden,
     required this.isCreditPayable,
+    this.loanPurpose,
+    this.loanPrincipal,
+    this.interestRate,
+    this.tenureMonths,
+    this.emiDate,
+    this.loanStartDate,
+    this.loanEndDate,
+    this.totalInterestPayable,
+    this.totalTaxPayable,
+    required this.isHidden,
+    this.displayOrder,
+    required this.createdAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1056,7 +1291,9 @@ class Account extends DataClass implements Insertable<Account> {
     map['name'] = Variable<String>(name);
     map['provider_name'] = Variable<String>(providerName);
     map['type'] = Variable<String>(type);
-    map['last4'] = Variable<String>(last4);
+    if (!nullToAbsent || last4 != null) {
+      map['last4'] = Variable<String>(last4);
+    }
     map['balance'] = Variable<double>(balance);
     if (!nullToAbsent || creditLimit != null) {
       map['credit_limit'] = Variable<double>(creditLimit);
@@ -1067,10 +1304,39 @@ class Account extends DataClass implements Insertable<Account> {
     if (!nullToAbsent || dueDate != null) {
       map['due_date'] = Variable<int>(dueDate);
     }
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['display_order'] = Variable<int>(displayOrder);
-    map['is_hidden'] = Variable<bool>(isHidden);
     map['is_credit_payable'] = Variable<bool>(isCreditPayable);
+    if (!nullToAbsent || loanPurpose != null) {
+      map['loan_purpose'] = Variable<String>(loanPurpose);
+    }
+    if (!nullToAbsent || loanPrincipal != null) {
+      map['loan_principal'] = Variable<double>(loanPrincipal);
+    }
+    if (!nullToAbsent || interestRate != null) {
+      map['interest_rate'] = Variable<double>(interestRate);
+    }
+    if (!nullToAbsent || tenureMonths != null) {
+      map['tenure_months'] = Variable<int>(tenureMonths);
+    }
+    if (!nullToAbsent || emiDate != null) {
+      map['emi_date'] = Variable<DateTime>(emiDate);
+    }
+    if (!nullToAbsent || loanStartDate != null) {
+      map['loan_start_date'] = Variable<DateTime>(loanStartDate);
+    }
+    if (!nullToAbsent || loanEndDate != null) {
+      map['loan_end_date'] = Variable<DateTime>(loanEndDate);
+    }
+    if (!nullToAbsent || totalInterestPayable != null) {
+      map['total_interest_payable'] = Variable<double>(totalInterestPayable);
+    }
+    if (!nullToAbsent || totalTaxPayable != null) {
+      map['total_tax_payable'] = Variable<double>(totalTaxPayable);
+    }
+    map['is_hidden'] = Variable<bool>(isHidden);
+    if (!nullToAbsent || displayOrder != null) {
+      map['display_order'] = Variable<int>(displayOrder);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
 
@@ -1080,7 +1346,9 @@ class Account extends DataClass implements Insertable<Account> {
       name: Value(name),
       providerName: Value(providerName),
       type: Value(type),
-      last4: Value(last4),
+      last4: last4 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(last4),
       balance: Value(balance),
       creditLimit: creditLimit == null && nullToAbsent
           ? const Value.absent()
@@ -1091,10 +1359,39 @@ class Account extends DataClass implements Insertable<Account> {
       dueDate: dueDate == null && nullToAbsent
           ? const Value.absent()
           : Value(dueDate),
-      createdAt: Value(createdAt),
-      displayOrder: Value(displayOrder),
-      isHidden: Value(isHidden),
       isCreditPayable: Value(isCreditPayable),
+      loanPurpose: loanPurpose == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loanPurpose),
+      loanPrincipal: loanPrincipal == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loanPrincipal),
+      interestRate: interestRate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(interestRate),
+      tenureMonths: tenureMonths == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tenureMonths),
+      emiDate: emiDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(emiDate),
+      loanStartDate: loanStartDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loanStartDate),
+      loanEndDate: loanEndDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loanEndDate),
+      totalInterestPayable: totalInterestPayable == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalInterestPayable),
+      totalTaxPayable: totalTaxPayable == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalTaxPayable),
+      isHidden: Value(isHidden),
+      displayOrder: displayOrder == null && nullToAbsent
+          ? const Value.absent()
+          : Value(displayOrder),
+      createdAt: Value(createdAt),
     );
   }
 
@@ -1108,15 +1405,26 @@ class Account extends DataClass implements Insertable<Account> {
       name: serializer.fromJson<String>(json['name']),
       providerName: serializer.fromJson<String>(json['providerName']),
       type: serializer.fromJson<String>(json['type']),
-      last4: serializer.fromJson<String>(json['last4']),
+      last4: serializer.fromJson<String?>(json['last4']),
       balance: serializer.fromJson<double>(json['balance']),
       creditLimit: serializer.fromJson<double?>(json['creditLimit']),
       billDate: serializer.fromJson<int?>(json['billDate']),
       dueDate: serializer.fromJson<int?>(json['dueDate']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      displayOrder: serializer.fromJson<int>(json['displayOrder']),
-      isHidden: serializer.fromJson<bool>(json['isHidden']),
       isCreditPayable: serializer.fromJson<bool>(json['isCreditPayable']),
+      loanPurpose: serializer.fromJson<String?>(json['loanPurpose']),
+      loanPrincipal: serializer.fromJson<double?>(json['loanPrincipal']),
+      interestRate: serializer.fromJson<double?>(json['interestRate']),
+      tenureMonths: serializer.fromJson<int?>(json['tenureMonths']),
+      emiDate: serializer.fromJson<DateTime?>(json['emiDate']),
+      loanStartDate: serializer.fromJson<DateTime?>(json['loanStartDate']),
+      loanEndDate: serializer.fromJson<DateTime?>(json['loanEndDate']),
+      totalInterestPayable: serializer.fromJson<double?>(
+        json['totalInterestPayable'],
+      ),
+      totalTaxPayable: serializer.fromJson<double?>(json['totalTaxPayable']),
+      isHidden: serializer.fromJson<bool>(json['isHidden']),
+      displayOrder: serializer.fromJson<int?>(json['displayOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
   @override
@@ -1127,15 +1435,24 @@ class Account extends DataClass implements Insertable<Account> {
       'name': serializer.toJson<String>(name),
       'providerName': serializer.toJson<String>(providerName),
       'type': serializer.toJson<String>(type),
-      'last4': serializer.toJson<String>(last4),
+      'last4': serializer.toJson<String?>(last4),
       'balance': serializer.toJson<double>(balance),
       'creditLimit': serializer.toJson<double?>(creditLimit),
       'billDate': serializer.toJson<int?>(billDate),
       'dueDate': serializer.toJson<int?>(dueDate),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'displayOrder': serializer.toJson<int>(displayOrder),
-      'isHidden': serializer.toJson<bool>(isHidden),
       'isCreditPayable': serializer.toJson<bool>(isCreditPayable),
+      'loanPurpose': serializer.toJson<String?>(loanPurpose),
+      'loanPrincipal': serializer.toJson<double?>(loanPrincipal),
+      'interestRate': serializer.toJson<double?>(interestRate),
+      'tenureMonths': serializer.toJson<int?>(tenureMonths),
+      'emiDate': serializer.toJson<DateTime?>(emiDate),
+      'loanStartDate': serializer.toJson<DateTime?>(loanStartDate),
+      'loanEndDate': serializer.toJson<DateTime?>(loanEndDate),
+      'totalInterestPayable': serializer.toJson<double?>(totalInterestPayable),
+      'totalTaxPayable': serializer.toJson<double?>(totalTaxPayable),
+      'isHidden': serializer.toJson<bool>(isHidden),
+      'displayOrder': serializer.toJson<int?>(displayOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
 
@@ -1144,29 +1461,55 @@ class Account extends DataClass implements Insertable<Account> {
     String? name,
     String? providerName,
     String? type,
-    String? last4,
+    Value<String?> last4 = const Value.absent(),
     double? balance,
     Value<double?> creditLimit = const Value.absent(),
     Value<int?> billDate = const Value.absent(),
     Value<int?> dueDate = const Value.absent(),
-    DateTime? createdAt,
-    int? displayOrder,
-    bool? isHidden,
     bool? isCreditPayable,
+    Value<String?> loanPurpose = const Value.absent(),
+    Value<double?> loanPrincipal = const Value.absent(),
+    Value<double?> interestRate = const Value.absent(),
+    Value<int?> tenureMonths = const Value.absent(),
+    Value<DateTime?> emiDate = const Value.absent(),
+    Value<DateTime?> loanStartDate = const Value.absent(),
+    Value<DateTime?> loanEndDate = const Value.absent(),
+    Value<double?> totalInterestPayable = const Value.absent(),
+    Value<double?> totalTaxPayable = const Value.absent(),
+    bool? isHidden,
+    Value<int?> displayOrder = const Value.absent(),
+    DateTime? createdAt,
   }) => Account(
     id: id ?? this.id,
     name: name ?? this.name,
     providerName: providerName ?? this.providerName,
     type: type ?? this.type,
-    last4: last4 ?? this.last4,
+    last4: last4.present ? last4.value : this.last4,
     balance: balance ?? this.balance,
     creditLimit: creditLimit.present ? creditLimit.value : this.creditLimit,
     billDate: billDate.present ? billDate.value : this.billDate,
     dueDate: dueDate.present ? dueDate.value : this.dueDate,
-    createdAt: createdAt ?? this.createdAt,
-    displayOrder: displayOrder ?? this.displayOrder,
-    isHidden: isHidden ?? this.isHidden,
     isCreditPayable: isCreditPayable ?? this.isCreditPayable,
+    loanPurpose: loanPurpose.present ? loanPurpose.value : this.loanPurpose,
+    loanPrincipal: loanPrincipal.present
+        ? loanPrincipal.value
+        : this.loanPrincipal,
+    interestRate: interestRate.present ? interestRate.value : this.interestRate,
+    tenureMonths: tenureMonths.present ? tenureMonths.value : this.tenureMonths,
+    emiDate: emiDate.present ? emiDate.value : this.emiDate,
+    loanStartDate: loanStartDate.present
+        ? loanStartDate.value
+        : this.loanStartDate,
+    loanEndDate: loanEndDate.present ? loanEndDate.value : this.loanEndDate,
+    totalInterestPayable: totalInterestPayable.present
+        ? totalInterestPayable.value
+        : this.totalInterestPayable,
+    totalTaxPayable: totalTaxPayable.present
+        ? totalTaxPayable.value
+        : this.totalTaxPayable,
+    isHidden: isHidden ?? this.isHidden,
+    displayOrder: displayOrder.present ? displayOrder.value : this.displayOrder,
+    createdAt: createdAt ?? this.createdAt,
   );
   Account copyWithCompanion(AccountsCompanion data) {
     return Account(
@@ -1183,14 +1526,39 @@ class Account extends DataClass implements Insertable<Account> {
           : this.creditLimit,
       billDate: data.billDate.present ? data.billDate.value : this.billDate,
       dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      displayOrder: data.displayOrder.present
-          ? data.displayOrder.value
-          : this.displayOrder,
-      isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
       isCreditPayable: data.isCreditPayable.present
           ? data.isCreditPayable.value
           : this.isCreditPayable,
+      loanPurpose: data.loanPurpose.present
+          ? data.loanPurpose.value
+          : this.loanPurpose,
+      loanPrincipal: data.loanPrincipal.present
+          ? data.loanPrincipal.value
+          : this.loanPrincipal,
+      interestRate: data.interestRate.present
+          ? data.interestRate.value
+          : this.interestRate,
+      tenureMonths: data.tenureMonths.present
+          ? data.tenureMonths.value
+          : this.tenureMonths,
+      emiDate: data.emiDate.present ? data.emiDate.value : this.emiDate,
+      loanStartDate: data.loanStartDate.present
+          ? data.loanStartDate.value
+          : this.loanStartDate,
+      loanEndDate: data.loanEndDate.present
+          ? data.loanEndDate.value
+          : this.loanEndDate,
+      totalInterestPayable: data.totalInterestPayable.present
+          ? data.totalInterestPayable.value
+          : this.totalInterestPayable,
+      totalTaxPayable: data.totalTaxPayable.present
+          ? data.totalTaxPayable.value
+          : this.totalTaxPayable,
+      isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
+      displayOrder: data.displayOrder.present
+          ? data.displayOrder.value
+          : this.displayOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
 
@@ -1206,16 +1574,25 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('creditLimit: $creditLimit, ')
           ..write('billDate: $billDate, ')
           ..write('dueDate: $dueDate, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('displayOrder: $displayOrder, ')
+          ..write('isCreditPayable: $isCreditPayable, ')
+          ..write('loanPurpose: $loanPurpose, ')
+          ..write('loanPrincipal: $loanPrincipal, ')
+          ..write('interestRate: $interestRate, ')
+          ..write('tenureMonths: $tenureMonths, ')
+          ..write('emiDate: $emiDate, ')
+          ..write('loanStartDate: $loanStartDate, ')
+          ..write('loanEndDate: $loanEndDate, ')
+          ..write('totalInterestPayable: $totalInterestPayable, ')
+          ..write('totalTaxPayable: $totalTaxPayable, ')
           ..write('isHidden: $isHidden, ')
-          ..write('isCreditPayable: $isCreditPayable')
+          ..write('displayOrder: $displayOrder, ')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     name,
     providerName,
@@ -1225,11 +1602,20 @@ class Account extends DataClass implements Insertable<Account> {
     creditLimit,
     billDate,
     dueDate,
-    createdAt,
-    displayOrder,
-    isHidden,
     isCreditPayable,
-  );
+    loanPurpose,
+    loanPrincipal,
+    interestRate,
+    tenureMonths,
+    emiDate,
+    loanStartDate,
+    loanEndDate,
+    totalInterestPayable,
+    totalTaxPayable,
+    isHidden,
+    displayOrder,
+    createdAt,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1243,10 +1629,19 @@ class Account extends DataClass implements Insertable<Account> {
           other.creditLimit == this.creditLimit &&
           other.billDate == this.billDate &&
           other.dueDate == this.dueDate &&
-          other.createdAt == this.createdAt &&
-          other.displayOrder == this.displayOrder &&
+          other.isCreditPayable == this.isCreditPayable &&
+          other.loanPurpose == this.loanPurpose &&
+          other.loanPrincipal == this.loanPrincipal &&
+          other.interestRate == this.interestRate &&
+          other.tenureMonths == this.tenureMonths &&
+          other.emiDate == this.emiDate &&
+          other.loanStartDate == this.loanStartDate &&
+          other.loanEndDate == this.loanEndDate &&
+          other.totalInterestPayable == this.totalInterestPayable &&
+          other.totalTaxPayable == this.totalTaxPayable &&
           other.isHidden == this.isHidden &&
-          other.isCreditPayable == this.isCreditPayable);
+          other.displayOrder == this.displayOrder &&
+          other.createdAt == this.createdAt);
 }
 
 class AccountsCompanion extends UpdateCompanion<Account> {
@@ -1254,15 +1649,24 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String> name;
   final Value<String> providerName;
   final Value<String> type;
-  final Value<String> last4;
+  final Value<String?> last4;
   final Value<double> balance;
   final Value<double?> creditLimit;
   final Value<int?> billDate;
   final Value<int?> dueDate;
-  final Value<DateTime> createdAt;
-  final Value<int> displayOrder;
-  final Value<bool> isHidden;
   final Value<bool> isCreditPayable;
+  final Value<String?> loanPurpose;
+  final Value<double?> loanPrincipal;
+  final Value<double?> interestRate;
+  final Value<int?> tenureMonths;
+  final Value<DateTime?> emiDate;
+  final Value<DateTime?> loanStartDate;
+  final Value<DateTime?> loanEndDate;
+  final Value<double?> totalInterestPayable;
+  final Value<double?> totalTaxPayable;
+  final Value<bool> isHidden;
+  final Value<int?> displayOrder;
+  final Value<DateTime> createdAt;
   final Value<int> rowid;
   const AccountsCompanion({
     this.id = const Value.absent(),
@@ -1274,10 +1678,19 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.creditLimit = const Value.absent(),
     this.billDate = const Value.absent(),
     this.dueDate = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.displayOrder = const Value.absent(),
-    this.isHidden = const Value.absent(),
     this.isCreditPayable = const Value.absent(),
+    this.loanPurpose = const Value.absent(),
+    this.loanPrincipal = const Value.absent(),
+    this.interestRate = const Value.absent(),
+    this.tenureMonths = const Value.absent(),
+    this.emiDate = const Value.absent(),
+    this.loanStartDate = const Value.absent(),
+    this.loanEndDate = const Value.absent(),
+    this.totalInterestPayable = const Value.absent(),
+    this.totalTaxPayable = const Value.absent(),
+    this.isHidden = const Value.absent(),
+    this.displayOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AccountsCompanion.insert({
@@ -1285,21 +1698,30 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     required String name,
     required String providerName,
     required String type,
-    required String last4,
-    this.balance = const Value.absent(),
+    this.last4 = const Value.absent(),
+    required double balance,
     this.creditLimit = const Value.absent(),
     this.billDate = const Value.absent(),
     this.dueDate = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.displayOrder = const Value.absent(),
-    this.isHidden = const Value.absent(),
     this.isCreditPayable = const Value.absent(),
+    this.loanPurpose = const Value.absent(),
+    this.loanPrincipal = const Value.absent(),
+    this.interestRate = const Value.absent(),
+    this.tenureMonths = const Value.absent(),
+    this.emiDate = const Value.absent(),
+    this.loanStartDate = const Value.absent(),
+    this.loanEndDate = const Value.absent(),
+    this.totalInterestPayable = const Value.absent(),
+    this.totalTaxPayable = const Value.absent(),
+    this.isHidden = const Value.absent(),
+    this.displayOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
        providerName = Value(providerName),
        type = Value(type),
-       last4 = Value(last4);
+       balance = Value(balance);
   static Insertable<Account> custom({
     Expression<String>? id,
     Expression<String>? name,
@@ -1310,10 +1732,19 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<double>? creditLimit,
     Expression<int>? billDate,
     Expression<int>? dueDate,
-    Expression<DateTime>? createdAt,
-    Expression<int>? displayOrder,
-    Expression<bool>? isHidden,
     Expression<bool>? isCreditPayable,
+    Expression<String>? loanPurpose,
+    Expression<double>? loanPrincipal,
+    Expression<double>? interestRate,
+    Expression<int>? tenureMonths,
+    Expression<DateTime>? emiDate,
+    Expression<DateTime>? loanStartDate,
+    Expression<DateTime>? loanEndDate,
+    Expression<double>? totalInterestPayable,
+    Expression<double>? totalTaxPayable,
+    Expression<bool>? isHidden,
+    Expression<int>? displayOrder,
+    Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1326,10 +1757,20 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (creditLimit != null) 'credit_limit': creditLimit,
       if (billDate != null) 'bill_date': billDate,
       if (dueDate != null) 'due_date': dueDate,
-      if (createdAt != null) 'created_at': createdAt,
-      if (displayOrder != null) 'display_order': displayOrder,
-      if (isHidden != null) 'is_hidden': isHidden,
       if (isCreditPayable != null) 'is_credit_payable': isCreditPayable,
+      if (loanPurpose != null) 'loan_purpose': loanPurpose,
+      if (loanPrincipal != null) 'loan_principal': loanPrincipal,
+      if (interestRate != null) 'interest_rate': interestRate,
+      if (tenureMonths != null) 'tenure_months': tenureMonths,
+      if (emiDate != null) 'emi_date': emiDate,
+      if (loanStartDate != null) 'loan_start_date': loanStartDate,
+      if (loanEndDate != null) 'loan_end_date': loanEndDate,
+      if (totalInterestPayable != null)
+        'total_interest_payable': totalInterestPayable,
+      if (totalTaxPayable != null) 'total_tax_payable': totalTaxPayable,
+      if (isHidden != null) 'is_hidden': isHidden,
+      if (displayOrder != null) 'display_order': displayOrder,
+      if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1339,15 +1780,24 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<String>? name,
     Value<String>? providerName,
     Value<String>? type,
-    Value<String>? last4,
+    Value<String?>? last4,
     Value<double>? balance,
     Value<double?>? creditLimit,
     Value<int?>? billDate,
     Value<int?>? dueDate,
-    Value<DateTime>? createdAt,
-    Value<int>? displayOrder,
-    Value<bool>? isHidden,
     Value<bool>? isCreditPayable,
+    Value<String?>? loanPurpose,
+    Value<double?>? loanPrincipal,
+    Value<double?>? interestRate,
+    Value<int?>? tenureMonths,
+    Value<DateTime?>? emiDate,
+    Value<DateTime?>? loanStartDate,
+    Value<DateTime?>? loanEndDate,
+    Value<double?>? totalInterestPayable,
+    Value<double?>? totalTaxPayable,
+    Value<bool>? isHidden,
+    Value<int?>? displayOrder,
+    Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
     return AccountsCompanion(
@@ -1360,10 +1810,19 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       creditLimit: creditLimit ?? this.creditLimit,
       billDate: billDate ?? this.billDate,
       dueDate: dueDate ?? this.dueDate,
-      createdAt: createdAt ?? this.createdAt,
-      displayOrder: displayOrder ?? this.displayOrder,
-      isHidden: isHidden ?? this.isHidden,
       isCreditPayable: isCreditPayable ?? this.isCreditPayable,
+      loanPurpose: loanPurpose ?? this.loanPurpose,
+      loanPrincipal: loanPrincipal ?? this.loanPrincipal,
+      interestRate: interestRate ?? this.interestRate,
+      tenureMonths: tenureMonths ?? this.tenureMonths,
+      emiDate: emiDate ?? this.emiDate,
+      loanStartDate: loanStartDate ?? this.loanStartDate,
+      loanEndDate: loanEndDate ?? this.loanEndDate,
+      totalInterestPayable: totalInterestPayable ?? this.totalInterestPayable,
+      totalTaxPayable: totalTaxPayable ?? this.totalTaxPayable,
+      isHidden: isHidden ?? this.isHidden,
+      displayOrder: displayOrder ?? this.displayOrder,
+      createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1398,17 +1857,46 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (dueDate.present) {
       map['due_date'] = Variable<int>(dueDate.value);
     }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+    if (isCreditPayable.present) {
+      map['is_credit_payable'] = Variable<bool>(isCreditPayable.value);
     }
-    if (displayOrder.present) {
-      map['display_order'] = Variable<int>(displayOrder.value);
+    if (loanPurpose.present) {
+      map['loan_purpose'] = Variable<String>(loanPurpose.value);
+    }
+    if (loanPrincipal.present) {
+      map['loan_principal'] = Variable<double>(loanPrincipal.value);
+    }
+    if (interestRate.present) {
+      map['interest_rate'] = Variable<double>(interestRate.value);
+    }
+    if (tenureMonths.present) {
+      map['tenure_months'] = Variable<int>(tenureMonths.value);
+    }
+    if (emiDate.present) {
+      map['emi_date'] = Variable<DateTime>(emiDate.value);
+    }
+    if (loanStartDate.present) {
+      map['loan_start_date'] = Variable<DateTime>(loanStartDate.value);
+    }
+    if (loanEndDate.present) {
+      map['loan_end_date'] = Variable<DateTime>(loanEndDate.value);
+    }
+    if (totalInterestPayable.present) {
+      map['total_interest_payable'] = Variable<double>(
+        totalInterestPayable.value,
+      );
+    }
+    if (totalTaxPayable.present) {
+      map['total_tax_payable'] = Variable<double>(totalTaxPayable.value);
     }
     if (isHidden.present) {
       map['is_hidden'] = Variable<bool>(isHidden.value);
     }
-    if (isCreditPayable.present) {
-      map['is_credit_payable'] = Variable<bool>(isCreditPayable.value);
+    if (displayOrder.present) {
+      map['display_order'] = Variable<int>(displayOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -1428,10 +1916,19 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('creditLimit: $creditLimit, ')
           ..write('billDate: $billDate, ')
           ..write('dueDate: $dueDate, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('displayOrder: $displayOrder, ')
-          ..write('isHidden: $isHidden, ')
           ..write('isCreditPayable: $isCreditPayable, ')
+          ..write('loanPurpose: $loanPurpose, ')
+          ..write('loanPrincipal: $loanPrincipal, ')
+          ..write('interestRate: $interestRate, ')
+          ..write('tenureMonths: $tenureMonths, ')
+          ..write('emiDate: $emiDate, ')
+          ..write('loanStartDate: $loanStartDate, ')
+          ..write('loanEndDate: $loanEndDate, ')
+          ..write('totalInterestPayable: $totalInterestPayable, ')
+          ..write('totalTaxPayable: $totalTaxPayable, ')
+          ..write('isHidden: $isHidden, ')
+          ..write('displayOrder: $displayOrder, ')
+          ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5060,15 +5557,24 @@ typedef $$AccountsTableCreateCompanionBuilder =
       required String name,
       required String providerName,
       required String type,
-      required String last4,
-      Value<double> balance,
+      Value<String?> last4,
+      required double balance,
       Value<double?> creditLimit,
       Value<int?> billDate,
       Value<int?> dueDate,
-      Value<DateTime> createdAt,
-      Value<int> displayOrder,
-      Value<bool> isHidden,
       Value<bool> isCreditPayable,
+      Value<String?> loanPurpose,
+      Value<double?> loanPrincipal,
+      Value<double?> interestRate,
+      Value<int?> tenureMonths,
+      Value<DateTime?> emiDate,
+      Value<DateTime?> loanStartDate,
+      Value<DateTime?> loanEndDate,
+      Value<double?> totalInterestPayable,
+      Value<double?> totalTaxPayable,
+      Value<bool> isHidden,
+      Value<int?> displayOrder,
+      Value<DateTime> createdAt,
       Value<int> rowid,
     });
 typedef $$AccountsTableUpdateCompanionBuilder =
@@ -5077,15 +5583,24 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> providerName,
       Value<String> type,
-      Value<String> last4,
+      Value<String?> last4,
       Value<double> balance,
       Value<double?> creditLimit,
       Value<int?> billDate,
       Value<int?> dueDate,
-      Value<DateTime> createdAt,
-      Value<int> displayOrder,
-      Value<bool> isHidden,
       Value<bool> isCreditPayable,
+      Value<String?> loanPurpose,
+      Value<double?> loanPrincipal,
+      Value<double?> interestRate,
+      Value<int?> tenureMonths,
+      Value<DateTime?> emiDate,
+      Value<DateTime?> loanStartDate,
+      Value<DateTime?> loanEndDate,
+      Value<double?> totalInterestPayable,
+      Value<double?> totalTaxPayable,
+      Value<bool> isHidden,
+      Value<int?> displayOrder,
+      Value<DateTime> createdAt,
       Value<int> rowid,
     });
 
@@ -5143,13 +5658,53 @@ class $$AccountsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
+  ColumnFilters<bool> get isCreditPayable => $composableBuilder(
+    column: $table.isCreditPayable,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get displayOrder => $composableBuilder(
-    column: $table.displayOrder,
+  ColumnFilters<String> get loanPurpose => $composableBuilder(
+    column: $table.loanPurpose,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get loanPrincipal => $composableBuilder(
+    column: $table.loanPrincipal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get interestRate => $composableBuilder(
+    column: $table.interestRate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get tenureMonths => $composableBuilder(
+    column: $table.tenureMonths,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get emiDate => $composableBuilder(
+    column: $table.emiDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get loanStartDate => $composableBuilder(
+    column: $table.loanStartDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get loanEndDate => $composableBuilder(
+    column: $table.loanEndDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalInterestPayable => $composableBuilder(
+    column: $table.totalInterestPayable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalTaxPayable => $composableBuilder(
+    column: $table.totalTaxPayable,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5158,8 +5713,13 @@ class $$AccountsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get isCreditPayable => $composableBuilder(
-    column: $table.isCreditPayable,
+  ColumnFilters<int> get displayOrder => $composableBuilder(
+    column: $table.displayOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5218,13 +5778,53 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
+  ColumnOrderings<bool> get isCreditPayable => $composableBuilder(
+    column: $table.isCreditPayable,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get displayOrder => $composableBuilder(
-    column: $table.displayOrder,
+  ColumnOrderings<String> get loanPurpose => $composableBuilder(
+    column: $table.loanPurpose,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get loanPrincipal => $composableBuilder(
+    column: $table.loanPrincipal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get interestRate => $composableBuilder(
+    column: $table.interestRate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get tenureMonths => $composableBuilder(
+    column: $table.tenureMonths,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get emiDate => $composableBuilder(
+    column: $table.emiDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get loanStartDate => $composableBuilder(
+    column: $table.loanStartDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get loanEndDate => $composableBuilder(
+    column: $table.loanEndDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalInterestPayable => $composableBuilder(
+    column: $table.totalInterestPayable,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalTaxPayable => $composableBuilder(
+    column: $table.totalTaxPayable,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5233,8 +5833,13 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get isCreditPayable => $composableBuilder(
-    column: $table.isCreditPayable,
+  ColumnOrderings<int> get displayOrder => $composableBuilder(
+    column: $table.displayOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -5279,21 +5884,64 @@ class $$AccountsTableAnnotationComposer
   GeneratedColumn<int> get dueDate =>
       $composableBuilder(column: $table.dueDate, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+  GeneratedColumn<bool> get isCreditPayable => $composableBuilder(
+    column: $table.isCreditPayable,
+    builder: (column) => column,
+  );
 
-  GeneratedColumn<int> get displayOrder => $composableBuilder(
-    column: $table.displayOrder,
+  GeneratedColumn<String> get loanPurpose => $composableBuilder(
+    column: $table.loanPurpose,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get loanPrincipal => $composableBuilder(
+    column: $table.loanPrincipal,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get interestRate => $composableBuilder(
+    column: $table.interestRate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get tenureMonths => $composableBuilder(
+    column: $table.tenureMonths,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get emiDate =>
+      $composableBuilder(column: $table.emiDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get loanStartDate => $composableBuilder(
+    column: $table.loanStartDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get loanEndDate => $composableBuilder(
+    column: $table.loanEndDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get totalInterestPayable => $composableBuilder(
+    column: $table.totalInterestPayable,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get totalTaxPayable => $composableBuilder(
+    column: $table.totalTaxPayable,
     builder: (column) => column,
   );
 
   GeneratedColumn<bool> get isHidden =>
       $composableBuilder(column: $table.isHidden, builder: (column) => column);
 
-  GeneratedColumn<bool> get isCreditPayable => $composableBuilder(
-    column: $table.isCreditPayable,
+  GeneratedColumn<int> get displayOrder => $composableBuilder(
+    column: $table.displayOrder,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
 }
 
 class $$AccountsTableTableManager
@@ -5328,15 +5976,24 @@ class $$AccountsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> providerName = const Value.absent(),
                 Value<String> type = const Value.absent(),
-                Value<String> last4 = const Value.absent(),
+                Value<String?> last4 = const Value.absent(),
                 Value<double> balance = const Value.absent(),
                 Value<double?> creditLimit = const Value.absent(),
                 Value<int?> billDate = const Value.absent(),
                 Value<int?> dueDate = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<int> displayOrder = const Value.absent(),
-                Value<bool> isHidden = const Value.absent(),
                 Value<bool> isCreditPayable = const Value.absent(),
+                Value<String?> loanPurpose = const Value.absent(),
+                Value<double?> loanPrincipal = const Value.absent(),
+                Value<double?> interestRate = const Value.absent(),
+                Value<int?> tenureMonths = const Value.absent(),
+                Value<DateTime?> emiDate = const Value.absent(),
+                Value<DateTime?> loanStartDate = const Value.absent(),
+                Value<DateTime?> loanEndDate = const Value.absent(),
+                Value<double?> totalInterestPayable = const Value.absent(),
+                Value<double?> totalTaxPayable = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
+                Value<int?> displayOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion(
                 id: id,
@@ -5348,10 +6005,19 @@ class $$AccountsTableTableManager
                 creditLimit: creditLimit,
                 billDate: billDate,
                 dueDate: dueDate,
-                createdAt: createdAt,
-                displayOrder: displayOrder,
-                isHidden: isHidden,
                 isCreditPayable: isCreditPayable,
+                loanPurpose: loanPurpose,
+                loanPrincipal: loanPrincipal,
+                interestRate: interestRate,
+                tenureMonths: tenureMonths,
+                emiDate: emiDate,
+                loanStartDate: loanStartDate,
+                loanEndDate: loanEndDate,
+                totalInterestPayable: totalInterestPayable,
+                totalTaxPayable: totalTaxPayable,
+                isHidden: isHidden,
+                displayOrder: displayOrder,
+                createdAt: createdAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5360,15 +6026,24 @@ class $$AccountsTableTableManager
                 required String name,
                 required String providerName,
                 required String type,
-                required String last4,
-                Value<double> balance = const Value.absent(),
+                Value<String?> last4 = const Value.absent(),
+                required double balance,
                 Value<double?> creditLimit = const Value.absent(),
                 Value<int?> billDate = const Value.absent(),
                 Value<int?> dueDate = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<int> displayOrder = const Value.absent(),
-                Value<bool> isHidden = const Value.absent(),
                 Value<bool> isCreditPayable = const Value.absent(),
+                Value<String?> loanPurpose = const Value.absent(),
+                Value<double?> loanPrincipal = const Value.absent(),
+                Value<double?> interestRate = const Value.absent(),
+                Value<int?> tenureMonths = const Value.absent(),
+                Value<DateTime?> emiDate = const Value.absent(),
+                Value<DateTime?> loanStartDate = const Value.absent(),
+                Value<DateTime?> loanEndDate = const Value.absent(),
+                Value<double?> totalInterestPayable = const Value.absent(),
+                Value<double?> totalTaxPayable = const Value.absent(),
+                Value<bool> isHidden = const Value.absent(),
+                Value<int?> displayOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion.insert(
                 id: id,
@@ -5380,10 +6055,19 @@ class $$AccountsTableTableManager
                 creditLimit: creditLimit,
                 billDate: billDate,
                 dueDate: dueDate,
-                createdAt: createdAt,
-                displayOrder: displayOrder,
-                isHidden: isHidden,
                 isCreditPayable: isCreditPayable,
+                loanPurpose: loanPurpose,
+                loanPrincipal: loanPrincipal,
+                interestRate: interestRate,
+                tenureMonths: tenureMonths,
+                emiDate: emiDate,
+                loanStartDate: loanStartDate,
+                loanEndDate: loanEndDate,
+                totalInterestPayable: totalInterestPayable,
+                totalTaxPayable: totalTaxPayable,
+                isHidden: isHidden,
+                displayOrder: displayOrder,
+                createdAt: createdAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

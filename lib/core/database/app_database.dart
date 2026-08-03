@@ -1,5 +1,3 @@
-// core/database/app_database.dart
-
 import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -16,14 +14,14 @@ part 'app_database.g.dart';
   Transactions,
   MonthlyBudgets,
   ClosedBudgetSnapshots,
-  CustomBudgets, // <-- NEW TABLE
+  CustomBudgets, 
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
-  // --- BUMP TO VERSION 15 ---
+  // --- BUMPED TO VERSION 18 ---
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -51,8 +49,21 @@ class AppDatabase extends _$AppDatabase {
       if (from < 14) await m.addColumn(accounts, accounts.isCreditPayable);
       if (from < 15) await m.createTable(customBudgets);
       if (from < 16) {
-        // --- NEW MIGRATION FOR SETTLED AMOUNT FREEZING ---
         await m.addColumn(customBudgets, customBudgets.settledAmount);
+      }
+      if (from < 17) {
+        await m.addColumn(accounts, accounts.loanPurpose);
+        await m.addColumn(accounts, accounts.loanPrincipal);
+        await m.addColumn(accounts, accounts.interestRate);
+        await m.addColumn(accounts, accounts.tenureMonths);
+        await m.addColumn(accounts, accounts.emiDate);
+        await m.addColumn(accounts, accounts.loanStartDate);
+        await m.addColumn(accounts, accounts.loanEndDate);
+      }
+      if (from < 18) {
+        // --- NEW MIGRATION FOR PERSISTENT LOAN METRICS ---
+        await m.addColumn(accounts, accounts.totalInterestPayable);
+        await m.addColumn(accounts, accounts.totalTaxPayable);
       }
     },
   );
@@ -65,6 +76,3 @@ LazyDatabase _openConnection() {
     return NativeDatabase.createInBackground(file);
   });
 }
-
-// NOTE: Please run `flutter pub run build_runner build --delete-conflicting-outputs`
-// in your terminal to regenerate `app_database.g.dart` with the new CustomBudgets table.

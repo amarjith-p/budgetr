@@ -66,6 +66,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isCreditCard = widget.account.type == 'Credit Cards';
+    final isLoan = widget.account.type == 'Loan';
 
     final bgColor = isCreditCard
         ? theme.colorScheme.primary
@@ -90,11 +91,11 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                 ..rotateY(angle),
               alignment: Alignment.center,
               child: isFrontVisible
-                  ? _buildFront(bgColor, fgColor, isCreditCard)
+                  ? _buildFront(bgColor, fgColor, isCreditCard, isLoan)
                   : Transform(
                       transform: Matrix4.identity()..rotateY(pi),
                       alignment: Alignment.center,
-                      child: _buildBack(bgColor, fgColor, isCreditCard),
+                      child: _buildBack(bgColor, fgColor, isCreditCard, isLoan),
                     ),
             ),
           ),
@@ -103,8 +104,8 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     );
   }
 
-  Widget _buildFront(Color bgColor, Color fgColor, bool isCreditCard) {
-    final labelText = isCreditCard ? 'OUTSTANDING BALANCE' : 'CURRENT BALANCE';
+  Widget _buildFront(Color bgColor, Color fgColor, bool isCreditCard, bool isLoan) {
+    final labelText = isLoan ? 'OUTSTANDING PRINCIPAL' : (isCreditCard ? 'OUTSTANDING BALANCE' : 'CURRENT BALANCE');
     final balance = widget.account.balance;
     // Explicit Rupee formatting logic
     final signText = balance < 0 ? '-₹' : '₹';
@@ -247,7 +248,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     );
   }
 
-  Widget _buildBack(Color bgColor, Color fgColor, bool isCreditCard) {
+  Widget _buildBack(Color bgColor, Color fgColor, bool isCreditCard, bool isLoan) {
     return Container(
       height: 190,
       decoration: BoxDecoration(
@@ -276,17 +277,25 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                     children: [
                       _buildBackData(fgColor, 'BILL DATE', _getOrdinal(widget.account.billDate)),
                       _buildBackData(fgColor, 'DUE DATE', _getOrdinal(widget.account.dueDate)),
-                      // Inserted the correct Rupee symbol into the credit limit
                       _buildBackData(fgColor, 'CREDIT LIMIT', '₹${widget.account.creditLimit?.toStringAsFixed(2) ?? "0.00"}'),
                     ],
                   )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildBackData(fgColor, 'ACCOUNT TYPE', widget.account.type),
-                      _buildBackData(fgColor, 'ADDED ON', '${widget.account.createdAt.day}/${widget.account.createdAt.month}/${widget.account.createdAt.year}'),
-                    ],
-                  ),
+                : isLoan
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildBackData(fgColor, 'INTEREST', '${widget.account.interestRate?.toStringAsFixed(2) ?? "0.0"}%'),
+                          _buildBackData(fgColor, 'TENURE', '${widget.account.tenureMonths ?? 0} Mo'),
+                          _buildBackData(fgColor, 'EMI DATE', _getOrdinal(widget.account.emiDate?.day)),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildBackData(fgColor, 'ACCOUNT TYPE', widget.account.type),
+                          _buildBackData(fgColor, 'ADDED ON', '${widget.account.createdAt.day}/${widget.account.createdAt.month}/${widget.account.createdAt.year}'),
+                        ],
+                      ),
           ),
           const Spacer(),
           GestureDetector(

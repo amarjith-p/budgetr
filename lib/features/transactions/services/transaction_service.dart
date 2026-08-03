@@ -56,6 +56,9 @@ class TransactionService {
       leftOuterJoin(_db.transactionCategories, _db.transactionCategories.id.equalsExp(_db.transactions.categoryId)),       
       leftOuterJoin(_db.budgetBuckets, _db.budgetBuckets.id.equalsExp(_db.transactions.bucketId)),     
     ])     
+    // --- THE ISOLATION RULE ---
+    // Prevents Loan transactions from bleeding into Global Records or Budgets
+    ..where(_db.accounts.type.isNotValue('Loan')) 
     ..orderBy([OrderingTerm.desc(_db.transactions.date)]);     
     
     return query.watch().map((rows) {       

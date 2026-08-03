@@ -31,7 +31,17 @@ class AccountActionNotifier extends AsyncNotifier<void> {
     required double balance,     
     double? creditLimit,     
     int? billDate,     
-    int? dueDate,   
+    int? dueDate,
+    String? loanPurpose,
+    double? loanPrincipal,
+    double? interestRate,
+    int? tenureMonths,
+    DateTime? emiDate,
+    DateTime? loanStartDate,
+    DateTime? loanEndDate,
+    // --- NEW PERSISTENT LOAN METRICS ---
+    double? totalInterestPayable,
+    double? totalTaxPayable,
   }) async {     
     state = const AsyncLoading();          
     
@@ -39,15 +49,21 @@ class AccountActionNotifier extends AsyncNotifier<void> {
       if (existingId == null) {         
         await _service.addAccount(           
           name: name, providerName: providerName, type: type, last4: last4,            
-          balance: balance, creditLimit: creditLimit, billDate: billDate, dueDate: dueDate         
+          balance: balance, creditLimit: creditLimit, billDate: billDate, dueDate: dueDate,
+          loanPurpose: loanPurpose, loanPrincipal: loanPrincipal, interestRate: interestRate,
+          tenureMonths: tenureMonths, emiDate: emiDate, loanStartDate: loanStartDate, loanEndDate: loanEndDate,
+          totalInterestPayable: totalInterestPayable, totalTaxPayable: totalTaxPayable
         );       
       } else {         
         final db = ref.read(databaseProvider);         
         final existing = await (db.select(db.accounts)..where((t) => t.id.equals(existingId))).getSingle();                  
         
         final updated = existing.copyWith(           
-          name: name, providerName: providerName, type: type, last4: last4,           
-          balance: balance, creditLimit: Value(creditLimit), billDate: Value(billDate), dueDate: Value(dueDate)         
+          name: name, providerName: providerName, type: type, last4: Value(last4),           
+          balance: balance, creditLimit: Value(creditLimit), billDate: Value(billDate), dueDate: Value(dueDate),
+          loanPurpose: Value(loanPurpose), loanPrincipal: Value(loanPrincipal), interestRate: Value(interestRate),
+          tenureMonths: Value(tenureMonths), emiDate: Value(emiDate), loanStartDate: Value(loanStartDate), loanEndDate: Value(loanEndDate),
+          totalInterestPayable: Value(totalInterestPayable), totalTaxPayable: Value(totalTaxPayable)
         );         
         await _service.updateAccount(updated);       
       }     
@@ -63,17 +79,15 @@ class AccountActionNotifier extends AsyncNotifier<void> {
   Future<void> reorderAccounts(List<Account> orderedList) async {     
     final updatedAccounts = <Account>[];     
     for (int i = 0; i < orderedList.length; i++) {       
-      updatedAccounts.add(orderedList[i].copyWith(displayOrder: i));     
+      updatedAccounts.add(orderedList[i].copyWith(displayOrder: Value(i)));     
     }          
     await AsyncValue.guard(() => _service.reorderAccounts(updatedAccounts)); 
   }
 
-  // --- NEW: Saves BOTH Order and Visibility states ---
   Future<void> updateAccountPreferences(List<Account> modifiedList) async {
     final updatedAccounts = <Account>[];     
     for (int i = 0; i < modifiedList.length; i++) {       
-      // Overwrite displayOrder based on the new index, preserve the isHidden flag
-      updatedAccounts.add(modifiedList[i].copyWith(displayOrder: i));     
+      updatedAccounts.add(modifiedList[i].copyWith(displayOrder: Value(i)));     
     }          
     await AsyncValue.guard(() => _service.reorderAccounts(updatedAccounts)); 
   }

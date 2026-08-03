@@ -10,7 +10,6 @@ class AccountService {
 
   Stream<List<Account>> watchAccounts() {
     return (_db.select(_db.accounts)
-          // --- UPDATED: Primary sort by custom order, secondary sort by newest ---
           ..orderBy([
             (t) => OrderingTerm(expression: t.displayOrder, mode: OrderingMode.asc),
             (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
@@ -27,20 +26,37 @@ class AccountService {
     double? creditLimit,
     int? billDate,
     int? dueDate,
+    String? loanPurpose,
+    double? loanPrincipal,
+    double? interestRate,
+    int? tenureMonths,
+    DateTime? emiDate,
+    DateTime? loanStartDate,
+    DateTime? loanEndDate,
+    // --- NEW PERSISTENT LOAN METRICS ---
+    double? totalInterestPayable,
+    double? totalTaxPayable,
   }) async {
     await _db.into(_db.accounts).insert(AccountsCompanion.insert(
       id: _uuid.v4(),
       name: name,
       providerName: providerName,
       type: type,
-      last4: last4,
-      balance: const Value.absent(), 
-    ).copyWith(
-      balance: Value(balance),
+      balance: balance,
+      last4: Value(last4),
       creditLimit: Value(creditLimit),
       billDate: Value(billDate),
       dueDate: Value(dueDate),
-      // New accounts automatically default to displayOrder: 0
+      loanPurpose: Value(loanPurpose),
+      loanPrincipal: Value(loanPrincipal),
+      interestRate: Value(interestRate),
+      tenureMonths: Value(tenureMonths),
+      emiDate: Value(emiDate),
+      loanStartDate: Value(loanStartDate),
+      loanEndDate: Value(loanEndDate),
+      // --- MAP TO DB ---
+      totalInterestPayable: Value(totalInterestPayable),
+      totalTaxPayable: Value(totalTaxPayable),
     ));
   }
 
@@ -52,7 +68,6 @@ class AccountService {
     await (_db.delete(_db.accounts)..where((t) => t.id.equals(id))).go();
   }
 
-  // --- NEW: Lightning Fast Batch Reorder ---
   Future<void> reorderAccounts(List<Account> accounts) async {
     await _db.batch((batch) {
       for (final acc in accounts) {

@@ -21,26 +21,41 @@ class BudgetBuckets extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-@DataClassName('Account')
 class Accounts extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
   TextColumn get providerName => text()();
   TextColumn get type => text()();
-  TextColumn get last4 => text().withLength(min: 4, max: 4)();
-  RealColumn get balance => real().withDefault(const Constant(0.0))();
+  TextColumn get last4 => text().nullable()();
+  RealColumn get balance => real()();
+  
+  // Existing Credit Card specific fields
   RealColumn get creditLimit => real().nullable()();
   IntColumn get billDate => integer().nullable()();
   IntColumn get dueDate => integer().nullable()();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-  IntColumn get displayOrder => integer().withDefault(const Constant(0))();
-  BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
   BoolColumn get isCreditPayable => boolean().withDefault(const Constant(false))();
+  
+  // --- NEW LOAN SPECIFIC FIELDS ---
+  TextColumn get loanPurpose => text().nullable()();
+  RealColumn get loanPrincipal => real().nullable()();
+  RealColumn get interestRate => real().nullable()();
+  IntColumn get tenureMonths => integer().nullable()();
+  DateTimeColumn get emiDate => dateTime().nullable()();
+  DateTimeColumn get loanStartDate => dateTime().nullable()();
+  DateTimeColumn get loanEndDate => dateTime().nullable()();
+  
+  // --- NEW PERSISTENT LOAN METRICS ---
+  RealColumn get totalInterestPayable => real().nullable()();
+  RealColumn get totalTaxPayable => real().nullable()();
+  
+  // System fields
+  BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
+  IntColumn get displayOrder => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
   Set<Column> get primaryKey => {id};
 }
-
 @DataClassName('TransactionRecord')
 class Transactions extends Table {
   TextColumn get id => text()();

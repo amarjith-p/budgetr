@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/features/transactions/views/account_transactions_page.dart';
-import 'package:budgetr/features/transactions/views/credit_transaction_page.dart'; 
+import 'package:budgetr/features/transactions/views/credit_transaction_page.dart';
+// --- NEW IMPORT ---
+import 'package:budgetr/features/transactions/views/loan_transaction_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,10 +48,12 @@ class AccountsTab extends ConsumerWidget {
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (accounts) {
           final creditCards = accounts.where((a) => a.type == 'Credit Cards').toList();
-          final bankAccounts = accounts.where((a) => a.type != 'Credit Cards').toList();
+          final loanAccounts = accounts.where((a) => a.type == 'Loan').toList();
+          final bankAccounts = accounts.where((a) => a.type != 'Credit Cards' && a.type != 'Loan').toList();
 
           final totalBankBalance = bankAccounts.fold(0.0, (sum, acc) => sum + acc.balance);
           final totalCreditBalance = creditCards.fold(0.0, (sum, acc) => sum + acc.balance);
+          final totalLoanBalance = loanAccounts.fold(0.0, (sum, acc) => sum + acc.balance);
 
           double customTotal = 0.0;
           for (var acc in accounts) {
@@ -64,7 +68,6 @@ class AccountsTab extends ConsumerWidget {
             physics: const BouncingScrollPhysics(),
             slivers: [
               
-              // --- FIX: Premium Sticky Header ---
               if (isSelectionMode)
                 SliverPersistentHeader(
                   pinned: true,
@@ -82,6 +85,10 @@ class AccountsTab extends ConsumerWidget {
               if (creditCards.isNotEmpty) ...[
                 _buildSectionHeader(context, 'CREDIT CARDS', totalCreditBalance),
                 _buildList(context, ref, creditCards, isSelectionMode, selectedIds),
+              ],
+              if (loanAccounts.isNotEmpty) ...[
+                _buildSectionHeader(context, 'ACTIVE LOANS', totalLoanBalance),
+                _buildList(context, ref, loanAccounts, isSelectionMode, selectedIds, isLoan: true),
               ],
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
@@ -134,7 +141,7 @@ class AccountsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildList(BuildContext context, WidgetRef ref, List<Account> items, bool isSelectionMode, Set<String> selectedIds) {
+  Widget _buildList(BuildContext context, WidgetRef ref, List<Account> items, bool isSelectionMode, Set<String> selectedIds, {bool isLoan = false}) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg),
       sliver: SliverReorderableList(
@@ -152,6 +159,29 @@ class AccountsTab extends ConsumerWidget {
         itemBuilder: (context, index) {
           final acc = items[index];
           final isSelected = selectedIds.contains(acc.id);
+
+          void handleTapAction() {
+            if (isSelectionMode) {
+              HapticFeedback.selectionClick();
+              final currentIds = ref.read(selectedAccountsProvider);
+              final newIds = Set<String>.from(currentIds);
+              if (isSelected) {
+                newIds.remove(acc.id);
+              } else {
+                newIds.add(acc.id);
+              }
+              ref.read(selectedAccountsProvider.notifier).state = newIds;
+            } else {
+              // --- FIX: ROUTING CORRECTED HERE ---
+              if (isLoan) {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => LoanTransactionPage(account: acc)));
+              } else if (acc.type == 'Credit Cards') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => CreditTransactionPage(account: acc)));
+              } else {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => AccountTransactionsPage(account: acc)));
+              }
+            }
+          }
           
           Widget cardChild = BoxySlidableCard(
             customBorderRadius: BorderRadius.circular(16.0), 
@@ -169,28 +199,7 @@ class AccountsTab extends ConsumerWidget {
             },
             child: Stack(
               children: [
-                PremiumAccountCard(
-                  account: acc,
-                  onCardTap: () {
-                    if (isSelectionMode) {
-                      HapticFeedback.selectionClick();
-                      final currentIds = ref.read(selectedAccountsProvider);
-                      final newIds = Set<String>.from(currentIds);
-                      if (isSelected) {
-                        newIds.remove(acc.id);
-                      } else {
-                        newIds.add(acc.id);
-                      }
-                      ref.read(selectedAccountsProvider.notifier).state = newIds;
-                    } else {
-                      if (acc.type == 'Credit Cards') {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => CreditTransactionPage(account: acc)));
-                      } else {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => AccountTransactionsPage(account: acc)));
-                      }
-                    }
-                  },
-                ),
+                PremiumAccountCard(account: acc, onCardTap: handleTapAction),
                 
                 if (isSelectionMode)
                   Positioned.fill(
@@ -237,7 +246,6 @@ class AccountsTab extends ConsumerWidget {
   }
 }
 
-// --- NEW: Sticky Header Delegate ---
 class _StickySelectionHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double customTotal;
   final int selectedCount;
@@ -258,7 +266,6 @@ class _StickySelectionHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
-          // Fades to a frosted glass background when scrolling
           color: theme.scaffoldBackgroundColor.withOpacity(overlapsContent || isDark ? 0.85 : 0.95),
           padding: const EdgeInsets.fromLTRB(DesignTokens.spacingLg, DesignTokens.spacingMd, DesignTokens.spacingLg, DesignTokens.spacingSm),
           alignment: Alignment.center,
