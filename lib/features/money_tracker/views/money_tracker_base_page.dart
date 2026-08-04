@@ -1,5 +1,4 @@
 // features/money_tracker/views/money_tracker_base_page.dart
-
 import 'package:budgetr/features/budgets/views/budget_management_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,9 +15,10 @@ import '../../transactions/providers/transaction_filter_provider.dart';
 import '../../transactions/components/transaction_filter_bottom_sheet.dart';
 import '../providers/bottom_nav_provider.dart';
 import 'money_tracker_home_tab.dart';
-
-// --- NEW IMPORT FOR CUSTOM BUDGETS ENTRY POINT ---
 import '../../custom_budgets/views/custom_budget_dashboard_page.dart';
+
+// --- NEW IMPORT ---
+import '../../analytics/components/balance_trend_widget.dart'; 
 
 class MoneyTrackerBasePage extends ConsumerWidget {
   const MoneyTrackerBasePage({Key? key}) : super(key: key);
@@ -51,7 +51,10 @@ class MoneyTrackerBasePage extends ConsumerWidget {
       const RecordsTab(),
       const AccountsTab(),
       const BudgetManagementTab(),
-      const _PlaceholderTab(title: 'ANALYTICS'),
+      
+      // --- NEW: INJECT ANALYTICS WIDGET HERE ---
+      const _AnalyticsTab(), 
+      
       const _PlaceholderTab(title: 'INSIGHTS'),
     ];
 
@@ -75,7 +78,6 @@ class MoneyTrackerBasePage extends ConsumerWidget {
 
     IconData? trailingIcon;
     VoidCallback? onTrailingPressed;
-
     IconData? extraTrailingIcon;
     Color? extraIconColor;
     VoidCallback? onExtraTrailingPressed;
@@ -90,6 +92,7 @@ class MoneyTrackerBasePage extends ConsumerWidget {
     } else if (currentIndex == 2) {
       trailingIcon = Icons.add_card_rounded;
       onTrailingPressed = () => _openAddAccountForm(context);
+
       extraTrailingIcon = isSelectionMode ? Icons.close_rounded : Icons.calculate_outlined;
       extraIconColor = isSelectionMode ? Theme.of(context).colorScheme.primary : null;
       onExtraTrailingPressed = () {
@@ -102,7 +105,6 @@ class MoneyTrackerBasePage extends ConsumerWidget {
         }
       };
     } else if (currentIndex == 3) {
-      // --- NEW LOGIC: Entry point for Custom Budgets on the Planning tab ---
       trailingIcon = Icons.tune_rounded;
       onTrailingPressed = () {
         HapticFeedback.lightImpact();
@@ -137,6 +139,25 @@ class MoneyTrackerBasePage extends ConsumerWidget {
         },
         onAddPressed: () => _openTransactionForm(context),
       ),
+    );
+  }
+}
+
+// --- NEW: ANALYTICS TAB HOLDER ---
+class _AnalyticsTab extends StatelessWidget {
+  const _AnalyticsTab({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 120), // Clear the bottom nav
+      children: const [
+        BalanceTrendWidget(),
+        
+        // As we build more widgets (like category pie charts or burn rates), 
+        // we will drop them right here!
+      ],
     );
   }
 }
