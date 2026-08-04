@@ -11,12 +11,11 @@ import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../providers/account_provider.dart';
-import '../providers/loan_math_provider.dart'; // <-- GLOBAL LOAN MATH IMPORT
+import '../providers/loan_math_provider.dart'; 
 import '../components/premium_account_card.dart';
 import '../components/account_form_bottom_sheet.dart';
 import '../../../core/database/app_database.dart'; 
 
-// Local State Providers exposed to Base Page
 final selectionModeProvider = StateProvider.autoDispose<bool>((ref) => false);
 final selectedAccountsProvider = StateProvider.autoDispose<Set<String>>((ref) => <String>{});
 
@@ -48,24 +47,24 @@ class AccountsTab extends ConsumerWidget {
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (accounts) {
           final creditCards = accounts.where((a) => a.type == 'Credit Cards').toList();
-          final loanAccounts = accounts.where((a) => a.type == 'Loan').toList();
           final bankAccounts = accounts.where((a) => a.type != 'Credit Cards' && a.type != 'Loan').toList();
+          
+          final activeLoans = accounts.where((a) => a.type == 'Loan' && !a.isClosed).toList();
+          final settledLoans = accounts.where((a) => a.type == 'Loan' && a.isClosed).toList();
 
           final totalBankBalance = bankAccounts.fold(0.0, (sum, acc) => sum + acc.balance);
           final totalCreditBalance = creditCards.fold(0.0, (sum, acc) => sum + acc.balance);
           
-          // --- FIX: EXACT MATH SOURCED FROM THE GLOBAL PROVIDER ---
           double totalLoanOutstanding = 0.0;
-          for (var loan in loanAccounts) {
+          for (var loan in activeLoans) {
             totalLoanOutstanding += ref.watch(loanTotalOutstandingProvider(loan));
           }
 
-          // --- FIX: DYNAMIC LIABILITIES IN CUSTOM TOTAL ---
           double customTotal = 0.0;
           for (var acc in accounts) {
-            if (selectedIds.contains(acc.id)) {
+            if (selectedIds.contains(acc.id) && !acc.isClosed) {
               if (acc.type == 'Loan') {
-                customTotal -= ref.watch(loanTotalOutstandingProvider(acc)); // Subtracts as debt
+                customTotal -= ref.watch(loanTotalOutstandingProvider(acc)); 
               } else {
                 customTotal += acc.balance; 
               }
@@ -79,7 +78,6 @@ class AccountsTab extends ConsumerWidget {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              
               if (isSelectionMode)
                 SliverPersistentHeader(
                   pinned: true,
@@ -98,11 +96,15 @@ class AccountsTab extends ConsumerWidget {
                 _buildSectionHeader(context, 'CREDIT CARDS', totalCreditBalance),
                 _buildList(context, ref, creditCards, isSelectionMode, selectedIds),
               ],
-              if (loanAccounts.isNotEmpty) ...[
-                // Pass negated total to force the "-₹" formatting for liabilities
+              if (activeLoans.isNotEmpty) ...[
                 _buildSectionHeader(context, 'ACTIVE LOANS', -totalLoanOutstanding),
-                _buildList(context, ref, loanAccounts, isSelectionMode, selectedIds, isLoan: true),
+                _buildList(context, ref, activeLoans, isSelectionMode, selectedIds, isLoan: true),
               ],
+              if (settledLoans.isNotEmpty) ...[
+                _buildSectionHeader(context, 'SETTLED LOANS', 0.0), 
+                _buildList(context, ref, settledLoans, isSelectionMode, selectedIds, isLoan: true, isSettled: true),
+              ],
+              
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );
@@ -154,13 +156,13 @@ class AccountsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildList(BuildContext context, WidgetRef ref, List<Account> items, bool isSelectionMode, Set<String> selectedIds, {bool isLoan = false}) {
+  Widget _buildList(BuildContext context, WidgetRef ref, List<Account> items, bool isSelectionMode, Set<String> selectedIds, {bool isLoan = false, bool isSettled = false}) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg),
       sliver: SliverReorderableList(
         itemCount: items.length,
         onReorder: (int oldIndex, int newIndex) {
-          if (isSelectionMode) return; 
+          if (isSelectionMode || isSettled) return; 
           
           if (oldIndex < newIndex) newIndex -= 1; 
           final mutableList = List<Account>.from(items);
@@ -174,7 +176,7 @@ class AccountsTab extends ConsumerWidget {
           final isSelected = selectedIds.contains(acc.id);
 
           void handleTapAction() {
-            if (isSelectionMode) {
+            if (isSelectionMode && !isSettled) {
               HapticFeedback.selectionClick();
               final currentIds = ref.read(selectedAccountsProvider);
               final newIds = Set<String>.from(currentIds);
@@ -184,7 +186,7 @@ class AccountsTab extends ConsumerWidget {
                 newIds.add(acc.id);
               }
               ref.read(selectedAccountsProvider.notifier).state = newIds;
-            } else {
+            } else if (!isSelectionMode) {
               if (isLoan) {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => LoanTransactionPage(account: acc)));
               } else if (acc.type == 'Credit Cards') {
@@ -198,7 +200,19 @@ class AccountsTab extends ConsumerWidget {
           Widget cardChild = BoxySlidableCard(
             customBorderRadius: BorderRadius.circular(16.0), 
             customBackgroundColor: Colors.transparent, 
-            onEdit: isSelectionMode ? null : () => _openForm(context, existingAccount: acc),
+            onEdit: (isSelectionMode || isSettled) ? null : () => _openForm(context, existingAccount: acc),
+            
+            // --- NEW: SLIDABLE SETTLE ACTION ---
+            onSettle: (isSelectionMode || !isLoan || isSettled) ? null : () {
+              ConfirmationBottomSheet.show(
+                context,
+                title: 'Settle Loan?',
+                description: 'This will permanently mark the loan as settled, remove it from your dashboard, and lock it to read-only mode. Proceed?',
+                confirmText: 'SETTLE',
+                onConfirm: () => ref.read(accountActionProvider.notifier).settleLoan(acc.id),
+              );
+            },
+            
             onDelete: isSelectionMode ? null : () {
               ConfirmationBottomSheet.show(
                 context,
@@ -213,7 +227,7 @@ class AccountsTab extends ConsumerWidget {
               children: [
                 PremiumAccountCard(account: acc, onCardTap: handleTapAction),
                 
-                if (isSelectionMode)
+                if (isSelectionMode && !isSettled)
                   Positioned.fill(
                     child: IgnorePointer( 
                       child: AnimatedContainer(
@@ -247,10 +261,10 @@ class AccountsTab extends ConsumerWidget {
             ),
           );
 
-          if (!isSelectionMode) {
+          if (!isSelectionMode && !isSettled) {
             return ReorderableDelayedDragStartListener(key: ValueKey(acc.id), index: index, child: cardChild);
           } else {
-            return KeyedSubtree(key: ValueKey(acc.id), child: cardChild);
+            return KeyedSubtree(key: ValueKey(acc.id), child: cardChild); 
           }
         },
       ),
@@ -312,10 +326,8 @@ class _StickySelectionHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   double get maxExtent => 90.0;
-
   @override
   double get minExtent => 90.0;
-
   @override
   bool shouldRebuild(covariant _StickySelectionHeaderDelegate oldDelegate) {
     return customTotal != oldDelegate.customTotal || selectedCount != oldDelegate.selectedCount;

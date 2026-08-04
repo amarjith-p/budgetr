@@ -10,7 +10,7 @@ import '../../../core/constants/icon_constants.dart';
 import '../../../core/constants/date_time_constants.dart';   
 import '../../../core/components/boxy_slidable_card.dart';  
 import '../../../core/components/confirmation_bottom_sheet.dart';  
-import '../../../core/components/custom_snackbars.dart'; // <-- ADDED
+import '../../../core/components/custom_snackbars.dart'; 
 import '../../../core/utils/location_helper.dart'; 
 import '../services/transaction_service.dart';  
 import '../providers/transaction_provider.dart';  
@@ -70,6 +70,11 @@ class TransactionCard extends ConsumerWidget {
     bool isLoanRepayment = tx.subCategory == 'Loan Principal' ||                            
                            tx.subCategory == 'Loan Interest' ||                            
                            tx.subCategory == 'Tax on Interest';
+
+    // --- CHECK IF PARENT ACCOUNT IS A SETTLED LOAN ---
+    final accountsList = ref.watch(accountsStreamProvider).asData?.value ?? [];
+    final parentAccount = accountsList.where((a) => a.id == currentAccountId).firstOrNull;
+    final bool isParentLoanSettled = parentAccount?.type == 'Loan' && (parentAccount?.isClosed ?? false);
 
     if (isTransfer) {              
       if (tx.toAccountId == 'EXTERNAL_IN') {                  
@@ -138,38 +143,47 @@ class TransactionCard extends ConsumerWidget {
     final compactDate = '$dayStr/$shortMonthStr';          
     final expandedDate = '$dayStr $fullMonthStr ${tx.date.year}, $weekdayStr : $timeStr';          
     final boxyRadius = BorderRadius.circular(DesignTokens.spacingXs);               
-    
-    return BoxySlidableCard(              
-      key: ValueKey('${tx.id}_$currentAccountId'),              
-      customBackgroundColor: cardBgColor,                      
-      
-      // --- LOCK: INTERCEPT CLONE ---
-      onClone: isLoanRepayment ? () {
+
+    // --- SAFE ACTION HANDLERS EXTRACTED FOR COMPILER STABILITY ---
+    final VoidCallback handleClone = () {
+      if (isLoanRepayment || isParentLoanSettled) {
         HapticFeedback.heavyImpact();
-        CustomSnackbars.showError(context, message: 'Loan records cannot be cloned. Log a new payment instead.');
-      } : () {                  
+        CustomSnackbars.showError(context, message: isParentLoanSettled ? 'This loan is settled. History is read-only.' : 'Loan records cannot be cloned. Log a new payment instead.');
+      } else {
         HapticFeedback.lightImpact();                  
-        Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(existingTransaction: data, isClone: true)));              
-      },              
-      
-      // --- LOCK: INTERCEPT SPLIT ---
-      onSplit: isLoanRepayment ? () {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(existingTransaction: data, isClone: true)));
+      }
+    };
+
+    final VoidCallback handleSplit = () {
+      if (isLoanRepayment || isParentLoanSettled) {
         HapticFeedback.heavyImpact();
-        CustomSnackbars.showError(context, message: 'Loan records are mathematically locked and cannot be split.');
-      } : () {                  
+        CustomSnackbars.showError(context, message: isParentLoanSettled ? 'This loan is settled. History is read-only.' : 'Loan records are mathematically locked and cannot be split.');
+      } else {
         HapticFeedback.lightImpact();                  
-        Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(existingTransaction: data, isSplit: true)));              
-      },                     
-      
-      onEdit: () {                  
+        Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(existingTransaction: data, isSplit: true)));
+      }
+    };
+
+    final VoidCallback handleEdit = () {
+      if (isParentLoanSettled) {
+        HapticFeedback.heavyImpact();
+        CustomSnackbars.showError(context, message: 'Settled loan records cannot be edited.');
+      } else {
         Navigator.push(                      
           context,                      
           MaterialPageRoute(                          
             builder: (_) => TransactionFormPage(existingTransaction: data),                      
           ),                  
-        );              
-      },              
-      onDelete: () {                  
+        );
+      }
+    };
+
+    final VoidCallback handleDelete = () {
+      if (isParentLoanSettled) {
+        HapticFeedback.heavyImpact();
+        CustomSnackbars.showError(context, message: 'Settled loan records cannot be deleted.');
+      } else {
         ConfirmationBottomSheet.show(                      
           context,                      
           title: 'Delete Log?',                      
@@ -177,8 +191,17 @@ class TransactionCard extends ConsumerWidget {
           confirmText: 'DELETE',                      
           isDestructive: true,                      
           onConfirm: () => ref.read(transactionActionProvider.notifier).deleteTransaction(tx.id),                  
-        );              
-      },              
+        );
+      }
+    };
+    
+    return BoxySlidableCard(              
+      key: ValueKey('${tx.id}_$currentAccountId'),              
+      customBackgroundColor: cardBgColor,                      
+      onClone: handleClone,              
+      onSplit: handleSplit,                     
+      onEdit: handleEdit,              
+      onDelete: handleDelete,              
       child: Theme(                  
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),                   
         child: ExpansionTile(                      
@@ -291,7 +314,7 @@ class TransactionCard extends ConsumerWidget {
                           if (tx.latitude == null || tx.longitude == null) return;                                                      
                           try {                             
                             await LocationHelper.openMap(tx.latitude!, tx.longitude!);                           
-                          } catch(e) {                             
+                          } catch (e) {                             
                             HapticFeedback.heavyImpact();                             
                             if (context.mounted) {                               
                               ScaffoldMessenger.of(context).showSnackBar(                                 
@@ -321,7 +344,7 @@ class TransactionCard extends ConsumerWidget {
                             ],                           
                           ),                         
                         ),                       
-                      ),                     
+                      ), // <-- FIXED: Was `],` in original code                     
                     ],                     
                     if (isSpilloverEligible || tx.isSpillover) ...[                                              
                       const Padding(                                                  
@@ -384,8 +407,8 @@ class TransactionCard extends ConsumerWidget {
                     ],                                      
                   ],                                  
                 ),                              
-              ),                          
-            ),                      
+              ),
+            ),                                            
           ],                  
         ),              
       ),          

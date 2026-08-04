@@ -51,6 +51,7 @@ class Accounts extends Table {
   // System fields
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
   IntColumn get displayOrder => integer().nullable()();
+  BoolColumn get isClosed => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override

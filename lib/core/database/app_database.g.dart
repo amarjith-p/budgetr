@@ -907,6 +907,21 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isClosedMeta = const VerificationMeta(
+    'isClosed',
+  );
+  @override
+  late final GeneratedColumn<bool> isClosed = GeneratedColumn<bool>(
+    'is_closed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_closed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -942,6 +957,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     totalTaxPayable,
     isHidden,
     displayOrder,
+    isClosed,
     createdAt,
   ];
   @override
@@ -1125,6 +1141,12 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         ),
       );
     }
+    if (data.containsKey('is_closed')) {
+      context.handle(
+        _isClosedMeta,
+        isClosed.isAcceptableOrUnknown(data['is_closed']!, _isClosedMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1224,6 +1246,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.int,
         data['${effectivePrefix}display_order'],
       ),
+      isClosed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_closed'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1259,6 +1285,7 @@ class Account extends DataClass implements Insertable<Account> {
   final double? totalTaxPayable;
   final bool isHidden;
   final int? displayOrder;
+  final bool isClosed;
   final DateTime createdAt;
   const Account({
     required this.id,
@@ -1282,6 +1309,7 @@ class Account extends DataClass implements Insertable<Account> {
     this.totalTaxPayable,
     required this.isHidden,
     this.displayOrder,
+    required this.isClosed,
     required this.createdAt,
   });
   @override
@@ -1336,6 +1364,7 @@ class Account extends DataClass implements Insertable<Account> {
     if (!nullToAbsent || displayOrder != null) {
       map['display_order'] = Variable<int>(displayOrder);
     }
+    map['is_closed'] = Variable<bool>(isClosed);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1391,6 +1420,7 @@ class Account extends DataClass implements Insertable<Account> {
       displayOrder: displayOrder == null && nullToAbsent
           ? const Value.absent()
           : Value(displayOrder),
+      isClosed: Value(isClosed),
       createdAt: Value(createdAt),
     );
   }
@@ -1424,6 +1454,7 @@ class Account extends DataClass implements Insertable<Account> {
       totalTaxPayable: serializer.fromJson<double?>(json['totalTaxPayable']),
       isHidden: serializer.fromJson<bool>(json['isHidden']),
       displayOrder: serializer.fromJson<int?>(json['displayOrder']),
+      isClosed: serializer.fromJson<bool>(json['isClosed']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1452,6 +1483,7 @@ class Account extends DataClass implements Insertable<Account> {
       'totalTaxPayable': serializer.toJson<double?>(totalTaxPayable),
       'isHidden': serializer.toJson<bool>(isHidden),
       'displayOrder': serializer.toJson<int?>(displayOrder),
+      'isClosed': serializer.toJson<bool>(isClosed),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1478,6 +1510,7 @@ class Account extends DataClass implements Insertable<Account> {
     Value<double?> totalTaxPayable = const Value.absent(),
     bool? isHidden,
     Value<int?> displayOrder = const Value.absent(),
+    bool? isClosed,
     DateTime? createdAt,
   }) => Account(
     id: id ?? this.id,
@@ -1509,6 +1542,7 @@ class Account extends DataClass implements Insertable<Account> {
         : this.totalTaxPayable,
     isHidden: isHidden ?? this.isHidden,
     displayOrder: displayOrder.present ? displayOrder.value : this.displayOrder,
+    isClosed: isClosed ?? this.isClosed,
     createdAt: createdAt ?? this.createdAt,
   );
   Account copyWithCompanion(AccountsCompanion data) {
@@ -1558,6 +1592,7 @@ class Account extends DataClass implements Insertable<Account> {
       displayOrder: data.displayOrder.present
           ? data.displayOrder.value
           : this.displayOrder,
+      isClosed: data.isClosed.present ? data.isClosed.value : this.isClosed,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1586,6 +1621,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('totalTaxPayable: $totalTaxPayable, ')
           ..write('isHidden: $isHidden, ')
           ..write('displayOrder: $displayOrder, ')
+          ..write('isClosed: $isClosed, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1614,6 +1650,7 @@ class Account extends DataClass implements Insertable<Account> {
     totalTaxPayable,
     isHidden,
     displayOrder,
+    isClosed,
     createdAt,
   ]);
   @override
@@ -1641,6 +1678,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.totalTaxPayable == this.totalTaxPayable &&
           other.isHidden == this.isHidden &&
           other.displayOrder == this.displayOrder &&
+          other.isClosed == this.isClosed &&
           other.createdAt == this.createdAt);
 }
 
@@ -1666,6 +1704,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<double?> totalTaxPayable;
   final Value<bool> isHidden;
   final Value<int?> displayOrder;
+  final Value<bool> isClosed;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const AccountsCompanion({
@@ -1690,6 +1729,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.totalTaxPayable = const Value.absent(),
     this.isHidden = const Value.absent(),
     this.displayOrder = const Value.absent(),
+    this.isClosed = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1715,6 +1755,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.totalTaxPayable = const Value.absent(),
     this.isHidden = const Value.absent(),
     this.displayOrder = const Value.absent(),
+    this.isClosed = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1744,6 +1785,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<double>? totalTaxPayable,
     Expression<bool>? isHidden,
     Expression<int>? displayOrder,
+    Expression<bool>? isClosed,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -1770,6 +1812,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (totalTaxPayable != null) 'total_tax_payable': totalTaxPayable,
       if (isHidden != null) 'is_hidden': isHidden,
       if (displayOrder != null) 'display_order': displayOrder,
+      if (isClosed != null) 'is_closed': isClosed,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1797,6 +1840,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<double?>? totalTaxPayable,
     Value<bool>? isHidden,
     Value<int?>? displayOrder,
+    Value<bool>? isClosed,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -1822,6 +1866,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       totalTaxPayable: totalTaxPayable ?? this.totalTaxPayable,
       isHidden: isHidden ?? this.isHidden,
       displayOrder: displayOrder ?? this.displayOrder,
+      isClosed: isClosed ?? this.isClosed,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1895,6 +1940,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (displayOrder.present) {
       map['display_order'] = Variable<int>(displayOrder.value);
     }
+    if (isClosed.present) {
+      map['is_closed'] = Variable<bool>(isClosed.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1928,6 +1976,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('totalTaxPayable: $totalTaxPayable, ')
           ..write('isHidden: $isHidden, ')
           ..write('displayOrder: $displayOrder, ')
+          ..write('isClosed: $isClosed, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -5574,6 +5623,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<double?> totalTaxPayable,
       Value<bool> isHidden,
       Value<int?> displayOrder,
+      Value<bool> isClosed,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -5600,6 +5650,7 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<double?> totalTaxPayable,
       Value<bool> isHidden,
       Value<int?> displayOrder,
+      Value<bool> isClosed,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -5715,6 +5766,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<int> get displayOrder => $composableBuilder(
     column: $table.displayOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isClosed => $composableBuilder(
+    column: $table.isClosed,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5838,6 +5894,11 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isClosed => $composableBuilder(
+    column: $table.isClosed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5940,6 +6001,9 @@ class $$AccountsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get isClosed =>
+      $composableBuilder(column: $table.isClosed, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 }
@@ -5993,6 +6057,7 @@ class $$AccountsTableTableManager
                 Value<double?> totalTaxPayable = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
                 Value<int?> displayOrder = const Value.absent(),
+                Value<bool> isClosed = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion(
@@ -6017,6 +6082,7 @@ class $$AccountsTableTableManager
                 totalTaxPayable: totalTaxPayable,
                 isHidden: isHidden,
                 displayOrder: displayOrder,
+                isClosed: isClosed,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -6043,6 +6109,7 @@ class $$AccountsTableTableManager
                 Value<double?> totalTaxPayable = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
                 Value<int?> displayOrder = const Value.absent(),
+                Value<bool> isClosed = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion.insert(
@@ -6067,6 +6134,7 @@ class $$AccountsTableTableManager
                 totalTaxPayable: totalTaxPayable,
                 isHidden: isHidden,
                 displayOrder: displayOrder,
+                isClosed: isClosed,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

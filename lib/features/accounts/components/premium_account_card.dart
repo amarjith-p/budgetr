@@ -68,30 +68,29 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     final isDark = theme.brightness == Brightness.dark;
     final isCreditCard = widget.account.type == 'Credit Cards';
     final isLoan = widget.account.type == 'Loan';
-
-    // UI RULE: Treat both Credit Cards and Loans as visual liabilities for the background
+    
+    final isSettled = widget.account.isClosed;
     final isDebtCard = isCreditCard || isLoan;
 
-    final bgColor = isDebtCard
-        ? theme.colorScheme.primary
-        : (isDark ? const Color(0xFF141414) : const Color(0xFF1E1E1E));
-    final fgColor = isDebtCard
-        ? theme.colorScheme.onPrimary
-        : Colors.white;
+    final bgColor = isSettled 
+        ? (isDark ? theme.colorScheme.surfaceContainerHighest : Colors.grey.shade300)
+        : (isDebtCard
+            ? theme.colorScheme.primary
+            : (isDark ? const Color(0xFF141414) : const Color(0xFF1E1E1E)));
+            
+    final fgColor = isSettled
+        ? (isDark ? Colors.white54 : Colors.black54)
+        : (isDebtCard ? theme.colorScheme.onPrimary : Colors.white);
 
-    // --- FETCH EXACT UNCAPPED BALANCE ---
     final double rawBalance = isLoan ? ref.watch(loanTotalOutstandingProvider(widget.account)) : widget.account.balance;
     
-    // --- CORRECTED SIGN & LABEL LOGIC ---
     String signText = '₹ ';
     String labelText = isCreditCard ? 'OUTSTANDING BALANCE' : 'CURRENT BALANCE';
 
     if (isLoan) {
-      // For Loans: Positive is Debt (-), Negative is Surplus (+)
       signText = rawBalance > 0 ? '-₹ ' : (rawBalance < 0 ? '+₹ ' : '₹ ');
-      labelText = rawBalance <= 0 ? 'CLEARED / SURPLUS' : 'TOTAL OUTSTANDING';
+      labelText = isSettled ? 'SETTLED LOAN' : (rawBalance <= 0 ? 'CLEARED / SURPLUS' : 'TOTAL OUTSTANDING');
     } else {
-      // For Banks & Credit Cards: Negative is Debt/Overdrawn (-), Positive is Cash/Surplus ( )
       signText = rawBalance < 0 ? '-₹ ' : '₹ ';
     }
 
@@ -111,11 +110,11 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                 ..rotateY(angle),
               alignment: Alignment.center,
               child: isFrontVisible
-                  ? _buildFront(bgColor, fgColor, isCreditCard, isLoan, rawBalance.abs(), signText, labelText)
+                  ? _buildFront(bgColor, fgColor, isCreditCard, isLoan, isSettled, rawBalance.abs(), signText, labelText)
                   : Transform(
                       transform: Matrix4.identity()..rotateY(pi),
                       alignment: Alignment.center,
-                      child: _buildBack(bgColor, fgColor, isCreditCard, isLoan),
+                      child: _buildBack(bgColor, fgColor, isCreditCard, isLoan, isSettled),
                     ),
             ),
           ),
@@ -124,8 +123,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     );
   }
 
-  // Removed amountColor - returning strictly to the uniform fgColor
-  Widget _buildFront(Color bgColor, Color fgColor, bool isCreditCard, bool isLoan, double displayBalance, String signText, String labelText) {
+  Widget _buildFront(Color bgColor, Color fgColor, bool isCreditCard, bool isLoan, bool isSettled, double displayBalance, String signText, String labelText) {
     return Container(
       height: 190,
       padding: const EdgeInsets.all(DesignTokens.spacingLg),
@@ -145,7 +143,6 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- PROVIDER NAME PILL ---
               Flexible(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -169,6 +166,13 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
               const SizedBox(width: 8),
               Row(
                 children: [
+                  if (isSettled)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(4)),
+                      child: const Text('SETTLED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5)),
+                    ),
                   GestureDetector(
                     onTap: _toggleCard,
                     behavior: HitTestBehavior.opaque,
@@ -200,7 +204,6 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- ACCOUNT NAME FITTED BOX ---
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
@@ -242,8 +245,6 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
-                    
-                    // --- BALANCE TEXT ---
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerRight,
@@ -253,7 +254,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                         amountStyle: TextStyle(
                           fontSize: 22, 
                           fontWeight: FontWeight.w900, 
-                          color: fgColor, // Fixed pristine foreground color
+                          color: fgColor,
                           letterSpacing: -0.5
                         ),
                         symbolStyle: TextStyle(
@@ -272,7 +273,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     );
   }
 
-  Widget _buildBack(Color bgColor, Color fgColor, bool isCreditCard, bool isLoan) {
+  Widget _buildBack(Color bgColor, Color fgColor, bool isCreditCard, bool isLoan, bool isSettled) {
     return Container(
       height: 190,
       decoration: BoxDecoration(
@@ -322,6 +323,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                       ),
           ),
           const Spacer(),
+            
           GestureDetector(
             onTap: _toggleCard,
             behavior: HitTestBehavior.opaque,

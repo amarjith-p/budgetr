@@ -91,6 +91,19 @@ class AccountActionNotifier extends AsyncNotifier<void> {
     }          
     await AsyncValue.guard(() => _service.reorderAccounts(updatedAccounts)); 
   }
+
+  // --- NEW: SETTLE LOAN CONNECTIVITY ---
+  Future<bool> settleLoan(String accountId) async {
+    state = const AsyncLoading();
+    try {
+      final success = await _service.settleLoan(accountId);
+      state = const AsyncData(null);
+      return success;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      return false;
+    }
+  }
 }
 
 final accountActionProvider = AsyncNotifierProvider<AccountActionNotifier, void>(   

@@ -28,15 +28,17 @@ class LoanTransactionPage extends ConsumerWidget {
     final allAccounts = accountsAsync.asData?.value ?? [];     
     final currentAccount = allAccounts.where((a) => a.id == account.id).firstOrNull ?? account;     
     
+    final bool isSettled = currentAccount.isClosed;
+
     return Scaffold(       
       backgroundColor: theme.scaffoldBackgroundColor,       
       appBar: ModernAppBar(         
         title: currentAccount.providerName.toUpperCase(),         
-        subtitle: currentAccount.name.toUpperCase(),         
+        subtitle: isSettled ? '${currentAccount.name.toUpperCase()} (SETTLED)' : currentAccount.name.toUpperCase(),         
         leadingIcon: Icons.arrow_back_rounded,         
         onLeadingPressed: () => Navigator.pop(context),       
       ),       
-      floatingActionButton: ModernSquircleFab(         
+      floatingActionButton: isSettled ? null : ModernSquircleFab(         
         onPressed: () {           
           LoanPaymentBottomSheet.show(context, currentAccount.id);         
         },         
@@ -53,7 +55,7 @@ class LoanTransactionPage extends ConsumerWidget {
               SliverToBoxAdapter(                 
                 child: Padding(                   
                   padding: const EdgeInsets.fromLTRB(DesignTokens.spacingMd, DesignTokens.spacingMd, DesignTokens.spacingMd, 0),                   
-                  child: _LoanSummaryCard(account: currentAccount, transactions: transactions),                 
+                  child: _LoanSummaryCard(account: currentAccount, transactions: transactions, isSettled: isSettled),                 
                 ),               
               ),                              
 
@@ -112,20 +114,18 @@ class LoanTransactionPage extends ConsumerWidget {
 class _LoanSummaryCard extends ConsumerWidget {   
   final Account account;   
   final List<TransactionWithDetails> transactions;
+  final bool isSettled;
 
-  const _LoanSummaryCard({required this.account, required this.transactions});   
+  const _LoanSummaryCard({required this.account, required this.transactions, required this.isSettled});   
   
   @override   
   Widget build(BuildContext context, WidgetRef ref) {     
     final theme = Theme.of(context);     
     final isDark = theme.brightness == Brightness.dark;     
     
-    // --- MATHEMATICAL ENGINE ---     
     final double principal = account.loanPrincipal ?? 0.0;     
     final double rate = account.interestRate ?? 0.0;     
     final int months = account.tenureMonths ?? 0;     
-    
-    // Uncapped Principal Balance
     final double currentBalance = account.balance;          
     
     double totalInterest = account.totalInterestPayable ?? 0.0;     
@@ -150,29 +150,24 @@ class _LoanSummaryCard extends ConsumerWidget {
       }
     }
 
-    // Uncapped Remaining Values
     double remainingInterest = totalInterest - interestPaid;
     double remainingTax = 0.0;
     if (taxAmount != null) {
       remainingTax = taxAmount - taxPaid;
     }
 
-    // --- TOTAL OUTSTANDING MATH ---
     final double totalOutstanding = currentBalance + remainingInterest + remainingTax;
     final double totalLoanAmount = principal + totalInterest + (taxAmount ?? 0.0);
 
-    // --- OVERALL REPAYMENT PROGRESS ---     
     double progress = 0.0;     
     if (totalLoanAmount > 0) {       
       double paid = totalLoanAmount - totalOutstanding;       
       progress = (paid / totalLoanAmount).clamp(0.0, 1.0);     
     }     
     
-    // --- DYNAMIC UI FORMATTING ---
-    // If > 0 it's a debt (-₹), If < 0 it's an overpayment surplus (+₹). If 0 it's cleared.
     final outstandingSign = totalOutstanding > 0 ? '-₹ ' : (totalOutstanding < 0 ? '+₹ ' : '₹ ');
-    final outstandingColor = totalOutstanding <= 0 ? Colors.green : theme.colorScheme.onSurface;
-    final outstandingLabel = totalOutstanding <= 0 ? 'CLEARED / SURPLUS' : 'TOTAL OUTSTANDING';
+    final outstandingColor = (totalOutstanding <= 0 || isSettled) ? Colors.green : theme.colorScheme.onSurface;
+    final outstandingLabel = isSettled ? 'SETTLED LOAN' : (totalOutstanding <= 0 ? 'CLEARED / SURPLUS' : 'TOTAL OUTSTANDING');
 
     final principalSign = currentBalance > 0 ? '-₹ ' : (currentBalance < 0 ? '+₹ ' : '₹ ');
     final principalColor = currentBalance <= 0 ? Colors.green : theme.colorScheme.onSurface;
@@ -204,7 +199,6 @@ class _LoanSummaryCard extends ConsumerWidget {
       child: Column(         
         crossAxisAlignment: CrossAxisAlignment.start,         
         children: [           
-          // --- 1. HERO: TOTAL OUTSTANDING ---
           Row(             
             mainAxisAlignment: MainAxisAlignment.spaceBetween,             
             children: [               
@@ -212,7 +206,7 @@ class _LoanSummaryCard extends ConsumerWidget {
                 outstandingLabel,                  
                 style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0, color: outstandingColor == Colors.green ? Colors.green : theme.colorScheme.onSurfaceVariant)               
               ),               
-              if (totalLoanAmount > 0)                 
+              if (totalLoanAmount > 0 && !isSettled)                 
                 Text(                   
                   '${(progress * 100).toStringAsFixed(0)}% PAID',                    
                   style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: theme.colorScheme.primary, letterSpacing: 0.5)                 
@@ -226,6 +220,7 @@ class _LoanSummaryCard extends ConsumerWidget {
             alignment: Alignment.centerLeft,
             child: CurrencyText(             
               amount: totalOutstanding.abs(),             
+              // FIX: Replaced `signText` with `outstandingSign`
               sign: outstandingSign,             
               amountStyle: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: outstandingColor, letterSpacing: -0.5),             
               symbolStyle: TextStyle(fontSize: 14, color: outstandingColor.withOpacity(0.7)),           
@@ -245,10 +240,10 @@ class _LoanSummaryCard extends ConsumerWidget {
                   ),                   
                   child: FractionallySizedBox(                     
                     alignment: Alignment.centerLeft,                     
-                    widthFactor: progress,                     
+                    widthFactor: isSettled ? 1.0 : progress,                     
                     child: Container(                       
                       decoration: BoxDecoration(                         
-                        color: theme.colorScheme.primary,                         
+                        color: isSettled ? Colors.green : theme.colorScheme.primary,                         
                         borderRadius: BorderRadius.circular(2),                       
                       ),                     
                     ),                   
@@ -263,11 +258,9 @@ class _LoanSummaryCard extends ConsumerWidget {
             child: Divider(height: 1),           
           ),                      
           
-          // --- 2. BREAKDOWN: 3-COLUMN GRID ---
           IntrinsicHeight(             
             child: Row(               
               children: [                 
-                // COLUMN 1: PRINCIPAL
                 Expanded(                   
                   child: Column(                     
                     crossAxisAlignment: CrossAxisAlignment.start,  
@@ -290,7 +283,6 @@ class _LoanSummaryCard extends ConsumerWidget {
                 ),                 
                 VerticalDivider(width: 16, thickness: 1, color: theme.dividerColor),                 
                 
-                // COLUMN 2: INTEREST
                 Expanded(                   
                   child: Column(                     
                     crossAxisAlignment: CrossAxisAlignment.start,     
@@ -300,14 +292,15 @@ class _LoanSummaryCard extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,                         
                         children: [                           
                           Text('INTEREST', style: labelStyle),                           
-                          GestureDetector(                             
-                            onTap: () => _triggerInterestEdit(context, ref, totalInterest, isCustomInterest),                             
-                            behavior: HitTestBehavior.opaque,                             
-                            child: Padding(                               
-                              padding: const EdgeInsets.only(left: 4.0, bottom: 2.0),                               
-                              child: Icon(Icons.edit_rounded, size: 10, color: theme.colorScheme.primary),                             
-                            ),                           
-                          ),                         
+                          if (!isSettled)
+                            GestureDetector(                             
+                              onTap: () => _triggerInterestEdit(context, ref, totalInterest, isCustomInterest),                             
+                              behavior: HitTestBehavior.opaque,                             
+                              child: Padding(                               
+                                padding: const EdgeInsets.only(left: 4.0, bottom: 2.0),                               
+                                child: Icon(Icons.edit_rounded, size: 10, color: theme.colorScheme.primary),                             
+                              ),                           
+                            ),                         
                         ],                       
                       ),                       
                       const SizedBox(height: 6),                       
@@ -326,7 +319,6 @@ class _LoanSummaryCard extends ConsumerWidget {
                 ),                 
                 VerticalDivider(width: 16, thickness: 1, color: theme.dividerColor),                 
                 
-                // COLUMN 3: TAX
                 Expanded(                   
                   child: Column(                     
                     crossAxisAlignment: CrossAxisAlignment.start,                     
@@ -336,18 +328,19 @@ class _LoanSummaryCard extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,                         
                         children: [                           
                           Text('TAX', style: labelStyle),                           
-                          GestureDetector(                             
-                            onTap: () => _triggerTaxCalculation(context, ref, totalInterest),                             
-                            behavior: HitTestBehavior.opaque,                             
-                            child: Padding(                               
-                              padding: const EdgeInsets.only(left: 4.0, bottom: 2.0),                               
-                              child: Icon(Icons.edit_rounded, size: 10, color: theme.colorScheme.primary),                             
-                            ),                           
-                          ),                         
+                          if (!isSettled)
+                            GestureDetector(                             
+                              onTap: () => _triggerTaxCalculation(context, ref, totalInterest),                             
+                              behavior: HitTestBehavior.opaque,                             
+                              child: Padding(                               
+                                padding: const EdgeInsets.only(left: 4.0, bottom: 2.0),                               
+                                child: Icon(Icons.edit_rounded, size: 10, color: theme.colorScheme.primary),                             
+                              ),                           
+                            ),                         
                         ],                       
                       ),                       
                       const SizedBox(height: 6),                       
-                      if (taxAmount != null) ...[                         
+                      if (taxAmount != null || isSettled) ...[                         
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,

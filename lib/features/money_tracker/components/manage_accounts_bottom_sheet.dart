@@ -34,7 +34,7 @@ class _ManageAccountsBottomSheetState extends ConsumerState<ManageAccountsBottom
     _draftCards = widget.allAccounts.where((a) => a.type == 'Credit Cards').toList();
     _draftCards.sort((a, b) => (a.displayOrder ?? 0).compareTo(b.displayOrder ?? 0));
 
-    _draftLoans = widget.allAccounts.where((a) => a.type == 'Loan').toList();
+    _draftLoans = widget.allAccounts.where((a) => a.type == 'Loan' && !a.isClosed).toList();
     _draftLoans.sort((a, b) => (a.displayOrder ?? 0).compareTo(b.displayOrder ?? 0));
   }
 

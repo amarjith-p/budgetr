@@ -21,7 +21,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMPED TO VERSION 18 ---
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -64,6 +64,9 @@ class AppDatabase extends _$AppDatabase {
         // --- NEW MIGRATION FOR PERSISTENT LOAN METRICS ---
         await m.addColumn(accounts, accounts.totalInterestPayable);
         await m.addColumn(accounts, accounts.totalTaxPayable);
+      }
+      if (from < 19) {
+        await m.addColumn(accounts, accounts.isClosed);
       }
     },
   );

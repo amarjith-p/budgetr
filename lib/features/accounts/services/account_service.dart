@@ -75,4 +75,15 @@ class AccountService {
       }
     });
   }
+
+  // --- NEW: SETTLE LOAN ACTION ---
+  Future<bool> settleLoan(String accountId) async {
+    try {
+      await (_db.update(_db.accounts)..where((a) => a.id.equals(accountId)))
+          .write(AccountsCompanion(isClosed: const Value(true)));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 }

@@ -57,8 +57,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
           // --- STRICT SEPARATION OF ASSETS AND LIABILITIES ---
           final bankAccounts = visibleAccounts.where((a) => a.type != 'Credit Cards' && a.type != 'Loan').toList();           
           final creditCards = visibleAccounts.where((a) => a.type == 'Credit Cards').toList();           
-          final loans = visibleAccounts.where((a) => a.type == 'Loan').toList();
-
+          final loans = visibleAccounts.where((a) => a.type == 'Loan' && !a.isClosed).toList();
           final double drBalance = bankAccounts.fold(0.0, (sum, acc) => sum + acc.balance);           
           
           // Add Credit Cards to Liability
