@@ -20,12 +20,14 @@ class TransactionCard extends ConsumerWidget {
   final TransactionWithDetails data;      
   final String currentAccountId;       
   final bool isGlobalView;      
+  final double? closingBalance; 
   
   const TransactionCard({          
     Key? key,           
     required this.data,           
     required this.currentAccountId,          
     this.isGlobalView = false,      
+    this.closingBalance, 
   }) : super(key: key);      
   
   @override      
@@ -138,7 +140,6 @@ class TransactionCard extends ConsumerWidget {
     final fullMonthStr = DateTimeConstants.fullMonths[tx.date.month - 1];          
     final weekdayStr = DateTimeConstants.shortDays[tx.date.weekday - 1];          
     
-    // --- UPDATED: 12-HOUR TIME LOGIC WITH AM/PM ---
     final int rawHour = tx.date.hour;
     final String amPm = rawHour >= 12 ? 'PM' : 'AM';
     final int displayHour = rawHour == 0 ? 12 : (rawHour > 12 ? rawHour - 12 : rawHour);
@@ -243,8 +244,8 @@ class TransactionCard extends ConsumerWidget {
                     fontWeight: FontWeight.w800,                                          
                     letterSpacing: 0.2,                                          
                     color: globalAccount.type == 'Credit Cards'                                                 
-                           ? theme.colorScheme.error                                                 
-                           : theme.colorScheme.onSurfaceVariant.withOpacity(0.6),                                      
+                           ? theme.colorScheme.error.withOpacity(0.7)                                              
+                           : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),                                      
                   ),                                      
                   maxLines: 1,                                      
                   overflow: TextOverflow.ellipsis,                                  
@@ -262,6 +263,18 @@ class TransactionCard extends ConsumerWidget {
                 amountStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: amountColor, letterSpacing: -0.5),                                  
                 symbolStyle: TextStyle(color: amountColor.withOpacity(0.85)),                               
               ),                              
+              
+              // --- FIX: Label removed, cleaner display ---
+              if (closingBalance != null) ...[
+                const SizedBox(height: 2),
+                CurrencyText(
+                  amount: closingBalance!.abs(),
+                  sign: closingBalance! < 0 ? '-₹ ' : '₹ ',
+                  amountStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7), letterSpacing: -0.2),
+                  symbolStyle: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7)),
+                ),
+              ],
+              
               const SizedBox(height: 4),                              
               Text(compactDate, style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold)),                          
             ],                      

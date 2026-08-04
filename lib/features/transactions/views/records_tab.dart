@@ -5,7 +5,8 @@ import '../../../core/theme/design_tokens.dart';
 import '../providers/transaction_provider.dart';
 import '../providers/transaction_filter_provider.dart';
 import '../components/transaction_card.dart';
-import '../components/active_filter_banner.dart'; // <-- NEW
+import '../components/active_filter_banner.dart'; 
+import '../../accounts/providers/account_provider.dart'; 
 
 class RecordsTab extends ConsumerWidget {
   const RecordsTab({Key? key}) : super(key: key);
@@ -14,6 +15,7 @@ class RecordsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(allTransactionsProvider);
     final filterState = ref.watch(transactionFilterProvider('GLOBAL'));
+    final accountsAsync = ref.watch(accountsStreamProvider); 
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -27,6 +29,69 @@ class RecordsTab extends ConsumerWidget {
               child: Text('No transactions logged yet.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))
             );
           }
+
+          // --- FIX: CHRONOLOGICAL GLOBAL BALANCE (EXCLUDING LOANS) ---
+          final rawAccounts = accountsAsync.asData?.value ?? [];
+          
+          // 1. Calculate the starting total by STRICTLY EXCLUDING Loan accounts
+          double currentGlobalBalance = rawAccounts
+              .where((a) => a.type != 'Loan')
+              .fold(0.0, (sum, acc) => sum + acc.balance);
+          
+          final globalClosingBalances = <String, double>{};
+          double totalGlobalImpact = 0;
+
+          // Helper to check if a destination account is a Loan
+          bool isLoanAccount(String? id) {
+            if (id == null) return false;
+            return rawAccounts.any((a) => a.id == id && a.type == 'Loan');
+          }
+
+          // 2. Find the total global impact
+          for (var txData in transactions) {
+            final t = txData.transaction;
+            bool isLoanFee = t.subCategory == 'Loan Interest' || t.subCategory == 'Tax on Interest';
+            
+            if (t.type == 'Income') {
+              totalGlobalImpact += t.amount;
+            } else if (t.type == 'Expense' && !isLoanFee) {
+              totalGlobalImpact -= t.amount;
+            } else if (t.type == 'Transfer') {
+              if (t.toAccountId == 'EXTERNAL_IN') {
+                totalGlobalImpact += t.amount;
+              } else if (t.toAccountId == 'EXTERNAL_OUT') {
+                totalGlobalImpact -= t.amount;
+              } else if (isLoanAccount(t.toAccountId)) {
+                // A transfer to a Loan account means money left the Non-Loan global ecosystem!
+                totalGlobalImpact -= t.amount;
+              }
+            }
+          }
+
+          // 3. Derive the true global starting balance
+          double runningBal = currentGlobalBalance - totalGlobalImpact;
+          
+          // 4. Walk forward chronologically
+          for (var txData in transactions.reversed) {
+            final t = txData.transaction;
+            bool isLoanFee = t.subCategory == 'Loan Interest' || t.subCategory == 'Tax on Interest';
+            
+            if (t.type == 'Income') {
+              runningBal += t.amount;
+            } else if (t.type == 'Expense' && !isLoanFee) {
+              runningBal -= t.amount;
+            } else if (t.type == 'Transfer') {
+              if (t.toAccountId == 'EXTERNAL_IN') {
+                runningBal += t.amount;
+              } else if (t.toAccountId == 'EXTERNAL_OUT') {
+                runningBal -= t.amount;
+              } else if (isLoanAccount(t.toAccountId)) {
+                runningBal -= t.amount;
+              }
+            }
+            globalClosingBalances[t.id] = runningBal;
+          }
+          // ------------------------------------------------
 
           final filteredRecords = TransactionFilterHelper.applyForRecords(transactions, filterState);
 
@@ -42,18 +107,16 @@ class RecordsTab extends ConsumerWidget {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // --- FIX: Dynamic Active Filter Banner ---
               if (filterState.isActive)
                 SliverToBoxAdapter(
                   child: ActiveFilterBanner(
-                    filterState: filterState, // <-- PASSED IN HERE
+                    filterState: filterState, 
                     onClear: () => ref.read(transactionFilterProvider('GLOBAL').notifier).state = const TransactionFilterState(),
                   ),
                 ),
                 
               const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
               
-              // --- FIX: Scrollable Empty State ---
               if (filteredRecords.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
@@ -77,6 +140,7 @@ class RecordsTab extends ConsumerWidget {
                                 data: record.data, 
                                 currentAccountId: record.perspectiveAccountId,
                                 isGlobalView: true,
+                                closingBalance: globalClosingBalances[record.data.transaction.id],
                               );
                             },
                             childCount: entry.value.length,
@@ -96,8 +160,6 @@ class RecordsTab extends ConsumerWidget {
     );
   }
 }
-
-// ... [Keep _StickyGlobalMonthHeaderDelegate unchanged]
 
 class _StickyGlobalMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;

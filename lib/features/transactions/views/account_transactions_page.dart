@@ -11,7 +11,8 @@ import 'transaction_form_page.dart';
 
 import '../providers/transaction_filter_provider.dart';
 import '../components/transaction_filter_bottom_sheet.dart';
-import '../components/active_filter_banner.dart'; // <-- NEW
+import '../components/active_filter_banner.dart'; 
+import '../../accounts/providers/account_provider.dart';
 
 class AccountTransactionsPage extends ConsumerWidget {
   final Account account;
@@ -22,25 +23,29 @@ class AccountTransactionsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(accountTransactionsProvider(account.id));
     final filterState = ref.watch(transactionFilterProvider(account.id));
+    
+    final accountsAsync = ref.watch(accountsStreamProvider);
+    final liveAccount = accountsAsync.asData?.value.where((a) => a.id == account.id).firstOrNull ?? account;
+    
     final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor, 
       appBar: ModernAppBar(
-        title: account.providerName.toUpperCase(),
-        subtitle: account.name.toUpperCase(),
+        title: liveAccount.providerName.toUpperCase(),
+        subtitle: liveAccount.name.toUpperCase(),
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.pop(context),
         
         trailingIcon: filterState.isActive ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
         onTrailingPressed: () {
           final txList = transactionsAsync.asData?.value ?? [];
-          TransactionFilterBottomSheet.show(context, account.id, txList);
+          TransactionFilterBottomSheet.show(context, liveAccount.id, txList);
         },
       ),
       floatingActionButton: ModernSquircleFab(
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(preSelectedAccountId: account.id)));
+          Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(preSelectedAccountId: liveAccount.id)));
         },
         icon: Icons.add_rounded,
         label: 'Log',
@@ -53,7 +58,46 @@ class AccountTransactionsPage extends ConsumerWidget {
             return Center(child: Text('No transactions logged yet.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold)));
           }
 
-          final filteredTransactions = TransactionFilterHelper.apply(transactions, filterState, account.id);
+          // --- FIX: EXACT CHRONOLOGICAL ALIGNMENT VIA REVERSE ITERATION ---
+          final closingBalances = <String, double>{};
+          double totalNetImpact = 0;
+
+          for (var txData in transactions) {
+            final t = txData.transaction;
+            if (t.type == 'Income') {
+              totalNetImpact += t.amount;
+            } else if (t.type == 'Expense') {
+              totalNetImpact -= t.amount;
+            } else if (t.type == 'Transfer') {
+              if (t.accountId == liveAccount.id) {
+                totalNetImpact -= t.amount;
+              } else if (t.toAccountId == liveAccount.id) {
+                totalNetImpact += t.amount;
+              }
+            }
+          }
+
+          double runningBal = liveAccount.balance - totalNetImpact;
+          
+          // Iterating reversed guarantees identical timestamps walk forward logically
+          for (var txData in transactions.reversed) {
+            final t = txData.transaction;
+            if (t.type == 'Income') {
+              runningBal += t.amount;
+            } else if (t.type == 'Expense') {
+              runningBal -= t.amount;
+            } else if (t.type == 'Transfer') {
+              if (t.accountId == liveAccount.id) {
+                runningBal -= t.amount;
+              } else if (t.toAccountId == liveAccount.id) {
+                runningBal += t.amount;
+              }
+            }
+            closingBalances[t.id] = runningBal;
+          }
+          // ------------------------------------------------
+
+          final filteredTransactions = TransactionFilterHelper.apply(transactions, filterState, liveAccount.id);
 
           final groupedTransactions = <String, List<dynamic>>{};
           const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -67,18 +111,16 @@ class AccountTransactionsPage extends ConsumerWidget {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // --- FIX: Dynamic Active Filter Banner ---
               if (filterState.isActive)
                 SliverToBoxAdapter(
                   child: ActiveFilterBanner(
-                    filterState: filterState, // <-- PASSED IN HERE
-                    onClear: () => ref.read(transactionFilterProvider(account.id).notifier).state = const TransactionFilterState(),
+                    filterState: filterState, 
+                    onClear: () => ref.read(transactionFilterProvider(liveAccount.id).notifier).state = const TransactionFilterState(),
                   ),
                 ),
                 
               const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
               
-              // --- FIX: Scrollable Empty State ---
               if (filteredTransactions.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
@@ -97,7 +139,12 @@ class AccountTransactionsPage extends ConsumerWidget {
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              return TransactionCard(data: entry.value[index], currentAccountId: account.id);
+                              final txData = entry.value[index];
+                              return TransactionCard(
+                                data: txData, 
+                                currentAccountId: liveAccount.id,
+                                closingBalance: closingBalances[txData.transaction.id], 
+                              );
                             },
                             childCount: entry.value.length,
                           ),
@@ -117,9 +164,6 @@ class AccountTransactionsPage extends ConsumerWidget {
   }
 }
 
-// ... [Keep _StickyMonthHeaderDelegate unchanged]
-
-// --- NEW: Sticky Header Delegate with iOS Frosted Glass Effect ---
 class _StickyMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;
   final ThemeData theme;
@@ -132,7 +176,6 @@ class _StickyMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
-          // Uses scaffold background color with opacity to create a native frosted glass look
           color: theme.scaffoldBackgroundColor.withOpacity(0.85),
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           alignment: Alignment.centerLeft,
@@ -152,10 +195,8 @@ class _StickyMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   double get maxExtent => 40.0;
-
   @override
   double get minExtent => 40.0;
-
   @override
   bool shouldRebuild(covariant _StickyMonthHeaderDelegate oldDelegate) => title != oldDelegate.title;
 }

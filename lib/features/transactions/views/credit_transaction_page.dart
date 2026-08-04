@@ -14,6 +14,7 @@ import '../../../core/constants/date_time_constants.dart';
 import '../providers/transaction_provider.dart';
 import '../components/transaction_card.dart';
 import 'transaction_form_page.dart';
+import '../../accounts/providers/account_provider.dart';
 
 extension CreditAccountExtensions on Account {
   int get safeBillingDay => billDate ?? 15; 
@@ -22,7 +23,6 @@ extension CreditAccountExtensions on Account {
   DateTime getEffectiveDate(TransactionRecord tx) {
     if (tx.isSpillover) {
       final bDay = safeBillingDay;
-      // FIX: End the boundary mathematically perfectly at midnight
       DateTime nextBillDate = DateTime(tx.date.year, tx.date.month, bDay, 23, 59, 59);
       if (tx.date.day > bDay) {
         nextBillDate = DateTime(tx.date.year, tx.date.month + 1, bDay, 23, 59, 59);
@@ -56,11 +56,11 @@ class CreditTransactionPage extends ConsumerWidget {
 
   const CreditTransactionPage({Key? key, required this.account}) : super(key: key);
 
-  List<BillingCycle> _groupIntoCycles(List<TransactionWithDetails> transactions) {
+  List<BillingCycle> _groupIntoCycles(List<TransactionWithDetails> transactions, Account liveAccount) {
     if (transactions.isEmpty) return [];
 
-    final bDay = account.safeBillingDay;
-    final dDay = account.safeDueDay;
+    final bDay = liveAccount.safeBillingDay;
+    final dDay = liveAccount.safeDueDay;
     
     List<BillingCycle> cycles = [];
     
@@ -69,7 +69,6 @@ class CreditTransactionPage extends ConsumerWidget {
     DateTime now = DateTime.now();
     if (now.isAfter(newest)) newest = now;
 
-    // FIX: Cycles formally end precisely at the final second of the bill date
     DateTime currentEnd = DateTime(newest.year, newest.month, bDay, 23, 59, 59);
     if (newest.day > bDay) {
       currentEnd = DateTime(newest.year, newest.month + 1, bDay, 23, 59, 59);
@@ -77,7 +76,6 @@ class CreditTransactionPage extends ConsumerWidget {
 
     DateTime pointerEnd = currentEnd;
     while (pointerEnd.isAfter(oldest) || pointerEnd.isAtSameMomentAs(oldest)) {
-      // FIX: New cycle begins exactly at midnight on the next day
       DateTime pointerStart = DateTime(pointerEnd.year, pointerEnd.month - 1, bDay + 1, 0, 0, 0);
       
       DateTime pointerDue = DateTime(pointerEnd.year, pointerEnd.month + 1, dDay, 23, 59, 59);
@@ -86,7 +84,7 @@ class CreditTransactionPage extends ConsumerWidget {
       }
 
       final cycleTxs = transactions.where((t) {
-        final effectiveDate = account.getEffectiveDate(t.transaction); 
+        final effectiveDate = liveAccount.getEffectiveDate(t.transaction); 
         return (effectiveDate.isAfter(pointerStart) || effectiveDate.isAtSameMomentAs(pointerStart)) && 
                (effectiveDate.isBefore(pointerEnd) || effectiveDate.isAtSameMomentAs(pointerEnd));
       }).toList();
@@ -107,7 +105,7 @@ class CreditTransactionPage extends ConsumerWidget {
       
       final paymentsToMove = currentCycle.transactions.where((tx) {
         final t = tx.transaction;
-        bool isIncoming = t.type == 'Income' || (t.type == 'Transfer' && t.toAccountId == account.id);
+        bool isIncoming = t.type == 'Income' || (t.type == 'Transfer' && t.toAccountId == liveAccount.id);
         bool isRepaymentCat = tx.category?.name == 'Repayment';
         bool isBeforeDue = t.date.isBefore(previousCycle.dueDate.add(const Duration(days: 1)));
 
@@ -128,26 +126,29 @@ class CreditTransactionPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(accountTransactionsProvider(account.id));
     final filterState = ref.watch(transactionFilterProvider(account.id));
+    
+    final accountsAsync = ref.watch(accountsStreamProvider);
+    final liveAccount = accountsAsync.asData?.value.where((a) => a.id == account.id).firstOrNull ?? account;
+    
     final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor, 
       appBar: ModernAppBar(
-        title: account.providerName.toUpperCase(),
-        subtitle: account.name.toUpperCase(),
+        title: liveAccount.providerName.toUpperCase(),
+        subtitle: liveAccount.name.toUpperCase(),
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.pop(context),
         
-        // --- FIX: Exclusively using the native trailingIcon parameter ---
         trailingIcon: filterState.isActive ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
         onTrailingPressed: () {
           final txList = transactionsAsync.asData?.value ?? [];
-          TransactionFilterBottomSheet.show(context, account.id, txList);
+          TransactionFilterBottomSheet.show(context, liveAccount.id, txList);
         },
       ),
       floatingActionButton: ModernSquircleFab(
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(preSelectedAccountId: account.id)));
+          Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(preSelectedAccountId: liveAccount.id)));
         },
         icon: Icons.add_rounded,
         label: 'Log',
@@ -156,14 +157,52 @@ class CreditTransactionPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (transactions) {
-          final rawCycles = _groupIntoCycles(transactions);
+          
+          final closingBalances = <String, double>{};
+          double totalNetImpact = 0;
+
+          for (var txData in transactions) {
+            final t = txData.transaction;
+            if (t.type == 'Income') {
+              totalNetImpact += t.amount;
+            } else if (t.type == 'Expense') {
+              totalNetImpact -= t.amount;
+            } else if (t.type == 'Transfer') {
+              if (t.accountId == liveAccount.id) {
+                totalNetImpact -= t.amount;
+              } else if (t.toAccountId == liveAccount.id) {
+                totalNetImpact += t.amount;
+              }
+            }
+          }
+
+          double runningBal = liveAccount.balance - totalNetImpact;
+          
+          // Iterating reversed guarantees identical timestamps walk forward logically
+          for (var txData in transactions.reversed) {
+            final t = txData.transaction;
+            if (t.type == 'Income') {
+              runningBal += t.amount;
+            } else if (t.type == 'Expense') {
+              runningBal -= t.amount;
+            } else if (t.type == 'Transfer') {
+              if (t.accountId == liveAccount.id) {
+                runningBal -= t.amount;
+              } else if (t.toAccountId == liveAccount.id) {
+                runningBal += t.amount;
+              }
+            }
+            closingBalances[t.id] = runningBal;
+          }
+
+          final rawCycles = _groupIntoCycles(transactions, liveAccount);
           
           final filteredCycles = rawCycles.map((cycle) {
             return BillingCycle(
               startDate: cycle.startDate,
               endDate: cycle.endDate,
               dueDate: cycle.dueDate,
-              transactions: TransactionFilterHelper.apply(cycle.transactions, filterState, account.id),
+              transactions: TransactionFilterHelper.apply(cycle.transactions, filterState, liveAccount.id),
             );
           }).toList();
           
@@ -173,16 +212,15 @@ class CreditTransactionPage extends ConsumerWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(DesignTokens.spacingMd),
-                  child: _CreditSummaryCard(cycles: rawCycles, account: account, allTransactions: transactions),
+                  child: _CreditSummaryCard(cycles: rawCycles, account: liveAccount, allTransactions: transactions),
                 ),
               ),
               
-              // --- FIX: Dynamic Active Filter Banner ---
               if (filterState.isActive)
                 SliverToBoxAdapter(
                   child: ActiveFilterBanner(
-                    filterState: filterState, // <-- PASSED IN HERE
-                    onClear: () => ref.read(transactionFilterProvider(account.id).notifier).state = const TransactionFilterState(),
+                    filterState: filterState, 
+                    onClear: () => ref.read(transactionFilterProvider(liveAccount.id).notifier).state = const TransactionFilterState(),
                   ),
                 ),
               
@@ -219,7 +257,14 @@ class CreditTransactionPage extends ConsumerWidget {
                           padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd),
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
-                              (context, index) => TransactionCard(data: cycle.transactions[index], currentAccountId: account.id),
+                              (context, index) {
+                                final txData = cycle.transactions[index];
+                                return TransactionCard(
+                                  data: txData, 
+                                  currentAccountId: liveAccount.id,
+                                  closingBalance: closingBalances[txData.transaction.id], 
+                                );
+                              },
                               childCount: cycle.transactions.length,
                             ),
                           ),
@@ -321,7 +366,7 @@ class _CreditSummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.dividerColor, width: 1.0), // CLEAN: Native divider
+        border: Border.all(color: theme.dividerColor, width: 1.0), 
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.2 : 0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
