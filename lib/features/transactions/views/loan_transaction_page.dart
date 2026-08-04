@@ -57,7 +57,6 @@ class LoanTransactionPage extends ConsumerWidget {
                 ),               
               ),                              
 
-              // --- PROFESSIONAL SEPARATION HEADER ---
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(DesignTokens.spacingLg, DesignTokens.spacingXl, DesignTokens.spacingLg, DesignTokens.spacingMd),
@@ -94,7 +93,6 @@ class LoanTransactionPage extends ConsumerWidget {
                   sliver: SliverList(                     
                     delegate: SliverChildBuilderDelegate(                       
                       (context, index) {                         
-                        // Removed the extra Padding wrapper to perfectly match other transaction pages
                         return TransactionCard(data: transactions[index], currentAccountId: currentAccount.id);                       
                       },                       
                       childCount: transactions.length,                     
@@ -126,7 +124,9 @@ class _LoanSummaryCard extends ConsumerWidget {
     final double principal = account.loanPrincipal ?? 0.0;     
     final double rate = account.interestRate ?? 0.0;     
     final int months = account.tenureMonths ?? 0;     
-    final double currentBalance = account.balance.abs();          
+    
+    // Uncapped Principal Balance
+    final double currentBalance = account.balance;          
     
     double totalInterest = account.totalInterestPayable ?? 0.0;     
     bool isCustomInterest = account.totalInterestPayable != null;     
@@ -139,7 +139,6 @@ class _LoanSummaryCard extends ConsumerWidget {
     
     double? taxAmount = account.totalTaxPayable;          
 
-    // --- STRICT LOOP FIX: Safe, Type-Enforced Dynamic Deductions ---
     double interestPaid = 0.0;
     double taxPaid = 0.0;
 
@@ -151,16 +150,14 @@ class _LoanSummaryCard extends ConsumerWidget {
       }
     }
 
+    // Uncapped Remaining Values
     double remainingInterest = totalInterest - interestPaid;
-    if (remainingInterest < 0) remainingInterest = 0.0;
-
     double remainingTax = 0.0;
     if (taxAmount != null) {
       remainingTax = taxAmount - taxPaid;
-      if (remainingTax < 0) remainingTax = 0.0;
     }
 
-    // --- NEW: TOTAL OUTSTANDING MATH ---
+    // --- TOTAL OUTSTANDING MATH ---
     final double totalOutstanding = currentBalance + remainingInterest + remainingTax;
     final double totalLoanAmount = principal + totalInterest + (taxAmount ?? 0.0);
 
@@ -168,11 +165,24 @@ class _LoanSummaryCard extends ConsumerWidget {
     double progress = 0.0;     
     if (totalLoanAmount > 0) {       
       double paid = totalLoanAmount - totalOutstanding;       
-      if (paid < 0) paid = 0;       
       progress = (paid / totalLoanAmount).clamp(0.0, 1.0);     
     }     
     
-    // --- STYLING CONSTANTS FOR THE 3-COLUMN GRID ---
+    // --- DYNAMIC UI FORMATTING ---
+    // If > 0 it's a debt (-₹), If < 0 it's an overpayment surplus (+₹). If 0 it's cleared.
+    final outstandingSign = totalOutstanding > 0 ? '-₹ ' : (totalOutstanding < 0 ? '+₹ ' : '₹ ');
+    final outstandingColor = totalOutstanding <= 0 ? Colors.green : theme.colorScheme.onSurface;
+    final outstandingLabel = totalOutstanding <= 0 ? 'CLEARED / SURPLUS' : 'TOTAL OUTSTANDING';
+
+    final principalSign = currentBalance > 0 ? '-₹ ' : (currentBalance < 0 ? '+₹ ' : '₹ ');
+    final principalColor = currentBalance <= 0 ? Colors.green : theme.colorScheme.onSurface;
+
+    final interestSign = remainingInterest > 0 ? '-₹ ' : (remainingInterest < 0 ? '+₹ ' : '₹ ');
+    final interestColor = remainingInterest <= 0 ? Colors.green : theme.colorScheme.error;
+
+    final taxSign = remainingTax > 0 ? '-₹ ' : (remainingTax < 0 ? '+₹ ' : '₹ ');
+    final taxColor = remainingTax <= 0 ? Colors.green : Colors.orangeAccent.shade700;
+
     final labelStyle = TextStyle(fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: theme.colorScheme.onSurfaceVariant);
     final valueStyle = TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurface, letterSpacing: -0.5);
     final symbolStyle = TextStyle(fontSize: 9, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8));
@@ -199,8 +209,8 @@ class _LoanSummaryCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,             
             children: [               
               Text(                 
-                'TOTAL OUTSTANDING',                  
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0, color: theme.colorScheme.onSurfaceVariant)               
+                outstandingLabel,                  
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0, color: outstandingColor == Colors.green ? Colors.green : theme.colorScheme.onSurfaceVariant)               
               ),               
               if (totalLoanAmount > 0)                 
                 Text(                   
@@ -215,10 +225,10 @@ class _LoanSummaryCard extends ConsumerWidget {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: CurrencyText(             
-              amount: totalOutstanding,             
-              sign: '₹ ',             
-              amountStyle: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: theme.colorScheme.onSurface, letterSpacing: -0.5),             
-              symbolStyle: TextStyle(fontSize: 14, color: theme.colorScheme.onSurfaceVariant),           
+              amount: totalOutstanding.abs(),             
+              sign: outstandingSign,             
+              amountStyle: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: outstandingColor, letterSpacing: -0.5),             
+              symbolStyle: TextStyle(fontSize: 14, color: outstandingColor.withOpacity(0.7)),           
             ),
           ),                      
           
@@ -269,10 +279,10 @@ class _LoanSummaryCard extends ConsumerWidget {
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
                         child: CurrencyText(                         
-                          amount: currentBalance,                         
-                          sign: '₹ ',                         
-                          amountStyle: valueStyle,                         
-                          symbolStyle: symbolStyle,                       
+                          amount: currentBalance.abs(),                         
+                          sign: principalSign,                         
+                          amountStyle: valueStyle.copyWith(color: principalColor),                         
+                          symbolStyle: symbolStyle.copyWith(color: principalColor.withOpacity(0.8)),                       
                         ),
                       ),                     
                     ],                   
@@ -305,10 +315,10 @@ class _LoanSummaryCard extends ConsumerWidget {
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
                         child: CurrencyText(                         
-                          amount: remainingInterest,                         
-                          sign: '+ ₹ ',                         
-                          amountStyle: valueStyle.copyWith(color: theme.colorScheme.error),                         
-                          symbolStyle: symbolStyle.copyWith(color: theme.colorScheme.error.withOpacity(0.8)),                       
+                          amount: remainingInterest.abs(),                         
+                          sign: interestSign,                         
+                          amountStyle: valueStyle.copyWith(color: interestColor),                         
+                          symbolStyle: symbolStyle.copyWith(color: interestColor.withOpacity(0.8)),                       
                         ),
                       ),                     
                     ],                   
@@ -342,10 +352,10 @@ class _LoanSummaryCard extends ConsumerWidget {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: CurrencyText(                           
-                            amount: remainingTax,                           
-                            sign: '+ ₹ ',                           
-                            amountStyle: valueStyle.copyWith(color: Colors.orangeAccent.shade700),                           
-                            symbolStyle: symbolStyle.copyWith(color: Colors.orangeAccent.shade700.withOpacity(0.8)),                         
+                            amount: remainingTax.abs(),                           
+                            sign: taxSign,                           
+                            amountStyle: valueStyle.copyWith(color: taxColor),                           
+                            symbolStyle: symbolStyle.copyWith(color: taxColor.withOpacity(0.8)),                         
                           ),
                         ),                       
                       ] else ...[                         

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
+import '../../accounts/providers/loan_math_provider.dart'; 
 
 class PremiumAccountCard extends ConsumerStatefulWidget {
   final Account account;
@@ -68,12 +69,31 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     final isCreditCard = widget.account.type == 'Credit Cards';
     final isLoan = widget.account.type == 'Loan';
 
-    final bgColor = isCreditCard
+    // UI RULE: Treat both Credit Cards and Loans as visual liabilities for the background
+    final isDebtCard = isCreditCard || isLoan;
+
+    final bgColor = isDebtCard
         ? theme.colorScheme.primary
         : (isDark ? const Color(0xFF141414) : const Color(0xFF1E1E1E));
-    final fgColor = isCreditCard
+    final fgColor = isDebtCard
         ? theme.colorScheme.onPrimary
         : Colors.white;
+
+    // --- FETCH EXACT UNCAPPED BALANCE ---
+    final double rawBalance = isLoan ? ref.watch(loanTotalOutstandingProvider(widget.account)) : widget.account.balance;
+    
+    // --- CORRECTED SIGN & LABEL LOGIC ---
+    String signText = '₹ ';
+    String labelText = isCreditCard ? 'OUTSTANDING BALANCE' : 'CURRENT BALANCE';
+
+    if (isLoan) {
+      // For Loans: Positive is Debt (-), Negative is Surplus (+)
+      signText = rawBalance > 0 ? '-₹ ' : (rawBalance < 0 ? '+₹ ' : '₹ ');
+      labelText = rawBalance <= 0 ? 'CLEARED / SURPLUS' : 'TOTAL OUTSTANDING';
+    } else {
+      // For Banks & Credit Cards: Negative is Debt/Overdrawn (-), Positive is Cash/Surplus ( )
+      signText = rawBalance < 0 ? '-₹ ' : '₹ ';
+    }
 
     return AnimatedBuilder(
       animation: _animation,
@@ -91,7 +111,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                 ..rotateY(angle),
               alignment: Alignment.center,
               child: isFrontVisible
-                  ? _buildFront(bgColor, fgColor, isCreditCard, isLoan)
+                  ? _buildFront(bgColor, fgColor, isCreditCard, isLoan, rawBalance.abs(), signText, labelText)
                   : Transform(
                       transform: Matrix4.identity()..rotateY(pi),
                       alignment: Alignment.center,
@@ -104,12 +124,8 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     );
   }
 
-  Widget _buildFront(Color bgColor, Color fgColor, bool isCreditCard, bool isLoan) {
-    final labelText = isLoan ? 'OUTSTANDING PRINCIPAL' : (isCreditCard ? 'OUTSTANDING BALANCE' : 'CURRENT BALANCE');
-    final balance = widget.account.balance;
-    // Explicit Rupee formatting logic
-    final signText = balance < 0 ? '-₹' : '₹';
-
+  // Removed amountColor - returning strictly to the uniform fgColor
+  Widget _buildFront(Color bgColor, Color fgColor, bool isCreditCard, bool isLoan, double displayBalance, String signText, String labelText) {
     return Container(
       height: 190,
       padding: const EdgeInsets.all(DesignTokens.spacingLg),
@@ -163,7 +179,10 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Icon(Icons.contactless_outlined, color: fgColor.withOpacity(0.7)),
+                  Icon(
+                    isLoan ? Icons.account_balance_rounded : Icons.contactless_outlined, 
+                    color: fgColor.withOpacity(0.7)
+                  ),
                 ],
               ),
             ],
@@ -177,7 +196,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                flex: 4, // More flex priority for the name
+                flex: 4, 
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -213,23 +232,28 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                   children: [
                     Text(
                       labelText,
-                      style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: fgColor.withOpacity(0.6), letterSpacing: 0.5),
+                      style: TextStyle(
+                        fontSize: 8, 
+                        fontWeight: FontWeight.w900, 
+                        color: fgColor.withOpacity(0.6), 
+                        letterSpacing: 0.5
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     
-                    // --- BALANCE TEXT (Font Size Reduced slightly) ---
+                    // --- BALANCE TEXT ---
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerRight,
                       child: CurrencyText(
-                        amount: balance.abs(), // Abs guarantees no duplicate minus signs
+                        amount: displayBalance, 
                         sign: signText,
                         amountStyle: TextStyle(
-                          fontSize: 22, // Shrunk from 24
+                          fontSize: 22, 
                           fontWeight: FontWeight.w900, 
-                          color: fgColor, 
+                          color: fgColor, // Fixed pristine foreground color
                           letterSpacing: -0.5
                         ),
                         symbolStyle: TextStyle(

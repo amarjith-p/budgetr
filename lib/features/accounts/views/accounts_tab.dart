@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/features/transactions/views/account_transactions_page.dart';
 import 'package:budgetr/features/transactions/views/credit_transaction_page.dart';
-// --- NEW IMPORT ---
 import 'package:budgetr/features/transactions/views/loan_transaction_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +11,7 @@ import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../providers/account_provider.dart';
+import '../providers/loan_math_provider.dart'; // <-- GLOBAL LOAN MATH IMPORT
 import '../components/premium_account_card.dart';
 import '../components/account_form_bottom_sheet.dart';
 import '../../../core/database/app_database.dart'; 
@@ -53,11 +53,23 @@ class AccountsTab extends ConsumerWidget {
 
           final totalBankBalance = bankAccounts.fold(0.0, (sum, acc) => sum + acc.balance);
           final totalCreditBalance = creditCards.fold(0.0, (sum, acc) => sum + acc.balance);
-          final totalLoanBalance = loanAccounts.fold(0.0, (sum, acc) => sum + acc.balance);
+          
+          // --- FIX: EXACT MATH SOURCED FROM THE GLOBAL PROVIDER ---
+          double totalLoanOutstanding = 0.0;
+          for (var loan in loanAccounts) {
+            totalLoanOutstanding += ref.watch(loanTotalOutstandingProvider(loan));
+          }
 
+          // --- FIX: DYNAMIC LIABILITIES IN CUSTOM TOTAL ---
           double customTotal = 0.0;
           for (var acc in accounts) {
-            if (selectedIds.contains(acc.id)) customTotal += acc.balance; 
+            if (selectedIds.contains(acc.id)) {
+              if (acc.type == 'Loan') {
+                customTotal -= ref.watch(loanTotalOutstandingProvider(acc)); // Subtracts as debt
+              } else {
+                customTotal += acc.balance; 
+              }
+            }
           }
 
           if (accounts.isEmpty) {
@@ -87,7 +99,8 @@ class AccountsTab extends ConsumerWidget {
                 _buildList(context, ref, creditCards, isSelectionMode, selectedIds),
               ],
               if (loanAccounts.isNotEmpty) ...[
-                _buildSectionHeader(context, 'ACTIVE LOANS', totalLoanBalance),
+                // Pass negated total to force the "-₹" formatting for liabilities
+                _buildSectionHeader(context, 'ACTIVE LOANS', -totalLoanOutstanding),
                 _buildList(context, ref, loanAccounts, isSelectionMode, selectedIds, isLoan: true),
               ],
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -172,7 +185,6 @@ class AccountsTab extends ConsumerWidget {
               }
               ref.read(selectedAccountsProvider.notifier).state = newIds;
             } else {
-              // --- FIX: ROUTING CORRECTED HERE ---
               if (isLoan) {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => LoanTransactionPage(account: acc)));
               } else if (acc.type == 'Credit Cards') {

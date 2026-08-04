@@ -4,7 +4,7 @@ import '../../../core/database/app_database.dart';
 import '../../transactions/providers/transaction_provider.dart';
 
 final loanTotalOutstandingProvider = Provider.family.autoDispose<double, Account>((ref, account) {
-  if (account.type != 'Loan') return account.balance.abs();
+  if (account.type != 'Loan') return account.balance;
 
   final transactionsAsync = ref.watch(accountTransactionsProvider(account.id));
   final transactions = transactionsAsync.asData?.value ?? [];
@@ -12,7 +12,9 @@ final loanTotalOutstandingProvider = Provider.family.autoDispose<double, Account
   final double principal = account.loanPrincipal ?? 0.0;
   final double rate = account.interestRate ?? 0.0;
   final int months = account.tenureMonths ?? 0;
-  final double currentBalance = account.balance.abs();
+  
+  // REMOVED .abs() - Allows tracking of overpaid principal
+  final double currentBalance = account.balance;
 
   double totalInterest = account.totalInterestPayable ?? 0.0;
   bool isCustomInterest = account.totalInterestPayable != null;
@@ -36,13 +38,12 @@ final loanTotalOutstandingProvider = Provider.family.autoDispose<double, Account
     }
   }
 
+  // REMOVED .clamp(0.0) - Allows tracking of overpaid interest and tax
   double remainingInterest = totalInterest - interestPaid;
-  if (remainingInterest < 0) remainingInterest = 0.0;
-
+  
   double remainingTax = 0.0;
   if (taxAmount != null) {
     remainingTax = taxAmount - taxPaid;
-    if (remainingTax < 0) remainingTax = 0.0;
   }
 
   return currentBalance + remainingInterest + remainingTax;

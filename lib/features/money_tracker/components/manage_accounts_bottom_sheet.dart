@@ -21,17 +21,21 @@ class ManageAccountsBottomSheet extends ConsumerStatefulWidget {
 class _ManageAccountsBottomSheetState extends ConsumerState<ManageAccountsBottomSheet> {
   late List<Account> _draftBanks;
   late List<Account> _draftCards;
+  late List<Account> _draftLoans; // <-- NEW: Dedicated Loan List
 
   @override
   void initState() {
     super.initState();
     
-    // Split into strictly isolated lists and sort by their existing displayOrder
-    _draftBanks = widget.allAccounts.where((a) => a.type != 'Credit Cards').toList();
+    // Split into 3 strictly isolated lists and sort by their existing displayOrder
+    _draftBanks = widget.allAccounts.where((a) => a.type != 'Credit Cards' && a.type != 'Loan').toList();
     _draftBanks.sort((a, b) => (a.displayOrder ?? 0).compareTo(b.displayOrder ?? 0));
     
     _draftCards = widget.allAccounts.where((a) => a.type == 'Credit Cards').toList();
     _draftCards.sort((a, b) => (a.displayOrder ?? 0).compareTo(b.displayOrder ?? 0));
+
+    _draftLoans = widget.allAccounts.where((a) => a.type == 'Loan').toList();
+    _draftLoans.sort((a, b) => (a.displayOrder ?? 0).compareTo(b.displayOrder ?? 0));
   }
 
   void _onReorderBanks(int oldIndex, int newIndex) {
@@ -52,12 +56,24 @@ class _ManageAccountsBottomSheetState extends ConsumerState<ManageAccountsBottom
     });
   }
 
+  void _onReorderLoans(int oldIndex, int newIndex) {
+    HapticFeedback.lightImpact();
+    if (oldIndex < newIndex) newIndex -= 1;
+    setState(() {
+      final Account item = _draftLoans.removeAt(oldIndex);
+      _draftLoans.insert(newIndex, item);
+    });
+  }
+
   void _toggleVisibility(Account acc, bool newValue) {
     HapticFeedback.selectionClick();
     setState(() {
       if (acc.type == 'Credit Cards') {
         final index = _draftCards.indexWhere((a) => a.id == acc.id);
         if (index != -1) _draftCards[index] = acc.copyWith(isHidden: newValue);
+      } else if (acc.type == 'Loan') {
+        final index = _draftLoans.indexWhere((a) => a.id == acc.id);
+        if (index != -1) _draftLoans[index] = acc.copyWith(isHidden: newValue);
       } else {
         final index = _draftBanks.indexWhere((a) => a.id == acc.id);
         if (index != -1) _draftBanks[index] = acc.copyWith(isHidden: newValue);
@@ -66,17 +82,19 @@ class _ManageAccountsBottomSheetState extends ConsumerState<ManageAccountsBottom
   }
 
   Future<void> _savePreferences() async {
-    // Recombine them. Banks first, then Cards. This keeps the global ordering clean and intact.
-    final combined = [..._draftBanks, ..._draftCards];
+    // Recombine all three lists. This keeps the global ordering clean and intact.
+    final combined = [..._draftBanks, ..._draftCards, ..._draftLoans];
     await ref.read(accountActionProvider.notifier).updateAccountPreferences(combined);
     if (mounted) Navigator.pop(context);
   }
 
   Widget _buildListItem(Account acc, int index, ThemeData theme) {
     final isHidden = acc.isHidden;
+
+    IconData cardIcon = Icons.account_balance_wallet_rounded;
+    if (acc.type == 'Credit Cards') cardIcon = Icons.credit_card_rounded;
+    if (acc.type == 'Loan') cardIcon = Icons.account_balance_rounded;
     
-    // FIX: Wrapped in Material widget to provide an ancestor for the ListTile during dragging.
-    // The key MUST be on the topmost widget for the ReorderableList to track it properly.
     return Material(
       key: ValueKey(acc.id),
       color: Colors.transparent,
@@ -90,7 +108,7 @@ class _ManageAccountsBottomSheetState extends ConsumerState<ManageAccountsBottom
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           leading: Icon(
-            acc.type == 'Credit Cards' ? Icons.credit_card_rounded : Icons.account_balance_wallet_rounded, 
+            cardIcon, 
             color: isHidden ? theme.dividerColor : theme.colorScheme.primary
           ),
           title: Text(
@@ -157,7 +175,7 @@ class _ManageAccountsBottomSheetState extends ConsumerState<ManageAccountsBottom
                   children: [
                     Text('Customize Dashboard', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.5)),
                     const SizedBox(height: 4),
-                    Text('Drag to reorder or toggle to hide accounts. Banks and Cards are managed separately.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13)),
+                    Text('Drag to reorder or toggle to hide accounts. Sections are managed separately.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13)),
                   ],
                 ),
               ),
@@ -174,7 +192,7 @@ class _ManageAccountsBottomSheetState extends ConsumerState<ManageAccountsBottom
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(DesignTokens.spacingLg, DesignTokens.spacingLg, DesignTokens.spacingLg, DesignTokens.spacingSm),
                           child: Text(
-                            'Accounts', 
+                            'ACCOUNTS', 
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: theme.colorScheme.primary)
                           ),
                         ),
@@ -202,13 +220,30 @@ class _ManageAccountsBottomSheetState extends ConsumerState<ManageAccountsBottom
                         itemBuilder: (context, index) => _buildListItem(_draftCards[index], index, theme),
                       ),
                     ],
+
+                    if (_draftLoans.isNotEmpty) ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(DesignTokens.spacingLg, DesignTokens.spacingLg, DesignTokens.spacingLg, DesignTokens.spacingSm),
+                          child: Text(
+                            'ACTIVE LOANS', 
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: theme.colorScheme.primary)
+                          ),
+                        ),
+                      ),
+                      SliverReorderableList(
+                        itemCount: _draftLoans.length,
+                        onReorder: _onReorderLoans,
+                        itemBuilder: (context, index) => _buildListItem(_draftLoans[index], index, theme),
+                      ),
+                    ],
                     
                     const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingXl)),
                   ],
                 ),
               ),
 
-              // FOOTER (Now containing Cancel and Save side-by-side)
+              // FOOTER
               Container(
                 padding: const EdgeInsets.all(DesignTokens.spacingLg),
                 decoration: BoxDecoration(
