@@ -32,7 +32,13 @@ class CustomBudgetService {
       return b.settledAmount!;
     }
 
-    final query = _db.select(_db.transactions)..where((t) => t.type.equals('Expense'));
+    final loanAccounts = await (_db.select(_db.accounts)..where((a) => a.type.equals('Loan'))).get();
+    final loanAccountIds = loanAccounts.map((a) => a.id).toList();
+
+    final query = _db.select(_db.transactions)
+      ..where((t) => t.type.equals('Expense'))
+      ..where((t) => t.accountId.isNotIn(loanAccountIds)); // <-- THE INVISIBLE WALL
+
     query.where((t) => t.date.isBetweenValues(b.startDate, b.endDate));
 
     if (b.categoryId != null) query.where((t) => t.categoryId.equals(b.categoryId!));

@@ -1,5 +1,6 @@
 import 'dart:async'; 
 import 'package:flutter_riverpod/flutter_riverpod.dart'; 
+import 'package:flutter_riverpod/legacy.dart'; 
 import '../../../core/database/database_provider.dart'; 
 import '../../../core/database/app_database.dart';  
 import '../services/transaction_service.dart'; 
@@ -108,6 +109,29 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
       );     
     });     
     return !state.hasError;   
+  }
+
+  // --- NEW: LOG LOAN PAYMENT METHOD ---
+  Future<bool> logLoanPayment({
+    required String accountId,
+    required double principal,
+    required double interest,
+    required double tax,
+    required DateTime date,
+    String? notes,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await _service.logLoanPayment(
+        accountId: accountId,
+        principal: principal,
+        interest: interest,
+        tax: tax,
+        date: date,
+        notes: notes,
+      );
+    });
+    return !state.hasError;
   }
 
   Future<void> toggleSpillover(String id, bool isSpillover) async {     

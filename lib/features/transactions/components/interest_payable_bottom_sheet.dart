@@ -5,16 +5,17 @@ import '../../../core/components/modern_boxy_button.dart';
 
 class InterestPayableBottomSheet extends StatefulWidget {
   final double currentAmount;
+  final bool isCustom;
   
-  const InterestPayableBottomSheet({Key? key, required this.currentAmount}) : super(key: key);
+  const InterestPayableBottomSheet({Key? key, required this.currentAmount, required this.isCustom}) : super(key: key);
 
-  static Future<double?> show(BuildContext context, double currentAmount) {
+  static Future<double?> show(BuildContext context, double currentAmount, bool isCustom) {
     return showModalBottomSheet<double>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       shape: DesignTokens.bottomSheetShape,
-      builder: (ctx) => InterestPayableBottomSheet(currentAmount: currentAmount),
+      builder: (ctx) => InterestPayableBottomSheet(currentAmount: currentAmount, isCustom: isCustom),
     );
   }
 
@@ -46,6 +47,10 @@ class _InterestPayableBottomSheetState extends State<InterestPayableBottomSheet>
     }
   }
 
+  void _resetToAuto() {
+    Navigator.pop(context, -1.0); // -1.0 acts as the sentinel reset signal
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -65,7 +70,6 @@ class _InterestPayableBottomSheetState extends State<InterestPayableBottomSheet>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- APP STANDARD DRAG HANDLE ---
               Center(
                 child: Container(
                   width: 40, height: 4,
@@ -74,11 +78,23 @@ class _InterestPayableBottomSheetState extends State<InterestPayableBottomSheet>
                 ),
               ),
               
-              // --- APP STANDARD TYPOGRAPHY ---
-              Text(
-                'Edit Interest Payable',
-                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Interest Payable',
+                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                  ),
+                  if (widget.isCustom)
+                    TextButton(
+                      onPressed: _resetToAuto,
+                      style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+                      child: const Text('RESET TO AUTO', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                    ),
+                ],
               ),
+              const SizedBox(height: 8),
+              Text('Override the auto-calculated EMI amount or reset back to formula calculation.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13)),
               const SizedBox(height: DesignTokens.spacingLg),
               
               ModernBoxyInput(
@@ -91,7 +107,6 @@ class _InterestPayableBottomSheetState extends State<InterestPayableBottomSheet>
               
               const SizedBox(height: DesignTokens.spacingLg),
               
-              // --- APP STANDARD TWIN ACTION BUTTONS ---
               Row(
                 children: [
                   Expanded(
