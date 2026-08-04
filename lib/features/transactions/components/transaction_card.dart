@@ -71,7 +71,6 @@ class TransactionCard extends ConsumerWidget {
                            tx.subCategory == 'Loan Interest' ||                            
                            tx.subCategory == 'Tax on Interest';
 
-    // --- CHECK IF PARENT ACCOUNT IS A SETTLED LOAN ---
     final accountsList = ref.watch(accountsStreamProvider).asData?.value ?? [];
     final parentAccount = accountsList.where((a) => a.id == currentAccountId).firstOrNull;
     final bool isParentLoanSettled = parentAccount?.type == 'Loan' && (parentAccount?.isClosed ?? false);
@@ -138,13 +137,18 @@ class TransactionCard extends ConsumerWidget {
     final shortMonthStr = DateTimeConstants.shortMonths[tx.date.month - 1];          
     final fullMonthStr = DateTimeConstants.fullMonths[tx.date.month - 1];          
     final weekdayStr = DateTimeConstants.shortDays[tx.date.weekday - 1];          
-    final timeStr = '${tx.date.hour.toString().padLeft(2, '0')}:${tx.date.minute.toString().padLeft(2, '0')}';                    
+    
+    // --- UPDATED: 12-HOUR TIME LOGIC WITH AM/PM ---
+    final int rawHour = tx.date.hour;
+    final String amPm = rawHour >= 12 ? 'PM' : 'AM';
+    final int displayHour = rawHour == 0 ? 12 : (rawHour > 12 ? rawHour - 12 : rawHour);
+    final String minuteStr = tx.date.minute.toString().padLeft(2, '0');
+    final String timeStr = '${displayHour.toString().padLeft(2, '0')}:$minuteStr $amPm';
     
     final compactDate = '$dayStr/$shortMonthStr';          
     final expandedDate = '$dayStr $fullMonthStr ${tx.date.year}, $weekdayStr : $timeStr';          
     final boxyRadius = BorderRadius.circular(DesignTokens.spacingXs);               
 
-    // --- SAFE ACTION HANDLERS EXTRACTED FOR COMPILER STABILITY ---
     final VoidCallback handleClone = () {
       if (isLoanRepayment || isParentLoanSettled) {
         HapticFeedback.heavyImpact();
@@ -198,9 +202,9 @@ class TransactionCard extends ConsumerWidget {
     return BoxySlidableCard(              
       key: ValueKey('${tx.id}_$currentAccountId'),              
       customBackgroundColor: cardBgColor,                      
-      onClone: handleClone,              
-      onSplit: handleSplit,                     
       onEdit: handleEdit,              
+      onClone: handleClone,              
+      onSplit: handleSplit, 
       onDelete: handleDelete,              
       child: Theme(                  
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),                   
@@ -344,7 +348,7 @@ class TransactionCard extends ConsumerWidget {
                             ],                           
                           ),                         
                         ),                       
-                      ), // <-- FIXED: Was `],` in original code                     
+                      ),                     
                     ],                     
                     if (isSpilloverEligible || tx.isSpillover) ...[                                              
                       const Padding(                                                  
@@ -407,8 +411,8 @@ class TransactionCard extends ConsumerWidget {
                     ],                                      
                   ],                                  
                 ),                              
-              ),
-            ),                                            
+              ),                          
+            ),                      
           ],                  
         ),              
       ),          

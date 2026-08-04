@@ -7,7 +7,7 @@ class BoxySlidableCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onClone; 
   final VoidCallback? onSplit; 
-  final VoidCallback? onSettle; // <-- NEW
+  final VoidCallback? onSettle; 
   final VoidCallback? onDelete;
   final EdgeInsetsGeometry margin;
   final BorderRadius? customBorderRadius; 
@@ -19,7 +19,7 @@ class BoxySlidableCard extends StatelessWidget {
     this.onEdit,
     this.onClone, 
     this.onSplit, 
-    this.onSettle, // <-- NEW
+    this.onSettle, 
     this.onDelete,
     this.margin = const EdgeInsets.only(bottom: DesignTokens.spacingMd),
     this.customBorderRadius,
@@ -33,7 +33,6 @@ class BoxySlidableCard extends StatelessWidget {
     int startActionCount = (onEdit != null ? 1 : 0) + (onClone != null ? 1 : 0);
     double startExtent = startActionCount * 0.25;
 
-    // Dynamically calculate end swipe width including the new Settle action
     int endActionCount = (onDelete != null ? 1 : 0) + (onSplit != null ? 1 : 0) + (onSettle != null ? 1 : 0);
     double endExtent = endActionCount * 0.25;
 
@@ -42,35 +41,11 @@ class BoxySlidableCard extends StatelessWidget {
       child: Slidable(
         key: key,
         
-        // SWIPE RIGHT (CLONE & EDIT)
+        // SWIPE RIGHT (EDIT & CLONE - ORDER SWAPPED)
         startActionPane: startActionCount == 0 ? null : ActionPane(
           motion: const DrawerMotion(),
           extentRatio: startExtent,
           children: [
-            if (onClone != null)
-              CustomSlidableAction(
-                onPressed: (_) => onClone!(),
-                backgroundColor: Colors.transparent,
-                foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
-                padding: EdgeInsets.zero,
-                child: Container(
-                  margin: const EdgeInsets.only(right: DesignTokens.spacingSm),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.secondaryContainer,
-                    borderRadius: activeRadius, 
-                    border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3), width: 1.2),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.content_copy_rounded),
-                      SizedBox(height: 4),
-                      Text('Clone', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              ),
             if (onEdit != null)
               CustomSlidableAction(
                 onPressed: (_) => onEdit!(),
@@ -95,6 +70,30 @@ class BoxySlidableCard extends StatelessWidget {
                   ),
                 ),
               ),
+            if (onClone != null)
+              CustomSlidableAction(
+                onPressed: (_) => onClone!(),
+                backgroundColor: Colors.transparent,
+                foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                padding: EdgeInsets.zero,
+                child: Container(
+                  margin: const EdgeInsets.only(right: DesignTokens.spacingSm),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    borderRadius: activeRadius, 
+                    border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3), width: 1.2),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.content_copy_rounded),
+                      SizedBox(height: 4),
+                      Text('Clone', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
 
@@ -103,7 +102,6 @@ class BoxySlidableCard extends StatelessWidget {
           motion: const DrawerMotion(),
           extentRatio: endExtent,
           children: [
-            // --- NEW: SETTLE ACTION ---
             if (onSettle != null)
               CustomSlidableAction(
                 onPressed: (_) => onSettle!(),
