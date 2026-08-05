@@ -308,7 +308,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     }
   }
 
-  // --- REVERTED SPACING: MODULAR GROUP BUILDER ---
   List<Widget> _buildAccountGroup(
     BuildContext ctx,
     List<Account> accounts,
@@ -321,7 +320,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
     List<Widget> children = [
       Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 4), // Tighter padding
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
         child: Text(
           title,
           style: TextStyle(
@@ -364,7 +363,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     return children;
   }
 
-  // --- ENHANCED ACCOUNT PICKER ---
   Future<void> _pickAccount(bool isToAccount, List<Account> rawAccounts) async {
     final theme = Theme.of(context);
 
@@ -423,7 +421,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 height: 12,
                 thickness: 4,
                 color: theme.dividerColor.withOpacity(0.05),
-              ), // Tighter divider
+              ),
 
             ..._buildAccountGroup(
               ctx,
@@ -496,7 +494,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     }
   }
 
-  // --- REVERTED SPACING: REDESIGNED TILE ---
   Widget _buildAccountTile(
     BuildContext ctx,
     String id,
@@ -508,11 +505,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   ) {
     final isSelected = id == selectedId;
     return ListTile(
-      dense: true, // Restored compact layout
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 0,
-      ), // Tightened padding
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
       leading: Icon(
         icon,
         size: 20,
@@ -523,7 +517,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       title: Text(
         name,
         style: TextStyle(
-          fontSize: 15, // Preserved comfortable reading size
+          fontSize: 15,
           fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
           color: isSelected
               ? theme.colorScheme.primary
@@ -533,7 +527,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       subtitle: Text(
         providerName,
         style: TextStyle(
-          fontSize: 13, // Preserved comfortable reading size
+          fontSize: 13,
           color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
@@ -543,7 +537,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               size: 18,
               color: theme.colorScheme.primary,
             )
-          : null, // Removed the trailing arrow to eliminate right-side whitespace
+          : null,
       onTap: () {
         HapticFeedback.selectionClick();
         Navigator.pop(ctx, id);
@@ -607,70 +601,417 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     }
   }
 
-  void _openNotesEditor() {
+  // --- UPGRADED: BOXY NOTES EDITOR WITH MASSIVE DATASET ---
+  void _openNotesEditor(
+    TransactionCategoryModel? selectedCatMatch,
+    List<TransactionWithDetails> allTxs,
+  ) {
+    final pastNotes = allTxs.reversed
+        .map((txData) => txData.transaction.notes)
+        .where((n) => n != null && n.trim().isNotEmpty)
+        .map((n) => n!.trim())
+        .toSet()
+        .toList();
+
+    List<String> getSmartSuggestions() {
+      final cat = selectedCatMatch?.name.toLowerCase() ?? '';
+
+      if (_typeIndex == 0) {
+        // Expense
+        if (cat.contains('food') ||
+            cat.contains('dining') ||
+            cat.contains('restaurant')) {
+          return [
+            'Breakfast',
+            'Lunch',
+            'Dinner',
+            'Coffee',
+            'Snacks',
+            'Groceries',
+            'Swiggy',
+            'Zomato',
+            'Cafe',
+            'Drinks',
+            'Street Food',
+            'Bakery',
+            'Pub',
+            'Fast Food',
+          ];
+        }
+        if (cat.contains('transport') ||
+            cat.contains('auto') ||
+            cat.contains('travel')) {
+          return [
+            'Uber',
+            'Taxi',
+            'Metro',
+            'Fuel',
+            'Parking',
+            'Bus Ticket',
+            'Train Ticket',
+            'Flight',
+            'Toll',
+            'Car Wash',
+            'Cab',
+            'Bike Service',
+            'Rickshaw',
+          ];
+        }
+        if (cat.contains('shopping') || cat.contains('retail')) {
+          return [
+            'Clothes',
+            'Electronics',
+            'Amazon',
+            'Gifts',
+            'Flipkart',
+            'Shoes',
+            'Accessories',
+            'Myntra',
+            'Gadgets',
+            'Home Decor',
+            'Cosmetics',
+            'Books',
+          ];
+        }
+        if (cat.contains('bills') || cat.contains('utility')) {
+          return [
+            'Electricity',
+            'Water',
+            'Internet',
+            'Mobile Recharge',
+            'Gas',
+            'Maintenance',
+            'Netflix',
+            'Amazon Prime',
+            'Spotify',
+            'Broadband',
+            'DTH',
+            'Cable',
+          ];
+        }
+        if (cat.contains('health') || cat.contains('medical')) {
+          return [
+            'Pharmacy',
+            'Doctor Consultation',
+            'Medicines',
+            'Therapy',
+            'Hospital',
+            'Checkup',
+            'Dental',
+            'Lab Test',
+            'Vitamins',
+            'Gym',
+            'Fitness',
+          ];
+        }
+        if (cat.contains('entertainment') || cat.contains('fun')) {
+          return [
+            'Movie',
+            'Concert',
+            'Event',
+            'Games',
+            'Bowling',
+            'Theme Park',
+            'Club',
+            'Party',
+            'Exhibition',
+          ];
+        }
+        if (cat.contains('education') || cat.contains('learning')) {
+          return [
+            'Course Fee',
+            'Books',
+            'Stationery',
+            'Tuition',
+            'Certification',
+            'Exam Fee',
+            'School Supplies',
+          ];
+        }
+        if (cat.contains('home') || cat.contains('rent')) {
+          return [
+            'House Rent',
+            'Maid',
+            'Cook',
+            'Plumber',
+            'Electrician',
+            'Furniture',
+            'Pest Control',
+            'Hardware',
+          ];
+        }
+        return [
+          'Groceries',
+          'Dining',
+          'Transport',
+          'Shopping',
+          'Miscellaneous',
+          'Subscription',
+          'Service',
+          'Supplies',
+          'Fee',
+        ];
+      } else if (_typeIndex == 1) {
+        // Income
+        if (cat.contains('salary'))
+          return [
+            'Monthly Salary',
+            'Bonus',
+            'Appraisal',
+            'Incentive',
+            'Overtime',
+            'Arrears',
+          ];
+        if (cat.contains('business') || cat.contains('freelance'))
+          return [
+            'Client Payment',
+            'Project Advance',
+            'Consulting',
+            'Contract',
+            'Sales',
+            'Service Fee',
+          ];
+        if (cat.contains('investment') || cat.contains('return'))
+          return [
+            'Dividends',
+            'Stock Sale',
+            'Mutual Fund',
+            'FD Interest',
+            'Crypto',
+            'Rent Income',
+          ];
+        return [
+          'Salary',
+          'Refund',
+          'Cashback',
+          'Interest',
+          'Gift',
+          'Reimbursement',
+          'Pocket Money',
+          'Allowance',
+        ];
+      } else {
+        // Transfer
+        return [
+          'Self Transfer',
+          'Credit Card Bill',
+          'Investment Deposit',
+          'Emergency Savings',
+          'Loan EMI',
+          'Wallet Top-up',
+          'Splitwise Settlement',
+          'Mutual Fund SIP',
+          'Stock Broker',
+          'Friend Repayment',
+        ];
+      }
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: DesignTokens.bottomSheetShape,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          padding: const EdgeInsets.all(DesignTokens.spacingLg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Transaction Note',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final query = _notesCtrl.text.trim().toLowerCase();
+
+            List<String> suggestions = pastNotes
+                .where((n) => n.toLowerCase().contains(query))
+                .toList();
+
+            if (suggestions.isEmpty) {
+              suggestions = getSmartSuggestions()
+                  .where((n) => n.toLowerCase().contains(query))
+                  .toList();
+            }
+
+            // Expanded to show up to 12 suggestions if space allows
+            suggestions = suggestions.take(12).toList();
+            final theme = Theme.of(context);
+
+            return Container(
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ), // BOXY DESIGN
               ),
-              const SizedBox(height: DesignTokens.spacingMd),
-              TextField(
-                controller: _notesCtrl,
-                autofocus: true,
-                maxLines: 3,
-                textInputAction: TextInputAction.done,
-                decoration: InputDecoration(
-                  hintText: 'What was this for?',
-                  filled: true,
-                  fillColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+                left: 24,
+                right: 24,
+                top: 12,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(
+                        color: theme.dividerColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                ),
-                onSubmitted: (_) {
-                  setState(() {});
-                  Navigator.pop(ctx);
-                },
-              ),
-              const SizedBox(height: DesignTokens.spacingMd),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Transaction Note',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      Text(
+                        '${_notesCtrl.text.length}/140',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                            0.6,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                onPressed: () {
-                  setState(() {});
-                  Navigator.pop(ctx);
-                },
-                child: const Text(
-                  'Save Note',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller: _notesCtrl,
+                    autofocus: true,
+                    maxLines: 3,
+                    maxLength: 140,
+                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                    textInputAction: TextInputAction.done,
+                    onChanged: (val) {
+                      setModalState(() {});
+                    },
+                    buildCounter:
+                        (
+                          context, {
+                          required currentLength,
+                          required isFocused,
+                          maxLength,
+                        }) => null,
+                    decoration: InputDecoration(
+                      hintText: 'What was this for?',
+                      hintStyle: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                          0.5,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: theme.colorScheme.surface,
+                      contentPadding: const EdgeInsets.all(16),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8), // BOXY DESIGN
+                        borderSide: BorderSide(
+                          color: theme.dividerColor.withOpacity(0.5),
+                          width: 1.0,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8), // BOXY DESIGN
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.primary.withOpacity(0.5),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                    onSubmitted: (_) {
+                      setState(() {});
+                      Navigator.pop(ctx);
+                    },
+                  ),
+
+                  if (suggestions.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      'SUGGESTIONS',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8.0,
+                      runSpacing: 8.0,
+                      children: suggestions.map((suggestion) {
+                        return ActionChip(
+                          label: Text(
+                            suggestion,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          backgroundColor: theme
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withOpacity(0.3),
+                          side: BorderSide(
+                            color: theme.dividerColor.withOpacity(0.3),
+                            width: 1.0,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ), // BOXY DESIGN
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            _notesCtrl.text = suggestion;
+                            _notesCtrl.selection = TextSelection.collapsed(
+                              offset: suggestion.length,
+                            );
+                            setState(() {});
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ), // BOXY DESIGN
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      setState(() {});
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text(
+                      'Save Note',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -950,6 +1291,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final rawCategories =
         ref.watch(categoriesStreamProvider).asData?.value ?? [];
 
+    final allTxs = ref.watch(allTransactionsProvider).asData?.value ?? [];
+
     final budgetDate = DateTime(
       _selectedDateTime.year,
       _selectedDateTime.month,
@@ -1115,10 +1458,11 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         'NOTES',
         _notesCtrl.text.isEmpty ? null : _notesCtrl.text,
         Icons.notes_rounded,
-        _openNotesEditor,
+        () => _openNotesEditor(selectedCatMatch, allTxs),
         false,
       ),
     );
+
     cells.add(
       _buildTableCell(
         'LOCATION',
