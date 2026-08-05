@@ -9,11 +9,11 @@ class AccountService {
   AccountService(this._db);
 
   Stream<List<Account>> watchAccounts() {
-    return (_db.select(_db.accounts)
-          ..orderBy([
-            (t) => OrderingTerm(expression: t.displayOrder, mode: OrderingMode.asc),
-            (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
-          ]))
+    return (_db.select(_db.accounts)..orderBy([
+          (t) =>
+              OrderingTerm(expression: t.displayOrder, mode: OrderingMode.asc),
+          (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
+        ]))
         .watch();
   }
 
@@ -33,31 +33,35 @@ class AccountService {
     DateTime? emiDate,
     DateTime? loanStartDate,
     DateTime? loanEndDate,
-    // --- NEW PERSISTENT LOAN METRICS ---
     double? totalInterestPayable,
     double? totalTaxPayable,
+    double? bankCharges, // <-- THIS WAS MISSING
   }) async {
-    await _db.into(_db.accounts).insert(AccountsCompanion.insert(
-      id: _uuid.v4(),
-      name: name,
-      providerName: providerName,
-      type: type,
-      balance: balance,
-      last4: Value(last4),
-      creditLimit: Value(creditLimit),
-      billDate: Value(billDate),
-      dueDate: Value(dueDate),
-      loanPurpose: Value(loanPurpose),
-      loanPrincipal: Value(loanPrincipal),
-      interestRate: Value(interestRate),
-      tenureMonths: Value(tenureMonths),
-      emiDate: Value(emiDate),
-      loanStartDate: Value(loanStartDate),
-      loanEndDate: Value(loanEndDate),
-      // --- MAP TO DB ---
-      totalInterestPayable: Value(totalInterestPayable),
-      totalTaxPayable: Value(totalTaxPayable),
-    ));
+    await _db
+        .into(_db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            id: _uuid.v4(),
+            name: name,
+            providerName: providerName,
+            type: type,
+            balance: balance,
+            last4: Value(last4),
+            creditLimit: Value(creditLimit),
+            billDate: Value(billDate),
+            dueDate: Value(dueDate),
+            loanPurpose: Value(loanPurpose),
+            loanPrincipal: Value(loanPrincipal),
+            interestRate: Value(interestRate),
+            tenureMonths: Value(tenureMonths),
+            emiDate: Value(emiDate),
+            loanStartDate: Value(loanStartDate),
+            loanEndDate: Value(loanEndDate),
+            totalInterestPayable: Value(totalInterestPayable),
+            totalTaxPayable: Value(totalTaxPayable),
+            bankCharges: Value(bankCharges), // <-- MAPS TO YOUR NEW DB FIELD
+          ),
+        );
   }
 
   Future<void> updateAccount(Account account) async {
@@ -76,11 +80,11 @@ class AccountService {
     });
   }
 
-  // --- NEW: SETTLE LOAN ACTION ---
+  // --- SETTLE LOAN ACTION ---
   Future<bool> settleLoan(String accountId) async {
     try {
       await (_db.update(_db.accounts)..where((a) => a.id.equals(accountId)))
-          .write(AccountsCompanion(isClosed: const Value(true)));
+          .write(const AccountsCompanion(isClosed: Value(true)));
       return true;
     } catch (e) {
       return false;

@@ -5,8 +5,8 @@ import '../../../core/theme/design_tokens.dart';
 import '../providers/transaction_provider.dart';
 import '../providers/transaction_filter_provider.dart';
 import '../components/transaction_card.dart';
-import '../components/active_filter_banner.dart'; 
-import '../../accounts/providers/account_provider.dart'; 
+import '../components/active_filter_banner.dart';
+import '../../accounts/providers/account_provider.dart';
 
 class RecordsTab extends ConsumerWidget {
   const RecordsTab({Key? key}) : super(key: key);
@@ -15,7 +15,7 @@ class RecordsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(allTransactionsProvider);
     final filterState = ref.watch(transactionFilterProvider('GLOBAL'));
-    final accountsAsync = ref.watch(accountsStreamProvider); 
+    final accountsAsync = ref.watch(accountsStreamProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -26,18 +26,24 @@ class RecordsTab extends ConsumerWidget {
         data: (transactions) {
           if (transactions.isEmpty) {
             return Center(
-              child: Text('No transactions logged yet.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))
+              child: Text(
+                'No transactions logged yet.',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             );
           }
 
           // --- FIX: CHRONOLOGICAL GLOBAL BALANCE (EXCLUDING LOANS) ---
           final rawAccounts = accountsAsync.asData?.value ?? [];
-          
+
           // 1. Calculate the starting total by STRICTLY EXCLUDING Loan accounts
           double currentGlobalBalance = rawAccounts
               .where((a) => a.type != 'Loan')
               .fold(0.0, (sum, acc) => sum + acc.balance);
-          
+
           final globalClosingBalances = <String, double>{};
           double totalGlobalImpact = 0;
 
@@ -50,8 +56,11 @@ class RecordsTab extends ConsumerWidget {
           // 2. Find the total global impact
           for (var txData in transactions) {
             final t = txData.transaction;
-            bool isLoanFee = t.subCategory == 'Loan Interest' || t.subCategory == 'Tax on Interest';
-            
+            bool isLoanFee =
+                t.subCategory == 'Loan Interest' ||
+                t.subCategory == 'Tax on Interest' ||
+                t.subCategory == 'Bank Charges on Loan';
+
             if (t.type == 'Income') {
               totalGlobalImpact += t.amount;
             } else if (t.type == 'Expense' && !isLoanFee) {
@@ -70,12 +79,14 @@ class RecordsTab extends ConsumerWidget {
 
           // 3. Derive the true global starting balance
           double runningBal = currentGlobalBalance - totalGlobalImpact;
-          
+
           // 4. Walk forward chronologically
           for (var txData in transactions.reversed) {
             final t = txData.transaction;
-            bool isLoanFee = t.subCategory == 'Loan Interest' || t.subCategory == 'Tax on Interest';
-            
+            bool isLoanFee =
+                t.subCategory == 'Loan Interest' ||
+                t.subCategory == 'Tax on Interest';
+
             if (t.type == 'Income') {
               runningBal += t.amount;
             } else if (t.type == 'Expense' && !isLoanFee) {
@@ -93,10 +104,26 @@ class RecordsTab extends ConsumerWidget {
           }
           // ------------------------------------------------
 
-          final filteredRecords = TransactionFilterHelper.applyForRecords(transactions, filterState);
+          final filteredRecords = TransactionFilterHelper.applyForRecords(
+            transactions,
+            filterState,
+          );
 
           final groupedRecords = <String, List<RecordItem>>{};
-          const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+          const fullMonths = [
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December',
+          ];
 
           for (var record in filteredRecords) {
             final tx = record.data.transaction;
@@ -110,48 +137,75 @@ class RecordsTab extends ConsumerWidget {
               if (filterState.isActive)
                 SliverToBoxAdapter(
                   child: ActiveFilterBanner(
-                    filterState: filterState, 
-                    onClear: () => ref.read(transactionFilterProvider('GLOBAL').notifier).state = const TransactionFilterState(),
+                    filterState: filterState,
+                    onClear: () =>
+                        ref
+                                .read(
+                                  transactionFilterProvider('GLOBAL').notifier,
+                                )
+                                .state =
+                            const TransactionFilterState(),
                   ),
                 ),
-                
-              const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
-              
+
+              const SliverToBoxAdapter(
+                child: SizedBox(height: DesignTokens.spacingMd),
+              ),
+
               if (filteredRecords.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(child: Text('No results match your filters.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),
+                  child: Center(
+                    child: Text(
+                      'No results match your filters.',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 )
               else
                 ...groupedRecords.entries.map((entry) {
                   return SliverMainAxisGroup(
                     slivers: [
                       SliverPersistentHeader(
-                        pinned: true, 
-                        delegate: _StickyGlobalMonthHeaderDelegate(title: entry.key, theme: theme),
-                      ),
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final record = entry.value[index];
-                              return TransactionCard(
-                                data: record.data, 
-                                currentAccountId: record.perspectiveAccountId,
-                                isGlobalView: true,
-                                closingBalance: globalClosingBalances[record.data.transaction.id],
-                              );
-                            },
-                            childCount: entry.value.length,
-                          ),
+                        pinned: true,
+                        delegate: _StickyGlobalMonthHeaderDelegate(
+                          title: entry.key,
+                          theme: theme,
                         ),
                       ),
-                      const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DesignTokens.spacingMd,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final record = entry.value[index];
+                            return TransactionCard(
+                              data: record.data,
+                              currentAccountId: record.perspectiveAccountId,
+                              isGlobalView: true,
+                              closingBalance:
+                                  globalClosingBalances[record
+                                      .data
+                                      .transaction
+                                      .id],
+                            );
+                          }, childCount: entry.value.length),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: DesignTokens.spacingMd),
+                      ),
                     ],
                   );
                 }).toList(),
-              
+
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );
@@ -168,7 +222,11 @@ class _StickyGlobalMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   _StickyGlobalMonthHeaderDelegate({required this.title, required this.theme});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
@@ -178,7 +236,12 @@ class _StickyGlobalMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
           alignment: Alignment.centerLeft,
           child: Text(
             title.toUpperCase(),
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.5, color: theme.colorScheme.primary),
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+              letterSpacing: 1.5,
+              color: theme.colorScheme.primary,
+            ),
           ),
         ),
       ),
@@ -190,5 +253,6 @@ class _StickyGlobalMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   double get minExtent => 40.0;
   @override
-  bool shouldRebuild(covariant _StickyGlobalMonthHeaderDelegate oldDelegate) => title != oldDelegate.title;
+  bool shouldRebuild(covariant _StickyGlobalMonthHeaderDelegate oldDelegate) =>
+      title != oldDelegate.title;
 }

@@ -28,13 +28,14 @@ class Accounts extends Table {
   TextColumn get type => text()();
   TextColumn get last4 => text().nullable()();
   RealColumn get balance => real()();
-  
+
   // Existing Credit Card specific fields
   RealColumn get creditLimit => real().nullable()();
   IntColumn get billDate => integer().nullable()();
   IntColumn get dueDate => integer().nullable()();
-  BoolColumn get isCreditPayable => boolean().withDefault(const Constant(false))();
-  
+  BoolColumn get isCreditPayable =>
+      boolean().withDefault(const Constant(false))();
+
   // --- NEW LOAN SPECIFIC FIELDS ---
   TextColumn get loanPurpose => text().nullable()();
   RealColumn get loanPrincipal => real().nullable()();
@@ -43,11 +44,12 @@ class Accounts extends Table {
   DateTimeColumn get emiDate => dateTime().nullable()();
   DateTimeColumn get loanStartDate => dateTime().nullable()();
   DateTimeColumn get loanEndDate => dateTime().nullable()();
-  
+
   // --- NEW PERSISTENT LOAN METRICS ---
   RealColumn get totalInterestPayable => real().nullable()();
   RealColumn get totalTaxPayable => real().nullable()();
-  
+  RealColumn get bankCharges => real().nullable()();
+
   // System fields
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
   IntColumn get displayOrder => integer().nullable()();
@@ -57,6 +59,7 @@ class Accounts extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
 @DataClassName('TransactionRecord')
 class Transactions extends Table {
   TextColumn get id => text()();
@@ -70,7 +73,8 @@ class Transactions extends Table {
   IntColumn get bucketId => integer().nullable()();
   TextColumn get notes => text().nullable()();
   BoolColumn get isSpillover => boolean().withDefault(const Constant(false))();
-  BoolColumn get isSettlementVerified => boolean().withDefault(const Constant(false))();
+  BoolColumn get isSettlementVerified =>
+      boolean().withDefault(const Constant(false))();
   TextColumn get bucketName => text().nullable()();
   TextColumn get locationName => text().nullable()();
   RealColumn get latitude => real().nullable()();
@@ -117,12 +121,13 @@ class ClosedBudgetSnapshots extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
 @DataClassName('CustomBudget')
 class CustomBudgets extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
   RealColumn get amountLimit => real()();
-  TextColumn get timeFrame => text()(); 
+  TextColumn get timeFrame => text()();
   DateTimeColumn get startDate => dateTime()();
   DateTimeColumn get endDate => dateTime()();
   TextColumn get categoryId => text().nullable()();
@@ -130,10 +135,10 @@ class CustomBudgets extends Table {
   IntColumn get bucketId => integer().nullable()();
   TextColumn get accountId => text().nullable()();
   BoolColumn get isSettled => boolean().withDefault(const Constant(false))();
-  
+
   // --- NEW: Freezes the exact spent amount upon settlement ---
-  RealColumn get settledAmount => real().nullable()(); 
-  
+  RealColumn get settledAmount => real().nullable()();
+
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override

@@ -81,7 +81,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final sub = widget.existingTransaction?.transaction.subCategory;
     return sub == 'Loan Principal' ||
         sub == 'Loan Interest' ||
-        sub == 'Tax on Interest';
+        sub == 'Tax on Interest' ||
+        sub == 'Bank Charges on Loan';
   }
 
   @override

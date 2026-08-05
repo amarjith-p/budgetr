@@ -881,6 +881,17 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _bankChargesMeta = const VerificationMeta(
+    'bankCharges',
+  );
+  @override
+  late final GeneratedColumn<double> bankCharges = GeneratedColumn<double>(
+    'bank_charges',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _isHiddenMeta = const VerificationMeta(
     'isHidden',
   );
@@ -955,6 +966,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     loanEndDate,
     totalInterestPayable,
     totalTaxPayable,
+    bankCharges,
     isHidden,
     displayOrder,
     isClosed,
@@ -1126,6 +1138,15 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         ),
       );
     }
+    if (data.containsKey('bank_charges')) {
+      context.handle(
+        _bankChargesMeta,
+        bankCharges.isAcceptableOrUnknown(
+          data['bank_charges']!,
+          _bankChargesMeta,
+        ),
+      );
+    }
     if (data.containsKey('is_hidden')) {
       context.handle(
         _isHiddenMeta,
@@ -1238,6 +1259,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.double,
         data['${effectivePrefix}total_tax_payable'],
       ),
+      bankCharges: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}bank_charges'],
+      ),
       isHidden: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_hidden'],
@@ -1283,6 +1308,7 @@ class Account extends DataClass implements Insertable<Account> {
   final DateTime? loanEndDate;
   final double? totalInterestPayable;
   final double? totalTaxPayable;
+  final double? bankCharges;
   final bool isHidden;
   final int? displayOrder;
   final bool isClosed;
@@ -1307,6 +1333,7 @@ class Account extends DataClass implements Insertable<Account> {
     this.loanEndDate,
     this.totalInterestPayable,
     this.totalTaxPayable,
+    this.bankCharges,
     required this.isHidden,
     this.displayOrder,
     required this.isClosed,
@@ -1359,6 +1386,9 @@ class Account extends DataClass implements Insertable<Account> {
     }
     if (!nullToAbsent || totalTaxPayable != null) {
       map['total_tax_payable'] = Variable<double>(totalTaxPayable);
+    }
+    if (!nullToAbsent || bankCharges != null) {
+      map['bank_charges'] = Variable<double>(bankCharges);
     }
     map['is_hidden'] = Variable<bool>(isHidden);
     if (!nullToAbsent || displayOrder != null) {
@@ -1416,6 +1446,9 @@ class Account extends DataClass implements Insertable<Account> {
       totalTaxPayable: totalTaxPayable == null && nullToAbsent
           ? const Value.absent()
           : Value(totalTaxPayable),
+      bankCharges: bankCharges == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bankCharges),
       isHidden: Value(isHidden),
       displayOrder: displayOrder == null && nullToAbsent
           ? const Value.absent()
@@ -1452,6 +1485,7 @@ class Account extends DataClass implements Insertable<Account> {
         json['totalInterestPayable'],
       ),
       totalTaxPayable: serializer.fromJson<double?>(json['totalTaxPayable']),
+      bankCharges: serializer.fromJson<double?>(json['bankCharges']),
       isHidden: serializer.fromJson<bool>(json['isHidden']),
       displayOrder: serializer.fromJson<int?>(json['displayOrder']),
       isClosed: serializer.fromJson<bool>(json['isClosed']),
@@ -1481,6 +1515,7 @@ class Account extends DataClass implements Insertable<Account> {
       'loanEndDate': serializer.toJson<DateTime?>(loanEndDate),
       'totalInterestPayable': serializer.toJson<double?>(totalInterestPayable),
       'totalTaxPayable': serializer.toJson<double?>(totalTaxPayable),
+      'bankCharges': serializer.toJson<double?>(bankCharges),
       'isHidden': serializer.toJson<bool>(isHidden),
       'displayOrder': serializer.toJson<int?>(displayOrder),
       'isClosed': serializer.toJson<bool>(isClosed),
@@ -1508,6 +1543,7 @@ class Account extends DataClass implements Insertable<Account> {
     Value<DateTime?> loanEndDate = const Value.absent(),
     Value<double?> totalInterestPayable = const Value.absent(),
     Value<double?> totalTaxPayable = const Value.absent(),
+    Value<double?> bankCharges = const Value.absent(),
     bool? isHidden,
     Value<int?> displayOrder = const Value.absent(),
     bool? isClosed,
@@ -1540,6 +1576,7 @@ class Account extends DataClass implements Insertable<Account> {
     totalTaxPayable: totalTaxPayable.present
         ? totalTaxPayable.value
         : this.totalTaxPayable,
+    bankCharges: bankCharges.present ? bankCharges.value : this.bankCharges,
     isHidden: isHidden ?? this.isHidden,
     displayOrder: displayOrder.present ? displayOrder.value : this.displayOrder,
     isClosed: isClosed ?? this.isClosed,
@@ -1588,6 +1625,9 @@ class Account extends DataClass implements Insertable<Account> {
       totalTaxPayable: data.totalTaxPayable.present
           ? data.totalTaxPayable.value
           : this.totalTaxPayable,
+      bankCharges: data.bankCharges.present
+          ? data.bankCharges.value
+          : this.bankCharges,
       isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
       displayOrder: data.displayOrder.present
           ? data.displayOrder.value
@@ -1619,6 +1659,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('loanEndDate: $loanEndDate, ')
           ..write('totalInterestPayable: $totalInterestPayable, ')
           ..write('totalTaxPayable: $totalTaxPayable, ')
+          ..write('bankCharges: $bankCharges, ')
           ..write('isHidden: $isHidden, ')
           ..write('displayOrder: $displayOrder, ')
           ..write('isClosed: $isClosed, ')
@@ -1648,6 +1689,7 @@ class Account extends DataClass implements Insertable<Account> {
     loanEndDate,
     totalInterestPayable,
     totalTaxPayable,
+    bankCharges,
     isHidden,
     displayOrder,
     isClosed,
@@ -1676,6 +1718,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.loanEndDate == this.loanEndDate &&
           other.totalInterestPayable == this.totalInterestPayable &&
           other.totalTaxPayable == this.totalTaxPayable &&
+          other.bankCharges == this.bankCharges &&
           other.isHidden == this.isHidden &&
           other.displayOrder == this.displayOrder &&
           other.isClosed == this.isClosed &&
@@ -1702,6 +1745,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<DateTime?> loanEndDate;
   final Value<double?> totalInterestPayable;
   final Value<double?> totalTaxPayable;
+  final Value<double?> bankCharges;
   final Value<bool> isHidden;
   final Value<int?> displayOrder;
   final Value<bool> isClosed;
@@ -1727,6 +1771,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.loanEndDate = const Value.absent(),
     this.totalInterestPayable = const Value.absent(),
     this.totalTaxPayable = const Value.absent(),
+    this.bankCharges = const Value.absent(),
     this.isHidden = const Value.absent(),
     this.displayOrder = const Value.absent(),
     this.isClosed = const Value.absent(),
@@ -1753,6 +1798,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.loanEndDate = const Value.absent(),
     this.totalInterestPayable = const Value.absent(),
     this.totalTaxPayable = const Value.absent(),
+    this.bankCharges = const Value.absent(),
     this.isHidden = const Value.absent(),
     this.displayOrder = const Value.absent(),
     this.isClosed = const Value.absent(),
@@ -1783,6 +1829,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<DateTime>? loanEndDate,
     Expression<double>? totalInterestPayable,
     Expression<double>? totalTaxPayable,
+    Expression<double>? bankCharges,
     Expression<bool>? isHidden,
     Expression<int>? displayOrder,
     Expression<bool>? isClosed,
@@ -1810,6 +1857,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (totalInterestPayable != null)
         'total_interest_payable': totalInterestPayable,
       if (totalTaxPayable != null) 'total_tax_payable': totalTaxPayable,
+      if (bankCharges != null) 'bank_charges': bankCharges,
       if (isHidden != null) 'is_hidden': isHidden,
       if (displayOrder != null) 'display_order': displayOrder,
       if (isClosed != null) 'is_closed': isClosed,
@@ -1838,6 +1886,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<DateTime?>? loanEndDate,
     Value<double?>? totalInterestPayable,
     Value<double?>? totalTaxPayable,
+    Value<double?>? bankCharges,
     Value<bool>? isHidden,
     Value<int?>? displayOrder,
     Value<bool>? isClosed,
@@ -1864,6 +1913,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       loanEndDate: loanEndDate ?? this.loanEndDate,
       totalInterestPayable: totalInterestPayable ?? this.totalInterestPayable,
       totalTaxPayable: totalTaxPayable ?? this.totalTaxPayable,
+      bankCharges: bankCharges ?? this.bankCharges,
       isHidden: isHidden ?? this.isHidden,
       displayOrder: displayOrder ?? this.displayOrder,
       isClosed: isClosed ?? this.isClosed,
@@ -1934,6 +1984,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (totalTaxPayable.present) {
       map['total_tax_payable'] = Variable<double>(totalTaxPayable.value);
     }
+    if (bankCharges.present) {
+      map['bank_charges'] = Variable<double>(bankCharges.value);
+    }
     if (isHidden.present) {
       map['is_hidden'] = Variable<bool>(isHidden.value);
     }
@@ -1974,6 +2027,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('loanEndDate: $loanEndDate, ')
           ..write('totalInterestPayable: $totalInterestPayable, ')
           ..write('totalTaxPayable: $totalTaxPayable, ')
+          ..write('bankCharges: $bankCharges, ')
           ..write('isHidden: $isHidden, ')
           ..write('displayOrder: $displayOrder, ')
           ..write('isClosed: $isClosed, ')
@@ -5621,6 +5675,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<DateTime?> loanEndDate,
       Value<double?> totalInterestPayable,
       Value<double?> totalTaxPayable,
+      Value<double?> bankCharges,
       Value<bool> isHidden,
       Value<int?> displayOrder,
       Value<bool> isClosed,
@@ -5648,6 +5703,7 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<DateTime?> loanEndDate,
       Value<double?> totalInterestPayable,
       Value<double?> totalTaxPayable,
+      Value<double?> bankCharges,
       Value<bool> isHidden,
       Value<int?> displayOrder,
       Value<bool> isClosed,
@@ -5756,6 +5812,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<double> get totalTaxPayable => $composableBuilder(
     column: $table.totalTaxPayable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get bankCharges => $composableBuilder(
+    column: $table.bankCharges,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5884,6 +5945,11 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get bankCharges => $composableBuilder(
+    column: $table.bankCharges,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isHidden => $composableBuilder(
     column: $table.isHidden,
     builder: (column) => ColumnOrderings(column),
@@ -5993,6 +6059,11 @@ class $$AccountsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get bankCharges => $composableBuilder(
+    column: $table.bankCharges,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<bool> get isHidden =>
       $composableBuilder(column: $table.isHidden, builder: (column) => column);
 
@@ -6055,6 +6126,7 @@ class $$AccountsTableTableManager
                 Value<DateTime?> loanEndDate = const Value.absent(),
                 Value<double?> totalInterestPayable = const Value.absent(),
                 Value<double?> totalTaxPayable = const Value.absent(),
+                Value<double?> bankCharges = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
                 Value<int?> displayOrder = const Value.absent(),
                 Value<bool> isClosed = const Value.absent(),
@@ -6080,6 +6152,7 @@ class $$AccountsTableTableManager
                 loanEndDate: loanEndDate,
                 totalInterestPayable: totalInterestPayable,
                 totalTaxPayable: totalTaxPayable,
+                bankCharges: bankCharges,
                 isHidden: isHidden,
                 displayOrder: displayOrder,
                 isClosed: isClosed,
@@ -6107,6 +6180,7 @@ class $$AccountsTableTableManager
                 Value<DateTime?> loanEndDate = const Value.absent(),
                 Value<double?> totalInterestPayable = const Value.absent(),
                 Value<double?> totalTaxPayable = const Value.absent(),
+                Value<double?> bankCharges = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
                 Value<int?> displayOrder = const Value.absent(),
                 Value<bool> isClosed = const Value.absent(),
@@ -6132,6 +6206,7 @@ class $$AccountsTableTableManager
                 loanEndDate: loanEndDate,
                 totalInterestPayable: totalInterestPayable,
                 totalTaxPayable: totalTaxPayable,
+                bankCharges: bankCharges,
                 isHidden: isHidden,
                 displayOrder: displayOrder,
                 isClosed: isClosed,

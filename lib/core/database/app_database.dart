@@ -7,31 +7,35 @@ import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [
-  TransactionCategories,
-  BudgetBuckets,
-  Accounts,
-  Transactions,
-  MonthlyBudgets,
-  ClosedBudgetSnapshots,
-  CustomBudgets, 
-])
+@DriftDatabase(
+  tables: [
+    TransactionCategories,
+    BudgetBuckets,
+    Accounts,
+    Transactions,
+    MonthlyBudgets,
+    ClosedBudgetSnapshots,
+    CustomBudgets,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   // --- BUMPED TO VERSION 18 ---
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) => m.createAll(),
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 3) await m.addColumn(transactions, transactions.isSpillover);
-      if (from < 4) await m.addColumn(transactions, transactions.isSettlementVerified);
+      if (from < 4)
+        await m.addColumn(transactions, transactions.isSettlementVerified);
       if (from < 5) await m.addColumn(accounts, accounts.displayOrder);
       if (from < 6) await m.createTable(monthlyBudgets);
-      if (from < 7) await m.addColumn(monthlyBudgets, monthlyBudgets.bucketsSnapshot);
+      if (from < 7)
+        await m.addColumn(monthlyBudgets, monthlyBudgets.bucketsSnapshot);
       if (from < 8) await m.addColumn(monthlyBudgets, monthlyBudgets.isClosed);
       if (from < 9) {
         await m.addColumn(monthlyBudgets, monthlyBudgets.closedTotalSpent);
@@ -67,6 +71,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 19) {
         await m.addColumn(accounts, accounts.isClosed);
+      }
+      if (from < 20) {
+        // --- NEW MIGRATION FOR BANK CHARGES ---
+        await m.addColumn(accounts, accounts.bankCharges);
       }
     },
   );
