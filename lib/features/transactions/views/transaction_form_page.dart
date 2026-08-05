@@ -77,12 +77,30 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   double? _longitude;
   bool _isFetchingLoc = false;
 
+  late TextEditingController _loanPrinCtrl;
+  late TextEditingController _loanIntCtrl;
+  late TextEditingController _loanTaxCtrl;
+  late TextEditingController _loanFeeCtrl;
+  bool _markAsExpense = false;
+  TextEditingController? _activeCalcController;
+
   bool get _isLoanRepayment {
     final sub = widget.existingTransaction?.transaction.subCategory;
     return sub == 'Loan Principal' ||
         sub == 'Loan Interest' ||
         sub == 'Tax on Interest' ||
         sub == 'Bank Charges on Loan';
+  }
+
+  bool _isToLoanMode() {
+    if (_typeIndex != 2) return false;
+    if (_selectedToAccountId == null || _selectedToAccountId == 'EXTERNAL')
+      return false;
+    final rawAccounts = ref.read(accountsStreamProvider).asData?.value ?? [];
+    final toAcc = rawAccounts
+        .where((a) => a.id == _selectedToAccountId)
+        .firstOrNull;
+    return toAcc?.type == 'Loan';
   }
 
   @override
@@ -96,6 +114,11 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     _amountController = TextEditingController(text: initialAmount);
     _expression = initialAmount;
     _liveResult = initialAmount.isEmpty ? '0.00' : initialAmount;
+
+    _loanPrinCtrl = TextEditingController();
+    _loanIntCtrl = TextEditingController();
+    _loanTaxCtrl = TextEditingController();
+    _loanFeeCtrl = TextEditingController();
 
     if (txDetails != null) {
       final tx = txDetails.transaction;
@@ -140,6 +163,10 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   void dispose() {
     _notesCtrl.dispose();
     _amountController.dispose();
+    _loanPrinCtrl.dispose();
+    _loanIntCtrl.dispose();
+    _loanTaxCtrl.dispose();
+    _loanFeeCtrl.dispose();
     super.dispose();
   }
 
@@ -165,32 +192,73 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     }
   }
 
+  void _updateLoanTransferTotal() {
+    final p =
+        double.tryParse(
+          BodmasCalculator.evaluate(
+            _loanPrinCtrl.text.isEmpty ? '0' : _loanPrinCtrl.text,
+          ),
+        ) ??
+        0.0;
+    final i =
+        double.tryParse(
+          BodmasCalculator.evaluate(
+            _loanIntCtrl.text.isEmpty ? '0' : _loanIntCtrl.text,
+          ),
+        ) ??
+        0.0;
+    final t =
+        double.tryParse(
+          BodmasCalculator.evaluate(
+            _loanTaxCtrl.text.isEmpty ? '0' : _loanTaxCtrl.text,
+          ),
+        ) ??
+        0.0;
+    final f =
+        double.tryParse(
+          BodmasCalculator.evaluate(
+            _loanFeeCtrl.text.isEmpty ? '0' : _loanFeeCtrl.text,
+          ),
+        ) ??
+        0.0;
+    final total = p + i + t + f;
+    _liveResult = total.toStringAsFixed(2);
+  }
+
   void _onCalcKeyPress(String key) {
     setState(() {
-      int cursorPosition = _amountController.selection.baseOffset;
-      if (cursorPosition < 0) cursorPosition = _amountController.text.length;
-      String currentText = _amountController.text;
+      TextEditingController targetCtrl =
+          _activeCalcController ?? _amountController;
+
+      int cursorPosition = targetCtrl.selection.baseOffset;
+      if (cursorPosition < 0) cursorPosition = targetCtrl.text.length;
+      String currentText = targetCtrl.text;
 
       if (key == 'C') {
-        _amountController.clear();
-        _expression = '';
-        _liveResult = '0.00';
-        return;
+        targetCtrl.clear();
+        if (!_isToLoanMode()) {
+          _expression = '';
+          _liveResult = '0.00';
+        }
       } else if (key == '⌫') {
         if (cursorPosition > 0) {
           final newText =
               currentText.substring(0, cursorPosition - 1) +
               currentText.substring(cursorPosition);
-          _amountController.value = TextEditingValue(
+          targetCtrl.value = TextEditingValue(
             text: newText,
             selection: TextSelection.collapsed(offset: cursorPosition - 1),
           );
         }
       } else if (key == '=') {
-        _amountController.text = _liveResult;
-        _amountController.selection = TextSelection.collapsed(
-          offset: _liveResult.length,
-        );
+        String rawResult = BodmasCalculator.evaluate(targetCtrl.text);
+        double? parsed = double.tryParse(rawResult);
+        if (parsed != null && !parsed.isNaN && !parsed.isInfinite) {
+          targetCtrl.text = parsed.toStringAsFixed(2);
+          targetCtrl.selection = TextSelection.collapsed(
+            offset: targetCtrl.text.length,
+          );
+        }
       } else {
         final isOperator = ['+', '-', '×', '÷'].contains(key);
         if (isOperator && cursorPosition > 0) {
@@ -200,7 +268,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 currentText.substring(0, cursorPosition - 1) +
                 key +
                 currentText.substring(cursorPosition);
-            _amountController.value = TextEditingValue(
+            targetCtrl.value = TextEditingValue(
               text: newText,
               selection: TextSelection.collapsed(offset: cursorPosition),
             );
@@ -210,7 +278,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                   currentText.substring(0, cursorPosition) +
                   key +
                   currentText.substring(cursorPosition);
-              _amountController.value = TextEditingValue(
+              targetCtrl.value = TextEditingValue(
                 text: newText,
                 selection: TextSelection.collapsed(offset: cursorPosition + 1),
               );
@@ -222,7 +290,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 currentText.substring(0, cursorPosition) +
                 key +
                 currentText.substring(cursorPosition);
-            _amountController.value = TextEditingValue(
+            targetCtrl.value = TextEditingValue(
               text: newText,
               selection: TextSelection.collapsed(offset: cursorPosition + 1),
             );
@@ -230,36 +298,40 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         }
       }
 
-      _expression = _amountController.text;
-      String rawResult = BodmasCalculator.evaluate(_expression);
-      double? parsed = double.tryParse(rawResult);
+      if (_isToLoanMode()) {
+        _updateLoanTransferTotal();
+      } else {
+        _expression = targetCtrl.text;
+        String rawResult = BodmasCalculator.evaluate(_expression);
+        double? parsed = double.tryParse(rawResult);
 
-      if (parsed != null) {
-        if (parsed.isNaN || parsed.isInfinite) {
-          _liveResult = '0.00';
-        } else if (parsed >= 1000000000000) {
-          _liveResult = '999999999999.99';
-          if (key != '⌫') {
-            _amountController.text = '999999999999.99';
-            _amountController.selection = TextSelection.collapsed(
-              offset: _amountController.text.length,
-            );
-            _expression = _amountController.text;
-          }
-        } else if (parsed <= -1000000000000) {
-          _liveResult = '-999999999999.99';
-          if (key != '⌫') {
-            _amountController.text = '-999999999999.99';
-            _amountController.selection = TextSelection.collapsed(
-              offset: _amountController.text.length,
-            );
-            _expression = _amountController.text;
+        if (parsed != null) {
+          if (parsed.isNaN || parsed.isInfinite) {
+            _liveResult = '0.00';
+          } else if (parsed >= 1000000000000) {
+            _liveResult = '999999999999.99';
+            if (key != '⌫') {
+              targetCtrl.text = '999999999999.99';
+              targetCtrl.selection = TextSelection.collapsed(
+                offset: targetCtrl.text.length,
+              );
+              _expression = targetCtrl.text;
+            }
+          } else if (parsed <= -1000000000000) {
+            _liveResult = '-999999999999.99';
+            if (key != '⌫') {
+              targetCtrl.text = '-999999999999.99';
+              targetCtrl.selection = TextSelection.collapsed(
+                offset: targetCtrl.text.length,
+              );
+              _expression = targetCtrl.text;
+            }
+          } else {
+            _liveResult = parsed.toStringAsFixed(2);
           }
         } else {
-          _liveResult = parsed.toStringAsFixed(2);
+          _liveResult = rawResult.isEmpty ? '0.00' : rawResult;
         }
-      } else {
-        _liveResult = rawResult.isEmpty ? '0.00' : rawResult;
       }
     });
   }
@@ -368,6 +440,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final theme = Theme.of(context);
 
     List<Account> availableAccounts = List.from(rawAccounts);
+
+    if (!isToAccount) {
+      availableAccounts = availableAccounts
+          .where((a) => a.type != 'Loan')
+          .toList();
+    }
+
     if (isToAccount) {
       if (_selectedAccountId != null && _selectedAccountId != 'EXTERNAL') {
         availableAccounts = availableAccounts
@@ -488,6 +567,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       setState(() {
         if (isToAccount) {
           _selectedToAccountId = selected;
+          if (_isToLoanMode()) {
+            _activeCalcController = _loanPrinCtrl;
+            _updateLoanTransferTotal();
+          } else {
+            _activeCalcController = _amountController;
+          }
         } else {
           _selectedAccountId = selected;
         }
@@ -602,7 +687,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     }
   }
 
-  // --- UPGRADED: BOXY NOTES EDITOR WITH MASSIVE DATASET ---
   void _openNotesEditor(
     TransactionCategoryModel? selectedCatMatch,
     List<TransactionWithDetails> allTxs,
@@ -618,7 +702,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       final cat = selectedCatMatch?.name.toLowerCase() ?? '';
 
       if (_typeIndex == 0) {
-        // Expense
         if (cat.contains('food') ||
             cat.contains('dining') ||
             cat.contains('restaurant')) {
@@ -753,7 +836,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           'Fee',
         ];
       } else if (_typeIndex == 1) {
-        // Income
         if (cat.contains('salary'))
           return [
             'Monthly Salary',
@@ -792,7 +874,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           'Allowance',
         ];
       } else {
-        // Transfer
         return [
           'Self Transfer',
           'Credit Card Bill',
@@ -816,7 +897,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final query = _notesCtrl.text.trim().toLowerCase();
-
             List<String> suggestions = pastNotes
                 .where((n) => n.toLowerCase().contains(query))
                 .toList();
@@ -827,7 +907,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                   .toList();
             }
 
-            // Expanded to show up to 12 suggestions if space allows
             suggestions = suggestions.take(12).toList();
             final theme = Theme.of(context);
 
@@ -836,7 +915,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 color: theme.scaffoldBackgroundColor,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(12),
-                ), // BOXY DESIGN
+                ),
               ),
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
@@ -859,7 +938,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                       ),
                     ),
                   ),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -884,7 +962,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
                   TextField(
                     controller: _notesCtrl,
                     autofocus: true,
@@ -892,9 +969,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                     maxLength: 140,
                     maxLengthEnforcement: MaxLengthEnforcement.enforced,
                     textInputAction: TextInputAction.done,
-                    onChanged: (val) {
-                      setModalState(() {});
-                    },
+                    onChanged: (val) => setModalState(() {}),
                     buildCounter:
                         (
                           context, {
@@ -913,14 +988,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                       fillColor: theme.colorScheme.surface,
                       contentPadding: const EdgeInsets.all(16),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8), // BOXY DESIGN
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
                           color: theme.dividerColor.withOpacity(0.5),
                           width: 1.0,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8), // BOXY DESIGN
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
                           color: theme.colorScheme.primary.withOpacity(0.5),
                           width: 1.5,
@@ -932,7 +1007,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                       Navigator.pop(ctx);
                     },
                   ),
-
                   if (suggestions.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     Text(
@@ -968,7 +1042,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(4),
-                          ), // BOXY DESIGN
+                          ),
                           onPressed: () {
                             HapticFeedback.selectionClick();
                             _notesCtrl.text = suggestion;
@@ -982,7 +1056,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                       }).toList(),
                     ),
                   ],
-
                   const SizedBox(height: 24),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -990,7 +1063,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                       foregroundColor: theme.colorScheme.onPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                      ), // BOXY DESIGN
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       elevation: 0,
                     ),
@@ -1023,6 +1096,77 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   }
 
   Future<void> _submit(List<_BucketItem> activeBucketItems) async {
+    if (_isToLoanMode()) {
+      final p =
+          double.tryParse(
+            BodmasCalculator.evaluate(
+              _loanPrinCtrl.text.isEmpty ? '0' : _loanPrinCtrl.text,
+            ),
+          ) ??
+          0.0;
+      final i =
+          double.tryParse(
+            BodmasCalculator.evaluate(
+              _loanIntCtrl.text.isEmpty ? '0' : _loanIntCtrl.text,
+            ),
+          ) ??
+          0.0;
+      final t =
+          double.tryParse(
+            BodmasCalculator.evaluate(
+              _loanTaxCtrl.text.isEmpty ? '0' : _loanTaxCtrl.text,
+            ),
+          ) ??
+          0.0;
+      final f =
+          double.tryParse(
+            BodmasCalculator.evaluate(
+              _loanFeeCtrl.text.isEmpty ? '0' : _loanFeeCtrl.text,
+            ),
+          ) ??
+          0.0;
+
+      final String? finalBucketName = _resolveBucketName(
+        activeBucketItems,
+        _selectedBucketId,
+      );
+
+      if ((p + i + t + f) <= 0 ||
+          _selectedAccountId == null ||
+          _selectedToAccountId == null ||
+          (_markAsExpense && _selectedBucketId == null)) {
+        setState(() => _showValidationErrors = true);
+        HapticFeedback.heavyImpact();
+        return;
+      }
+
+      final success = await ref
+          .read(transactionActionProvider.notifier)
+          .logLoanTransfer(
+            fromAccountId: _selectedAccountId!,
+            loanAccountId: _selectedToAccountId!,
+            principal: p,
+            interest: i,
+            tax: t,
+            bankCharges: f,
+            date: _selectedDateTime,
+            markAsExpense: _markAsExpense,
+            bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
+            bucketName: finalBucketName,
+            notes: _notesCtrl.text.trim().isNotEmpty
+                ? _notesCtrl.text.trim()
+                : null,
+            isSpillover: _isSpillover,
+            isSettlementVerified: _isSettlementVerified,
+            locationName: _locationName,
+            latitude: _latitude,
+            longitude: _longitude,
+          );
+
+      if (success && mounted) Navigator.pop(context);
+      return;
+    }
+
     final amount = double.tryParse(_liveResult) ?? 0.0;
     final isExpense = _typeIndex == 0;
     final isIncome = _typeIndex == 1;
@@ -1190,13 +1334,17 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     String? value,
     IconData icon,
     VoidCallback? onTap,
-    bool isError,
-  ) {
+    bool isError, {
+    bool isActive = false,
+  }) {
     final theme = Theme.of(context);
-    final hasValue = value != null && value.isNotEmpty;
+    final hasValue =
+        value != null && value.isNotEmpty && value != '0.00' && value != '0';
 
     return Material(
-      color: Colors.transparent,
+      color: isActive
+          ? theme.colorScheme.primaryContainer.withOpacity(0.3)
+          : Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Padding(
@@ -1241,7 +1389,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                   color: isError
                       ? theme.colorScheme.error
                       : (hasValue
-                            ? theme.colorScheme.onSurface
+                            ? (isActive
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurface)
                             : theme.colorScheme.onSurfaceVariant.withOpacity(
                                 0.5,
                               )),
@@ -1257,15 +1407,317 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     );
   }
 
+  // --- REDESIGNED TOGGLE CELL ---
+  Widget _buildToggleCell(
+    String label,
+    bool value,
+    IconData icon,
+    ValueChanged<bool> onChanged,
+  ) {
+    final theme = Theme.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onChanged(!value);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 14, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Transform.scale(
+                  scale: 0.85,
+                  alignment: Alignment.centerLeft,
+                  child: Switch(
+                    value: value,
+                    activeColor: theme.colorScheme.primary,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    onChanged: (val) {
+                      HapticFeedback.lightImpact();
+                      onChanged(val);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildStandardCells(
+    ThemeData theme,
+    List<Account> rawAccounts,
+    String? displayAccName,
+    String? displayToAccName,
+    TransactionCategoryModel? selectedCatMatch,
+    List<TransactionCategoryModel> activeCategories,
+    List<String> activeSubCategories,
+    List<_BucketItem> bucketItems,
+    _BucketItem? selectedBucketMatch,
+    List<TransactionWithDetails> allTxs,
+  ) {
+    final List<Widget> cells = [];
+    final isExpense = _typeIndex == 0;
+    final isIncome = _typeIndex == 1;
+    final isTransfer = _typeIndex == 2;
+    final isLoanRep = _isLoanRepayment;
+
+    cells.add(
+      _buildTableCell(
+        'DATE & TIME',
+        _formatDateTime(_selectedDateTime),
+        Icons.calendar_today_rounded,
+        _pickDateTime,
+        false,
+      ),
+    );
+    cells.add(
+      _buildTableCell(
+        isTransfer ? 'FROM ACCOUNT' : 'ACCOUNT',
+        displayAccName,
+        Icons.account_balance_wallet_rounded,
+        isLoanRep ? null : () => _pickAccount(false, rawAccounts),
+        _showValidationErrors && _selectedAccountId == null,
+      ),
+    );
+
+    if (isTransfer) {
+      cells.add(
+        _buildTableCell(
+          'TO ACCOUNT',
+          displayToAccName,
+          Icons.sync_alt_rounded,
+          isLoanRep ? null : () => _pickAccount(true, rawAccounts),
+          _showValidationErrors && _selectedToAccountId == null,
+        ),
+      );
+    } else {
+      cells.add(
+        _buildTableCell(
+          'CATEGORY',
+          isLoanRep ? 'Loan Repayment' : selectedCatMatch?.name,
+          Icons.category_rounded,
+          isLoanRep
+              ? null
+              : () => _pickCategory(activeCategories, selectedCatMatch),
+          _showValidationErrors && _selectedCategoryId == null && !isLoanRep,
+        ),
+      );
+      if (activeSubCategories.isNotEmpty ||
+          _selectedSubCategory != null ||
+          isLoanRep) {
+        cells.add(
+          _buildTableCell(
+            'SUBCATEGORY',
+            _selectedSubCategory,
+            Icons.subdirectory_arrow_right_rounded,
+            isLoanRep ? null : () => _pickSubCategory(activeSubCategories),
+            false,
+          ),
+        );
+      }
+      if (!isIncome) {
+        cells.add(
+          _buildTableCell(
+            'BUDGET BUCKET',
+            isLoanRep ? 'Out of Bucket' : selectedBucketMatch?.name,
+            Icons.donut_small_rounded,
+            isLoanRep
+                ? null
+                : () => _pickBucket(bucketItems, selectedBucketMatch),
+            _showValidationErrors &&
+                isExpense &&
+                _selectedBucketId == null &&
+                !isLoanRep,
+          ),
+        );
+      }
+    }
+
+    cells.add(
+      _buildTableCell(
+        'NOTES',
+        _notesCtrl.text.isEmpty ? null : _notesCtrl.text,
+        Icons.notes_rounded,
+        () => _openNotesEditor(selectedCatMatch, allTxs),
+        false,
+      ),
+    );
+    cells.add(
+      _buildTableCell(
+        'LOCATION',
+        _isFetchingLoc ? 'Locating...' : _locationName,
+        Icons.pin_drop_rounded,
+        _fetchLocation,
+        false,
+      ),
+    );
+
+    if (cells.length % 2 != 0) cells.add(const SizedBox.shrink());
+    return cells;
+  }
+
+  List<Widget> _buildLoanTransferCells(
+    ThemeData theme,
+    List<Account> rawAccounts,
+    String? displayAccName,
+    String? displayToAccName,
+    TransactionCategoryModel? selectedCatMatch,
+    List<_BucketItem> bucketItems,
+    _BucketItem? selectedBucketMatch,
+    List<TransactionWithDetails> allTxs,
+  ) {
+    final List<Widget> cells = [];
+
+    cells.add(
+      _buildTableCell(
+        'DATE & TIME',
+        _formatDateTime(_selectedDateTime),
+        Icons.calendar_today_rounded,
+        _pickDateTime,
+        false,
+      ),
+    );
+    cells.add(
+      _buildTableCell(
+        'FROM ACCOUNT',
+        displayAccName,
+        Icons.account_balance_wallet_rounded,
+        () => _pickAccount(false, rawAccounts),
+        _showValidationErrors && _selectedAccountId == null,
+      ),
+    );
+    cells.add(
+      _buildTableCell(
+        'TO LOAN ACCOUNT',
+        displayToAccName,
+        Icons.account_balance_rounded,
+        () => _pickAccount(true, rawAccounts),
+        _showValidationErrors && _selectedToAccountId == null,
+      ),
+    );
+
+    cells.add(
+      _buildTableCell(
+        'PRINCIPAL (₹)',
+        _loanPrinCtrl.text.isEmpty ? '0.00' : _loanPrinCtrl.text,
+        Icons.payments_rounded,
+        () => setState(() => _activeCalcController = _loanPrinCtrl),
+        false,
+        isActive: _activeCalcController == _loanPrinCtrl,
+      ),
+    );
+    cells.add(
+      _buildTableCell(
+        'INTEREST (₹)',
+        _loanIntCtrl.text.isEmpty ? '0.00' : _loanIntCtrl.text,
+        Icons.percent_rounded,
+        () => setState(() => _activeCalcController = _loanIntCtrl),
+        false,
+        isActive: _activeCalcController == _loanIntCtrl,
+      ),
+    );
+    cells.add(
+      _buildTableCell(
+        'TAX (₹)',
+        _loanTaxCtrl.text.isEmpty ? '0.00' : _loanTaxCtrl.text,
+        Icons.account_balance_rounded,
+        () => setState(() => _activeCalcController = _loanTaxCtrl),
+        false,
+        isActive: _activeCalcController == _loanTaxCtrl,
+      ),
+    );
+    cells.add(
+      _buildTableCell(
+        'BANK CHARGES (₹)',
+        _loanFeeCtrl.text.isEmpty ? '0.00' : _loanFeeCtrl.text,
+        Icons.receipt_long_rounded,
+        () => setState(() => _activeCalcController = _loanFeeCtrl),
+        false,
+        isActive: _activeCalcController == _loanFeeCtrl,
+      ),
+    );
+
+    // --- REBUILT TOGGLE UI ---
+    cells.add(
+      _buildToggleCell(
+        'RECORD AS EXPENSE',
+        _markAsExpense,
+        Icons.receipt_long_rounded,
+        (val) => setState(() => _markAsExpense = val),
+      ),
+    );
+
+    if (_markAsExpense) {
+      cells.add(
+        _buildTableCell(
+          'BUDGET BUCKET',
+          selectedBucketMatch?.name,
+          Icons.donut_small_rounded,
+          () => _pickBucket(bucketItems, selectedBucketMatch),
+          _showValidationErrors && _selectedBucketId == null,
+        ),
+      );
+    }
+
+    cells.add(
+      _buildTableCell(
+        'NOTES',
+        _notesCtrl.text.isEmpty ? null : _notesCtrl.text,
+        Icons.notes_rounded,
+        () => _openNotesEditor(selectedCatMatch, allTxs),
+        false,
+      ),
+    );
+    cells.add(
+      _buildTableCell(
+        'LOCATION',
+        _isFetchingLoc ? 'Locating...' : _locationName,
+        Icons.pin_drop_rounded,
+        _fetchLocation,
+        false,
+      ),
+    );
+
+    if (cells.length % 2 != 0) cells.add(const SizedBox.shrink());
+    return cells;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     final isExpense = _typeIndex == 0;
-    final isIncome = _typeIndex == 1;
-    final isTransfer = _typeIndex == 2;
     final isLoanRep = _isLoanRepayment;
+    final isToLoan = _isToLoanMode();
 
     final txColor = TransactionColors.getTypeColor(_types[_typeIndex], theme);
     final amountVal = double.tryParse(_liveResult) ?? 0.0;
@@ -1381,100 +1833,29 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         .where((b) => b.id == _selectedBucketId)
         .firstOrNull;
 
-    final List<Widget> cells = [
-      _buildTableCell(
-        'DATE & TIME',
-        _formatDateTime(_selectedDateTime),
-        Icons.calendar_today_rounded,
-        _pickDateTime,
-        false,
-      ),
-
-      _buildTableCell(
-        isTransfer ? 'FROM ACCOUNT' : 'ACCOUNT',
-        displayAccName,
-        Icons.account_balance_wallet_rounded,
-        isLoanRep ? null : () => _pickAccount(false, rawAccounts),
-        _showValidationErrors && _selectedAccountId == null,
-      ),
-    ];
-
-    if (isTransfer) {
-      cells.add(
-        _buildTableCell(
-          'TO ACCOUNT',
-          displayToAccName,
-          Icons.sync_alt_rounded,
-          isLoanRep ? null : () => _pickAccount(true, rawAccounts),
-          _showValidationErrors && _selectedToAccountId == null,
-        ),
-      );
-    } else {
-      cells.add(
-        _buildTableCell(
-          'CATEGORY',
-          isLoanRep ? 'Loan Repayment' : selectedCatMatch?.name,
-          Icons.category_rounded,
-          isLoanRep
-              ? null
-              : () => _pickCategory(activeCategories, selectedCatMatch),
-          _showValidationErrors && _selectedCategoryId == null && !isLoanRep,
-        ),
-      );
-
-      if (activeSubCategories.isNotEmpty ||
-          _selectedSubCategory != null ||
-          isLoanRep) {
-        cells.add(
-          _buildTableCell(
-            'SUBCATEGORY',
-            _selectedSubCategory,
-            Icons.subdirectory_arrow_right_rounded,
-            isLoanRep ? null : () => _pickSubCategory(activeSubCategories),
-            false,
-          ),
-        );
-      }
-
-      if (!isIncome) {
-        cells.add(
-          _buildTableCell(
-            'BUDGET BUCKET',
-            isLoanRep ? 'Out of Bucket' : selectedBucketMatch?.name,
-            Icons.donut_small_rounded,
-            isLoanRep
-                ? null
-                : () => _pickBucket(bucketItems, selectedBucketMatch),
-            _showValidationErrors &&
-                isExpense &&
-                _selectedBucketId == null &&
-                !isLoanRep,
-          ),
-        );
-      }
-    }
-
-    cells.add(
-      _buildTableCell(
-        'NOTES',
-        _notesCtrl.text.isEmpty ? null : _notesCtrl.text,
-        Icons.notes_rounded,
-        () => _openNotesEditor(selectedCatMatch, allTxs),
-        false,
-      ),
-    );
-
-    cells.add(
-      _buildTableCell(
-        'LOCATION',
-        _isFetchingLoc ? 'Locating...' : _locationName,
-        Icons.pin_drop_rounded,
-        _fetchLocation,
-        false,
-      ),
-    );
-
-    if (cells.length % 2 != 0) cells.add(const SizedBox.shrink());
+    final List<Widget> cells = isToLoan
+        ? _buildLoanTransferCells(
+            theme,
+            rawAccounts,
+            displayAccName,
+            displayToAccName,
+            selectedCatMatch,
+            bucketItems,
+            selectedBucketMatch,
+            allTxs,
+          )
+        : _buildStandardCells(
+            theme,
+            rawAccounts,
+            displayAccName,
+            displayToAccName,
+            selectedCatMatch,
+            activeCategories,
+            activeSubCategories,
+            bucketItems,
+            selectedBucketMatch,
+            allTxs,
+          );
 
     List<TableRow> tableRows = [];
     for (int i = 0; i < cells.length; i += 2) {
@@ -1531,13 +1912,21 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                 _selectedAccountId == 'EXTERNAL') {
                               _selectedAccountId = null;
                             }
+
+                            if (_isToLoanMode()) {
+                              _activeCalcController = _loanPrinCtrl;
+                              _updateLoanTransferTotal();
+                            } else {
+                              _activeCalcController = _amountController;
+                            }
                           }),
                         ),
                       ),
                     ),
                   ),
                   Expanded(
-                    flex: 3,
+                    // --- DYNAMIC HERO FLEX COMPRESSION ---
+                    flex: isToLoan ? 2 : 3,
                     child: Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1557,67 +1946,118 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                   ),
                                 ),
                               ),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    '₹ ',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .displayMedium!
-                                        .copyWith(
-                                          color: displayAmountColor.withOpacity(
-                                            0.7,
+
+                            AnimatedCrossFade(
+                              duration: const Duration(milliseconds: 250),
+                              crossFadeState: isToLoan
+                                  ? CrossFadeState.showSecond
+                                  : CrossFadeState.showFirst,
+                              firstChild: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '₹ ',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .displayMedium!
+                                          .copyWith(
+                                            color: displayAmountColor
+                                                .withOpacity(0.7),
+                                            fontWeight: FontWeight.w600,
                                           ),
-                                          fontWeight: FontWeight.w600,
+                                    ),
+                                    IntrinsicWidth(
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          minWidth: 40,
                                         ),
-                                  ),
-                                  IntrinsicWidth(
-                                    child: ConstrainedBox(
-                                      constraints: const BoxConstraints(
-                                        minWidth: 40,
-                                      ),
-                                      child: TextField(
-                                        controller: _amountController,
-                                        readOnly: true,
-                                        showCursor: true,
-                                        autofocus: true,
-                                        cursorColor: displayAmountColor,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .displayLarge!
-                                            .copyWith(
-                                              color: displayAmountColor,
-                                            ),
-                                        decoration: InputDecoration(
-                                          border: InputBorder.none,
-                                          focusedBorder: InputBorder.none,
-                                          enabledBorder: InputBorder.none,
-                                          errorBorder: InputBorder.none,
-                                          disabledBorder: InputBorder.none,
-                                          isDense: true,
-                                          contentPadding: EdgeInsets.zero,
-                                          hintText: '0.00',
-                                          hintStyle: Theme.of(context)
+                                        child: TextField(
+                                          controller: _amountController,
+                                          readOnly: true,
+                                          showCursor: true,
+                                          autofocus: true,
+                                          cursorColor: displayAmountColor,
+                                          style: Theme.of(context)
                                               .textTheme
                                               .displayLarge!
                                               .copyWith(
-                                                color: displayAmountColor
-                                                    .withOpacity(0.3),
+                                                color: displayAmountColor,
                                               ),
+                                          decoration: InputDecoration(
+                                            border: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            errorBorder: InputBorder.none,
+                                            disabledBorder: InputBorder.none,
+                                            isDense: true,
+                                            contentPadding: EdgeInsets.zero,
+                                            hintText: '0.00',
+                                            hintStyle: Theme.of(context)
+                                                .textTheme
+                                                .displayLarge!
+                                                .copyWith(
+                                                  color: displayAmountColor
+                                                      .withOpacity(0.3),
+                                                ),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                              ),
+                              // --- CLEANED UP LOAN AMOUNT UI ---
+                              secondChild: Padding(
+                                padding: const EdgeInsets.only(bottom: 0.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'TOTAL REPAYMENT',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                        color: theme.colorScheme.primary,
+                                        letterSpacing: 1.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: '₹ ',
+                                            style: TextStyle(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.w600,
+                                              color: displayAmountColor
+                                                  .withOpacity(0.7),
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: _liveResult,
+                                            style: TextStyle(
+                                              fontSize: 32,
+                                              fontWeight: FontWeight.w900,
+                                              color: displayAmountColor,
+                                              letterSpacing: -1.0,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
+
                             if (_expression.isNotEmpty &&
                                 _expression != _liveResult &&
-                                !hasAmountError)
+                                !hasAmountError &&
+                                !isToLoan)
                               Text(
                                 '= ₹$_liveResult',
                                 style: TextStyle(
@@ -1644,7 +2084,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                     ),
                   ),
                   Expanded(
-                    flex: 5,
+                    // --- DYNAMIC GRID EXPANSION ---
+                    flex: isToLoan ? 6 : 5,
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
                       child: Column(

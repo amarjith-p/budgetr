@@ -97,6 +97,7 @@ class TransactionCard extends ConsumerWidget {
       subTitle = tx.subCategory!;
       leadingIcon = Icons.payments_rounded;
       amountColor = theme.colorScheme.primary;
+      sign = '+ ';
     } else if (!isTransfer && data.category != null) {
       leadingIcon = IconConstants.getIconByCode(data.category!.iconCode);
       mainTitle = data.category!.name;
@@ -105,8 +106,7 @@ class TransactionCard extends ConsumerWidget {
 
     Account? globalAccount;
     if (isGlobalView) {
-      final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
-      globalAccount = rawAccounts
+      globalAccount = accountsList
           .where((a) => a.id == currentAccountId)
           .firstOrNull;
     }
@@ -139,6 +139,7 @@ class TransactionCard extends ConsumerWidget {
           59,
         );
       }
+
       final pureTxDate = DateTime(tx.date.year, tx.date.month, tx.date.day);
       final pureBillDate = DateTime(
         currentBillDate.year,
@@ -146,6 +147,7 @@ class TransactionCard extends ConsumerWidget {
         currentBillDate.day,
       );
       final diff = pureBillDate.difference(pureTxDate).inDays;
+
       if (diff >= 0 && diff <= 2) {
         isSpilloverEligible = true;
       }
@@ -185,16 +187,27 @@ class TransactionCard extends ConsumerWidget {
     final compactDate = '$dayStr/$shortMonthStr';
     final expandedDate =
         '$dayStr $fullMonthStr ${tx.date.year}, $weekdayStr : $timeStr';
+
     final boxyRadius = BorderRadius.circular(DesignTokens.spacingXs);
 
+    // --- PROTECT THE ASSET-SIDE SOURCE LEGS ---
+    final bool isMultiLeg = tx.id.startsWith('LOAN_TX_');
+    final bool isLinkedSourceLeg = isMultiLeg && tx.id.contains('_SOURCE');
+    final bool isTransferToLoan =
+        tx.type == 'Transfer' &&
+        accountsList.any((a) => a.id == tx.toAccountId && a.type == 'Loan');
+    final bool isSourceOfTransferToLoan =
+        isTransferToLoan && tx.accountId == currentAccountId;
+
     final VoidCallback handleClone = () {
-      if (isLoanRepayment || isParentLoanSettled) {
+      if (isLinkedSourceLeg ||
+          isLoanRepayment ||
+          isParentLoanSettled ||
+          isSourceOfTransferToLoan) {
         HapticFeedback.heavyImpact();
         CustomSnackbars.showError(
           context,
-          message: isParentLoanSettled
-              ? 'This loan is settled. History is read-only.'
-              : 'Loan records cannot be cloned. Log a new payment instead.',
+          message: 'This record cannot be cloned. Log a new payment instead.',
         );
       } else {
         HapticFeedback.lightImpact();
@@ -209,13 +222,14 @@ class TransactionCard extends ConsumerWidget {
     };
 
     final VoidCallback handleSplit = () {
-      if (isLoanRepayment || isParentLoanSettled) {
+      if (isLinkedSourceLeg ||
+          isLoanRepayment ||
+          isParentLoanSettled ||
+          isSourceOfTransferToLoan) {
         HapticFeedback.heavyImpact();
         CustomSnackbars.showError(
           context,
-          message: isParentLoanSettled
-              ? 'This loan is settled. History is read-only.'
-              : 'Loan records are mathematically locked and cannot be split.',
+          message: 'Loan payment records cannot be split.',
         );
       } else {
         HapticFeedback.lightImpact();
@@ -230,7 +244,28 @@ class TransactionCard extends ConsumerWidget {
     };
 
     final VoidCallback handleEdit = () {
-      if (isParentLoanSettled) {
+      if (isLinkedSourceLeg && tx.id.endsWith('_SOURCETRANSFER')) {
+        HapticFeedback.heavyImpact();
+        CustomSnackbars.showError(
+          context,
+          message:
+              'Transfers to Loan accounts must be edited from the Loan side.',
+        );
+      } else if (isLinkedSourceLeg) {
+        HapticFeedback.heavyImpact();
+        CustomSnackbars.showError(
+          context,
+          message:
+              'Please edit this transaction directly from the Loan Account side.',
+        );
+      } else if (isSourceOfTransferToLoan) {
+        HapticFeedback.heavyImpact();
+        CustomSnackbars.showError(
+          context,
+          message:
+              'Transfers to Loan accounts must be edited from the Loan side.',
+        );
+      } else if (isParentLoanSettled) {
         HapticFeedback.heavyImpact();
         CustomSnackbars.showError(
           context,
@@ -361,7 +396,6 @@ class TransactionCard extends ConsumerWidget {
                 symbolStyle: TextStyle(color: amountColor.withOpacity(0.85)),
               ),
 
-              // --- FIX: Label removed, cleaner display ---
               if (closingBalance != null) ...[
                 const SizedBox(height: 2),
                 CurrencyText(
@@ -379,7 +413,6 @@ class TransactionCard extends ConsumerWidget {
                   ),
                 ),
               ],
-
               const SizedBox(height: 4),
               Text(
                 compactDate,
@@ -459,7 +492,6 @@ class TransactionCard extends ConsumerWidget {
                         ),
                       ),
                     ],
-
                     if (tx.locationName != null &&
                         tx.locationName!.isNotEmpty) ...[
                       const Padding(

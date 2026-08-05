@@ -153,7 +153,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     required double principal,
     required double interest,
     required double tax,
-    required double bankCharges, // <-- NEW
+    required double bankCharges,
     required DateTime date,
     String? notes,
   }) async {
@@ -167,6 +167,49 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
         bankCharges: bankCharges,
         date: date,
         notes: notes,
+      );
+    });
+    return !state.hasError;
+  }
+
+  // --- LOAN TRANSFER ACTION METHOD ---
+  Future<bool> logLoanTransfer({
+    required String fromAccountId,
+    required String loanAccountId,
+    required double principal,
+    required double interest,
+    required double tax,
+    required double bankCharges,
+    required DateTime date,
+    required bool markAsExpense,
+    int? bucketId,
+    String? bucketName,
+    String? notes,
+    bool isSpillover = false,
+    bool isSettlementVerified = false,
+    String? locationName,
+    double? latitude,
+    double? longitude,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await _service.logLoanTransfer(
+        fromAccountId: fromAccountId,
+        loanAccountId: loanAccountId,
+        principal: principal,
+        interest: interest,
+        tax: tax,
+        bankCharges: bankCharges,
+        date: date,
+        markAsExpense: markAsExpense,
+        bucketId: bucketId,
+        bucketName: bucketName,
+        notes: notes,
+        isSpillover: isSpillover,
+        isSettlementVerified: isSettlementVerified,
+        locationName: locationName,
+        latitude: latitude,
+        longitude: longitude,
       );
     });
     return !state.hasError;

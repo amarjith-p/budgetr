@@ -147,11 +147,10 @@ class TransactionService {
       )..where((a) => a.id.equals(dbAccountId))).getSingle();
       double newSourceBalance = sourceAcc.balance;
 
-      // --- LOAN FEE BYPASS ---
       bool isLoanFee =
           subCategory == 'Loan Interest' ||
           subCategory == 'Tax on Interest' ||
-          subCategory == 'Bank Charges on Laon';
+          subCategory == 'Bank Charges on Loan';
 
       if (type == 'Expense' && !isLoanFee) newSourceBalance -= amount;
       if (type == 'Income') newSourceBalance += amount;
@@ -222,6 +221,122 @@ class TransactionService {
     double? latitude,
     double? longitude,
   }) async {
+    // --- MULTI-LEG LOAN SYNCHRONIZATION ---
+    if (id.startsWith('LOAN_TX_')) {
+      final parts = id.split('_');
+      final prefix = '${parts[0]}_${parts[1]}_${parts[2]}';
+      final legType = parts[3];
+
+      await _db.transaction(() async {
+        final oldTx = await (_db.select(
+          _db.transactions,
+        )..where((t) => t.id.equals(id))).getSingle();
+        final double diff = amount - oldTx.amount;
+
+        await _db
+            .update(_db.transactions)
+            .replace(
+              oldTx.copyWith(
+                amount: amount,
+                date: date,
+                categoryId: Value(categoryId),
+                subCategory: Value(subCategory),
+                bucketId: Value(bucketId),
+                bucketName: Value(bucketName),
+                notes: Value(notes),
+                locationName: Value(locationName),
+                latitude: Value(latitude),
+                longitude: Value(longitude),
+              ),
+            );
+
+        final isSourceLeg = legType.startsWith('SOURCE');
+        final isLoanLeg = legType.startsWith('LOAN');
+
+        if (isSourceLeg) {
+          final sourceAcc = await (_db.select(
+            _db.accounts,
+          )..where((a) => a.id.equals(oldTx.accountId))).getSingle();
+          await _db
+              .update(_db.accounts)
+              .replace(sourceAcc.copyWith(balance: sourceAcc.balance - diff));
+        } else if (legType == 'LOANPRIN') {
+          final loanAcc = await (_db.select(
+            _db.accounts,
+          )..where((a) => a.id.equals(oldTx.accountId))).getSingle();
+          await _db
+              .update(_db.accounts)
+              .replace(loanAcc.copyWith(balance: loanAcc.balance - diff));
+        }
+
+        String oppositeLegId = '';
+        if (legType == 'SOURCEPRIN')
+          oppositeLegId = '${prefix}_LOANPRIN';
+        else if (legType == 'SOURCEINT')
+          oppositeLegId = '${prefix}_LOANINT';
+        else if (legType == 'SOURCETAX')
+          oppositeLegId = '${prefix}_LOANTAX';
+        else if (legType == 'SOURCEFEE')
+          oppositeLegId = '${prefix}_LOANFEE';
+        else if (legType == 'LOANPRIN')
+          oppositeLegId = '${prefix}_SOURCEPRIN';
+        else if (legType == 'LOANINT')
+          oppositeLegId = '${prefix}_SOURCEINT';
+        else if (legType == 'LOANTAX')
+          oppositeLegId = '${prefix}_SOURCETAX';
+        else if (legType == 'LOANFEE')
+          oppositeLegId = '${prefix}_SOURCEFEE';
+
+        if (isSourceLeg) {
+          if (oppositeLegId.isNotEmpty) {
+            final oppTx = await (_db.select(
+              _db.transactions,
+            )..where((t) => t.id.equals(oppositeLegId))).getSingleOrNull();
+            if (oppTx != null) {
+              await _db
+                  .update(_db.transactions)
+                  .replace(oppTx.copyWith(amount: oppTx.amount + diff));
+
+              if (oppositeLegId == '${prefix}_LOANPRIN') {
+                final oppAcc = await (_db.select(
+                  _db.accounts,
+                )..where((a) => a.id.equals(oppTx.accountId))).getSingle();
+                await _db
+                    .update(_db.accounts)
+                    .replace(oppAcc.copyWith(balance: oppAcc.balance - diff));
+              }
+            }
+          }
+        } else if (isLoanLeg) {
+          TransactionRecord? oppTx;
+          if (oppositeLegId.isNotEmpty) {
+            oppTx = await (_db.select(
+              _db.transactions,
+            )..where((t) => t.id.equals(oppositeLegId))).getSingleOrNull();
+          }
+          if (oppTx == null) {
+            oppTx =
+                await (_db.select(_db.transactions)
+                      ..where((t) => t.id.equals('${prefix}_SOURCETRANSFER')))
+                    .getSingleOrNull();
+          }
+
+          if (oppTx != null) {
+            await _db
+                .update(_db.transactions)
+                .replace(oppTx.copyWith(amount: oppTx.amount + diff));
+            final oppAcc = await (_db.select(
+              _db.accounts,
+            )..where((a) => a.id.equals(oppTx!.accountId))).getSingle();
+            await _db
+                .update(_db.accounts)
+                .replace(oppAcc.copyWith(balance: oppAcc.balance - diff));
+          }
+        }
+      });
+      return;
+    }
+
     String dbAccountId = accountId;
     String? dbToAccountId = toAccountId;
 
@@ -341,6 +456,43 @@ class TransactionService {
   }
 
   Future<void> deleteTransaction(String transactionId) async {
+    // --- MULTI-LEG LOAN SYNCHRONIZATION ---
+    if (transactionId.startsWith('LOAN_TX_')) {
+      final parts = transactionId.split('_');
+      final prefix = '${parts[0]}_${parts[1]}_${parts[2]}';
+
+      await _db.transaction(() async {
+        final allLegs = await (_db.select(
+          _db.transactions,
+        )..where((t) => t.id.like('$prefix%'))).get();
+
+        for (final tx in allLegs) {
+          final acc = await (_db.select(
+            _db.accounts,
+          )..where((a) => a.id.equals(tx.accountId))).getSingle();
+
+          if (tx.id.endsWith('_SOURCETRANSFER')) {
+            await _db
+                .update(_db.accounts)
+                .replace(acc.copyWith(balance: acc.balance + tx.amount));
+          } else if (tx.id.contains('_SOURCE')) {
+            await _db
+                .update(_db.accounts)
+                .replace(acc.copyWith(balance: acc.balance + tx.amount));
+          } else if (tx.id.endsWith('_LOANPRIN')) {
+            await _db
+                .update(_db.accounts)
+                .replace(acc.copyWith(balance: acc.balance + tx.amount));
+          }
+
+          await (_db.delete(
+            _db.transactions,
+          )..where((t) => t.id.equals(tx.id))).go();
+        }
+      });
+      return;
+    }
+
     await _db.transaction(() async {
       final tx = await (_db.select(
         _db.transactions,
@@ -489,7 +641,7 @@ class TransactionService {
     required double principal,
     required double interest,
     required double tax,
-    required double bankCharges, // <-- NEW
+    required double bankCharges,
     required DateTime date,
     String? notes,
   }) async {
@@ -498,12 +650,12 @@ class TransactionService {
         _db.accounts,
       )..where((a) => a.id.equals(accountId))).getSingle();
 
-      // 1. Principal Payment
       if (principal > 0) {
         double newBalance = loanAcc.balance - principal;
         await _db
             .update(_db.accounts)
             .replace(loanAcc.copyWith(balance: newBalance));
+
         await _db
             .into(_db.transactions)
             .insert(
@@ -519,7 +671,6 @@ class TransactionService {
             );
       }
 
-      // 2. Interest Payment (Uses Bypass)
       if (interest > 0) {
         await _db
             .into(_db.transactions)
@@ -536,7 +687,6 @@ class TransactionService {
             );
       }
 
-      // 3. Tax Payment (Uses Bypass)
       if (tax > 0) {
         await _db
             .into(_db.transactions)
@@ -553,7 +703,6 @@ class TransactionService {
             );
       }
 
-      // 4. Bank Charges (Uses Bypass)
       if (bankCharges > 0) {
         await _db
             .into(_db.transactions)
@@ -569,6 +718,154 @@ class TransactionService {
               ),
             );
       }
+    });
+  }
+
+  // --- MULTI-LEG LOAN TRANSFER ---
+  Future<void> logLoanTransfer({
+    required String fromAccountId,
+    required String loanAccountId,
+    required double principal,
+    required double interest,
+    required double tax,
+    required double bankCharges,
+    required DateTime date,
+    required bool markAsExpense,
+    int? bucketId,
+    String? bucketName,
+    String? notes,
+    bool isSpillover = false,
+    bool isSettlementVerified = false,
+    String? locationName,
+    double? latitude,
+    double? longitude,
+  }) async {
+    await _db.transaction(() async {
+      final fromAcc = await (_db.select(
+        _db.accounts,
+      )..where((a) => a.id.equals(fromAccountId))).getSingle();
+      final loanAcc = await (_db.select(
+        _db.accounts,
+      )..where((a) => a.id.equals(loanAccountId))).getSingle();
+
+      final totalAmount = principal + interest + tax + bankCharges;
+      final groupId = _uuid.v4();
+
+      await _db
+          .update(_db.accounts)
+          .replace(fromAcc.copyWith(balance: fromAcc.balance - totalAmount));
+
+      if (markAsExpense) {
+        final bfCat =
+            await (_db.select(_db.transactionCategories)
+                  ..where((c) => c.name.equals('Banking & Financial')))
+                .getSingleOrNull();
+        final taxCat =
+            await (_db.select(_db.transactionCategories)
+                  ..where((c) => c.name.equals('Taxes & Gov. Charges')))
+                .getSingleOrNull();
+
+        Future<void> insertFromTx(
+          double amt,
+          String idSuffix,
+          String? catId,
+          String subCat,
+        ) async {
+          if (amt > 0) {
+            await _db
+                .into(_db.transactions)
+                .insert(
+                  TransactionsCompanion.insert(
+                    id: 'LOAN_TX_${groupId}_$idSuffix',
+                    type: 'Expense',
+                    amount: amt,
+                    date: date,
+                    accountId: fromAccountId,
+                    categoryId: Value(catId),
+                    subCategory: Value(subCat),
+                    bucketId: Value(bucketId),
+                    bucketName: Value(bucketName),
+                    notes: Value(notes),
+                    isSpillover: Value(isSpillover),
+                    isSettlementVerified: Value(isSettlementVerified),
+                    locationName: Value(locationName),
+                    latitude: Value(latitude),
+                    longitude: Value(longitude),
+                  ),
+                );
+          }
+        }
+
+        await insertFromTx(principal, 'SOURCEPRIN', bfCat?.id, 'Loan EMIs');
+        await insertFromTx(
+          interest,
+          'SOURCEINT',
+          bfCat?.id,
+          'Interest Charges',
+        );
+        await insertFromTx(tax, 'SOURCETAX', taxCat?.id, 'GST');
+        await insertFromTx(
+          bankCharges,
+          'SOURCEFEE',
+          bfCat?.id,
+          'Processing Fees',
+        );
+      } else {
+        await _db
+            .into(_db.transactions)
+            .insert(
+              TransactionsCompanion.insert(
+                id: 'LOAN_TX_${groupId}_SOURCETRANSFER',
+                type: 'Transfer',
+                amount: totalAmount,
+                date: date,
+                accountId: fromAccountId,
+                toAccountId: Value(loanAccountId),
+                notes: Value(notes),
+                isSpillover: Value(isSpillover),
+                isSettlementVerified: Value(isSettlementVerified),
+                locationName: Value(locationName),
+                latitude: Value(latitude),
+                longitude: Value(longitude),
+              ),
+            );
+      }
+
+      Future<void> insertLoanTx(
+        double amt,
+        String idSuffix,
+        String subCat,
+      ) async {
+        if (amt > 0) {
+          await _db
+              .into(_db.transactions)
+              .insert(
+                TransactionsCompanion.insert(
+                  id: 'LOAN_TX_${groupId}_$idSuffix',
+                  type: 'Expense',
+                  amount: amt,
+                  date: date,
+                  accountId: loanAccountId,
+                  subCategory: Value(subCat),
+                  notes: Value(notes),
+                  locationName: Value(locationName),
+                  latitude: Value(latitude),
+                  longitude: Value(longitude),
+                ),
+              );
+        }
+      }
+
+      if (principal > 0) {
+        await _db
+            .update(_db.accounts)
+            .replace(loanAcc.copyWith(balance: loanAcc.balance - principal));
+        await insertLoanTx(principal, 'LOANPRIN', 'Loan Principal');
+      }
+
+      await insertLoanTx(interest, 'LOANINT', 'Loan Interest');
+      await insertLoanTx(tax, 'LOANTAX', 'Tax on Interest');
+      await insertLoanTx(bankCharges, 'LOANFEE', 'Bank Charges on Loan');
     });
   }
 }

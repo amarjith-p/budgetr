@@ -59,6 +59,13 @@ class LoanTransactionPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (transactions) {
+          // --- HIDE THE INTERNAL TRANSFER LEG FROM LOAN UI ---
+          final validTransactions = transactions
+              .where(
+                (txData) => !txData.transaction.id.endsWith('_SOURCETRANSFER'),
+              )
+              .toList();
+
           final groupedTransactions = <String, List<dynamic>>{};
           const fullMonths = [
             'January',
@@ -74,7 +81,7 @@ class LoanTransactionPage extends ConsumerWidget {
             'November',
             'December',
           ];
-          for (var txData in transactions) {
+          for (var txData in validTransactions) {
             final tx = txData.transaction;
             final groupKey = '${fullMonths[tx.date.month - 1]} ${tx.date.year}';
             groupedTransactions.putIfAbsent(groupKey, () => []).add(txData);
@@ -93,7 +100,7 @@ class LoanTransactionPage extends ConsumerWidget {
                   ),
                   child: _LoanSummaryCard(
                     account: currentAccount,
-                    transactions: transactions,
+                    transactions: validTransactions,
                     isSettled: isSettled,
                   ),
                 ),
@@ -119,7 +126,7 @@ class LoanTransactionPage extends ConsumerWidget {
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      if (transactions.isNotEmpty)
+                      if (validTransactions.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -130,7 +137,7 @@ class LoanTransactionPage extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            '${transactions.length} RECORD${transactions.length > 1 ? 'S' : ''}',
+                            '${validTransactions.length} RECORD${validTransactions.length > 1 ? 'S' : ''}',
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w900,
@@ -144,7 +151,7 @@ class LoanTransactionPage extends ConsumerWidget {
                 ),
               ),
 
-              if (transactions.isEmpty)
+              if (validTransactions.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: Center(
@@ -181,7 +188,6 @@ class LoanTransactionPage extends ConsumerWidget {
                             return TransactionCard(
                               data: txData,
                               currentAccountId: currentAccount.id,
-                              // closingBalance intentionally omitted for minimal loan UI
                             );
                           }, childCount: entry.value.length),
                         ),
@@ -363,7 +369,7 @@ class _LoanSummaryCardState extends ConsumerState<_LoanSummaryCard> {
         interestPaid += item.transaction.amount;
       } else if (item.transaction.subCategory == 'Tax on Interest') {
         taxPaid += item.transaction.amount;
-      } else if (item.transaction.subCategory == 'Bank Charges') {
+      } else if (item.transaction.subCategory == 'Bank Charges on Loan') {
         chargesPaid += item.transaction.amount;
       }
     }
