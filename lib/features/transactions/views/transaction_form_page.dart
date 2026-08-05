@@ -1,881 +1,1402 @@
-import 'dart:convert';   
-import 'package:budgetr/core/models/transaction_category_model.dart';  
-import 'package:budgetr/features/transactions/services/transaction_service.dart'; 
-import 'package:drift/drift.dart' show BooleanExpressionOperators;  
-import 'package:flutter/material.dart';  
-import 'package:flutter/services.dart';  
-import 'package:flutter_riverpod/flutter_riverpod.dart';  
-import '../../../core/database/app_database.dart' hide Column, Table;  
-import '../../../core/database/database_provider.dart' as db_prov;  
-import '../../../core/theme/design_tokens.dart';  
-import '../../../core/theme/transaction_colors.dart';  
-import '../../../core/components/modern_app_bar.dart';  
-import '../../../core/components/modern_boxy_toggle.dart';  
-import '../../../core/components/docked_calculator_pad.dart';  
-import '../../../core/utils/bodmas_calculator.dart';  
-import '../../../core/components/confirmation_bottom_sheet.dart';   
-import '../../../core/utils/location_helper.dart'; 
-import '../../accounts/providers/account_provider.dart';  
-import '../../category_manager/providers/category_provider.dart';  
-import '../providers/transaction_provider.dart';  
+import 'dart:convert';
+import 'package:budgetr/core/models/transaction_category_model.dart';
+import 'package:budgetr/features/transactions/services/transaction_service.dart';
+import 'package:drift/drift.dart' show BooleanExpressionOperators;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/database/app_database.dart' hide Column, Table;
+import '../../../core/database/database_provider.dart' as db_prov;
+import '../../../core/theme/design_tokens.dart';
+import '../../../core/theme/transaction_colors.dart';
+import '../../../core/components/modern_app_bar.dart';
+import '../../../core/components/modern_boxy_toggle.dart';
+import '../../../core/components/docked_calculator_pad.dart';
+import '../../../core/utils/bodmas_calculator.dart';
+import '../../../core/components/confirmation_bottom_sheet.dart';
+import '../../../core/components/global_selection_sheet.dart';
+import '../../../core/utils/location_helper.dart';
+import '../../accounts/providers/account_provider.dart';
+import '../../category_manager/providers/category_provider.dart';
+import '../providers/transaction_provider.dart';
 
-class _AccountItem {      
-  final String id;      
-  final String name;      
-  _AccountItem(this.id, this.name);  
+class _BucketItem {
+  final int id;
+  final String name;
+  _BucketItem(this.id, this.name);
 }
 
-class _BucketItem {      
-  final int id;      
-  final String name;      
-  _BucketItem(this.id, this.name);  
+final _formBudgetProvider = StreamProvider.family
+    .autoDispose<MonthlyBudget?, DateTime>((ref, date) {
+      final db = ref.watch(db_prov.databaseProvider);
+      return (db.select(db.monthlyBudgets)..where(
+            (t) => t.month.equals(date.month) & t.year.equals(date.year),
+          ))
+          .watchSingleOrNull();
+    });
+
+class TransactionFormPage extends ConsumerStatefulWidget {
+  final TransactionWithDetails? existingTransaction;
+  final String? preSelectedAccountId;
+  final bool isClone;
+  final bool isSplit;
+
+  const TransactionFormPage({
+    Key? key,
+    this.existingTransaction,
+    this.preSelectedAccountId,
+    this.isClone = false,
+    this.isSplit = false,
+  }) : super(key: key);
+
+  @override
+  ConsumerState<TransactionFormPage> createState() =>
+      _TransactionFormPageState();
 }
 
-final _formBudgetProvider = StreamProvider.family.autoDispose<MonthlyBudget?, DateTime>((ref, date) {      
-  final db = ref.watch(db_prov.databaseProvider);      
-  return (db.select(db.monthlyBudgets)              
-          ..where((t) => t.month.equals(date.month) & t.year.equals(date.year)))            
-        .watchSingleOrNull();  
-});
+class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
+  int _typeIndex = 0;
+  final List<String> _types = ['Expense', 'Income', 'Transfer'];
+  String _expression = '';
+  String _liveResult = '0.00';
+  bool _isSpillover = false;
+  bool _isSettlementVerified = false;
+  late TextEditingController _amountController;
+  late TextEditingController _notesCtrl;
+  DateTime _selectedDateTime = DateTime.now();
+  String? _selectedAccountId;
+  String? _selectedToAccountId;
+  String? _selectedCategoryId;
+  String? _selectedSubCategory;
+  int? _selectedBucketId;
+  String? _historicalBucketName;
+  bool _showValidationErrors = false;
 
-class TransactionFormPage extends ConsumerStatefulWidget {      
-  final TransactionWithDetails? existingTransaction;      
-  final String? preSelectedAccountId;      
-  final bool isClone;      
-  final bool isSplit;      
-  
-  const TransactionFormPage({          
-    Key? key,           
-    this.existingTransaction,          
-    this.preSelectedAccountId,          
-    this.isClone = false,          
-    this.isSplit = false,      
-  }) : super(key: key);      
-  
-  @override      
-  ConsumerState<TransactionFormPage> createState() => _TransactionFormPageState();  
-}
+  String? _locationName;
+  double? _latitude;
+  double? _longitude;
+  bool _isFetchingLoc = false;
 
-class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {      
-  int _typeIndex = 0;      
-  final List<String> _types = ['Expense', 'Income', 'Transfer'];      
-  String _expression = '';      
-  String _liveResult = '0.00';      
-  bool _isSpillover = false;       
-  bool _isSettlementVerified = false;       
-  late TextEditingController _amountController;      
-  late TextEditingController _notesCtrl;      
-  DateTime _selectedDateTime = DateTime.now();      
-  String? _selectedAccountId;      
-  String? _selectedToAccountId;      
-  String? _selectedCategoryId;      
-  String? _selectedSubCategory;      
-  int? _selectedBucketId;      
-  String? _historicalBucketName;       
-  bool _showValidationErrors = false;      
-  
-  String? _locationName;   
-  double? _latitude;   
-  double? _longitude;   
-  bool _isFetchingLoc = false;   
-  
-  // --- IDENTIFY LOAN LEDGER ENTRY ---
   bool get _isLoanRepayment {
     final sub = widget.existingTransaction?.transaction.subCategory;
-    return sub == 'Loan Principal' || sub == 'Loan Interest' || sub == 'Tax on Interest';
+    return sub == 'Loan Principal' ||
+        sub == 'Loan Interest' ||
+        sub == 'Tax on Interest';
   }
 
-  @override      
-  void initState() {          
-    super.initState();          
-    final txDetails = widget.existingTransaction;                    
-    String initialAmount = '';          
-    if (txDetails != null && !widget.isSplit) {              
-      initialAmount = txDetails.transaction.amount.toStringAsFixed(2);          
-    }                    
-    _amountController = TextEditingController(text: initialAmount);          
-    _expression = initialAmount;          
-    _liveResult = initialAmount.isEmpty ? '0.00' : initialAmount;               
-    
-    if (txDetails != null) {              
-      final tx = txDetails.transaction;              
-      _typeIndex = _types.indexOf(tx.type);              
-      _selectedDateTime = widget.isClone ? DateTime.now() : tx.date;              
-      _isSpillover = widget.isClone || widget.isSplit ? false : tx.isSpillover;               
-      _isSettlementVerified = widget.isClone || widget.isSplit ? false : tx.isSettlementVerified;                      
-      _notesCtrl = TextEditingController(text: tx.notes ?? '');                     
-      _selectedCategoryId = widget.isSplit ? null : tx.categoryId;              
-      _selectedSubCategory = widget.isSplit ? null : tx.subCategory;                            
-      
-      _locationName = tx.locationName;       
-      _latitude = tx.latitude;       
-      _longitude = tx.longitude;       
-      
-      if (tx.type == 'Transfer') {                  
-        if (tx.toAccountId == 'EXTERNAL_IN') {                      
-          _selectedAccountId = 'EXTERNAL';                      
-          _selectedToAccountId = tx.accountId;                  
-        } else if (tx.toAccountId == 'EXTERNAL_OUT') {                      
-          _selectedAccountId = tx.accountId;                      
-          _selectedToAccountId = 'EXTERNAL';                  
-        } else {                      
-          _selectedAccountId = tx.accountId;                      
-          _selectedToAccountId = tx.toAccountId;                  
-        }              
-      } else {                  
-        _selectedAccountId = tx.accountId;              
-      }                            
-      
-      _selectedBucketId = tx.bucketId ?? -1;              
-      _historicalBucketName = tx.bucketName ?? txDetails.bucket?.name;                 
-    } else {              
-      _notesCtrl = TextEditingController();              
-      _selectedAccountId = widget.preSelectedAccountId;          
-    }      
+  @override
+  void initState() {
+    super.initState();
+    final txDetails = widget.existingTransaction;
+    String initialAmount = '';
+    if (txDetails != null && !widget.isSplit) {
+      initialAmount = txDetails.transaction.amount.toStringAsFixed(2);
+    }
+    _amountController = TextEditingController(text: initialAmount);
+    _expression = initialAmount;
+    _liveResult = initialAmount.isEmpty ? '0.00' : initialAmount;
+
+    if (txDetails != null) {
+      final tx = txDetails.transaction;
+      _typeIndex = _types.indexOf(tx.type);
+      _selectedDateTime = widget.isClone ? DateTime.now() : tx.date;
+      _isSpillover = widget.isClone || widget.isSplit ? false : tx.isSpillover;
+      _isSettlementVerified = widget.isClone || widget.isSplit
+          ? false
+          : tx.isSettlementVerified;
+      _notesCtrl = TextEditingController(text: tx.notes ?? '');
+      _selectedCategoryId = widget.isSplit ? null : tx.categoryId;
+      _selectedSubCategory = widget.isSplit ? null : tx.subCategory;
+
+      _locationName = tx.locationName;
+      _latitude = tx.latitude;
+      _longitude = tx.longitude;
+
+      if (tx.type == 'Transfer') {
+        if (tx.toAccountId == 'EXTERNAL_IN') {
+          _selectedAccountId = 'EXTERNAL';
+          _selectedToAccountId = tx.accountId;
+        } else if (tx.toAccountId == 'EXTERNAL_OUT') {
+          _selectedAccountId = tx.accountId;
+          _selectedToAccountId = 'EXTERNAL';
+        } else {
+          _selectedAccountId = tx.accountId;
+          _selectedToAccountId = tx.toAccountId;
+        }
+      } else {
+        _selectedAccountId = tx.accountId;
+      }
+
+      _selectedBucketId = tx.bucketId ?? -1;
+      _historicalBucketName = tx.bucketName ?? txDetails.bucket?.name;
+    } else {
+      _notesCtrl = TextEditingController();
+      _selectedAccountId = widget.preSelectedAccountId;
+    }
   }
 
-  @override      
-  void dispose() {          
-    _notesCtrl.dispose();          
-    _amountController.dispose();          
-    super.dispose();      
+  @override
+  void dispose() {
+    _notesCtrl.dispose();
+    _amountController.dispose();
+    super.dispose();
   }
 
-  Future<void> _fetchLocation() async {     
-    setState(() => _isFetchingLoc = true);     
-    try {       
-      final locData = await LocationHelper.fetchCurrentLocation();       
-      if (locData != null) {         
-        setState(() {           
-          _locationName = locData['name'];           
-          _latitude = locData['latitude'];           
-          _longitude = locData['longitude'];         
-        });       
-      }     
-    } catch (e) {       
-      if (mounted) {         
-        ScaffoldMessenger.of(context).showSnackBar(           
-          SnackBar(content: Text('Could not fetch location: $e')),         
-        );       
-      }     
-    } finally {       
-      if (mounted) setState(() => _isFetchingLoc = false);     
-    }   
+  Future<void> _fetchLocation() async {
+    setState(() => _isFetchingLoc = true);
+    try {
+      final locData = await LocationHelper.fetchCurrentLocation();
+      if (locData != null) {
+        setState(() {
+          _locationName = locData['name'];
+          _latitude = locData['latitude'];
+          _longitude = locData['longitude'];
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not fetch location: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isFetchingLoc = false);
+    }
   }
 
-  void _onCalcKeyPress(String key) {          
-    setState(() {              
-      int cursorPosition = _amountController.selection.baseOffset;              
-      if (cursorPosition < 0) cursorPosition = _amountController.text.length;              
-      String currentText = _amountController.text;                     
-      
-      if (key == 'C') {                  
-        _amountController.clear();                  
-        _expression = '';                  
-        _liveResult = '0.00';                  
-        return;              
-      } else if (key == '⌫') {                  
-        if (cursorPosition > 0) {                      
-          final newText = currentText.substring(0, cursorPosition - 1) + currentText.substring(cursorPosition);                      
-          _amountController.value = TextEditingValue(                          
-            text: newText,                          
-            selection: TextSelection.collapsed(offset: cursorPosition - 1),                      
-          );                  
-        }              
-      } else if (key == '=') {                  
-        _amountController.text = _liveResult;                  
-        _amountController.selection = TextSelection.collapsed(offset: _liveResult.length);              
-      } else {                  
-        final isOperator = ['+', '-', '×', '÷'].contains(key);                  
-        if (isOperator && cursorPosition > 0) {                      
-          final prevChar = currentText[cursorPosition - 1];                      
-          if (['+', '-', '×', '÷'].contains(prevChar)) {                          
-            final newText = currentText.substring(0, cursorPosition - 1) + key + currentText.substring(cursorPosition);                          
-            _amountController.value = TextEditingValue(                              
-              text: newText,                              
-              selection: TextSelection.collapsed(offset: cursorPosition),                          
-            );                      
-          } else {                          
-            if (currentText.length < 25) {                              
-              final newText = currentText.substring(0, cursorPosition) + key + currentText.substring(cursorPosition);                              
-              _amountController.value = TextEditingValue(                                  
-                text: newText,                                  
-                selection: TextSelection.collapsed(offset: cursorPosition + 1),                              
-              );                          
-            }                      
-          }                  
-        } else {                      
-          if (currentText.length < 25) {                          
-            final newText = currentText.substring(0, cursorPosition) + key + currentText.substring(cursorPosition);                          
-            _amountController.value = TextEditingValue(                              
-              text: newText,                              
-              selection: TextSelection.collapsed(offset: cursorPosition + 1),                          
-            );                      
-          }                  
-        }              
-      }                     
-      
-      _expression = _amountController.text;              
-      String rawResult = BodmasCalculator.evaluate(_expression);              
-      double? parsed = double.tryParse(rawResult);                            
-      
-      if (parsed != null) {                  
-        if (parsed.isNaN || parsed.isInfinite) {                      
-          _liveResult = '0.00';                  
-        } else if (parsed >= 1000000000000) {                       
-          _liveResult = '999999999999.99';                      
-          if (key != '⌫') {                          
-            _amountController.text = '999999999999.99';                          
-            _amountController.selection = TextSelection.collapsed(offset: _amountController.text.length);                          
-            _expression = _amountController.text;                      
-          }                  
-        } else if (parsed <= -1000000000000) {                      
-          _liveResult = '-999999999999.99';                      
-          if (key != '⌫') {                          
-            _amountController.text = '-999999999999.99';                          
-            _amountController.selection = TextSelection.collapsed(offset: _amountController.text.length);                          
-            _expression = _amountController.text;                      
-          }                  
-        } else {                      
-          _liveResult = parsed.toStringAsFixed(2);                  
-        }              
-      } else {                  
-        _liveResult = rawResult.isEmpty ? '0.00' : rawResult;              
-      }          
-    });      
+  void _onCalcKeyPress(String key) {
+    setState(() {
+      int cursorPosition = _amountController.selection.baseOffset;
+      if (cursorPosition < 0) cursorPosition = _amountController.text.length;
+      String currentText = _amountController.text;
+
+      if (key == 'C') {
+        _amountController.clear();
+        _expression = '';
+        _liveResult = '0.00';
+        return;
+      } else if (key == '⌫') {
+        if (cursorPosition > 0) {
+          final newText =
+              currentText.substring(0, cursorPosition - 1) +
+              currentText.substring(cursorPosition);
+          _amountController.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: cursorPosition - 1),
+          );
+        }
+      } else if (key == '=') {
+        _amountController.text = _liveResult;
+        _amountController.selection = TextSelection.collapsed(
+          offset: _liveResult.length,
+        );
+      } else {
+        final isOperator = ['+', '-', '×', '÷'].contains(key);
+        if (isOperator && cursorPosition > 0) {
+          final prevChar = currentText[cursorPosition - 1];
+          if (['+', '-', '×', '÷'].contains(prevChar)) {
+            final newText =
+                currentText.substring(0, cursorPosition - 1) +
+                key +
+                currentText.substring(cursorPosition);
+            _amountController.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: cursorPosition),
+            );
+          } else {
+            if (currentText.length < 25) {
+              final newText =
+                  currentText.substring(0, cursorPosition) +
+                  key +
+                  currentText.substring(cursorPosition);
+              _amountController.value = TextEditingValue(
+                text: newText,
+                selection: TextSelection.collapsed(offset: cursorPosition + 1),
+              );
+            }
+          }
+        } else {
+          if (currentText.length < 25) {
+            final newText =
+                currentText.substring(0, cursorPosition) +
+                key +
+                currentText.substring(cursorPosition);
+            _amountController.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: cursorPosition + 1),
+            );
+          }
+        }
+      }
+
+      _expression = _amountController.text;
+      String rawResult = BodmasCalculator.evaluate(_expression);
+      double? parsed = double.tryParse(rawResult);
+
+      if (parsed != null) {
+        if (parsed.isNaN || parsed.isInfinite) {
+          _liveResult = '0.00';
+        } else if (parsed >= 1000000000000) {
+          _liveResult = '999999999999.99';
+          if (key != '⌫') {
+            _amountController.text = '999999999999.99';
+            _amountController.selection = TextSelection.collapsed(
+              offset: _amountController.text.length,
+            );
+            _expression = _amountController.text;
+          }
+        } else if (parsed <= -1000000000000) {
+          _liveResult = '-999999999999.99';
+          if (key != '⌫') {
+            _amountController.text = '-999999999999.99';
+            _amountController.selection = TextSelection.collapsed(
+              offset: _amountController.text.length,
+            );
+            _expression = _amountController.text;
+          }
+        } else {
+          _liveResult = parsed.toStringAsFixed(2);
+        }
+      } else {
+        _liveResult = rawResult.isEmpty ? '0.00' : rawResult;
+      }
+    });
   }
 
-  String _formatDateTime(DateTime d) {          
-    final time = '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';          
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];          
-    return '${d.day.toString().padLeft(2, '0')} ${months[d.month - 1]}, $time';      
+  String _formatDateTime(DateTime d) {
+    final time =
+        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${d.day.toString().padLeft(2, '0')} ${months[d.month - 1]}, $time';
   }
 
-  Future<void> _pickDateTime() async {          
-    final date = await showDatePicker(              
-      context: context, initialDate: _selectedDateTime, firstDate: DateTime(2000), lastDate: DateTime(2100),          
-    );          
-    if (date != null && mounted) {              
-      final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_selectedDateTime));              
-      if (time != null) setState(() => _selectedDateTime = DateTime(date.year, date.month, date.day, time.hour, time.minute));          
-    }      
+  Future<void> _pickDateTime() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _selectedDateTime,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (date != null && mounted) {
+      final time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_selectedDateTime),
+      );
+      if (time != null)
+        setState(
+          () => _selectedDateTime = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            time.hour,
+            time.minute,
+          ),
+        );
+    }
   }
 
-  void _showSelector<T>({          
-    required String title,          
-    required List<T> items,          
-    required String Function(T) labelBuilder,          
-    required void Function(T) onSelected,      
-  }) {          
-    showModalBottomSheet(              
-      context: context, shape: DesignTokens.bottomSheetShape, isScrollControlled: true,              
-      builder: (ctx) => DraggableScrollableSheet(                  
-        initialChildSize: 0.5, maxChildSize: 0.8, minChildSize: 0.4, expand: false,                  
-        builder: (context, scrollController) => Column(                      
-          children: [                          
-            Padding(                              
-              padding: const EdgeInsets.all(DesignTokens.spacingMd),                              
-              child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),                          
-            ),                          
-            const Divider(height: 1),                          
-            Expanded(                              
-              child: ListView.builder(                                  
-                controller: scrollController, itemCount: items.length,                                  
-                itemBuilder: (context, index) {                                      
-                  final item = items[index];                                      
-                  return ListTile(                                          
-                    contentPadding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg),                                          
-                    title: Text(labelBuilder(item), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),                                          
-                    onTap: () { onSelected(item); Navigator.pop(ctx); },                                      
-                  );                                  
-                },                              
-              ),                          
-            ),                      
-          ],                  
-        ),              
-      ),          
-    );      
+  // --- REVERTED SPACING: MODULAR GROUP BUILDER ---
+  List<Widget> _buildAccountGroup(
+    BuildContext ctx,
+    List<Account> accounts,
+    String title,
+    IconData iconData,
+    String? selectedId,
+    ThemeData theme,
+  ) {
+    if (accounts.isEmpty) return [];
+
+    List<Widget> children = [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 4), // Tighter padding
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+      ),
+    ];
+
+    for (int i = 0; i < accounts.length; i++) {
+      final acc = accounts[i];
+      final isLast = i == accounts.length - 1;
+
+      children.add(
+        Column(
+          children: [
+            _buildAccountTile(
+              ctx,
+              acc.id,
+              acc.name,
+              acc.providerName,
+              iconData,
+              selectedId,
+              theme,
+            ),
+            if (!isLast)
+              Divider(
+                height: 1,
+                color: theme.dividerColor.withOpacity(0.2),
+                indent: 20,
+                endIndent: 20,
+              ),
+          ],
+        ),
+      );
+    }
+    return children;
   }
 
-  void _openNotesEditor() {          
-    showModalBottomSheet(              
-      context: context,              
-      isScrollControlled: true,              
-      shape: DesignTokens.bottomSheetShape,              
-      builder: (ctx) => Padding(                  
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),                  
-        child: Container(                      
-          padding: const EdgeInsets.all(DesignTokens.spacingLg),                      
-          child: Column(                          
-            mainAxisSize: MainAxisSize.min,                          
-            crossAxisAlignment: CrossAxisAlignment.stretch,                          
-            children: [                              
-              Text('Transaction Note', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),                              
-              const SizedBox(height: DesignTokens.spacingMd),                              
-              TextField(                                  
-                controller: _notesCtrl,                                  
-                autofocus: true,                                  
-                maxLines: 3,                                  
-                textInputAction: TextInputAction.done,                                  
-                decoration: InputDecoration(                                      
-                  hintText: 'What was this for?',                                      
-                  filled: true,                                      
-                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),                                      
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),                                  
-                ),                                  
-                onSubmitted: (_) {                                      
-                  setState(() {});                                       
-                  Navigator.pop(ctx);                                  
-                },                              
-              ),                              
-              const SizedBox(height: DesignTokens.spacingMd),                              
-              ElevatedButton(                                  
-                style: ElevatedButton.styleFrom(                                      
-                  backgroundColor: Theme.of(context).colorScheme.primary,                                      
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,                                      
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),                                      
-                  padding: const EdgeInsets.symmetric(vertical: 16),                                  
-                ),                                  
-                onPressed: () {                                      
-                  setState(() {});                                       
-                  Navigator.pop(ctx);                                  
-                },                                  
-                child: const Text('Save Note', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),                              
-              )                          
-            ],                      
-          ),                  
-        ),              
-      ),          
-    );      
+  // --- ENHANCED ACCOUNT PICKER ---
+  Future<void> _pickAccount(bool isToAccount, List<Account> rawAccounts) async {
+    final theme = Theme.of(context);
+
+    List<Account> availableAccounts = List.from(rawAccounts);
+    if (isToAccount) {
+      if (_selectedAccountId != null && _selectedAccountId != 'EXTERNAL') {
+        availableAccounts = availableAccounts
+            .where((a) => a.id != _selectedAccountId)
+            .toList();
+      }
+    } else {
+      if (_typeIndex == 2 &&
+          _selectedToAccountId != null &&
+          _selectedToAccountId != 'EXTERNAL') {
+        availableAccounts = availableAccounts
+            .where((a) => a.id != _selectedToAccountId)
+            .toList();
+      }
+    }
+
+    final assets = availableAccounts
+        .where((a) => a.type != 'Credit Cards' && a.type != 'Loan')
+        .toList();
+    final creditCards = availableAccounts
+        .where((a) => a.type == 'Credit Cards')
+        .toList();
+    final loans = availableAccounts.where((a) => a.type == 'Loan').toList();
+
+    final selectedId = isToAccount ? _selectedToAccountId : _selectedAccountId;
+
+    bool showExternal = _typeIndex == 2;
+    if (isToAccount && _selectedAccountId == 'EXTERNAL') showExternal = false;
+    if (!isToAccount && _selectedToAccountId == 'EXTERNAL')
+      showExternal = false;
+
+    final selected = await GlobalSelectionSheet.show<String>(
+      context: context,
+      title: isToAccount ? 'Select Destination' : 'Select Account',
+      builder: (ctx, scrollController) {
+        return ListView(
+          controller: scrollController,
+          physics: const BouncingScrollPhysics(),
+          children: [
+            ..._buildAccountGroup(
+              ctx,
+              assets,
+              'ASSETS',
+              Icons.account_balance_wallet_rounded,
+              selectedId,
+              theme,
+            ),
+
+            if (assets.isNotEmpty &&
+                (creditCards.isNotEmpty || loans.isNotEmpty || showExternal))
+              Divider(
+                height: 12,
+                thickness: 4,
+                color: theme.dividerColor.withOpacity(0.05),
+              ), // Tighter divider
+
+            ..._buildAccountGroup(
+              ctx,
+              creditCards,
+              'CREDIT CARDS',
+              Icons.credit_card_rounded,
+              selectedId,
+              theme,
+            ),
+
+            if (creditCards.isNotEmpty && (loans.isNotEmpty || showExternal))
+              Divider(
+                height: 12,
+                thickness: 4,
+                color: theme.dividerColor.withOpacity(0.05),
+              ),
+
+            ..._buildAccountGroup(
+              ctx,
+              loans,
+              'LOANS',
+              Icons.account_balance_rounded,
+              selectedId,
+              theme,
+            ),
+
+            if (loans.isNotEmpty && showExternal)
+              Divider(
+                height: 12,
+                thickness: 4,
+                color: theme.dividerColor.withOpacity(0.05),
+              ),
+
+            if (showExternal) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                child: Text(
+                  'EXTERNAL',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+              _buildAccountTile(
+                ctx,
+                'EXTERNAL',
+                'External Account',
+                'Outside of Budgetr',
+                Icons.sync_alt_rounded,
+                selectedId,
+                theme,
+              ),
+            ],
+          ],
+        );
+      },
+    );
+
+    if (selected != null && mounted) {
+      setState(() {
+        if (isToAccount) {
+          _selectedToAccountId = selected;
+        } else {
+          _selectedAccountId = selected;
+        }
+      });
+    }
   }
 
-  String? _resolveBucketName(List<_BucketItem> items, int? selectedId) {          
-    if (selectedId == null || selectedId == -1) return null;          
-    final match = items.where((b) => b.id == selectedId).firstOrNull;          
-    return match?.name ?? _historicalBucketName;      
+  // --- REVERTED SPACING: REDESIGNED TILE ---
+  Widget _buildAccountTile(
+    BuildContext ctx,
+    String id,
+    String name,
+    String providerName,
+    IconData icon,
+    String? selectedId,
+    ThemeData theme,
+  ) {
+    final isSelected = id == selectedId;
+    return ListTile(
+      dense: true, // Restored compact layout
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 0,
+      ), // Tightened padding
+      leading: Icon(
+        icon,
+        size: 20,
+        color: isSelected
+            ? theme.colorScheme.primary
+            : theme.colorScheme.onSurfaceVariant,
+      ),
+      title: Text(
+        name,
+        style: TextStyle(
+          fontSize: 15, // Preserved comfortable reading size
+          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+          color: isSelected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurface,
+        ),
+      ),
+      subtitle: Text(
+        providerName,
+        style: TextStyle(
+          fontSize: 13, // Preserved comfortable reading size
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+      trailing: isSelected
+          ? Icon(
+              Icons.check_circle_rounded,
+              size: 18,
+              color: theme.colorScheme.primary,
+            )
+          : null, // Removed the trailing arrow to eliminate right-side whitespace
+      onTap: () {
+        HapticFeedback.selectionClick();
+        Navigator.pop(ctx, id);
+      },
+    );
   }
 
-  Future<void> _submit(List<_BucketItem> activeBucketItems) async {          
-    final amount = double.tryParse(_liveResult) ?? 0.0;               
-    final isExpense = _typeIndex == 0;          
-    final isIncome = _typeIndex == 1;          
-    final isTransfer = _typeIndex == 2;          
-    final isLoanRep = _isLoanRepayment;          
-    
-    final hasDanglingOperator = _expression.isNotEmpty && ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);               
-    final origAmount = widget.existingTransaction?.transaction.amount ?? 0.0;          
-    final isOverSplit = widget.isSplit && amount >= origAmount;               
-    
-    // --- BYPASS VALIDATION FOR LOCKED LOAN FIELDS ---
-    if (amount <= 0 || hasDanglingOperator || isOverSplit || _selectedAccountId == null ||                  
-        (isTransfer && _selectedToAccountId == null) ||                 
-        (isTransfer && _selectedAccountId == _selectedToAccountId) ||                  
-        (!isTransfer && _selectedCategoryId == null && !isLoanRep) ||                 
-        (isExpense && _selectedBucketId == null && !isLoanRep)) {              
-      setState(() => _showValidationErrors = true);              
-      HapticFeedback.heavyImpact();              
-      return;          
-    }               
-    
-    final rawAccounts = ref.read(accountsStreamProvider).asData?.value ?? [];          
-    final rawCategories = ref.read(categoriesStreamProvider).asData?.value ?? [];               
-    
-    Account? targetCC;               
-    if (isTransfer && _selectedToAccountId != null && _selectedToAccountId != 'EXTERNAL') {              
-      final rawTarget = rawAccounts.where((a) => a.id == _selectedToAccountId).firstOrNull;              
-      if (rawTarget?.type == 'Credit Cards') targetCC = rawTarget;          
-    } else if (isIncome && _selectedAccountId != null && _selectedAccountId != 'EXTERNAL') {              
-      final rawTarget = rawAccounts.where((a) => a.id == _selectedAccountId).firstOrNull;              
-      if (rawTarget?.type == 'Credit Cards') targetCC = rawTarget;          
-    }               
-    
-    String? finalCategoryId = _selectedCategoryId;          
-    String? finalSubCategory = _selectedSubCategory;          
-    String? finalNotes = _notesCtrl.text.trim();               
-    String? finalBucketName = _resolveBucketName(activeBucketItems, _selectedBucketId);               
-    
-    if (targetCC != null) {              
-      final bDay = targetCC.billDate ?? 15;              
-      final dDay = targetCC.dueDate ?? 5;              
-      final txDate = _selectedDateTime;                            
-      
-      DateTime lastBillDate = DateTime(txDate.year, txDate.month, bDay);              
-      if (txDate.day < bDay) {                  
-        lastBillDate = DateTime(txDate.year, txDate.month - 1, bDay);              
-      }                     
-      
-      DateTime dueDate = DateTime(lastBillDate.year, lastBillDate.month + 1, dDay);              
-      if (dDay > bDay) {                  
-        dueDate = DateTime(lastBillDate.year, lastBillDate.month, dDay);              
-      }                     
-      
-      bool inWindow = txDate.isAfter(lastBillDate) && txDate.isBefore(dueDate.add(const Duration(days: 1)));              
-      final selectedCatName = rawCategories.where((c) => c.id == _selectedCategoryId).firstOrNull?.name;                     
-      
-      if (inWindow && selectedCatName != 'Repayment') {                  
-        final isRepayment = await ConfirmationBottomSheet.show(                      
-          context,                      
-          title: 'Credit Card Repayment?',                      
-          description: 'This transaction is between the last bill date and the due date. Is this a repayment for the previous statement?',                      
-          confirmText: 'YES, REPAYMENT',                      
-          cancelText: 'NO, NORMAL',                      
-          onConfirm: () {},                   
-        );                  
-        if (isRepayment == true) {                      
-          final repaymentCat = rawCategories.where((c) => c.name == 'Repayment' && c.type == 'Income').firstOrNull;                      
-          if (repaymentCat != null) {                          
-            finalCategoryId = repaymentCat.id;                          
-            finalSubCategory = isTransfer ? 'Credit Card Bill' : 'Account Adjustments';                           
-            finalNotes = finalNotes!.isEmpty ? 'Auto-tagged as Bill Repayment' : '$finalNotes (Bill Repayment)';                      
-          }                  
-        }              
-      }          
-    }               
-    
-    if (widget.isSplit) {              
-      final success = await ref.read(transactionActionProvider.notifier).splitTransaction(                  
-        originalTxId: widget.existingTransaction!.transaction.id,                  
-        splitAmount: amount,                  
-        type: _types[_typeIndex],                  
-        date: _selectedDateTime,                  
-        accountId: _selectedAccountId!,                  
-        toAccountId: _selectedToAccountId,                  
-        categoryId: finalCategoryId,                  
-        subCategory: finalSubCategory,                  
-        bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,                  
-        bucketName: finalBucketName,                   
-        notes: finalNotes,                  
-        isSpillover: _isSpillover,                   
-        isSettlementVerified: _isSettlementVerified,         
-        locationName: _locationName,         
-        latitude: _latitude,         
-        longitude: _longitude,       
-      );              
-      if (success && mounted) Navigator.pop(context);              
-      return;          
-    }               
-    
-    final String? safeExistingId = (widget.existingTransaction != null && !widget.isClone)                 
-      ? widget.existingTransaction!.transaction.id                 
-      : null;                 
-      
-    final success = await ref.read(transactionActionProvider.notifier).saveTransaction(              
-      existingId: safeExistingId,              
-      type: _types[_typeIndex],              
-      amount: amount,              
-      date: _selectedDateTime,              
-      accountId: _selectedAccountId!,              
-      toAccountId: _selectedToAccountId,              
-      categoryId: finalCategoryId,              
-      subCategory: finalSubCategory,              
-      bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,              
-      bucketName: finalBucketName,               
-      notes: finalNotes,              
-      isSpillover: _isSpillover,               
-      isSettlementVerified: _isSettlementVerified,       
-      locationName: _locationName,       
-      latitude: _latitude,       
-      longitude: _longitude,     
-    );               
-    
-    if (success && mounted) Navigator.pop(context);      
+  Future<void> _pickCategory(
+    List<TransactionCategoryModel> activeCategories,
+    TransactionCategoryModel? selectedCatMatch,
+  ) async {
+    final items = activeCategories.map((c) => c.name).toList();
+    final selected = await GlobalSelectionSheet.showSimple(
+      context: context,
+      title: 'Select Category',
+      items: items,
+      selectedValue: selectedCatMatch?.name ?? '',
+    );
+    if (selected != null && mounted) {
+      setState(() {
+        _selectedCategoryId = activeCategories
+            .firstWhere((c) => c.name == selected)
+            .id;
+        _selectedSubCategory = null;
+      });
+    }
   }
 
-  Widget _buildTableCell(String label, String? value, IconData icon, VoidCallback? onTap, bool isError) {          
-    final theme = Theme.of(context);          
-    final hasValue = value != null && value.isNotEmpty;                    
-    
-    return Material(              
-      color: Colors.transparent,              
-      child: InkWell(                  
-        onTap: onTap,                  
-        child: Padding(                      
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),                      
-          child: Column(                          
-            crossAxisAlignment: CrossAxisAlignment.start,                          
-            mainAxisAlignment: MainAxisAlignment.center,                          
-            children: [                              
-              Row(                                  
-                children: [                                      
-                  Icon(icon, size: 14, color: isError ? theme.colorScheme.error : theme.colorScheme.primary),                                      
-                  const SizedBox(width: 8),                                      
-                  Expanded(                                          
-                    child: Text(                                              
-                      label,                                               
-                      style: TextStyle(                                                  
-                        fontSize: 10,                                                   
-                        fontWeight: FontWeight.w800,                                                   
-                        letterSpacing: 0.5,                                                   
-                        color: isError ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant                                              
-                      ),                                               
-                      maxLines: 1,                                              
-                      overflow: TextOverflow.ellipsis,                                          
-                    ),                                      
-                  ),                                  
-                ],                              
-              ),                              
-              const SizedBox(height: 8),                              
-              Text(                                  
-                hasValue ? value : (onTap != null ? 'Select' : ''),                                  
-                style: TextStyle(                                      
-                  fontSize: 15,                                       
-                  fontWeight: hasValue ? FontWeight.w800 : FontWeight.w500,                                      
-                  color: isError ? theme.colorScheme.error : (hasValue ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant.withOpacity(0.5)),                                      
-                  letterSpacing: -0.3,                                  
-                ),                                  
-                maxLines: 1,                                  
-                overflow: TextOverflow.ellipsis,                              
-              ),                          
-            ],                      
-          ),                  
-        ),              
-      ),          
-    );      
+  Future<void> _pickSubCategory(List<String> activeSubCategories) async {
+    if (activeSubCategories.isEmpty) return;
+    final selected = await GlobalSelectionSheet.showSimple(
+      context: context,
+      title: 'Select Subcategory',
+      items: activeSubCategories,
+      selectedValue: _selectedSubCategory ?? '',
+    );
+    if (selected != null && mounted) {
+      setState(() {
+        _selectedSubCategory = selected;
+      });
+    }
   }
 
-  @override      
-  Widget build(BuildContext context) {          
-    final theme = Theme.of(context);           
-    final isDark = theme.brightness == Brightness.dark;               
-    
-    final isExpense = _typeIndex == 0;          
-    final isIncome = _typeIndex == 1;          
-    final isTransfer = _typeIndex == 2;          
+  Future<void> _pickBucket(
+    List<_BucketItem> bucketItems,
+    _BucketItem? selectedBucketMatch,
+  ) async {
+    final items = bucketItems.map((b) => b.name).toList();
+    final selected = await GlobalSelectionSheet.showSimple(
+      context: context,
+      title: 'Assign to Bucket',
+      items: items,
+      selectedValue: selectedBucketMatch?.name ?? '',
+    );
+    if (selected != null && mounted) {
+      setState(() {
+        _selectedBucketId = bucketItems
+            .firstWhere((b) => b.name == selected)
+            .id;
+      });
+    }
+  }
+
+  void _openNotesEditor() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: DesignTokens.bottomSheetShape,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          padding: const EdgeInsets.all(DesignTokens.spacingLg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Transaction Note',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: DesignTokens.spacingMd),
+              TextField(
+                controller: _notesCtrl,
+                autofocus: true,
+                maxLines: 3,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  hintText: 'What was this for?',
+                  filled: true,
+                  fillColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onSubmitted: (_) {
+                  setState(() {});
+                  Navigator.pop(ctx);
+                },
+              ),
+              const SizedBox(height: DesignTokens.spacingMd),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                onPressed: () {
+                  setState(() {});
+                  Navigator.pop(ctx);
+                },
+                child: const Text(
+                  'Save Note',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String? _resolveBucketName(List<_BucketItem> items, int? selectedId) {
+    if (selectedId == null || selectedId == -1) return null;
+    final match = items.where((b) => b.id == selectedId).firstOrNull;
+    return match?.name ?? _historicalBucketName;
+  }
+
+  Future<void> _submit(List<_BucketItem> activeBucketItems) async {
+    final amount = double.tryParse(_liveResult) ?? 0.0;
+    final isExpense = _typeIndex == 0;
+    final isIncome = _typeIndex == 1;
+    final isTransfer = _typeIndex == 2;
     final isLoanRep = _isLoanRepayment;
-    
-    final txColor = TransactionColors.getTypeColor(_types[_typeIndex], theme);          
-    final amountVal = double.tryParse(_liveResult) ?? 0.0;          
-    final origAmount = widget.existingTransaction?.transaction.amount ?? 0.0;          
-    final hasDanglingOperator = _expression.isNotEmpty && ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);          
-    final isOverSplit = widget.isSplit && amountVal >= origAmount;               
-    
-    final hasAmountError = _showValidationErrors && (amountVal <= 0 || hasDanglingOperator || isOverSplit);          
-    final displayAmountColor = hasAmountError ? theme.colorScheme.error : txColor;               
-    
-    String errorMsg = 'Amount must be greater than 0';          
-    if (hasDanglingOperator) errorMsg = 'Incomplete mathematical expression';          
-    if (isOverSplit) errorMsg = 'Split amount must be less than original (₹${origAmount.toStringAsFixed(2)})';               
-    
-    final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];          
-    final rawCategories = ref.watch(categoriesStreamProvider).asData?.value ?? [];               
-    
-    final budgetDate = DateTime(_selectedDateTime.year, _selectedDateTime.month);          
-    final budgetAsync = ref.watch(_formBudgetProvider(budgetDate));                    
-    final List<_BucketItem> bucketItems = [];          
-    final activeBudget = budgetAsync.asData?.value;               
-    
-    bool isBudgetLocked = activeBudget == null || activeBudget.isClosed;               
-    String lockedReason = activeBudget == null                 
-      ? 'No active budget exists for this month.'                
-      : 'This month\'s budget is permanently closed.';                 
-      
-    final bool isEditingExisting = widget.existingTransaction != null && !widget.isClone && !widget.isSplit;          
-    
-    if (isBudgetLocked) {              
-      if (isEditingExisting && _selectedBucketId != null && _selectedBucketId != -1) {                   
-        bucketItems.add(_BucketItem(_selectedBucketId!, _historicalBucketName ?? ''));              
-      } else {                   
-        if (_selectedBucketId != null && _selectedBucketId != -1) {                        
-          _selectedBucketId = null;                    
-        }              
-      }              
-      bucketItems.add(_BucketItem(-1, 'Out of Bucket'));          
-    } else {              
-      if (activeBudget.bucketsSnapshot != null) {                  
-        try {                      
-          final List<dynamic> decoded = jsonDecode(activeBudget.bucketsSnapshot!);                      
-          for (var b in decoded) {                          
-            bucketItems.add(_BucketItem(b['id'] as int, b['name'] as String));                      
-          }                  
-        } catch (e) {}              
-      }                     
-      if (isEditingExisting && _selectedBucketId != null && _selectedBucketId != -1) {                  
-        if (!bucketItems.any((b) => b.id == _selectedBucketId)) {                      
-          String displayLabel = _historicalBucketName ?? '';                      
-          if (bucketItems.any((b) => b.name == displayLabel)) displayLabel = '$displayLabel (Legacy)';                      
-          bucketItems.add(_BucketItem(_selectedBucketId!, displayLabel));                  
-        }              
-      } else {                   
-        if (_selectedBucketId != null && _selectedBucketId != -1) {                         
-          if (!bucketItems.any((b) => b.id == _selectedBucketId)) {                               
-            _selectedBucketId = null;                         
-          }                   
-        }              
-      }              
-      bucketItems.add(_BucketItem(-1, 'Out of Bucket'));          
-    }                    
-    
-    final accountItems = rawAccounts.map((a) => _AccountItem(a.id, a.name)).toList();          
-    if (isTransfer) {              
-      accountItems.add(_AccountItem('EXTERNAL', 'External Account'));          
-    }               
-    
-    final activeCategories = rawCategories.where((c) => c.type == _types[_typeIndex]).toList();          
-    final selectedCatMatch = rawCategories.where((c) => c.id == _selectedCategoryId).firstOrNull;          
-    final activeSubCategories = selectedCatMatch?.subCategories ?? [];               
-    
-    final selectedAccMatch = accountItems.where((a) => a.id == _selectedAccountId).firstOrNull;          
-    final selectedToAccMatch = accountItems.where((a) => a.id == _selectedToAccountId).firstOrNull;               
-    final selectedBucketMatch = bucketItems.where((b) => b.id == _selectedBucketId).firstOrNull;               
-    
-    final List<Widget> cells = [              
-      _buildTableCell('DATE & TIME', _formatDateTime(_selectedDateTime), Icons.calendar_today_rounded, _pickDateTime, false),              
-      
-      // --- LOCK: ACCOUNT SELECTOR ---
-      _buildTableCell(                  
-        isTransfer ? 'FROM ACCOUNT' : 'ACCOUNT', selectedAccMatch?.name, Icons.account_balance_wallet_rounded,                  
-        isLoanRep ? null : () => _showSelector<_AccountItem>(                      
-          title: 'Select Account', items: isTransfer ? accountItems.where((a) => a.id != _selectedToAccountId).toList() : accountItems,                       
-          labelBuilder: (a) => a.name, onSelected: (a) => setState(() => _selectedAccountId = a.id)                  
-        ),                  
-        _showValidationErrors && _selectedAccountId == null              
-      ),          
-    ];               
-    
-    if (isTransfer) {              
-      cells.add(_buildTableCell(                  
-        'TO ACCOUNT', selectedToAccMatch?.name, Icons.sync_alt_rounded,                  
-        isLoanRep ? null : () => _showSelector<_AccountItem>(                      
-          title: 'Select Destination', items: accountItems.where((a) => a.id != _selectedAccountId).toList(),                       
-          labelBuilder: (a) => a.name, onSelected: (a) => setState(() => _selectedToAccountId = a.id)                  
-        ),                  
-        _showValidationErrors && _selectedToAccountId == null              
-      ));          
-    } else {              
-      // --- LOCK: CATEGORY SELECTOR ---
-      cells.add(_buildTableCell(                  
-        'CATEGORY', isLoanRep ? 'Loan Repayment' : selectedCatMatch?.name, Icons.category_rounded,                  
-        isLoanRep ? null : () => _showSelector<TransactionCategoryModel>(title: 'Select Category', items: activeCategories, labelBuilder: (c) => c.name, onSelected: (c) => setState(() { _selectedCategoryId = c.id; _selectedSubCategory = null; })),                  
-        _showValidationErrors && _selectedCategoryId == null && !isLoanRep              
-      ));                            
-      
-      // --- LOCK: SUBCATEGORY SELECTOR ---
-      if (activeSubCategories.isNotEmpty || _selectedSubCategory != null || isLoanRep) {                  
-        cells.add(_buildTableCell(                      
-          'SUBCATEGORY', _selectedSubCategory, Icons.subdirectory_arrow_right_rounded,                      
-          isLoanRep ? null : () { if (activeSubCategories.isNotEmpty) _showSelector<String>(title: 'Select Subcategory', items: activeSubCategories, labelBuilder: (s) => s, onSelected: (s) => setState(() => _selectedSubCategory = s)); },                      
-          false                  
-        ));              
-      }                            
-      
-      // --- LOCK: BUCKET SELECTOR ---
-      if (!isIncome) {                  
-        cells.add(_buildTableCell(                      
-          'BUDGET BUCKET', isLoanRep ? 'Out of Bucket' : selectedBucketMatch?.name, Icons.donut_small_rounded,                      
-          isLoanRep ? null : () => _showSelector<_BucketItem>(title: 'Assign to Bucket', items: bucketItems, labelBuilder: (b) => b.name, onSelected: (b) => setState(() => _selectedBucketId = b.id)),                      
-          _showValidationErrors && isExpense && _selectedBucketId == null && !isLoanRep                   
-        ));              
-      }          
-    }               
-    
-    cells.add(_buildTableCell('NOTES', _notesCtrl.text.isEmpty ? null : _notesCtrl.text, Icons.notes_rounded, _openNotesEditor, false));               
-    cells.add(_buildTableCell(       
-      'LOCATION', _isFetchingLoc ? 'Locating...' : _locationName, Icons.pin_drop_rounded, _fetchLocation, false     
-    ));     
-    
-    if (cells.length % 2 != 0) cells.add(const SizedBox.shrink());                
-    
-    List<TableRow> tableRows = [];          
-    for (int i = 0; i < cells.length; i += 2) {              
-      tableRows.add(TableRow(children: [cells[i], cells[i + 1]]));          
-    }               
-    
-    String appBarTitle = 'New Log';          
-    if (widget.existingTransaction != null) {              
-      if (widget.isClone) appBarTitle = 'Clone Log';              
-      else if (widget.isSplit) appBarTitle = 'Split Log';              
-      else appBarTitle = 'Edit Log';          
-    }               
-    
-    return Scaffold(              
-      backgroundColor: theme.scaffoldBackgroundColor,               
-      resizeToAvoidBottomInset: false,               
-      appBar: ModernAppBar(                  
-        title: appBarTitle,                  
-        subtitle: 'TRANSACTION',                  
-        leadingIcon: Icons.close_rounded,                  
-        onLeadingPressed: () => Navigator.pop(context),                  
-        trailingIcon: Icons.done_all_rounded,                   
-        onTrailingPressed: () => _submit(bucketItems),              
-      ),                     
-      body: SafeArea(                  
-        child: Column(                      
-          children: [                          
-            Expanded(                              
-              flex: 60,                              
-              child: Column(                                  
-                children: [                                      
-                  Padding(                                          
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),                                          
-                    // --- LOCK: TYPE TOGGLE ---
+
+    final hasDanglingOperator =
+        _expression.isNotEmpty &&
+        ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
+    final origAmount = widget.existingTransaction?.transaction.amount ?? 0.0;
+    final isOverSplit = widget.isSplit && amount >= origAmount;
+
+    if (amount <= 0 ||
+        hasDanglingOperator ||
+        isOverSplit ||
+        _selectedAccountId == null ||
+        (isTransfer && _selectedToAccountId == null) ||
+        (isTransfer && _selectedAccountId == _selectedToAccountId) ||
+        (!isTransfer && _selectedCategoryId == null && !isLoanRep) ||
+        (isExpense && _selectedBucketId == null && !isLoanRep)) {
+      setState(() => _showValidationErrors = true);
+      HapticFeedback.heavyImpact();
+      return;
+    }
+
+    final rawAccounts = ref.read(accountsStreamProvider).asData?.value ?? [];
+    final rawCategories =
+        ref.read(categoriesStreamProvider).asData?.value ?? [];
+
+    Account? targetCC;
+    if (isTransfer &&
+        _selectedToAccountId != null &&
+        _selectedToAccountId != 'EXTERNAL') {
+      final rawTarget = rawAccounts
+          .where((a) => a.id == _selectedToAccountId)
+          .firstOrNull;
+      if (rawTarget?.type == 'Credit Cards') targetCC = rawTarget;
+    } else if (isIncome &&
+        _selectedAccountId != null &&
+        _selectedAccountId != 'EXTERNAL') {
+      final rawTarget = rawAccounts
+          .where((a) => a.id == _selectedAccountId)
+          .firstOrNull;
+      if (rawTarget?.type == 'Credit Cards') targetCC = rawTarget;
+    }
+
+    String? finalCategoryId = _selectedCategoryId;
+    String? finalSubCategory = _selectedSubCategory;
+    String? finalNotes = _notesCtrl.text.trim();
+    String? finalBucketName = _resolveBucketName(
+      activeBucketItems,
+      _selectedBucketId,
+    );
+
+    if (targetCC != null) {
+      final bDay = targetCC.billDate ?? 15;
+      final dDay = targetCC.dueDate ?? 5;
+      final txDate = _selectedDateTime;
+
+      DateTime lastBillDate = DateTime(txDate.year, txDate.month, bDay);
+      if (txDate.day < bDay) {
+        lastBillDate = DateTime(txDate.year, txDate.month - 1, bDay);
+      }
+
+      DateTime dueDate = DateTime(
+        lastBillDate.year,
+        lastBillDate.month + 1,
+        dDay,
+      );
+      if (dDay > bDay) {
+        dueDate = DateTime(lastBillDate.year, lastBillDate.month, dDay);
+      }
+
+      bool inWindow =
+          txDate.isAfter(lastBillDate) &&
+          txDate.isBefore(dueDate.add(const Duration(days: 1)));
+      final selectedCatName = rawCategories
+          .where((c) => c.id == _selectedCategoryId)
+          .firstOrNull
+          ?.name;
+
+      if (inWindow && selectedCatName != 'Repayment') {
+        final isRepayment = await ConfirmationBottomSheet.show(
+          context,
+          title: 'Credit Card Repayment?',
+          description:
+              'This transaction is between the last bill date and the due date. Is this a repayment for the previous statement?',
+          confirmText: 'YES, REPAYMENT',
+          cancelText: 'NO, NORMAL',
+          onConfirm: () {},
+        );
+        if (isRepayment == true) {
+          final repaymentCat = rawCategories
+              .where((c) => c.name == 'Repayment' && c.type == 'Income')
+              .firstOrNull;
+          if (repaymentCat != null) {
+            finalCategoryId = repaymentCat.id;
+            finalSubCategory = isTransfer
+                ? 'Credit Card Bill'
+                : 'Account Adjustments';
+            finalNotes = finalNotes!.isEmpty
+                ? 'Auto-tagged as Bill Repayment'
+                : '$finalNotes (Bill Repayment)';
+          }
+        }
+      }
+    }
+
+    if (widget.isSplit) {
+      final success = await ref
+          .read(transactionActionProvider.notifier)
+          .splitTransaction(
+            originalTxId: widget.existingTransaction!.transaction.id,
+            splitAmount: amount,
+            type: _types[_typeIndex],
+            date: _selectedDateTime,
+            accountId: _selectedAccountId!,
+            toAccountId: _selectedToAccountId,
+            categoryId: finalCategoryId,
+            subCategory: finalSubCategory,
+            bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
+            bucketName: finalBucketName,
+            notes: finalNotes,
+            isSpillover: _isSpillover,
+            isSettlementVerified: _isSettlementVerified,
+            locationName: _locationName,
+            latitude: _latitude,
+            longitude: _longitude,
+          );
+      if (success && mounted) Navigator.pop(context);
+      return;
+    }
+
+    final String? safeExistingId =
+        (widget.existingTransaction != null && !widget.isClone)
+        ? widget.existingTransaction!.transaction.id
+        : null;
+
+    final success = await ref
+        .read(transactionActionProvider.notifier)
+        .saveTransaction(
+          existingId: safeExistingId,
+          type: _types[_typeIndex],
+          amount: amount,
+          date: _selectedDateTime,
+          accountId: _selectedAccountId!,
+          toAccountId: _selectedToAccountId,
+          categoryId: finalCategoryId,
+          subCategory: finalSubCategory,
+          bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
+          bucketName: finalBucketName,
+          notes: finalNotes,
+          isSpillover: _isSpillover,
+          isSettlementVerified: _isSettlementVerified,
+          locationName: _locationName,
+          latitude: _latitude,
+          longitude: _longitude,
+        );
+
+    if (success && mounted) Navigator.pop(context);
+  }
+
+  Widget _buildTableCell(
+    String label,
+    String? value,
+    IconData icon,
+    VoidCallback? onTap,
+    bool isError,
+  ) {
+    final theme = Theme.of(context);
+    final hasValue = value != null && value.isNotEmpty;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    icon,
+                    size: 14,
+                    color: isError
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                        color: isError
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                hasValue ? value : (onTap != null ? 'Select' : ''),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: hasValue ? FontWeight.w800 : FontWeight.w500,
+                  color: isError
+                      ? theme.colorScheme.error
+                      : (hasValue
+                            ? theme.colorScheme.onSurface
+                            : theme.colorScheme.onSurfaceVariant.withOpacity(
+                                0.5,
+                              )),
+                  letterSpacing: -0.3,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final isExpense = _typeIndex == 0;
+    final isIncome = _typeIndex == 1;
+    final isTransfer = _typeIndex == 2;
+    final isLoanRep = _isLoanRepayment;
+
+    final txColor = TransactionColors.getTypeColor(_types[_typeIndex], theme);
+    final amountVal = double.tryParse(_liveResult) ?? 0.0;
+    final origAmount = widget.existingTransaction?.transaction.amount ?? 0.0;
+    final hasDanglingOperator =
+        _expression.isNotEmpty &&
+        ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
+    final isOverSplit = widget.isSplit && amountVal >= origAmount;
+
+    final hasAmountError =
+        _showValidationErrors &&
+        (amountVal <= 0 || hasDanglingOperator || isOverSplit);
+    final displayAmountColor = hasAmountError
+        ? theme.colorScheme.error
+        : txColor;
+
+    String errorMsg = 'Amount must be greater than 0';
+    if (hasDanglingOperator) errorMsg = 'Incomplete mathematical expression';
+    if (isOverSplit)
+      errorMsg =
+          'Split amount must be less than original (₹${origAmount.toStringAsFixed(2)})';
+
+    final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
+    final rawCategories =
+        ref.watch(categoriesStreamProvider).asData?.value ?? [];
+
+    final budgetDate = DateTime(
+      _selectedDateTime.year,
+      _selectedDateTime.month,
+    );
+    final budgetAsync = ref.watch(_formBudgetProvider(budgetDate));
+    final List<_BucketItem> bucketItems = [];
+    final activeBudget = budgetAsync.asData?.value;
+
+    bool isBudgetLocked = activeBudget == null || activeBudget.isClosed;
+    String lockedReason = activeBudget == null
+        ? 'No active budget exists for this month.'
+        : 'This month\'s budget is permanently closed.';
+
+    final bool isEditingExisting =
+        widget.existingTransaction != null &&
+        !widget.isClone &&
+        !widget.isSplit;
+
+    if (isBudgetLocked) {
+      if (isEditingExisting &&
+          _selectedBucketId != null &&
+          _selectedBucketId != -1) {
+        bucketItems.add(
+          _BucketItem(_selectedBucketId!, _historicalBucketName ?? ''),
+        );
+      } else {
+        if (_selectedBucketId != null && _selectedBucketId != -1) {
+          _selectedBucketId = null;
+        }
+      }
+      bucketItems.add(_BucketItem(-1, 'Out of Bucket'));
+    } else {
+      if (activeBudget.bucketsSnapshot != null) {
+        try {
+          final List<dynamic> decoded = jsonDecode(
+            activeBudget.bucketsSnapshot!,
+          );
+          for (var b in decoded) {
+            bucketItems.add(_BucketItem(b['id'] as int, b['name'] as String));
+          }
+        } catch (e) {}
+      }
+      if (isEditingExisting &&
+          _selectedBucketId != null &&
+          _selectedBucketId != -1) {
+        if (!bucketItems.any((b) => b.id == _selectedBucketId)) {
+          String displayLabel = _historicalBucketName ?? '';
+          if (bucketItems.any((b) => b.name == displayLabel))
+            displayLabel = '$displayLabel (Legacy)';
+          bucketItems.add(_BucketItem(_selectedBucketId!, displayLabel));
+        }
+      } else {
+        if (_selectedBucketId != null && _selectedBucketId != -1) {
+          if (!bucketItems.any((b) => b.id == _selectedBucketId)) {
+            _selectedBucketId = null;
+          }
+        }
+      }
+      bucketItems.add(_BucketItem(-1, 'Out of Bucket'));
+    }
+
+    final activeCategories = rawCategories
+        .where((c) => c.type == _types[_typeIndex])
+        .toList();
+    final selectedCatMatch = rawCategories
+        .where((c) => c.id == _selectedCategoryId)
+        .firstOrNull;
+    final activeSubCategories = selectedCatMatch?.subCategories ?? [];
+
+    final selectedAccMatch = rawAccounts
+        .where((a) => a.id == _selectedAccountId)
+        .firstOrNull;
+    final selectedToAccMatch = rawAccounts
+        .where((a) => a.id == _selectedToAccountId)
+        .firstOrNull;
+
+    final displayAccName = _selectedAccountId == 'EXTERNAL'
+        ? 'External Account'
+        : selectedAccMatch?.name;
+    final displayToAccName = _selectedToAccountId == 'EXTERNAL'
+        ? 'External Account'
+        : selectedToAccMatch?.name;
+
+    final selectedBucketMatch = bucketItems
+        .where((b) => b.id == _selectedBucketId)
+        .firstOrNull;
+
+    final List<Widget> cells = [
+      _buildTableCell(
+        'DATE & TIME',
+        _formatDateTime(_selectedDateTime),
+        Icons.calendar_today_rounded,
+        _pickDateTime,
+        false,
+      ),
+
+      _buildTableCell(
+        isTransfer ? 'FROM ACCOUNT' : 'ACCOUNT',
+        displayAccName,
+        Icons.account_balance_wallet_rounded,
+        isLoanRep ? null : () => _pickAccount(false, rawAccounts),
+        _showValidationErrors && _selectedAccountId == null,
+      ),
+    ];
+
+    if (isTransfer) {
+      cells.add(
+        _buildTableCell(
+          'TO ACCOUNT',
+          displayToAccName,
+          Icons.sync_alt_rounded,
+          isLoanRep ? null : () => _pickAccount(true, rawAccounts),
+          _showValidationErrors && _selectedToAccountId == null,
+        ),
+      );
+    } else {
+      cells.add(
+        _buildTableCell(
+          'CATEGORY',
+          isLoanRep ? 'Loan Repayment' : selectedCatMatch?.name,
+          Icons.category_rounded,
+          isLoanRep
+              ? null
+              : () => _pickCategory(activeCategories, selectedCatMatch),
+          _showValidationErrors && _selectedCategoryId == null && !isLoanRep,
+        ),
+      );
+
+      if (activeSubCategories.isNotEmpty ||
+          _selectedSubCategory != null ||
+          isLoanRep) {
+        cells.add(
+          _buildTableCell(
+            'SUBCATEGORY',
+            _selectedSubCategory,
+            Icons.subdirectory_arrow_right_rounded,
+            isLoanRep ? null : () => _pickSubCategory(activeSubCategories),
+            false,
+          ),
+        );
+      }
+
+      if (!isIncome) {
+        cells.add(
+          _buildTableCell(
+            'BUDGET BUCKET',
+            isLoanRep ? 'Out of Bucket' : selectedBucketMatch?.name,
+            Icons.donut_small_rounded,
+            isLoanRep
+                ? null
+                : () => _pickBucket(bucketItems, selectedBucketMatch),
+            _showValidationErrors &&
+                isExpense &&
+                _selectedBucketId == null &&
+                !isLoanRep,
+          ),
+        );
+      }
+    }
+
+    cells.add(
+      _buildTableCell(
+        'NOTES',
+        _notesCtrl.text.isEmpty ? null : _notesCtrl.text,
+        Icons.notes_rounded,
+        _openNotesEditor,
+        false,
+      ),
+    );
+    cells.add(
+      _buildTableCell(
+        'LOCATION',
+        _isFetchingLoc ? 'Locating...' : _locationName,
+        Icons.pin_drop_rounded,
+        _fetchLocation,
+        false,
+      ),
+    );
+
+    if (cells.length % 2 != 0) cells.add(const SizedBox.shrink());
+
+    List<TableRow> tableRows = [];
+    for (int i = 0; i < cells.length; i += 2) {
+      tableRows.add(TableRow(children: [cells[i], cells[i + 1]]));
+    }
+
+    String appBarTitle = 'New Log';
+    if (widget.existingTransaction != null) {
+      if (widget.isClone)
+        appBarTitle = 'Clone Log';
+      else if (widget.isSplit)
+        appBarTitle = 'Split Log';
+      else
+        appBarTitle = 'Edit Log';
+    }
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      resizeToAvoidBottomInset: false,
+      appBar: ModernAppBar(
+        title: appBarTitle,
+        subtitle: 'TRANSACTION',
+        leadingIcon: Icons.close_rounded,
+        onLeadingPressed: () => Navigator.pop(context),
+        trailingIcon: Icons.done_all_rounded,
+        onTrailingPressed: () => _submit(bucketItems),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              flex: 60,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                     child: AbsorbPointer(
                       absorbing: isLoanRep,
                       child: Opacity(
                         opacity: isLoanRep ? 0.6 : 1.0,
-                        child: ModernBoxyToggle(                                              
-                          labels: _types,                                              
-                          selectedIndex: _typeIndex,                                              
-                          onSelected: (index) => setState(() {                                                  
-                            final oldIndex = _typeIndex;                                                  
-                            _typeIndex = index;                                                  
-                            _selectedCategoryId = null;                                                   
-                            _selectedSubCategory = null;                                                  
-                            if (index == 1) _selectedBucketId = null;                                                   
-                            if (oldIndex == 2 && index != 2) {                                                      
-                              _selectedAccountId = null;                                                      
-                              _selectedToAccountId = null;                                                  
-                            } else if (index != 2 && _selectedAccountId == 'EXTERNAL') {                                                      
-                              _selectedAccountId = null;                                                  
-                            }                                              
-                          }),                                          
+                        child: ModernBoxyToggle(
+                          labels: _types,
+                          selectedIndex: _typeIndex,
+                          onSelected: (index) => setState(() {
+                            final oldIndex = _typeIndex;
+                            _typeIndex = index;
+                            _selectedCategoryId = null;
+                            _selectedSubCategory = null;
+                            if (index == 1) _selectedBucketId = null;
+                            if (oldIndex == 2 && index != 2) {
+                              _selectedAccountId = null;
+                              _selectedToAccountId = null;
+                            } else if (index != 2 &&
+                                _selectedAccountId == 'EXTERNAL') {
+                              _selectedAccountId = null;
+                            }
+                          }),
                         ),
                       ),
-                    ),                                      
-                  ),                                      
-                  Expanded(                                          
-                    flex: 3,                                          
-                    child: Center(                                              
-                      child: Padding(                                                  
-                        padding: const EdgeInsets.symmetric(horizontal: 24),                                                  
-                        child: Column(                                                      
-                          mainAxisSize: MainAxisSize.min,                                                      
-                          children: [                                                          
-                            if (widget.isSplit)                                                              
-                              Padding(                                                                  
-                                padding: const EdgeInsets.only(bottom: 8.0),                                                                  
-                                child: Text(                                                                      
-                                  'SPLITTING FROM ₹${origAmount.toStringAsFixed(2)}',                                                                    
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: theme.colorScheme.primary, letterSpacing: 1.5),                                                                  
-                                ),                                                              
-                              ),                                                          
-                            FittedBox(                                                              
-                              fit: BoxFit.scaleDown,                                                              
-                              child: Row(                                                                  
-                                mainAxisSize: MainAxisSize.min,                                                                  
-                                crossAxisAlignment: CrossAxisAlignment.center,                                                                  
-                                children: [                                                                      
-                                  Text(                                                                          
-                                    '₹ ',                                                                         
-                                    style: Theme.of(context).textTheme.displayMedium!.copyWith(                                                                              
-                                      color: displayAmountColor.withOpacity(0.7),                                                                               
-                                      fontWeight: FontWeight.w600                                                                          
-                                    )                                                                      
-                                  ),                                                                      
-                                  IntrinsicWidth(                                                                          
-                                    child: ConstrainedBox(                                                                              
-                                      constraints: const BoxConstraints(minWidth: 40),                                                                              
-                                      child: TextField(                                                                                  
-                                        controller: _amountController,                                                                                  
-                                        readOnly: true,                                                                                   
-                                        showCursor: true,                                                                                   
-                                        autofocus: true,                                                                                  
-                                        cursorColor: displayAmountColor,                                                                                  
-                                        style: Theme.of(context).textTheme.displayLarge!.copyWith(color: displayAmountColor),                                                                                  
-                                        decoration: InputDecoration(                                                                                      
-                                          border: InputBorder.none,                                                                                      
-                                          focusedBorder: InputBorder.none,                                                                                      
-                                          enabledBorder: InputBorder.none,                                                                                      
-                                          errorBorder: InputBorder.none,                                                                                      
-                                          disabledBorder: InputBorder.none,                                                                                      
-                                          isDense: true,                                                                                      
-                                          contentPadding: EdgeInsets.zero,                                                                                      
-                                          hintText: '0.00',                                                                                      
-                                          hintStyle: Theme.of(context).textTheme.displayLarge!.copyWith(color: displayAmountColor.withOpacity(0.3)),                                                                                  
-                                        ),                                                                              
-                                      ),                                                                          
-                                    ),                                                                      
-                                  ),                                                                  
-                                ],                                                              
-                              ),                                                          
-                            ),                                                          
-                            if (_expression.isNotEmpty && _expression != _liveResult && !hasAmountError)                                                              
-                              Text(                                                                  
-                                '= ₹$_liveResult',                                                                
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: displayAmountColor),                                                              
-                              ),                                                          
-                            if (hasAmountError)                                                              
-                              Padding(                                                                  
-                                padding: const EdgeInsets.only(top: 4.0),                                                                  
-                                child: Text(                                                                      
-                                  errorMsg,                                                                      
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: theme.colorScheme.error),                                                                  
-                                ),                                                              
-                              ),                                                      
-                          ],                                                  
-                        ),                                              
-                      ),                                          
-                    ),                                      
-                  ),                                      
-                  Expanded(                                          
-                    flex: 5,                                          
-                    child: SingleChildScrollView(                                              
-                      physics: const BouncingScrollPhysics(),                                              
-                      child: Column(                                                  
-                        children: [                                                      
-                          if (isExpense && isBudgetLocked && !isEditingExisting && !isLoanRep)                                                          
-                            Padding(                                                              
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),                                                              
-                              child: Container(                                                                  
-                                padding: const EdgeInsets.all(12),                                                                  
-                                decoration: BoxDecoration(                                                                      
-                                  color: theme.colorScheme.error.withOpacity(0.1),                                                                      
-                                  borderRadius: BorderRadius.circular(12),                                                                      
-                                  border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),                                                                  
-                                ),                                                                  
-                                child: Row(                                                                      
-                                  children: [                                                                          
-                                    Icon(Icons.info_outline_rounded, color: theme.colorScheme.error, size: 20),                                                                          
-                                    const SizedBox(width: 8),                                                                          
-                                    Expanded(                                                                              
-                                      child: Text(                                                                                  
-                                        'Only "Out of Bucket" is available because $lockedReason',                                                                                  
-                                        style: TextStyle(fontSize: 11, color: theme.colorScheme.error, fontWeight: FontWeight.w700),                                                                              
-                                      ),                                                                          
-                                    ),                                                                      
-                                  ],                                                                  
-                                ),                                                              
-                              ),                                                          
-                            ),                                                                                   
-                          
-                          Container(                                                          
-                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),                                                          
-                            decoration: BoxDecoration(                                                              
-                              color: theme.colorScheme.surface,                                                              
-                              borderRadius: BorderRadius.circular(16),                                                              
-                              border: Border.all(color: theme.dividerColor, width: 1.0),                                                              
-                              boxShadow: [                                                                  
-                                BoxShadow(color: Colors.black.withOpacity(isDark ? 0.2 : 0.05), blurRadius: 10, offset: const Offset(0, 4))                                                              
-                              ],                                                          
-                            ),                                                          
-                            clipBehavior: Clip.antiAlias,                                                           
-                            child: Material(                                                              
-                              color: Colors.transparent,                                                              
-                              child: Table(                                                                  
-                                border: TableBorder.symmetric(                                                                      
-                                  inside: BorderSide(color: theme.dividerColor, width: 1.0),                                                                  
-                                ),                                                                  
-                                children: tableRows,                                                              
-                              ),                                                          
-                            ),                                                      
-                          ),                                                  
-                        ],                                              
-                      ),                                          
-                    ),                                      
-                  ),                                  
-                ],                              
-              ),                          
-            ),                                       
-            Expanded(                              
-              flex: 40,                              
-              child: DockedCalculatorPad(                                  
-                backgroundColor: theme.scaffoldBackgroundColor,                                   
-                actionColor: txColor,                                  
-                onKeyPress: _onCalcKeyPress,                              
-              ),                          
-            ),                      
-          ],                  
-        ),              
-      ),          
-    );      
-  }  
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.isSplit)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Text(
+                                  'SPLITTING FROM ₹${origAmount.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    color: theme.colorScheme.primary,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                              ),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '₹ ',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .displayMedium!
+                                        .copyWith(
+                                          color: displayAmountColor.withOpacity(
+                                            0.7,
+                                          ),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                  IntrinsicWidth(
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        minWidth: 40,
+                                      ),
+                                      child: TextField(
+                                        controller: _amountController,
+                                        readOnly: true,
+                                        showCursor: true,
+                                        autofocus: true,
+                                        cursorColor: displayAmountColor,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .displayLarge!
+                                            .copyWith(
+                                              color: displayAmountColor,
+                                            ),
+                                        decoration: InputDecoration(
+                                          border: InputBorder.none,
+                                          focusedBorder: InputBorder.none,
+                                          enabledBorder: InputBorder.none,
+                                          errorBorder: InputBorder.none,
+                                          disabledBorder: InputBorder.none,
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.zero,
+                                          hintText: '0.00',
+                                          hintStyle: Theme.of(context)
+                                              .textTheme
+                                              .displayLarge!
+                                              .copyWith(
+                                                color: displayAmountColor
+                                                    .withOpacity(0.3),
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_expression.isNotEmpty &&
+                                _expression != _liveResult &&
+                                !hasAmountError)
+                              Text(
+                                '= ₹$_liveResult',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: displayAmountColor,
+                                ),
+                              ),
+                            if (hasAmountError)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  errorMsg,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 5,
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        children: [
+                          if (isExpense &&
+                              isBudgetLocked &&
+                              !isEditingExisting &&
+                              !isLoanRep)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.error.withOpacity(
+                                    0.1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: theme.colorScheme.error.withOpacity(
+                                      0.3,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline_rounded,
+                                      color: theme.colorScheme.error,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Only "Out of Bucket" is available because $lockedReason',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: theme.colorScheme.error,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                          Container(
+                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: theme.dividerColor,
+                                width: 1.0,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(
+                                    isDark ? 0.2 : 0.05,
+                                  ),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: Table(
+                                border: TableBorder.symmetric(
+                                  inside: BorderSide(
+                                    color: theme.dividerColor,
+                                    width: 1.0,
+                                  ),
+                                ),
+                                children: tableRows,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 40,
+              child: DockedCalculatorPad(
+                backgroundColor: theme.scaffoldBackgroundColor,
+                actionColor: txColor,
+                onKeyPress: _onCalcKeyPress,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

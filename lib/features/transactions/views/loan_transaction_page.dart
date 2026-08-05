@@ -1,4 +1,5 @@
 import 'dart:math'; 
+import 'dart:ui';
 import 'package:flutter/material.dart'; 
 import 'package:flutter/services.dart'; 
 import 'package:flutter_riverpod/flutter_riverpod.dart'; 
@@ -14,7 +15,6 @@ import '../components/tax_rate_bottom_sheet.dart';
 import '../components/interest_payable_bottom_sheet.dart'; 
 import '../components/loan_payment_bottom_sheet.dart'; 
 import '../../accounts/providers/account_provider.dart'; 
-import 'transaction_form_page.dart'; 
 
 class LoanTransactionPage extends ConsumerWidget {   
   final Account account;   
@@ -49,6 +49,53 @@ class LoanTransactionPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),         
         error: (e, st) => Center(child: Text('Error: $e')),         
         data: (transactions) {           
+
+          final closingBalances = <String, double>{};
+          double totalNetImpact = 0;
+
+          for (var txData in transactions) {
+            final t = txData.transaction;
+            if (t.type == 'Income') {
+              totalNetImpact += t.amount;
+            } else if (t.type == 'Expense') {
+              totalNetImpact -= t.amount;
+            } else if (t.type == 'Transfer') {
+              if (t.accountId == currentAccount.id) {
+                totalNetImpact -= t.amount;
+              } else if (t.toAccountId == currentAccount.id) {
+                totalNetImpact += t.amount;
+              }
+            }
+          }
+
+          double runningBal = currentAccount.balance - totalNetImpact;
+          
+          for (var txData in transactions.reversed) {
+            final t = txData.transaction;
+            if (t.type == 'Income') {
+              runningBal += t.amount;
+            } else if (t.type == 'Expense') {
+              runningBal -= t.amount;
+            } else if (t.type == 'Transfer') {
+              if (t.accountId == currentAccount.id) {
+                runningBal -= t.amount;
+              } else if (t.toAccountId == currentAccount.id) {
+                runningBal += t.amount;
+              }
+            }
+            closingBalances[t.id] = runningBal;
+          }
+
+          // --- FIX: GROUP TRANSACTIONS BY MONTH ---
+          final groupedTransactions = <String, List<dynamic>>{};
+          const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+          for (var txData in transactions) {
+            final tx = txData.transaction;
+            final groupKey = '${fullMonths[tx.date.month - 1]} ${tx.date.year}';
+            groupedTransactions.putIfAbsent(groupKey, () => []).add(txData);
+          }
+
           return CustomScrollView(             
             physics: const BouncingScrollPhysics(),             
             slivers: [               
@@ -90,17 +137,33 @@ class LoanTransactionPage extends ConsumerWidget {
                   child: Center(child: Text('No repayments logged yet.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),                 
                 )               
               else                 
-                SliverPadding(                   
-                  padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd),                   
-                  sliver: SliverList(                     
-                    delegate: SliverChildBuilderDelegate(                       
-                      (context, index) {                         
-                        return TransactionCard(data: transactions[index], currentAccountId: currentAccount.id);                       
-                      },                       
-                      childCount: transactions.length,                     
-                    ),                   
-                  ),                 
-                ),                                
+                ...groupedTransactions.entries.map((entry) {
+                  return SliverMainAxisGroup(
+                    slivers: [
+                      SliverPersistentHeader(
+                        pinned: true, 
+                        delegate: _StickyLoanMonthHeaderDelegate(title: entry.key, theme: theme),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final txData = entry.value[index];
+                              return TransactionCard(
+                                data: txData, 
+                                currentAccountId: currentAccount.id,
+                                closingBalance: closingBalances[txData.transaction.id], 
+                              );
+                            },
+                            childCount: entry.value.length,
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
+                    ],
+                  );
+                }).toList(),                              
               
               const SliverToBoxAdapter(child: SizedBox(height: 100)),             
             ],           
@@ -220,7 +283,6 @@ class _LoanSummaryCard extends ConsumerWidget {
             alignment: Alignment.centerLeft,
             child: CurrencyText(             
               amount: totalOutstanding.abs(),             
-              // FIX: Replaced `signText` with `outstandingSign`
               sign: outstandingSign,             
               amountStyle: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: outstandingColor, letterSpacing: -0.5),             
               symbolStyle: TextStyle(fontSize: 14, color: outstandingColor.withOpacity(0.7)),           
@@ -415,4 +477,41 @@ class _LoanSummaryCard extends ConsumerWidget {
       await _updateDatabase(ref, newTax: calculatedTax);     
     }   
   }
+}
+
+class _StickyLoanMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final String title;
+  final ThemeData theme;
+
+  _StickyLoanMonthHeaderDelegate({required this.title, required this.theme});
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          color: theme.scaffoldBackgroundColor.withOpacity(0.85),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          alignment: Alignment.centerLeft,
+          child: Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+              letterSpacing: 1.5,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  double get maxExtent => 40.0;
+  @override
+  double get minExtent => 40.0;
+  @override
+  bool shouldRebuild(covariant _StickyLoanMonthHeaderDelegate oldDelegate) => title != oldDelegate.title;
 }

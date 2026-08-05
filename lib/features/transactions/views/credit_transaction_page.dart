@@ -78,9 +78,14 @@ class CreditTransactionPage extends ConsumerWidget {
     while (pointerEnd.isAfter(oldest) || pointerEnd.isAtSameMomentAs(oldest)) {
       DateTime pointerStart = DateTime(pointerEnd.year, pointerEnd.month - 1, bDay + 1, 0, 0, 0);
       
-      DateTime pointerDue = DateTime(pointerEnd.year, pointerEnd.month + 1, dDay, 23, 59, 59);
-      if (dDay > bDay && pointerEnd.month == pointerStart.month) {
+      // --- FIX: FLAWLESS DUE DATE MATH ---
+      DateTime pointerDue;
+      if (dDay > bDay) {
+        // Due date falls in the same month as the statement end date (e.g., Bill 2, Due 22)
         pointerDue = DateTime(pointerEnd.year, pointerEnd.month, dDay, 23, 59, 59);
+      } else {
+        // Due date crosses over into the following month (e.g., Bill 25, Due 12)
+        pointerDue = DateTime(pointerEnd.year, pointerEnd.month + 1, dDay, 23, 59, 59);
       }
 
       final cycleTxs = transactions.where((t) {
@@ -178,7 +183,6 @@ class CreditTransactionPage extends ConsumerWidget {
 
           double runningBal = liveAccount.balance - totalNetImpact;
           
-          // Iterating reversed guarantees identical timestamps walk forward logically
           for (var txData in transactions.reversed) {
             final t = txData.transaction;
             if (t.type == 'Income') {
