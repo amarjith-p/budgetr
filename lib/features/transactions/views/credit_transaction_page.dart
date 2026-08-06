@@ -77,12 +77,13 @@ class CreditTransactionPage extends ConsumerWidget {
     if (transactions.isEmpty) return [];
     final bDay = liveAccount.safeBillingDay;
     final dDay = liveAccount.safeDueDay;
-
     List<BillingCycle> cycles = [];
+
     DateTime oldest = transactions.last.transaction.date;
     DateTime newest = transactions.first.transaction.date;
     DateTime now = DateTime.now();
     if (now.isAfter(newest)) newest = now;
+
     DateTime currentEnd = DateTime(newest.year, newest.month, bDay, 23, 59, 59);
     if (newest.day > bDay) {
       currentEnd = DateTime(newest.year, newest.month + 1, bDay, 23, 59, 59);
@@ -98,7 +99,6 @@ class CreditTransactionPage extends ConsumerWidget {
         0,
         0,
       );
-
       DateTime pointerDue;
       if (dDay > bDay) {
         pointerDue = DateTime(
@@ -119,7 +119,6 @@ class CreditTransactionPage extends ConsumerWidget {
           59,
         );
       }
-
       final cycleTxs = transactions.where((t) {
         final effectiveDate = liveAccount.getEffectiveDate(t.transaction);
         return (effectiveDate.isAfter(pointerStart) ||
@@ -127,7 +126,6 @@ class CreditTransactionPage extends ConsumerWidget {
             (effectiveDate.isBefore(pointerEnd) ||
                 effectiveDate.isAtSameMomentAs(pointerEnd));
       }).toList();
-
       cycles.add(
         BillingCycle(
           startDate: pointerStart,
@@ -391,7 +389,6 @@ class CreditTransactionPage extends ConsumerWidget {
                       );
                     })
                     .toList(),
-
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );
@@ -412,13 +409,41 @@ class _CreditSummaryCard extends StatelessWidget {
     required this.allTransactions,
   });
 
+  // --- LOAN STYLE MINI DATE BUILDER ---
+  Widget _buildDateMini(String label, String value, ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 8,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
     final now = DateTime.now();
     BillingCycle? lastCycle = cycles.length > 1 ? cycles[1] : null;
     DateTime? lastStatementDate = lastCycle?.endDate;
+
     double historicalNet = 0;
     double currentCycleNet = 0;
     double paymentsSinceStatement = 0;
@@ -452,12 +477,21 @@ class _CreditSummaryCard extends StatelessWidget {
       }
     }
 
+    // Exact UNBILLED / BILLED separation requested previously
     double remainingDueNet = historicalNet + paymentsSinceStatement;
-
     double adjustedUnbilled = currentCycleNet;
     if (lastCycle != null && now.isAfter(lastCycle.dueDate)) {
       adjustedUnbilled += remainingDueNet;
     }
+
+    // Exact Total calculation mapped
+    double totalOutstanding = currentCycleNet + remainingDueNet;
+    String totalSign = totalOutstanding < 0
+        ? '-₹ '
+        : (totalOutstanding > 0 ? '+₹ ' : '₹ ');
+    Color totalColor = totalOutstanding < 0
+        ? theme.colorScheme.onSurface
+        : Colors.green;
 
     String unbilledSign = adjustedUnbilled < 0
         ? '-₹ '
@@ -465,6 +499,7 @@ class _CreditSummaryCard extends StatelessWidget {
     String statementSign = historicalNet < 0
         ? '-₹ '
         : (historicalNet > 0 ? '+₹ ' : '₹ ');
+
     String statusText = 'NO DUES';
     Color statusColor = theme.colorScheme.primary;
     int daysUntilDue = 0;
@@ -473,12 +508,10 @@ class _CreditSummaryCard extends StatelessWidget {
       daysUntilDue = lastCycle.dueDate.difference(now).inDays;
       if (remainingDueNet < 0) {
         if (daysUntilDue < 0) {
-          // --- APPLIED GLOBAL FORMATTER ---
           statusText =
               'OVERDUE (- ₹${CurrencyFormatter.format(remainingDueNet.abs())})';
           statusColor = theme.colorScheme.error;
         } else if (paymentsSinceStatement > 0) {
-          // --- APPLIED GLOBAL FORMATTER ---
           statusText =
               'PARTIAL (- ₹${CurrencyFormatter.format(remainingDueNet.abs())} LEFT)';
           statusColor = Colors.orangeAccent.shade700;
@@ -487,7 +520,6 @@ class _CreditSummaryCard extends StatelessWidget {
           statusColor = theme.colorScheme.error;
         }
       } else if (remainingDueNet > 0) {
-        // --- APPLIED GLOBAL FORMATTER ---
         statusText =
             'SURPLUS (+ ₹${CurrencyFormatter.format(remainingDueNet)})';
         statusColor = theme.colorScheme.primary;
@@ -497,161 +529,206 @@ class _CreditSummaryCard extends StatelessWidget {
       }
     }
 
+    String billDateStr = cycles.isNotEmpty
+        ? '${cycles[0].endDate.day} ${DateTimeConstants.shortMonths[cycles[0].endDate.month - 1]} ${cycles[0].endDate.year}'
+        : '--';
+    String dueDateStr = lastCycle != null
+        ? '${lastCycle.dueDate.day} ${DateTimeConstants.shortMonths[lastCycle.dueDate.month - 1]} ${lastCycle.dueDate.year}'
+        : '--';
+
+    final labelStyle = TextStyle(
+      fontSize: 8,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0.5,
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final valueStyle = TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w800,
+      color: theme.colorScheme.onSurface,
+      letterSpacing: -0.5,
+    );
+    final symbolStyle = TextStyle(
+      fontSize: 9,
+      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
+    );
+
     return Container(
+      padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: theme.dividerColor, width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(
-              theme.brightness == Brightness.dark ? 0.2 : 0.05,
-            ),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'UNBILLED',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    CurrencyText(
-                      amount: adjustedUnbilled,
-                      sign: unbilledSign,
-                      amountStyle: textTheme.titleLarge!,
-                    ),
-                    const SizedBox(height: 12),
-                    if (cycles.isNotEmpty)
-                      _buildMiniInfo(
-                        Icons.calendar_today_rounded,
-                        'Bills on ${cycles[0].endDate.day} ${DateTimeConstants.shortMonths[cycles[0].endDate.month - 1]}',
-                        theme,
-                      ),
-
-                    if (cycles.isNotEmpty &&
-                        remainingDueNet != 0 &&
-                        (lastCycle != null && now.isAfter(lastCycle.dueDate)))
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: _buildMiniInfo(
-                          Icons.compare_arrows_rounded,
-                          // --- APPLIED GLOBAL FORMATTER ---
-                          'Includes ${remainingDueNet < 0 ? '-' : '+'}₹${CurrencyFormatter.format(remainingDueNet.abs())} prev. balance',
-                          theme,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            VerticalDivider(
-              width: 1,
-              thickness: 1,
-              color: theme.dividerColor.withOpacity(0.3),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'LAST STATEMENT',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    CurrencyText(
-                      amount: historicalNet,
-                      sign: statementSign,
-                      amountStyle: textTheme.titleLarge!,
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        statusText,
-                        style: textTheme.labelSmall?.copyWith(
-                          color: statusColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (lastCycle != null && remainingDueNet < 0)
-                      _buildMiniInfo(
-                        daysUntilDue < 0
-                            ? Icons.warning_rounded
-                            : Icons.timer_outlined,
-                        daysUntilDue < 0
-                            ? 'Due passed'
-                            : 'Due in $daysUntilDue days',
-                        theme,
-                        isAlert: daysUntilDue < 0,
-                      )
-                    else if (lastCycle != null)
-                      _buildMiniInfo(
-                        Icons.check_circle_outline_rounded,
-                        'Cleared',
-                        theme,
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMiniInfo(
-    IconData icon,
-    String text,
-    ThemeData theme, {
-    bool isAlert = false,
-  }) {
-    final color = isAlert
-        ? theme.colorScheme.error
-        : theme.colorScheme.onSurfaceVariant;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 2.0),
-          child: Icon(icon, size: 12, color: color),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            text,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'TOTAL OUTSTANDING',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.0,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: CurrencyText(
+              amount: totalOutstanding.abs(),
+              sign: totalSign,
+              amountStyle: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: totalColor,
+                letterSpacing: -0.5,
+              ),
+              symbolStyle: TextStyle(
+                fontSize: 14,
+                color: totalColor.withOpacity(0.7),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildDateMini('NEXT BILL DATE', billDateStr, theme),
+              _buildDateMini('PAYMENT DUE DATE', dueDateStr, theme),
+            ],
+          ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12.0),
+            child: Divider(height: 1),
+          ),
+
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text('UNBILLED', style: labelStyle),
+                      const SizedBox(height: 6),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: CurrencyText(
+                          amount: adjustedUnbilled.abs(),
+                          sign: unbilledSign,
+                          amountStyle: valueStyle.copyWith(
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          symbolStyle: symbolStyle.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.8),
+                          ),
+                        ),
+                      ),
+
+                      if (cycles.isNotEmpty &&
+                          remainingDueNet != 0 &&
+                          (lastCycle != null && now.isAfter(lastCycle.dueDate)))
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            'Includes ${remainingDueNet < 0 ? '-' : '+'}₹${CurrencyFormatter.format(remainingDueNet.abs())} prev.',
+                            style: TextStyle(
+                              fontSize: 8,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                VerticalDivider(
+                  width: 16,
+                  thickness: 1,
+                  color: theme.dividerColor,
+                ),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text('LAST STATEMENT', style: labelStyle),
+                      const SizedBox(height: 6),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: CurrencyText(
+                          amount: historicalNet.abs(),
+                          sign: statementSign,
+                          amountStyle: valueStyle.copyWith(
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          symbolStyle: symbolStyle.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.8),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                            color: statusColor,
+                          ),
+                        ),
+                      ),
+
+                      if (lastCycle != null && remainingDueNet < 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            daysUntilDue < 0
+                                ? 'Due passed'
+                                : 'Due in $daysUntilDue days',
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w700,
+                              color: daysUntilDue < 0
+                                  ? theme.colorScheme.error
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
