@@ -923,164 +923,167 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 right: 24,
                 top: 12,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 24),
-                      decoration: BoxDecoration(
-                        color: theme.dividerColor,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Transaction Note',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
+              // --- FIX: Wrap Column in SingleChildScrollView to prevent overflow ---
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 24),
+                        decoration: BoxDecoration(
+                          color: theme.dividerColor,
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      Text(
-                        '${_notesCtrl.text.length}/140',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Transaction Note',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        Text(
+                          '${_notesCtrl.text.length}/140',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _notesCtrl,
+                      autofocus: true,
+                      maxLines: 3,
+                      maxLength: 140,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                      textInputAction: TextInputAction.done,
+                      onChanged: (val) => setModalState(() {}),
+                      buildCounter:
+                          (
+                            context, {
+                            required currentLength,
+                            required isFocused,
+                            maxLength,
+                          }) => null,
+                      decoration: InputDecoration(
+                        hintText: 'What was this for?',
+                        hintStyle: TextStyle(
                           color: theme.colorScheme.onSurfaceVariant.withOpacity(
-                            0.6,
+                            0.5,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _notesCtrl,
-                    autofocus: true,
-                    maxLines: 3,
-                    maxLength: 140,
-                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                    textInputAction: TextInputAction.done,
-                    onChanged: (val) => setModalState(() {}),
-                    buildCounter:
-                        (
-                          context, {
-                          required currentLength,
-                          required isFocused,
-                          maxLength,
-                        }) => null,
-                    decoration: InputDecoration(
-                      hintText: 'What was this for?',
-                      hintStyle: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant.withOpacity(
-                          0.5,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: theme.colorScheme.surface,
-                      contentPadding: const EdgeInsets.all(16),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: theme.dividerColor.withOpacity(0.5),
-                          width: 1.0,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: theme.colorScheme.primary.withOpacity(0.5),
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                    onSubmitted: (_) {
-                      setState(() {});
-                      Navigator.pop(ctx);
-                    },
-                  ),
-                  if (suggestions.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    Text(
-                      'SUGGESTIONS',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8.0,
-                      runSpacing: 8.0,
-                      children: suggestions.map((suggestion) {
-                        return ActionChip(
-                          label: Text(
-                            suggestion,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
-                          backgroundColor: theme
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withOpacity(0.3),
-                          side: BorderSide(
-                            color: theme.dividerColor.withOpacity(0.3),
+                        filled: true,
+                        fillColor: theme.colorScheme.surface,
+                        contentPadding: const EdgeInsets.all(16),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: theme.dividerColor.withOpacity(0.5),
                             width: 1.0,
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: theme.colorScheme.primary.withOpacity(0.5),
+                            width: 1.5,
                           ),
-                          onPressed: () {
-                            HapticFeedback.selectionClick();
-                            _notesCtrl.text = suggestion;
-                            _notesCtrl.selection = TextSelection.collapsed(
-                              offset: suggestion.length,
-                            );
-                            setState(() {});
-                            Navigator.pop(ctx);
-                          },
-                        );
-                      }).toList(),
+                        ),
+                      ),
+                      onSubmitted: (_) {
+                        setState(() {});
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                    if (suggestions.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Text(
+                        'SUGGESTIONS',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8.0,
+                        runSpacing: 8.0,
+                        children: suggestions.map((suggestion) {
+                          return ActionChip(
+                            label: Text(
+                              suggestion,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                            backgroundColor: theme
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withOpacity(0.3),
+                            side: BorderSide(
+                              color: theme.dividerColor.withOpacity(0.3),
+                              width: 1.0,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              _notesCtrl.text = suggestion;
+                              _notesCtrl.selection = TextSelection.collapsed(
+                                offset: suggestion.length,
+                              );
+                              setState(() {});
+                              Navigator.pop(ctx);
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        setState(() {});
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text(
+                        'Save Note',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ),
                   ],
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: theme.colorScheme.onPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      elevation: 0,
-                    ),
-                    onPressed: () {
-                      setState(() {});
-                      Navigator.pop(ctx);
-                    },
-                    child: const Text(
-                      'Save Note',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             );
           },
@@ -1407,7 +1410,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     );
   }
 
-  // --- REDESIGNED TOGGLE CELL ---
   Widget _buildToggleCell(
     String label,
     bool value,
@@ -1665,7 +1667,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       ),
     );
 
-    // --- REBUILT TOGGLE UI ---
     cells.add(
       _buildToggleCell(
         'RECORD AS EXPENSE',
@@ -1925,7 +1926,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                     ),
                   ),
                   Expanded(
-                    // --- DYNAMIC HERO FLEX COMPRESSION ---
                     flex: isToLoan ? 2 : 3,
                     child: Center(
                       child: Padding(
@@ -2009,7 +2009,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                   ],
                                 ),
                               ),
-                              // --- CLEANED UP LOAN AMOUNT UI ---
                               secondChild: Padding(
                                 padding: const EdgeInsets.only(bottom: 0.0),
                                 child: Column(
@@ -2084,7 +2083,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                     ),
                   ),
                   Expanded(
-                    // --- DYNAMIC GRID EXPANSION ---
                     flex: isToLoan ? 6 : 5,
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
