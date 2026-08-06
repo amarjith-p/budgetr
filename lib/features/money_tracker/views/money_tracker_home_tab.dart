@@ -6,6 +6,7 @@ import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/currency_text.dart';
 import '../../accounts/providers/account_provider.dart';
 import '../../accounts/providers/loan_math_provider.dart';
+import '../../accounts/providers/credit_math_provider.dart';
 import '../../transactions/views/account_transactions_page.dart';
 import '../../transactions/views/credit_transaction_page.dart';
 import '../../transactions/views/loan_transaction_page.dart';
@@ -73,12 +74,13 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
             (sum, acc) => sum + acc.balance,
           );
 
-          // --- FIX: ABSOLUTE VALUE LIABILITY CALCULATION ---
           double crBalance = 0.0;
           for (var acc in creditCards) {
-            if (acc.balance < 0) crBalance += acc.balance.abs();
+            final metrics = ref.watch(creditCardMetricsProvider(acc));
+            if (metrics.totalOutstanding < 0) {
+              crBalance += metrics.totalOutstanding.abs();
+            }
           }
-
           for (var loan in loans) {
             final out = ref.watch(loanTotalOutstandingProvider(loan));
             if (out > 0) crBalance += out;
@@ -90,8 +92,8 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                 0.0,
                 (sum, acc) => sum + (acc.balance > 0 ? acc.balance : 0.0),
               );
-          final double difference = allocatedFunds - crBalance;
 
+          final double difference = allocatedFunds - crBalance;
           final debtAccounts = [...creditCards, ...loans];
 
           if (accounts.isEmpty) {
@@ -165,6 +167,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                   ),
                 ),
               ),
+
               const SliverToBoxAdapter(
                 child: SizedBox(height: DesignTokens.spacingSm),
               ),
@@ -227,7 +230,6 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
     ThemeData theme,
   ) {
     final isDark = theme.brightness == Brightness.dark;
-
     Color diffColor = Colors.blueAccent.shade700;
     String diffLabel = 'Tally:';
     if (difference > 0) {
@@ -273,9 +275,10 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                   width: 1.5,
                   color: theme.dividerColor,
                 ),
+                // --- FIX: VISUALLY FORCE LIABILITY TO SHOW AS NEGATIVE ---
                 _buildPillMetric(
                   'Cr:',
-                  crBalance,
+                  crBalance > 0 ? -crBalance : 0.0,
                   theme.colorScheme.error,
                   theme,
                 ),
@@ -307,7 +310,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
     ThemeData theme, {
     bool showPlus = false,
   }) {
-    String sign = amount < 0 ? '- ' : (showPlus && amount > 0 ? '+ ' : ' ');
+    String sign = amount < 0 ? '-₹ ' : (showPlus && amount > 0 ? '+₹ ' : '₹ ');
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -341,7 +344,6 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
     int mid = (accounts.length / 2).ceil();
     final topRow = accounts.sublist(0, mid);
     final bottomRow = accounts.sublist(mid);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -365,7 +367,6 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                 .toList(),
           ),
         ),
-
         if (bottomRow.isNotEmpty)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,

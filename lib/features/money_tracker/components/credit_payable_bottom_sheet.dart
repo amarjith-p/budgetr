@@ -64,7 +64,6 @@ class _CreditPayableBottomSheetState
     for (var acc in widget.bankAccounts) {
       if (_selectedIds.contains(acc.id)) allocatedFunds += acc.balance;
     }
-
     final liability = widget.totalCreditLiability.abs();
     final difference = allocatedFunds - liability;
 
@@ -108,7 +107,6 @@ class _CreditPayableBottomSheetState
                   ),
                 ),
               ),
-
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                 child: Column(
@@ -122,7 +120,6 @@ class _CreditPayableBottomSheetState
                       ),
                     ),
                     const SizedBox(height: 16),
-
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -146,10 +143,10 @@ class _CreditPayableBottomSheetState
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              // --- FIX: Added Spacing ---
+                              // --- FIX: VISUALLY FORCE LIABILITY TO SHOW AS NEGATIVE ---
                               CurrencyText(
                                 amount: liability,
-                                sign: '₹ ',
+                                sign: liability > 0 ? '-₹ ' : '₹ ',
                                 amountStyle: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w800,
@@ -170,7 +167,6 @@ class _CreditPayableBottomSheetState
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              // --- FIX: Added Spacing ---
                               CurrencyText(
                                 amount: allocatedFunds,
                                 sign: '₹ ',
@@ -211,7 +207,6 @@ class _CreditPayableBottomSheetState
                               ),
                               CurrencyText(
                                 amount: difference.abs(),
-                                // --- FIX: Added Spacing ---
                                 sign: difference < 0
                                     ? '-₹ '
                                     : (difference > 0 ? '+₹ ' : '₹ '),
@@ -234,7 +229,6 @@ class _CreditPayableBottomSheetState
                 ),
               ),
               const Divider(height: 1),
-
               Expanded(
                 child: ListView.builder(
                   controller: scrollController,
@@ -282,7 +276,6 @@ class _CreditPayableBottomSheetState
                               ),
                             ),
                             const Spacer(),
-                            // --- APPLIED GLOBAL FORMATTER ---
                             Text(
                               '₹ ${CurrencyFormatter.format(acc.balance)}',
                               style: TextStyle(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/components/currency_text.dart';
 import '../../accounts/providers/loan_math_provider.dart';
+import '../../accounts/providers/credit_math_provider.dart';
 
 class MiniAccountCard extends ConsumerWidget {
   final Account account;
@@ -11,6 +12,12 @@ class MiniAccountCard extends ConsumerWidget {
 
   const MiniAccountCard({Key? key, required this.account, required this.onTap})
     : super(key: key);
+
+  String _formatSubtext(double val) {
+    if (val < 0) return '-₹ ${CurrencyFormatter.format(val.abs())}';
+    if (val > 0) return '+₹ ${CurrencyFormatter.format(val.abs())}';
+    return '₹ 0.00';
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,16 +37,28 @@ class MiniAccountCard extends ConsumerWidget {
         ? theme.colorScheme.onPrimary
         : theme.colorScheme.onSurface;
 
-    final double rawBalance = isLoan
-        ? ref.watch(loanTotalOutstandingProvider(account))
-        : account.balance;
-
-    String signText = ' ';
+    double rawBalance = account.balance;
+    double unbilled = 0.0;
+    double billed = 0.0;
 
     if (isLoan) {
-      signText = rawBalance > 0 ? '- ' : (rawBalance < 0 ? '+ ' : ' ');
+      rawBalance = ref.watch(loanTotalOutstandingProvider(account));
+    } else if (isCreditCard) {
+      final metrics = ref.watch(creditCardMetricsProvider(account));
+      rawBalance = metrics.totalOutstanding;
+      unbilled = metrics.unbilled;
+      billed = metrics.billed;
+    }
+
+    String signText = '₹ ';
+
+    // --- FIX: RESTORED THE RUPEE SYMBOL TO THE MAIN BALANCE SIGNS ---
+    if (isLoan) {
+      signText = rawBalance > 0 ? '-₹ ' : (rawBalance < 0 ? '+₹ ' : '₹ ');
+    } else if (isCreditCard) {
+      signText = rawBalance < 0 ? '-₹ ' : (rawBalance > 0 ? '+₹ ' : '₹ ');
     } else {
-      signText = rawBalance < 0 ? '- ' : ' ';
+      signText = rawBalance < 0 ? '-₹ ' : '₹ ';
     }
 
     IconData cardIcon = Icons.account_balance_wallet_rounded;
@@ -123,18 +142,42 @@ class MiniAccountCard extends ConsumerWidget {
                       children: [
                         Expanded(
                           flex: 6,
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              account.name,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: fgColor,
-                                letterSpacing: 0.2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  account.name,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: fgColor,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
                               ),
-                            ),
+
+                              if (isCreditCard &&
+                                  (unbilled != 0 || billed != 0))
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'U: ${_formatSubtext(unbilled)} | B: ${_formatSubtext(billed)}',
+                                      style: TextStyle(
+                                        fontSize: 7,
+                                        fontWeight: FontWeight.w800,
+                                        color: fgColor.withOpacity(0.7),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -143,7 +186,6 @@ class MiniAccountCard extends ConsumerWidget {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerRight,
-                            // --- AUTOMATICALLY HANDLED BY CURRENCYTEXT ---
                             child: CurrencyText(
                               amount: rawBalance.abs(),
                               sign: signText,

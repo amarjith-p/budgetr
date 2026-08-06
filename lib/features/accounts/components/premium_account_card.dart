@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../accounts/providers/loan_math_provider.dart';
+import '../../accounts/providers/credit_math_provider.dart'; // <-- IMPORTED
 
 class PremiumAccountCard extends ConsumerStatefulWidget {
   final Account account;
@@ -68,6 +69,12 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
     }
   }
 
+  String _formatSubtext(double val) {
+    if (val < 0) return '-₹ ${CurrencyFormatter.format(val.abs())}';
+    if (val > 0) return '+₹ ${CurrencyFormatter.format(val.abs())}';
+    return '₹ 0.00';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -90,18 +97,33 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
         ? (isDark ? Colors.white54 : Colors.black54)
         : (isDebtCard ? theme.colorScheme.onPrimary : Colors.white);
 
-    final double rawBalance = isLoan
-        ? ref.watch(loanTotalOutstandingProvider(widget.account))
-        : widget.account.balance;
+    // --- FETCH EXACT MATHEMATICAL OUTSTANDINGS ---
+    double rawBalance = widget.account.balance;
+    double unbilled = 0.0;
+    double billed = 0.0;
+
+    if (isLoan) {
+      rawBalance = ref.watch(loanTotalOutstandingProvider(widget.account));
+    } else if (isCreditCard) {
+      final metrics = ref.watch(creditCardMetricsProvider(widget.account));
+      rawBalance = metrics.totalOutstanding;
+      unbilled = metrics.unbilled;
+      billed = metrics.billed;
+    }
 
     String signText = '₹ ';
-    String labelText = isCreditCard ? 'OUTSTANDING BALANCE' : 'CURRENT BALANCE';
+    String labelText = 'CURRENT BALANCE';
 
     if (isLoan) {
       signText = rawBalance > 0 ? '-₹ ' : (rawBalance < 0 ? '+₹ ' : '₹ ');
       labelText = isSettled
           ? 'SETTLED LOAN'
           : (rawBalance <= 0 ? 'CLEARED / SURPLUS' : 'TOTAL OUTSTANDING');
+    } else if (isCreditCard) {
+      signText = rawBalance < 0 ? '-₹ ' : (rawBalance > 0 ? '+₹ ' : '₹ ');
+      labelText = rawBalance < 0
+          ? 'TOTAL OUTSTANDING'
+          : (rawBalance > 0 ? 'SURPLUS' : 'OUTSTANDING BALANCE');
     } else {
       signText = rawBalance < 0 ? '-₹ ' : '₹ ';
     }
@@ -131,6 +153,8 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
                       rawBalance.abs(),
                       signText,
                       labelText,
+                      unbilled,
+                      billed,
                     )
                   : Transform(
                       transform: Matrix4.identity()..rotateY(pi),
@@ -159,6 +183,8 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
     double displayBalance,
     String signText,
     String labelText,
+    double unbilled,
+    double billed,
   ) {
     return Container(
       height: 190,
@@ -308,7 +334,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
               ),
               const SizedBox(width: 8),
               Expanded(
-                flex: 3,
+                flex: 5,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -342,6 +368,42 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
                         ),
                       ),
                     ),
+
+                    if (isCreditCard && (unbilled != 0 || billed != 0)) ...[
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Unbilled: ${_formatSubtext(unbilled)}',
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w700,
+                                color: fgColor.withOpacity(0.75),
+                              ),
+                            ),
+                            Text(
+                              ' | ',
+                              style: TextStyle(
+                                fontSize: 8,
+                                color: fgColor.withOpacity(0.4),
+                              ),
+                            ),
+                            Text(
+                              'Billed: ${_formatSubtext(billed)}',
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w700,
+                                color: fgColor.withOpacity(0.75),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -401,11 +463,10 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
                         'DUE DATE',
                         _getOrdinal(widget.account.dueDate),
                       ),
-                      // --- FORMATTED WITH CURRENCY UTILITY ---
                       _buildBackData(
                         fgColor,
                         'CREDIT LIMIT',
-                        '₹${widget.account.creditLimit != null ? CurrencyFormatter.format(widget.account.creditLimit!) : "0.00"}',
+                        '₹ ${widget.account.creditLimit != null ? CurrencyFormatter.format(widget.account.creditLimit!) : "0.00"}',
                       ),
                     ],
                   )
