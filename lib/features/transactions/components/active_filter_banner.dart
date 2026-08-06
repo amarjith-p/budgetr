@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/design_tokens.dart';
+import '../../../core/components/currency_text.dart'; // <-- IMPORTED CURRENCY UTILITY
 import '../providers/transaction_filter_provider.dart';
 
 class ActiveFilterBanner extends StatelessWidget {
@@ -8,25 +9,25 @@ class ActiveFilterBanner extends StatelessWidget {
   final VoidCallback onClear;
 
   const ActiveFilterBanner({
-    Key? key, 
-    required this.filterState, 
+    Key? key,
+    required this.filterState,
     required this.onClear,
   }) : super(key: key);
 
   List<String> _generateActiveTags() {
     List<String> tags = [];
-    
-    // Sort
+
     if (filterState.sortBy == SortOption.oldest) tags.add('Oldest');
-    if (filterState.sortBy == SortOption.highestAmount) tags.add('Highest ₹');
-    if (filterState.sortBy == SortOption.lowestAmount) tags.add('Lowest ₹');
+    if (filterState.sortBy == SortOption.highestAmount) tags.add('Highest');
+    if (filterState.sortBy == SortOption.lowestAmount) tags.add('Lowest');
 
-    // Timeframe
-    if (filterState.timeframe == TimeframeOption.currentMonth) tags.add('This Month');
-    if (filterState.timeframe == TimeframeOption.lastMonth) tags.add('Last Month');
-    if (filterState.timeframe == TimeframeOption.custom) tags.add('Custom Dates');
+    if (filterState.timeframe == TimeframeOption.currentMonth)
+      tags.add('This Month');
+    if (filterState.timeframe == TimeframeOption.lastMonth)
+      tags.add('Last Month');
+    if (filterState.timeframe == TimeframeOption.custom)
+      tags.add('Custom Dates');
 
-    // Types
     if (filterState.types.isNotEmpty) {
       if (filterState.types.length <= 2) {
         tags.addAll(filterState.types);
@@ -35,21 +36,25 @@ class ActiveFilterBanner extends StatelessWidget {
       }
     }
 
-    // Amounts
+    // --- APPLIED GLOBAL FORMATTER ---
     if (filterState.minAmount != null && filterState.maxAmount != null) {
-      tags.add('₹${filterState.minAmount!.toInt()} - ₹${filterState.maxAmount!.toInt()}');
+      tags.add(
+        '₹${CurrencyFormatter.format(filterState.minAmount!)} - ₹${CurrencyFormatter.format(filterState.maxAmount!)}',
+      );
     } else if (filterState.minAmount != null) {
-      tags.add('> ₹${filterState.minAmount!.toInt()}');
+      tags.add('> ₹${CurrencyFormatter.format(filterState.minAmount!)}');
     } else if (filterState.maxAmount != null) {
-      tags.add('< ₹${filterState.maxAmount!.toInt()}');
+      tags.add('< ₹${CurrencyFormatter.format(filterState.maxAmount!)}');
     }
 
-    // Data Filters
-    if (filterState.accountIds.isNotEmpty) tags.add('${filterState.accountIds.length} Accounts');
-    if (filterState.categoryIds.isNotEmpty) tags.add('${filterState.categoryIds.length} Categories');
-    if (filterState.subCategories.isNotEmpty) tags.add('${filterState.subCategories.length} Subcats');
-    if (filterState.bucketIds.isNotEmpty) tags.add('${filterState.bucketIds.length} Buckets');
-
+    if (filterState.accountIds.isNotEmpty)
+      tags.add('${filterState.accountIds.length} Accounts');
+    if (filterState.categoryIds.isNotEmpty)
+      tags.add('${filterState.categoryIds.length} Categories');
+    if (filterState.subCategories.isNotEmpty)
+      tags.add('${filterState.subCategories.length} Subcats');
+    if (filterState.bucketIds.isNotEmpty)
+      tags.add('${filterState.bucketIds.length} Buckets');
     return tags;
   }
 
@@ -58,22 +63,35 @@ class ActiveFilterBanner extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final activeTags = _generateActiveTags();
-    
+
     return Container(
-      height: 46, // Sleek, fixed height so it never gets bulky
-      margin: const EdgeInsets.fromLTRB(DesignTokens.spacingMd, DesignTokens.spacingMd, DesignTokens.spacingMd, 0),
+      height: 46,
+      margin: const EdgeInsets.fromLTRB(
+        DesignTokens.spacingMd,
+        DesignTokens.spacingMd,
+        DesignTokens.spacingMd,
+        0,
+      ),
       padding: const EdgeInsets.only(left: 12, right: 6),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withOpacity(isDark ? 0.2 : 0.4),
+        color: theme.colorScheme.primaryContainer.withOpacity(
+          isDark ? 0.2 : 0.4,
+        ),
         borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3), width: 1.0),
+        border: Border.all(
+          color: theme.colorScheme.primary.withOpacity(0.3),
+          width: 1.0,
+        ),
       ),
       child: Row(
         children: [
-          Icon(Icons.filter_list_rounded, size: 16, color: theme.colorScheme.primary),
+          Icon(
+            Icons.filter_list_rounded,
+            size: 16,
+            color: theme.colorScheme.primary,
+          ),
           const SizedBox(width: 8),
-          
-          // Horizontal scrolling tags
+
           Expanded(
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
@@ -83,9 +101,14 @@ class ActiveFilterBanner extends StatelessWidget {
               itemBuilder: (context, index) {
                 return Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(isDark ? 0.15 : 0.1),
+                      color: theme.colorScheme.primary.withOpacity(
+                        isDark ? 0.15 : 0.1,
+                      ),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -102,10 +125,9 @@ class ActiveFilterBanner extends StatelessWidget {
               },
             ),
           ),
-          
+
           const SizedBox(width: 8),
-          
-          // Ultra-minimal clear button
+
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();

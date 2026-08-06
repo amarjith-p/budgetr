@@ -59,7 +59,6 @@ class LoanTransactionPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (transactions) {
-          // --- HIDE THE INTERNAL TRANSFER LEG FROM LOAN UI ---
           final validTransactions = transactions
               .where(
                 (txData) => !txData.transaction.id.endsWith('_SOURCETRANSFER'),
@@ -392,7 +391,7 @@ class _LoanSummaryCardState extends ConsumerState<_LoanSummaryCard> {
       progress = (paid / totalLoanAmount).clamp(0.0, 1.0);
     }
 
-    // --- STYLING & FORMATTING DECISION ENGINE ---
+    // --- RESTORED SIGNS AND FORMATTING ---
     final outstandingSign = totalOutstanding > 0
         ? '-₹ '
         : (totalOutstanding < 0 ? '+₹ ' : '₹ ');

@@ -5,23 +5,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
-import '../../accounts/providers/loan_math_provider.dart'; 
+import '../../accounts/providers/loan_math_provider.dart';
 
 class PremiumAccountCard extends ConsumerStatefulWidget {
   final Account account;
   final VoidCallback? onCardTap;
 
-  const PremiumAccountCard({
-    Key? key,
-    required this.account,
-    this.onCardTap
-  }) : super(key: key);
+  const PremiumAccountCard({Key? key, required this.account, this.onCardTap})
+    : super(key: key);
 
   @override
   ConsumerState<PremiumAccountCard> createState() => _PremiumAccountCardState();
 }
 
-class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with SingleTickerProviderStateMixin {
+class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
   bool _isFront = true;
@@ -29,10 +27,14 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-    _animation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
     );
+    _animation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
   }
 
   @override
@@ -55,10 +57,14 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     if (number == null) return 'N/A';
     if (number >= 11 && number <= 13) return '${number}th';
     switch (number % 10) {
-      case 1: return '${number}st';
-      case 2: return '${number}nd';
-      case 3: return '${number}rd';
-      default: return '${number}th';
+      case 1:
+        return '${number}st';
+      case 2:
+        return '${number}nd';
+      case 3:
+        return '${number}rd';
+      default:
+        return '${number}th';
     }
   }
 
@@ -68,28 +74,34 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     final isDark = theme.brightness == Brightness.dark;
     final isCreditCard = widget.account.type == 'Credit Cards';
     final isLoan = widget.account.type == 'Loan';
-    
+
     final isSettled = widget.account.isClosed;
     final isDebtCard = isCreditCard || isLoan;
 
-    final bgColor = isSettled 
-        ? (isDark ? theme.colorScheme.surfaceContainerHighest : Colors.grey.shade300)
+    final bgColor = isSettled
+        ? (isDark
+              ? theme.colorScheme.surfaceContainerHighest
+              : Colors.grey.shade300)
         : (isDebtCard
-            ? theme.colorScheme.primary
-            : (isDark ? const Color(0xFF141414) : const Color(0xFF1E1E1E)));
-            
+              ? theme.colorScheme.primary
+              : (isDark ? const Color(0xFF141414) : const Color(0xFF1E1E1E)));
+
     final fgColor = isSettled
         ? (isDark ? Colors.white54 : Colors.black54)
         : (isDebtCard ? theme.colorScheme.onPrimary : Colors.white);
 
-    final double rawBalance = isLoan ? ref.watch(loanTotalOutstandingProvider(widget.account)) : widget.account.balance;
-    
+    final double rawBalance = isLoan
+        ? ref.watch(loanTotalOutstandingProvider(widget.account))
+        : widget.account.balance;
+
     String signText = '₹ ';
     String labelText = isCreditCard ? 'OUTSTANDING BALANCE' : 'CURRENT BALANCE';
 
     if (isLoan) {
       signText = rawBalance > 0 ? '-₹ ' : (rawBalance < 0 ? '+₹ ' : '₹ ');
-      labelText = isSettled ? 'SETTLED LOAN' : (rawBalance <= 0 ? 'CLEARED / SURPLUS' : 'TOTAL OUTSTANDING');
+      labelText = isSettled
+          ? 'SETTLED LOAN'
+          : (rawBalance <= 0 ? 'CLEARED / SURPLUS' : 'TOTAL OUTSTANDING');
     } else {
       signText = rawBalance < 0 ? '-₹ ' : '₹ ';
     }
@@ -110,11 +122,26 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                 ..rotateY(angle),
               alignment: Alignment.center,
               child: isFrontVisible
-                  ? _buildFront(bgColor, fgColor, isCreditCard, isLoan, isSettled, rawBalance.abs(), signText, labelText)
+                  ? _buildFront(
+                      bgColor,
+                      fgColor,
+                      isCreditCard,
+                      isLoan,
+                      isSettled,
+                      rawBalance.abs(),
+                      signText,
+                      labelText,
+                    )
                   : Transform(
                       transform: Matrix4.identity()..rotateY(pi),
                       alignment: Alignment.center,
-                      child: _buildBack(bgColor, fgColor, isCreditCard, isLoan, isSettled),
+                      child: _buildBack(
+                        bgColor,
+                        fgColor,
+                        isCreditCard,
+                        isLoan,
+                        isSettled,
+                      ),
                     ),
             ),
           ),
@@ -123,16 +150,33 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     );
   }
 
-  Widget _buildFront(Color bgColor, Color fgColor, bool isCreditCard, bool isLoan, bool isSettled, double displayBalance, String signText, String labelText) {
+  Widget _buildFront(
+    Color bgColor,
+    Color fgColor,
+    bool isCreditCard,
+    bool isLoan,
+    bool isSettled,
+    double displayBalance,
+    String signText,
+    String labelText,
+  ) {
     return Container(
       height: 190,
       padding: const EdgeInsets.all(DesignTokens.spacingLg),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : Colors.transparent),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white12
+              : Colors.transparent,
+        ),
         boxShadow: [
-          BoxShadow(color: bgColor.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))
+          BoxShadow(
+            color: bgColor.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Column(
@@ -145,7 +189,10 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
             children: [
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: fgColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
@@ -169,23 +216,46 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                   if (isSettled)
                     Container(
                       margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(4)),
-                      child: const Text('SETTLED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'SETTLED',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ),
                   GestureDetector(
                     onTap: _toggleCard,
                     behavior: HitTestBehavior.opaque,
                     child: Container(
                       padding: const EdgeInsets.all(4.0),
-                      decoration: BoxDecoration(color: fgColor.withOpacity(0.1), shape: BoxShape.circle),
-                      child: Icon(Icons.info_outline_rounded, color: fgColor.withOpacity(0.9), size: 20),
+                      decoration: BoxDecoration(
+                        color: fgColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.info_outline_rounded,
+                        color: fgColor.withOpacity(0.9),
+                        size: 20,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Icon(
-                    isLoan ? Icons.account_balance_rounded : Icons.contactless_outlined, 
-                    color: fgColor.withOpacity(0.7)
+                    isLoan
+                        ? Icons.account_balance_rounded
+                        : Icons.contactless_outlined,
+                    color: fgColor.withOpacity(0.7),
                   ),
                 ],
               ),
@@ -193,14 +263,19 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
           ),
           Text(
             '**** **** **** ${widget.account.last4}',
-            style: TextStyle(color: fgColor.withOpacity(0.8), fontSize: 18, fontFamily: 'monospace', letterSpacing: 2.0),
+            style: TextStyle(
+              color: fgColor.withOpacity(0.8),
+              fontSize: 18,
+              fontFamily: 'monospace',
+              letterSpacing: 2.0,
+            ),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                flex: 4, 
+                flex: 4,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -220,7 +295,11 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                     const SizedBox(height: 2),
                     Text(
                       widget.account.type,
-                      style: TextStyle(fontSize: 10, color: fgColor.withOpacity(0.6), fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: fgColor.withOpacity(0.6),
+                        fontWeight: FontWeight.w600,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -236,10 +315,10 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                     Text(
                       labelText,
                       style: TextStyle(
-                        fontSize: 8, 
-                        fontWeight: FontWeight.w900, 
-                        color: fgColor.withOpacity(0.6), 
-                        letterSpacing: 0.5
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        color: fgColor.withOpacity(0.6),
+                        letterSpacing: 0.5,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -249,17 +328,17 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerRight,
                       child: CurrencyText(
-                        amount: displayBalance, 
+                        amount: displayBalance,
                         sign: signText,
                         amountStyle: TextStyle(
-                          fontSize: 22, 
-                          fontWeight: FontWeight.w900, 
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
                           color: fgColor,
-                          letterSpacing: -0.5
+                          letterSpacing: -0.5,
                         ),
                         symbolStyle: TextStyle(
-                          fontSize: 14, 
-                          color: fgColor.withOpacity(0.9)
+                          fontSize: 14,
+                          color: fgColor.withOpacity(0.9),
                         ),
                       ),
                     ),
@@ -273,19 +352,29 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
     );
   }
 
-  Widget _buildBack(Color bgColor, Color fgColor, bool isCreditCard, bool isLoan, bool isSettled) {
+  Widget _buildBack(
+    Color bgColor,
+    Color fgColor,
+    bool isCreditCard,
+    bool isLoan,
+    bool isSettled,
+  ) {
     return Container(
       height: 190,
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : Colors.transparent),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white12
+              : Colors.transparent,
+        ),
         boxShadow: [
           BoxShadow(
             color: bgColor.withOpacity(0.3),
             blurRadius: 12,
             offset: const Offset(0, 6),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -295,45 +384,95 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
           Container(height: 40, color: Colors.black87),
           const SizedBox(height: 16),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg),
+            padding: const EdgeInsets.symmetric(
+              horizontal: DesignTokens.spacingLg,
+            ),
             child: isCreditCard
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildBackData(fgColor, 'BILL DATE', _getOrdinal(widget.account.billDate)),
-                      _buildBackData(fgColor, 'DUE DATE', _getOrdinal(widget.account.dueDate)),
-                      _buildBackData(fgColor, 'CREDIT LIMIT', '₹${widget.account.creditLimit?.toStringAsFixed(2) ?? "0.00"}'),
+                      _buildBackData(
+                        fgColor,
+                        'BILL DATE',
+                        _getOrdinal(widget.account.billDate),
+                      ),
+                      _buildBackData(
+                        fgColor,
+                        'DUE DATE',
+                        _getOrdinal(widget.account.dueDate),
+                      ),
+                      // --- FORMATTED WITH CURRENCY UTILITY ---
+                      _buildBackData(
+                        fgColor,
+                        'CREDIT LIMIT',
+                        '₹${widget.account.creditLimit != null ? CurrencyFormatter.format(widget.account.creditLimit!) : "0.00"}',
+                      ),
                     ],
                   )
                 : isLoan
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildBackData(fgColor, 'INTEREST', '${widget.account.interestRate?.toStringAsFixed(2) ?? "0.0"}%'),
-                          _buildBackData(fgColor, 'TENURE', '${widget.account.tenureMonths ?? 0} Mo'),
-                          _buildBackData(fgColor, 'EMI DATE', _getOrdinal(widget.account.emiDate?.day)),
-                        ],
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildBackData(fgColor, 'ACCOUNT TYPE', widget.account.type),
-                          _buildBackData(fgColor, 'ADDED ON', '${widget.account.createdAt.day}/${widget.account.createdAt.month}/${widget.account.createdAt.year}'),
-                        ],
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildBackData(
+                        fgColor,
+                        'INTEREST',
+                        '${widget.account.interestRate?.toStringAsFixed(2) ?? "0.0"}%',
                       ),
+                      _buildBackData(
+                        fgColor,
+                        'TENURE',
+                        '${widget.account.tenureMonths ?? 0} Mo',
+                      ),
+                      _buildBackData(
+                        fgColor,
+                        'EMI DATE',
+                        _getOrdinal(widget.account.emiDate?.day),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildBackData(
+                        fgColor,
+                        'ACCOUNT TYPE',
+                        widget.account.type,
+                      ),
+                      _buildBackData(
+                        fgColor,
+                        'ADDED ON',
+                        '${widget.account.createdAt.day}/${widget.account.createdAt.month}/${widget.account.createdAt.year}',
+                      ),
+                    ],
+                  ),
           ),
           const Spacer(),
-            
+
           GestureDetector(
             onTap: _toggleCard,
             behavior: HitTestBehavior.opaque,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg, vertical: DesignTokens.spacingMd),
+              padding: const EdgeInsets.symmetric(
+                horizontal: DesignTokens.spacingLg,
+                vertical: DesignTokens.spacingMd,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('FLIP TO FRONT', style: TextStyle(color: fgColor.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
-                  Icon(Icons.flip_to_front_rounded, color: fgColor.withOpacity(0.7), size: 18),
+                  Text(
+                    'FLIP TO FRONT',
+                    style: TextStyle(
+                      color: fgColor.withOpacity(0.5),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  Icon(
+                    Icons.flip_to_front_rounded,
+                    color: fgColor.withOpacity(0.7),
+                    size: 18,
+                  ),
                 ],
               ),
             ),
@@ -350,14 +489,23 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard> with Si
         children: [
           Text(
             label,
-            style: TextStyle(color: fgColor.withOpacity(0.6), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1.0),
+            style: TextStyle(
+              color: fgColor.withOpacity(0.6),
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.0,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: TextStyle(color: fgColor, fontSize: 13, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: fgColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

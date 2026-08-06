@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../services/transaction_service.dart';
 
 enum SortOption { newest, oldest, highestAmount, lowestAmount }
+
 enum TimeframeOption { allTime, currentMonth, lastMonth, custom }
 
 /// Wrapper for Global Records to handle both perspective legs of an internal transfer
@@ -10,10 +11,7 @@ class RecordItem {
   final TransactionWithDetails data;
   final String perspectiveAccountId;
 
-  const RecordItem({
-    required this.data,
-    required this.perspectiveAccountId,
-  });
+  const RecordItem({required this.data, required this.perspectiveAccountId});
 }
 
 class TransactionFilterState {
@@ -21,11 +19,11 @@ class TransactionFilterState {
   final TimeframeOption timeframe;
   final DateTime? customStartDate;
   final DateTime? customEndDate;
-  final Set<String> types; 
-  final Set<int> bucketIds; 
+  final Set<String> types;
+  final Set<int> bucketIds;
   final Set<String> categoryIds;
   final Set<String> subCategories;
-  final Set<String> accountIds; 
+  final Set<String> accountIds;
   final double? minAmount;
   final double? maxAmount;
 
@@ -38,7 +36,7 @@ class TransactionFilterState {
     this.bucketIds = const {},
     this.categoryIds = const {},
     this.subCategories = const {},
-    this.accountIds = const {}, 
+    this.accountIds = const {},
     this.minAmount,
     this.maxAmount,
   });
@@ -50,7 +48,7 @@ class TransactionFilterState {
       bucketIds.isNotEmpty ||
       categoryIds.isNotEmpty ||
       subCategories.isNotEmpty ||
-      accountIds.isNotEmpty || 
+      accountIds.isNotEmpty ||
       minAmount != null ||
       maxAmount != null;
 
@@ -63,7 +61,7 @@ class TransactionFilterState {
     Set<int>? bucketIds,
     Set<String>? categoryIds,
     Set<String>? subCategories,
-    Set<String>? accountIds, 
+    Set<String>? accountIds,
     double? minAmount,
     double? maxAmount,
     bool clearMin = false,
@@ -78,16 +76,17 @@ class TransactionFilterState {
       bucketIds: bucketIds ?? this.bucketIds,
       categoryIds: categoryIds ?? this.categoryIds,
       subCategories: subCategories ?? this.subCategories,
-      accountIds: accountIds ?? this.accountIds, 
+      accountIds: accountIds ?? this.accountIds,
       minAmount: clearMin ? null : (minAmount ?? this.minAmount),
       maxAmount: clearMax ? null : (maxAmount ?? this.maxAmount),
     );
   }
 }
 
-final transactionFilterProvider = StateProvider.autoDispose.family<TransactionFilterState, String>((ref, accountId) {
-  return const TransactionFilterState();
-});
+final transactionFilterProvider = StateProvider.autoDispose
+    .family<TransactionFilterState, String>((ref, accountId) {
+      return const TransactionFilterState();
+    });
 
 class TransactionFilterHelper {
   /// Standard filter for individual account ledgers
@@ -105,45 +104,65 @@ class TransactionFilterHelper {
 
       if (filter.timeframe == TimeframeOption.currentMonth) {
         final now = DateTime.now();
-        if (tx.date.year != now.year || tx.date.month != now.month) return false;
+        if (tx.date.year != now.year || tx.date.month != now.month)
+          return false;
       } else if (filter.timeframe == TimeframeOption.lastMonth) {
         final now = DateTime.now();
         int targetYear = now.month == 1 ? now.year - 1 : now.year;
         int targetMonth = now.month == 1 ? 12 : now.month - 1;
-        if (tx.date.year != targetYear || tx.date.month != targetMonth) return false;
-      } else if (filter.timeframe == TimeframeOption.custom && filter.customStartDate != null && filter.customEndDate != null) {
-        if (tx.date.isBefore(filter.customStartDate!) || tx.date.isAfter(filter.customEndDate!.add(const Duration(days: 1)))) return false;
+        if (tx.date.year != targetYear || tx.date.month != targetMonth)
+          return false;
+      } else if (filter.timeframe == TimeframeOption.custom &&
+          filter.customStartDate != null &&
+          filter.customEndDate != null) {
+        if (tx.date.isBefore(filter.customStartDate!) ||
+            tx.date.isAfter(filter.customEndDate!.add(const Duration(days: 1))))
+          return false;
       }
 
       if (filter.types.isNotEmpty) {
         final isExpense = tx.type == 'Expense';
         final isIncome = tx.type == 'Income';
         final isTransfer = tx.type == 'Transfer';
-        
+
         bool isMoneyLeaving = isExpense;
         if (isTransfer) {
-          if (tx.toAccountId == 'EXTERNAL_IN') isMoneyLeaving = false;
-          else if (tx.toAccountId == 'EXTERNAL_OUT') isMoneyLeaving = true;
-          else isMoneyLeaving = tx.accountId == currentAccountId;
+          if (tx.toAccountId == 'EXTERNAL_IN')
+            isMoneyLeaving = false;
+          else if (tx.toAccountId == 'EXTERNAL_OUT')
+            isMoneyLeaving = true;
+          else
+            isMoneyLeaving = tx.accountId == currentAccountId;
         }
 
         String mappedType = '';
-        if (isExpense) mappedType = 'Expense';
-        else if (isIncome) mappedType = 'Income';
-        else if (isTransfer && isMoneyLeaving) mappedType = 'Transfer Out';
-        else if (isTransfer && !isMoneyLeaving) mappedType = 'Transfer In';
+        if (isExpense)
+          mappedType = 'Expense';
+        else if (isIncome)
+          mappedType = 'Income';
+        else if (isTransfer && isMoneyLeaving)
+          mappedType = 'Transfer Out';
+        else if (isTransfer && !isMoneyLeaving)
+          mappedType = 'Transfer In';
 
-        if (mappedType.isNotEmpty && !filter.types.contains(mappedType)) return false;
+        if (mappedType.isNotEmpty && !filter.types.contains(mappedType))
+          return false;
       }
 
-      if (filter.minAmount != null && tx.amount < filter.minAmount!) return false;
-      if (filter.maxAmount != null && tx.amount > filter.maxAmount!) return false;
+      if (filter.minAmount != null && tx.amount < filter.minAmount!)
+        return false;
+      if (filter.maxAmount != null && tx.amount > filter.maxAmount!)
+        return false;
 
       if (filter.categoryIds.isNotEmpty) {
-        if (tx.categoryId == null || !filter.categoryIds.contains(tx.categoryId)) return false;
+        if (tx.categoryId == null ||
+            !filter.categoryIds.contains(tx.categoryId))
+          return false;
       }
       if (filter.subCategories.isNotEmpty) {
-        if (tx.subCategory == null || !filter.subCategories.contains(tx.subCategory)) return false;
+        if (tx.subCategory == null ||
+            !filter.subCategories.contains(tx.subCategory))
+          return false;
       }
       if (filter.bucketIds.isNotEmpty) {
         int effectiveBucket = tx.bucketId ?? -1;
@@ -155,10 +174,14 @@ class TransactionFilterHelper {
 
     filtered.sort((a, b) {
       switch (filter.sortBy) {
-        case SortOption.newest: return b.transaction.date.compareTo(a.transaction.date);
-        case SortOption.oldest: return a.transaction.date.compareTo(b.transaction.date);
-        case SortOption.highestAmount: return b.transaction.amount.compareTo(a.transaction.amount);
-        case SortOption.lowestAmount: return a.transaction.amount.compareTo(b.transaction.amount);
+        case SortOption.newest:
+          return b.transaction.date.compareTo(a.transaction.date);
+        case SortOption.oldest:
+          return a.transaction.date.compareTo(b.transaction.date);
+        case SortOption.highestAmount:
+          return b.transaction.amount.compareTo(a.transaction.amount);
+        case SortOption.lowestAmount:
+          return a.transaction.amount.compareTo(b.transaction.amount);
       }
     });
 
@@ -171,15 +194,19 @@ class TransactionFilterHelper {
     TransactionFilterState filter,
   ) {
     List<RecordItem> expanded = [];
-    
+
     for (var data in transactions) {
       final tx = data.transaction;
       // Primary leg
       expanded.add(RecordItem(data: data, perspectiveAccountId: tx.accountId));
-      
+
       // Secondary leg for internal transfers
-      if (tx.type == 'Transfer' && tx.toAccountId != null && !tx.toAccountId!.startsWith('EXTERNAL')) {
-        expanded.add(RecordItem(data: data, perspectiveAccountId: tx.toAccountId!));
+      if (tx.type == 'Transfer' &&
+          tx.toAccountId != null &&
+          !tx.toAccountId!.startsWith('EXTERNAL')) {
+        expanded.add(
+          RecordItem(data: data, perspectiveAccountId: tx.toAccountId!),
+        );
       }
     }
 
@@ -193,45 +220,65 @@ class TransactionFilterHelper {
 
       if (filter.timeframe == TimeframeOption.currentMonth) {
         final now = DateTime.now();
-        if (tx.date.year != now.year || tx.date.month != now.month) return false;
+        if (tx.date.year != now.year || tx.date.month != now.month)
+          return false;
       } else if (filter.timeframe == TimeframeOption.lastMonth) {
         final now = DateTime.now();
         int targetYear = now.month == 1 ? now.year - 1 : now.year;
         int targetMonth = now.month == 1 ? 12 : now.month - 1;
-        if (tx.date.year != targetYear || tx.date.month != targetMonth) return false;
-      } else if (filter.timeframe == TimeframeOption.custom && filter.customStartDate != null && filter.customEndDate != null) {
-        if (tx.date.isBefore(filter.customStartDate!) || tx.date.isAfter(filter.customEndDate!.add(const Duration(days: 1)))) return false;
+        if (tx.date.year != targetYear || tx.date.month != targetMonth)
+          return false;
+      } else if (filter.timeframe == TimeframeOption.custom &&
+          filter.customStartDate != null &&
+          filter.customEndDate != null) {
+        if (tx.date.isBefore(filter.customStartDate!) ||
+            tx.date.isAfter(filter.customEndDate!.add(const Duration(days: 1))))
+          return false;
       }
 
       if (filter.types.isNotEmpty) {
         final isExpense = tx.type == 'Expense';
         final isIncome = tx.type == 'Income';
         final isTransfer = tx.type == 'Transfer';
-        
+
         bool isMoneyLeaving = isExpense;
         if (isTransfer) {
-          if (tx.toAccountId == 'EXTERNAL_IN') isMoneyLeaving = false;
-          else if (tx.toAccountId == 'EXTERNAL_OUT') isMoneyLeaving = true;
-          else isMoneyLeaving = tx.accountId == perspective;
+          if (tx.toAccountId == 'EXTERNAL_IN')
+            isMoneyLeaving = false;
+          else if (tx.toAccountId == 'EXTERNAL_OUT')
+            isMoneyLeaving = true;
+          else
+            isMoneyLeaving = tx.accountId == perspective;
         }
 
         String mappedType = '';
-        if (isExpense) mappedType = 'Expense';
-        else if (isIncome) mappedType = 'Income';
-        else if (isTransfer && isMoneyLeaving) mappedType = 'Transfer Out';
-        else if (isTransfer && !isMoneyLeaving) mappedType = 'Transfer In';
+        if (isExpense)
+          mappedType = 'Expense';
+        else if (isIncome)
+          mappedType = 'Income';
+        else if (isTransfer && isMoneyLeaving)
+          mappedType = 'Transfer Out';
+        else if (isTransfer && !isMoneyLeaving)
+          mappedType = 'Transfer In';
 
-        if (mappedType.isNotEmpty && !filter.types.contains(mappedType)) return false;
+        if (mappedType.isNotEmpty && !filter.types.contains(mappedType))
+          return false;
       }
 
-      if (filter.minAmount != null && tx.amount < filter.minAmount!) return false;
-      if (filter.maxAmount != null && tx.amount > filter.maxAmount!) return false;
+      if (filter.minAmount != null && tx.amount < filter.minAmount!)
+        return false;
+      if (filter.maxAmount != null && tx.amount > filter.maxAmount!)
+        return false;
 
       if (filter.categoryIds.isNotEmpty) {
-        if (tx.categoryId == null || !filter.categoryIds.contains(tx.categoryId)) return false;
+        if (tx.categoryId == null ||
+            !filter.categoryIds.contains(tx.categoryId))
+          return false;
       }
       if (filter.subCategories.isNotEmpty) {
-        if (tx.subCategory == null || !filter.subCategories.contains(tx.subCategory)) return false;
+        if (tx.subCategory == null ||
+            !filter.subCategories.contains(tx.subCategory))
+          return false;
       }
       if (filter.bucketIds.isNotEmpty) {
         int effectiveBucket = tx.bucketId ?? -1;
@@ -243,10 +290,14 @@ class TransactionFilterHelper {
 
     filtered.sort((a, b) {
       switch (filter.sortBy) {
-        case SortOption.newest: return b.data.transaction.date.compareTo(a.data.transaction.date);
-        case SortOption.oldest: return a.data.transaction.date.compareTo(b.data.transaction.date);
-        case SortOption.highestAmount: return b.data.transaction.amount.compareTo(a.data.transaction.amount);
-        case SortOption.lowestAmount: return a.data.transaction.amount.compareTo(b.data.transaction.amount);
+        case SortOption.newest:
+          return b.data.transaction.date.compareTo(a.data.transaction.date);
+        case SortOption.oldest:
+          return a.data.transaction.date.compareTo(b.data.transaction.date);
+        case SortOption.highestAmount:
+          return b.data.transaction.amount.compareTo(a.data.transaction.amount);
+        case SortOption.lowestAmount:
+          return a.data.transaction.amount.compareTo(b.data.transaction.amount);
       }
     });
 

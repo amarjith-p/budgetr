@@ -57,12 +57,14 @@ class TransactionCard extends ConsumerWidget {
 
     Color amountColor = TransactionColors.getTypeColor(tx.type, theme);
     String sign;
+
+    // --- FIX: ADDED RUPEE SYMBOLS DIRECTLY TO THE SIGN OVERRIDES ---
     if (isTransfer) {
-      sign = isMoneyLeaving ? '- ' : '+ ';
+      sign = isMoneyLeaving ? '-₹ ' : '+₹ ';
     } else if (isExpense) {
-      sign = '- ';
+      sign = '-₹ ';
     } else {
-      sign = '+ ';
+      sign = '+₹ ';
     }
 
     IconData leadingIcon = Icons.sync_alt_rounded;
@@ -97,7 +99,8 @@ class TransactionCard extends ConsumerWidget {
       subTitle = tx.subCategory!;
       leadingIcon = Icons.payments_rounded;
       amountColor = theme.colorScheme.primary;
-      sign = '+ ';
+      // --- FIX: POSITIVE RUPEE SYMBOL FOR LOAN REPAYMENT UI ---
+      sign = '+₹ ';
     } else if (!isTransfer && data.category != null) {
       leadingIcon = IconConstants.getIconByCode(data.category!.iconCode);
       mainTitle = data.category!.name;
@@ -400,6 +403,7 @@ class TransactionCard extends ConsumerWidget {
                 const SizedBox(height: 2),
                 CurrencyText(
                   amount: closingBalance!.abs(),
+                  // --- FIX: ADDED RUPEE SYMBOLS TO CLOSING BALANCE ---
                   sign: closingBalance! < 0 ? '-₹ ' : '₹ ',
                   amountStyle: TextStyle(
                     fontSize: 11,

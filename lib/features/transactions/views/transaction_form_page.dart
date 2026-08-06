@@ -15,6 +15,7 @@ import '../../../core/components/docked_calculator_pad.dart';
 import '../../../core/utils/bodmas_calculator.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../../../core/components/global_selection_sheet.dart';
+import '../../../core/components/currency_text.dart'; // <-- ADDED GLOBAL FORMATTER
 import '../../../core/utils/location_helper.dart';
 import '../../accounts/providers/account_provider.dart';
 import '../../category_manager/providers/category_provider.dart';
@@ -923,7 +924,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 right: 24,
                 top: 12,
               ),
-              // --- FIX: Wrap Column in SingleChildScrollView to prevent overflow ---
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Column(
@@ -1332,6 +1332,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     if (success && mounted) Navigator.pop(context);
   }
 
+  // --- SMART CELL FORMATTER UTILITY ---
+  String _formatCell(String text) {
+    if (text.isEmpty) return '0.00';
+    final parsed = double.tryParse(text);
+    if (parsed != null) return CurrencyFormatter.format(parsed);
+    return text;
+  }
+
   Widget _buildTableCell(
     String label,
     String? value,
@@ -1629,7 +1637,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     cells.add(
       _buildTableCell(
         'PRINCIPAL (₹)',
-        _loanPrinCtrl.text.isEmpty ? '0.00' : _loanPrinCtrl.text,
+        _formatCell(_loanPrinCtrl.text),
         Icons.payments_rounded,
         () => setState(() => _activeCalcController = _loanPrinCtrl),
         false,
@@ -1639,7 +1647,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     cells.add(
       _buildTableCell(
         'INTEREST (₹)',
-        _loanIntCtrl.text.isEmpty ? '0.00' : _loanIntCtrl.text,
+        _formatCell(_loanIntCtrl.text),
         Icons.percent_rounded,
         () => setState(() => _activeCalcController = _loanIntCtrl),
         false,
@@ -1649,7 +1657,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     cells.add(
       _buildTableCell(
         'TAX (₹)',
-        _loanTaxCtrl.text.isEmpty ? '0.00' : _loanTaxCtrl.text,
+        _formatCell(_loanTaxCtrl.text),
         Icons.account_balance_rounded,
         () => setState(() => _activeCalcController = _loanTaxCtrl),
         false,
@@ -1659,7 +1667,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     cells.add(
       _buildTableCell(
         'BANK CHARGES (₹)',
-        _loanFeeCtrl.text.isEmpty ? '0.00' : _loanFeeCtrl.text,
+        _formatCell(_loanFeeCtrl.text),
         Icons.receipt_long_rounded,
         () => setState(() => _activeCalcController = _loanFeeCtrl),
         false,
@@ -1738,8 +1746,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     String errorMsg = 'Amount must be greater than 0';
     if (hasDanglingOperator) errorMsg = 'Incomplete mathematical expression';
     if (isOverSplit)
+      // --- FORMATTED SPLITTING STRING ---
       errorMsg =
-          'Split amount must be less than original (₹${origAmount.toStringAsFixed(2)})';
+          'Split amount must be less than original (₹${CurrencyFormatter.format(origAmount)})';
 
     final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
     final rawCategories =
@@ -1936,8 +1945,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                             if (widget.isSplit)
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 8.0),
+                                // --- FORMATTED SPLITTING STRING ---
                                 child: Text(
-                                  'SPLITTING FROM ₹${origAmount.toStringAsFixed(2)}',
+                                  'SPLITTING FROM ₹${CurrencyFormatter.format(origAmount)}',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900,
@@ -2024,6 +2034,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                       ),
                                     ),
                                     const SizedBox(height: 2),
+                                    // --- FORMATTED TOTAL REPAYMENT ---
                                     RichText(
                                       text: TextSpan(
                                         children: [
@@ -2037,7 +2048,10 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                             ),
                                           ),
                                           TextSpan(
-                                            text: _liveResult,
+                                            text: CurrencyFormatter.format(
+                                              double.tryParse(_liveResult) ??
+                                                  0.0,
+                                            ),
                                             style: TextStyle(
                                               fontSize: 32,
                                               fontWeight: FontWeight.w900,
@@ -2057,8 +2071,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                 _expression != _liveResult &&
                                 !hasAmountError &&
                                 !isToLoan)
+                              // --- FORMATTED LIVE RESULT EQUATION ---
                               Text(
-                                '= ₹$_liveResult',
+                                '= ₹${CurrencyFormatter.format(double.tryParse(_liveResult) ?? 0.0)}',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/design_tokens.dart';
+import '../../../core/components/currency_text.dart'; // <-- IMPORTED
 
 class BudgetProgressCard extends StatelessWidget {
   final String bucketName;
@@ -21,43 +22,43 @@ class BudgetProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final left = allocated - spent;
     final progress = allocated == 0 ? 0.0 : (spent / allocated);
 
-    // Determine tracking colors
     Color activeColor = theme.colorScheme.primary;
     bool isWarning = false;
     bool isDanger = false;
 
     if (progress >= 1.0) {
-      activeColor = theme.colorScheme.error; 
+      activeColor = theme.colorScheme.error;
       isDanger = true;
     } else if (progress >= 0.85) {
-      activeColor = Colors.orangeAccent.shade700; 
+      activeColor = Colors.orangeAccent.shade700;
       isWarning = true;
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12), // Tighter vertical list spacing
+      padding: const EdgeInsets.only(bottom: 12),
       child: Material(
         color: theme.colorScheme.surface,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12), // Sleeker radius
+          borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: isDanger ? theme.colorScheme.error.withOpacity(0.4) : theme.dividerColor,
+            color: isDanger
+                ? theme.colorScheme.error.withOpacity(0.4)
+                : theme.dividerColor,
             width: 1.0,
           ),
         ),
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(12), // Reduced from 16 to 12
+            padding: const EdgeInsets.all(12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // --- SLEEK SQUARE BADGE ---
                 Container(
                   width: 38,
                   height: 38,
@@ -76,15 +77,13 @@ class BudgetProgressCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(width: 12),
-                
-                // --- INLINE DETAILS & PROGRESS ---
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Header Row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -93,35 +92,39 @@ class BudgetProgressCard extends StatelessWidget {
                             child: Text(
                               bucketName.toUpperCase(),
                               style: const TextStyle(
-                                fontWeight: FontWeight.w800, 
-                                fontSize: 11, 
+                                fontWeight: FontWeight.w800,
+                                fontSize: 11,
                                 letterSpacing: 0.5,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          // --- FORMATTED WITH CURRENCY UTILITY ---
                           Text(
-                            '₹${spent.toStringAsFixed(0)} / ₹${allocated.toStringAsFixed(0)}',
+                            '₹${CurrencyFormatter.format(spent)} / ₹${CurrencyFormatter.format(allocated)}',
                             style: TextStyle(
-                              fontSize: 10, 
-                              fontWeight: FontWeight.w800, 
-                              color: isDanger || isWarning ? activeColor : theme.colorScheme.onSurface,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: isDanger || isWarning
+                                  ? activeColor
+                                  : theme.colorScheme.onSurface,
                             ),
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 6),
-                      
-                      // Progress Bar
+
                       LayoutBuilder(
                         builder: (context, constraints) {
                           return Container(
-                            height: 6.0, // Ultra-thin bar
+                            height: 6.0,
                             width: constraints.maxWidth,
                             decoration: BoxDecoration(
-                              color: isDark ? Colors.white12 : Colors.black.withOpacity(0.06),
+                              color: isDark
+                                  ? Colors.white12
+                                  : Colors.black.withOpacity(0.06),
                               borderRadius: BorderRadius.circular(3.0),
                             ),
                             child: Stack(
@@ -129,45 +132,67 @@ class BudgetProgressCard extends StatelessWidget {
                                 AnimatedContainer(
                                   duration: const Duration(milliseconds: 600),
                                   curve: Curves.easeOutCubic,
-                                  width: constraints.maxWidth * progress.clamp(0.0, 1.0),
+                                  width:
+                                      constraints.maxWidth *
+                                      progress.clamp(0.0, 1.0),
                                   height: 6.0,
                                   decoration: BoxDecoration(
                                     color: activeColor,
                                     borderRadius: BorderRadius.circular(3.0),
-                                    boxShadow: isDanger ? [
-                                      BoxShadow(color: activeColor.withOpacity(0.4), blurRadius: 4, offset: const Offset(0, 1))
-                                    ] : null,
+                                    boxShadow: isDanger
+                                        ? [
+                                            BoxShadow(
+                                              color: activeColor.withOpacity(
+                                                0.4,
+                                              ),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ]
+                                        : null,
                                   ),
                                 ),
                               ],
                             ),
                           );
-                        }
+                        },
                       ),
-                      
+
                       const SizedBox(height: 6),
-                      
-                      // Footer Row (Remaining / Warnings)
+
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          // --- FORMATTED WITH CURRENCY UTILITY ---
                           Text(
-                            left >= 0 ? '₹${left.toStringAsFixed(0)} Left' : '₹${left.abs().toStringAsFixed(0)} Over', 
+                            left >= 0
+                                ? '₹${CurrencyFormatter.format(left)} Left'
+                                : '₹${CurrencyFormatter.format(left.abs())} Over',
                             style: TextStyle(
-                              fontSize: 9, 
-                              fontWeight: FontWeight.w800, 
-                              color: left >= 0 ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.error,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: left >= 0
+                                  ? theme.colorScheme.onSurfaceVariant
+                                  : theme.colorScheme.error,
                             ),
                           ),
                           if (isDanger || isWarning)
                             Row(
                               children: [
-                                Icon(Icons.warning_rounded, size: 10, color: activeColor),
+                                Icon(
+                                  Icons.warning_rounded,
+                                  size: 10,
+                                  color: activeColor,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   isDanger ? 'OVER BUDGET' : 'NEAR LIMIT',
-                                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: activeColor),
-                                )
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w900,
+                                    color: activeColor,
+                                  ),
+                                ),
                               ],
                             ),
                         ],
@@ -175,9 +200,13 @@ class BudgetProgressCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(width: 8),
-                Icon(Icons.chevron_right_rounded, size: 16, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4)),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
+                ),
               ],
             ),
           ),

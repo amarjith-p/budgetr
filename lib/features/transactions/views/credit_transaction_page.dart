@@ -17,17 +17,31 @@ import 'transaction_form_page.dart';
 import '../../accounts/providers/account_provider.dart';
 
 extension CreditAccountExtensions on Account {
-  int get safeBillingDay => billDate ?? 15; 
-  int get safeDueDay => dueDate ?? 5;      
-  
+  int get safeBillingDay => billDate ?? 15;
+  int get safeDueDay => dueDate ?? 5;
+
   DateTime getEffectiveDate(TransactionRecord tx) {
     if (tx.isSpillover) {
       final bDay = safeBillingDay;
-      DateTime nextBillDate = DateTime(tx.date.year, tx.date.month, bDay, 23, 59, 59);
+      DateTime nextBillDate = DateTime(
+        tx.date.year,
+        tx.date.month,
+        bDay,
+        23,
+        59,
+        59,
+      );
       if (tx.date.day > bDay) {
-        nextBillDate = DateTime(tx.date.year, tx.date.month + 1, bDay, 23, 59, 59);
+        nextBillDate = DateTime(
+          tx.date.year,
+          tx.date.month + 1,
+          bDay,
+          23,
+          59,
+          59,
+        );
       }
-      return nextBillDate.add(const Duration(days: 1)); 
+      return nextBillDate.add(const Duration(days: 1));
     }
     return tx.date;
   }
@@ -40,8 +54,8 @@ class BillingCycle {
   final List<TransactionWithDetails> transactions;
 
   BillingCycle({
-    required this.startDate, 
-    required this.endDate, 
+    required this.startDate,
+    required this.endDate,
     required this.dueDate,
     required this.transactions,
   });
@@ -53,99 +67,136 @@ class BillingCycle {
 
 class CreditTransactionPage extends ConsumerWidget {
   final Account account;
+  const CreditTransactionPage({Key? key, required this.account})
+    : super(key: key);
 
-  const CreditTransactionPage({Key? key, required this.account}) : super(key: key);
-
-  List<BillingCycle> _groupIntoCycles(List<TransactionWithDetails> transactions, Account liveAccount) {
+  List<BillingCycle> _groupIntoCycles(
+    List<TransactionWithDetails> transactions,
+    Account liveAccount,
+  ) {
     if (transactions.isEmpty) return [];
-
     final bDay = liveAccount.safeBillingDay;
     final dDay = liveAccount.safeDueDay;
-    
+
     List<BillingCycle> cycles = [];
-    
     DateTime oldest = transactions.last.transaction.date;
     DateTime newest = transactions.first.transaction.date;
     DateTime now = DateTime.now();
     if (now.isAfter(newest)) newest = now;
-
     DateTime currentEnd = DateTime(newest.year, newest.month, bDay, 23, 59, 59);
     if (newest.day > bDay) {
       currentEnd = DateTime(newest.year, newest.month + 1, bDay, 23, 59, 59);
     }
-
     DateTime pointerEnd = currentEnd;
+
     while (pointerEnd.isAfter(oldest) || pointerEnd.isAtSameMomentAs(oldest)) {
-      DateTime pointerStart = DateTime(pointerEnd.year, pointerEnd.month - 1, bDay + 1, 0, 0, 0);
-      
-      // --- FIX: FLAWLESS DUE DATE MATH ---
+      DateTime pointerStart = DateTime(
+        pointerEnd.year,
+        pointerEnd.month - 1,
+        bDay + 1,
+        0,
+        0,
+        0,
+      );
+
       DateTime pointerDue;
       if (dDay > bDay) {
-        // Due date falls in the same month as the statement end date (e.g., Bill 2, Due 22)
-        pointerDue = DateTime(pointerEnd.year, pointerEnd.month, dDay, 23, 59, 59);
+        pointerDue = DateTime(
+          pointerEnd.year,
+          pointerEnd.month,
+          dDay,
+          23,
+          59,
+          59,
+        );
       } else {
-        // Due date crosses over into the following month (e.g., Bill 25, Due 12)
-        pointerDue = DateTime(pointerEnd.year, pointerEnd.month + 1, dDay, 23, 59, 59);
+        pointerDue = DateTime(
+          pointerEnd.year,
+          pointerEnd.month + 1,
+          dDay,
+          23,
+          59,
+          59,
+        );
       }
 
       final cycleTxs = transactions.where((t) {
-        final effectiveDate = liveAccount.getEffectiveDate(t.transaction); 
-        return (effectiveDate.isAfter(pointerStart) || effectiveDate.isAtSameMomentAs(pointerStart)) && 
-               (effectiveDate.isBefore(pointerEnd) || effectiveDate.isAtSameMomentAs(pointerEnd));
+        final effectiveDate = liveAccount.getEffectiveDate(t.transaction);
+        return (effectiveDate.isAfter(pointerStart) ||
+                effectiveDate.isAtSameMomentAs(pointerStart)) &&
+            (effectiveDate.isBefore(pointerEnd) ||
+                effectiveDate.isAtSameMomentAs(pointerEnd));
       }).toList();
 
-      cycles.add(BillingCycle(
-        startDate: pointerStart, 
-        endDate: pointerEnd, 
-        dueDate: pointerDue, 
-        transactions: cycleTxs
-      ));
-
-      pointerEnd = DateTime(pointerEnd.year, pointerEnd.month - 1, bDay, 23, 59, 59);
+      cycles.add(
+        BillingCycle(
+          startDate: pointerStart,
+          endDate: pointerEnd,
+          dueDate: pointerDue,
+          transactions: cycleTxs,
+        ),
+      );
+      pointerEnd = DateTime(
+        pointerEnd.year,
+        pointerEnd.month - 1,
+        bDay,
+        23,
+        59,
+        59,
+      );
     }
 
     for (int i = 0; i < cycles.length - 1; i++) {
       final currentCycle = cycles[i];
       final previousCycle = cycles[i + 1];
-      
       final paymentsToMove = currentCycle.transactions.where((tx) {
         final t = tx.transaction;
-        bool isIncoming = t.type == 'Income' || (t.type == 'Transfer' && t.toAccountId == liveAccount.id);
+        bool isIncoming =
+            t.type == 'Income' ||
+            (t.type == 'Transfer' && t.toAccountId == liveAccount.id);
         bool isRepaymentCat = tx.category?.name == 'Repayment';
-        bool isBeforeDue = t.date.isBefore(previousCycle.dueDate.add(const Duration(days: 1)));
-
+        bool isBeforeDue = t.date.isBefore(
+          previousCycle.dueDate.add(const Duration(days: 1)),
+        );
         return isIncoming && isRepaymentCat && isBeforeDue;
       }).toList();
-
       if (paymentsToMove.isNotEmpty) {
-        currentCycle.transactions.removeWhere((tx) => paymentsToMove.contains(tx));
+        currentCycle.transactions.removeWhere(
+          (tx) => paymentsToMove.contains(tx),
+        );
         previousCycle.transactions.insertAll(0, paymentsToMove);
-        previousCycle.transactions.sort((a, b) => b.transaction.date.compareTo(a.transaction.date));
+        previousCycle.transactions.sort(
+          (a, b) => b.transaction.date.compareTo(a.transaction.date),
+        );
       }
     }
-
     return cycles;
   }
 
- @override
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transactionsAsync = ref.watch(accountTransactionsProvider(account.id));
+    final transactionsAsync = ref.watch(
+      accountTransactionsProvider(account.id),
+    );
     final filterState = ref.watch(transactionFilterProvider(account.id));
-    
     final accountsAsync = ref.watch(accountsStreamProvider);
-    final liveAccount = accountsAsync.asData?.value.where((a) => a.id == account.id).firstOrNull ?? account;
-    
+    final liveAccount =
+        accountsAsync.asData?.value
+            .where((a) => a.id == account.id)
+            .firstOrNull ??
+        account;
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, 
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: ModernAppBar(
         title: liveAccount.providerName.toUpperCase(),
         subtitle: liveAccount.name.toUpperCase(),
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.pop(context),
-        
-        trailingIcon: filterState.isActive ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
+        trailingIcon: filterState.isActive
+            ? Icons.filter_alt_rounded
+            : Icons.filter_alt_outlined,
         onTrailingPressed: () {
           final txList = transactionsAsync.asData?.value ?? [];
           TransactionFilterBottomSheet.show(context, liveAccount.id, txList);
@@ -153,7 +204,13 @@ class CreditTransactionPage extends ConsumerWidget {
       ),
       floatingActionButton: ModernSquircleFab(
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(preSelectedAccountId: liveAccount.id)));
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  TransactionFormPage(preSelectedAccountId: liveAccount.id),
+            ),
+          );
         },
         icon: Icons.add_rounded,
         label: 'Log',
@@ -162,10 +219,8 @@ class CreditTransactionPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (transactions) {
-          
           final closingBalances = <String, double>{};
           double totalNetImpact = 0;
-
           for (var txData in transactions) {
             final t = txData.transaction;
             if (t.type == 'Income') {
@@ -180,9 +235,8 @@ class CreditTransactionPage extends ConsumerWidget {
               }
             }
           }
-
           double runningBal = liveAccount.balance - totalNetImpact;
-          
+
           for (var txData in transactions.reversed) {
             final t = txData.transaction;
             if (t.type == 'Income') {
@@ -200,84 +254,144 @@ class CreditTransactionPage extends ConsumerWidget {
           }
 
           final rawCycles = _groupIntoCycles(transactions, liveAccount);
-          
           final filteredCycles = rawCycles.map((cycle) {
             return BillingCycle(
               startDate: cycle.startDate,
               endDate: cycle.endDate,
               dueDate: cycle.dueDate,
-              transactions: TransactionFilterHelper.apply(cycle.transactions, filterState, liveAccount.id),
+              transactions: TransactionFilterHelper.apply(
+                cycle.transactions,
+                filterState,
+                liveAccount.id,
+              ),
             );
           }).toList();
-          
+
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(DesignTokens.spacingMd),
-                  child: _CreditSummaryCard(cycles: rawCycles, account: liveAccount, allTransactions: transactions),
+                  child: _CreditSummaryCard(
+                    cycles: rawCycles,
+                    account: liveAccount,
+                    allTransactions: transactions,
+                  ),
                 ),
               ),
-              
+
               if (filterState.isActive)
                 SliverToBoxAdapter(
                   child: ActiveFilterBanner(
-                    filterState: filterState, 
-                    onClear: () => ref.read(transactionFilterProvider(liveAccount.id).notifier).state = const TransactionFilterState(),
+                    filterState: filterState,
+                    onClear: () =>
+                        ref
+                                .read(
+                                  transactionFilterProvider(
+                                    liveAccount.id,
+                                  ).notifier,
+                                )
+                                .state =
+                            const TransactionFilterState(),
                   ),
                 ),
-              
+
               if (transactions.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(child: Text('No credit activity yet.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),
+                  child: Center(
+                    child: Text(
+                      'No credit activity yet.',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 )
               else if (filteredCycles.every((c) => c.transactions.isEmpty))
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(child: Text('No results match your filters.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),
+                  child: Center(
+                    child: Text(
+                      'No results match your filters.',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 )
               else
-                ...filteredCycles.where((c) => c.transactions.isNotEmpty || filteredCycles.indexOf(c) <= 1).map((cycle) {
-                  final isCurrentUnbilled = filteredCycles.indexOf(cycle) == 0;
-                  final headerTitle = isCurrentUnbilled ? 'UNBILLED (Ends ${cycle.title})' : 'STATEMENT - ${cycle.title}';
-
-                  return SliverMainAxisGroup(
-                    slivers: [
-                      SliverPersistentHeader(
-                        pinned: true,
-                        delegate: _StickyCycleHeaderDelegate(title: headerTitle, theme: theme),
-                      ),
-                      if (cycle.transactions.isEmpty)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 24.0),
-                            child: Center(child: Text(filterState.isActive ? 'No matches in this cycle' : 'No transactions in this cycle.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12))),
-                          ),
-                        )
-                      else
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final txData = cycle.transactions[index];
-                                return TransactionCard(
-                                  data: txData, 
-                                  currentAccountId: liveAccount.id,
-                                  closingBalance: closingBalances[txData.transaction.id], 
-                                );
-                              },
-                              childCount: cycle.transactions.length,
+                ...filteredCycles
+                    .where(
+                      (c) =>
+                          c.transactions.isNotEmpty ||
+                          filteredCycles.indexOf(c) <= 1,
+                    )
+                    .map((cycle) {
+                      final isCurrentUnbilled =
+                          filteredCycles.indexOf(cycle) == 0;
+                      final headerTitle = isCurrentUnbilled
+                          ? 'UNBILLED (Ends ${cycle.title})'
+                          : 'STATEMENT - ${cycle.title}';
+                      return SliverMainAxisGroup(
+                        slivers: [
+                          SliverPersistentHeader(
+                            pinned: true,
+                            delegate: _StickyCycleHeaderDelegate(
+                              title: headerTitle,
+                              theme: theme,
                             ),
                           ),
-                        ),
-                      const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
-                    ],
-                  );
-                }).toList(),
-              
+                          if (cycle.transactions.isEmpty)
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 24.0,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    filterState.isActive
+                                        ? 'No matches in this cycle'
+                                        : 'No transactions in this cycle.',
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          else
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DesignTokens.spacingMd,
+                              ),
+                              sliver: SliverList(
+                                delegate: SliverChildBuilderDelegate((
+                                  context,
+                                  index,
+                                ) {
+                                  final txData = cycle.transactions[index];
+                                  return TransactionCard(
+                                    data: txData,
+                                    currentAccountId: liveAccount.id,
+                                    closingBalance:
+                                        closingBalances[txData.transaction.id],
+                                  );
+                                }, childCount: cycle.transactions.length),
+                              ),
+                            ),
+                          const SliverToBoxAdapter(
+                            child: SizedBox(height: DesignTokens.spacingMd),
+                          ),
+                        ],
+                      );
+                    })
+                    .toList(),
+
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );
@@ -293,7 +407,7 @@ class _CreditSummaryCard extends StatelessWidget {
   final List<TransactionWithDetails> allTransactions;
 
   const _CreditSummaryCard({
-    required this.cycles, 
+    required this.cycles,
     required this.account,
     required this.allTransactions,
   });
@@ -303,31 +417,35 @@ class _CreditSummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final now = DateTime.now();
-
     BillingCycle? lastCycle = cycles.length > 1 ? cycles[1] : null;
     DateTime? lastStatementDate = lastCycle?.endDate;
-
-    double historicalNet = 0;           
-    double currentCycleNet = 0;         
-    double paymentsSinceStatement = 0;  
+    double historicalNet = 0;
+    double currentCycleNet = 0;
+    double paymentsSinceStatement = 0;
 
     for (var tx in allTransactions) {
       final t = tx.transaction;
-      bool isExpense = t.type == 'Expense' || (t.type == 'Transfer' && t.accountId == account.id);
-      bool isPayment = t.type == 'Income' || (t.type == 'Transfer' && t.toAccountId == account.id);
+      bool isExpense =
+          t.type == 'Expense' ||
+          (t.type == 'Transfer' && t.accountId == account.id);
+      bool isPayment =
+          t.type == 'Income' ||
+          (t.type == 'Transfer' && t.toAccountId == account.id);
       bool isRepayment = tx.category?.name == 'Repayment';
-      
       double netAmount = 0;
-      if (isExpense) netAmount = -t.amount;      
-      else if (isPayment) netAmount = t.amount;  
+
+      if (isExpense)
+        netAmount = -t.amount;
+      else if (isPayment)
+        netAmount = t.amount;
 
       DateTime effectiveDate = account.getEffectiveDate(t);
-
-      if (lastStatementDate == null || effectiveDate.isAfter(lastStatementDate)) {
+      if (lastStatementDate == null ||
+          effectiveDate.isAfter(lastStatementDate)) {
         if (isPayment && isRepayment) {
-          paymentsSinceStatement += netAmount; 
+          paymentsSinceStatement += netAmount;
         } else {
-          currentCycleNet += netAmount; 
+          currentCycleNet += netAmount;
         }
       } else {
         historicalNet += netAmount;
@@ -335,30 +453,43 @@ class _CreditSummaryCard extends StatelessWidget {
     }
 
     double remainingDueNet = historicalNet + paymentsSinceStatement;
-    double adjustedUnbilled = currentCycleNet + remainingDueNet; 
 
-    String unbilledSign = adjustedUnbilled < 0 ? '-₹' : (adjustedUnbilled > 0 ? '+₹' : '₹');
-    String statementSign = historicalNet < 0 ? '-₹' : (historicalNet > 0 ? '+₹' : '₹');
+    double adjustedUnbilled = currentCycleNet;
+    if (lastCycle != null && now.isAfter(lastCycle.dueDate)) {
+      adjustedUnbilled += remainingDueNet;
+    }
 
+    String unbilledSign = adjustedUnbilled < 0
+        ? '-₹ '
+        : (adjustedUnbilled > 0 ? '+₹ ' : '₹ ');
+    String statementSign = historicalNet < 0
+        ? '-₹ '
+        : (historicalNet > 0 ? '+₹ ' : '₹ ');
     String statusText = 'NO DUES';
     Color statusColor = theme.colorScheme.primary;
     int daysUntilDue = 0;
-    
+
     if (lastCycle != null) {
       daysUntilDue = lastCycle.dueDate.difference(now).inDays;
-      if (remainingDueNet < 0) { 
+      if (remainingDueNet < 0) {
         if (daysUntilDue < 0) {
-          statusText = 'OVERDUE (-₹${remainingDueNet.abs().toStringAsFixed(2)})';
+          // --- APPLIED GLOBAL FORMATTER ---
+          statusText =
+              'OVERDUE (- ₹${CurrencyFormatter.format(remainingDueNet.abs())})';
           statusColor = theme.colorScheme.error;
         } else if (paymentsSinceStatement > 0) {
-          statusText = 'PARTIAL (-₹${remainingDueNet.abs().toStringAsFixed(2)} LEFT)';
+          // --- APPLIED GLOBAL FORMATTER ---
+          statusText =
+              'PARTIAL (- ₹${CurrencyFormatter.format(remainingDueNet.abs())} LEFT)';
           statusColor = Colors.orangeAccent.shade700;
         } else {
           statusText = 'UNPAID';
           statusColor = theme.colorScheme.error;
         }
-      } else if (remainingDueNet > 0) { 
-        statusText = 'SURPLUS (+₹${remainingDueNet.toStringAsFixed(2)})';
+      } else if (remainingDueNet > 0) {
+        // --- APPLIED GLOBAL FORMATTER ---
+        statusText =
+            'SURPLUS (+ ₹${CurrencyFormatter.format(remainingDueNet)})';
         statusColor = theme.colorScheme.primary;
       } else if (remainingDueNet == 0 && historicalNet < 0) {
         statusText = 'PAID IN FULL';
@@ -370,9 +501,15 @@ class _CreditSummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.dividerColor, width: 1.0), 
+        border: Border.all(color: theme.dividerColor, width: 1.0),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.2 : 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              theme.brightness == Brightness.dark ? 0.2 : 0.05,
+            ),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: IntrinsicHeight(
@@ -384,7 +521,12 @@ class _CreditSummaryCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('UNBILLED', style: textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    Text(
+                      'UNBILLED',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     CurrencyText(
                       amount: adjustedUnbilled,
@@ -392,31 +534,46 @@ class _CreditSummaryCard extends StatelessWidget {
                       amountStyle: textTheme.titleLarge!,
                     ),
                     const SizedBox(height: 12),
-                    
                     if (cycles.isNotEmpty)
-                      _buildMiniInfo(Icons.calendar_today_rounded, 'Bills on ${cycles[0].endDate.day} ${DateTimeConstants.shortMonths[cycles[0].endDate.month - 1]}', theme),
-                    
-                    if (cycles.isNotEmpty && remainingDueNet != 0)
+                      _buildMiniInfo(
+                        Icons.calendar_today_rounded,
+                        'Bills on ${cycles[0].endDate.day} ${DateTimeConstants.shortMonths[cycles[0].endDate.month - 1]}',
+                        theme,
+                      ),
+
+                    if (cycles.isNotEmpty &&
+                        remainingDueNet != 0 &&
+                        (lastCycle != null && now.isAfter(lastCycle.dueDate)))
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),
                         child: _buildMiniInfo(
-                          Icons.compare_arrows_rounded, 
-                          'Includes ${remainingDueNet < 0 ? '-' : '+'}₹${remainingDueNet.abs().toStringAsFixed(2)} prev. balance', 
-                          theme
+                          Icons.compare_arrows_rounded,
+                          // --- APPLIED GLOBAL FORMATTER ---
+                          'Includes ${remainingDueNet < 0 ? '-' : '+'}₹${CurrencyFormatter.format(remainingDueNet.abs())} prev. balance',
+                          theme,
                         ),
                       ),
                   ],
                 ),
               ),
             ),
-            VerticalDivider(width: 1, thickness: 1, color: theme.dividerColor.withOpacity(0.3)),
+            VerticalDivider(
+              width: 1,
+              thickness: 1,
+              color: theme.dividerColor.withOpacity(0.3),
+            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('LAST STATEMENT', style: textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    Text(
+                      'LAST STATEMENT',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     CurrencyText(
                       amount: historicalNet,
@@ -425,20 +582,39 @@ class _CreditSummaryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                      child: Text(statusText, style: textTheme.labelSmall?.copyWith(color: statusColor)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        statusText,
+                        style: textTheme.labelSmall?.copyWith(
+                          color: statusColor,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     if (lastCycle != null && remainingDueNet < 0)
                       _buildMiniInfo(
-                        daysUntilDue < 0 ? Icons.warning_rounded : Icons.timer_outlined, 
-                        daysUntilDue < 0 ? 'Due passed' : 'Due in $daysUntilDue days', 
+                        daysUntilDue < 0
+                            ? Icons.warning_rounded
+                            : Icons.timer_outlined,
+                        daysUntilDue < 0
+                            ? 'Due passed'
+                            : 'Due in $daysUntilDue days',
                         theme,
-                        isAlert: daysUntilDue < 0
+                        isAlert: daysUntilDue < 0,
                       )
                     else if (lastCycle != null)
-                      _buildMiniInfo(Icons.check_circle_outline_rounded, 'Cleared', theme),
+                      _buildMiniInfo(
+                        Icons.check_circle_outline_rounded,
+                        'Cleared',
+                        theme,
+                      ),
                   ],
                 ),
               ),
@@ -449,8 +625,15 @@ class _CreditSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildMiniInfo(IconData icon, String text, ThemeData theme, {bool isAlert = false}) {
-    final color = isAlert ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant;
+  Widget _buildMiniInfo(
+    IconData icon,
+    String text,
+    ThemeData theme, {
+    bool isAlert = false,
+  }) {
+    final color = isAlert
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurfaceVariant;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -461,8 +644,11 @@ class _CreditSummaryCard extends StatelessWidget {
         const SizedBox(width: 4),
         Expanded(
           child: Text(
-            text, 
-            style: theme.textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w700),
+            text,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
@@ -473,11 +659,14 @@ class _CreditSummaryCard extends StatelessWidget {
 class _StickyCycleHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;
   final ThemeData theme;
-
   _StickyCycleHeaderDelegate({required this.title, required this.theme});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
@@ -487,7 +676,12 @@ class _StickyCycleHeaderDelegate extends SliverPersistentHeaderDelegate {
           alignment: Alignment.centerLeft,
           child: Text(
             title,
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.5, color: theme.colorScheme.primary),
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 11,
+              letterSpacing: 1.5,
+              color: theme.colorScheme.primary,
+            ),
           ),
         ),
       ),
@@ -499,5 +693,6 @@ class _StickyCycleHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   double get minExtent => 40.0;
   @override
-  bool shouldRebuild(covariant _StickyCycleHeaderDelegate oldDelegate) => title != oldDelegate.title;
+  bool shouldRebuild(covariant _StickyCycleHeaderDelegate oldDelegate) =>
+      title != oldDelegate.title;
 }

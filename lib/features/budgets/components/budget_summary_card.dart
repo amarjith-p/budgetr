@@ -7,11 +7,11 @@ class BudgetSummaryCard extends StatelessWidget {
   final double salaryIncome;
   final double extraIncome;
   final double deductions;
-  final bool isClosed; 
+  final bool isClosed;
   final VoidCallback onTap;
-  final VoidCallback onEdit; 
-  final VoidCallback onClose; 
-  final VoidCallback onDelete; 
+  final VoidCallback onEdit;
+  final VoidCallback onClose;
+  final VoidCallback onDelete;
 
   const BudgetSummaryCard({
     Key? key,
@@ -34,12 +34,11 @@ class BudgetSummaryCard extends StatelessWidget {
 
     return Slidable(
       key: const ValueKey('budget_summary_card'),
-      enabled: !isClosed, 
-      
-      // SWIPE RIGHT (EDIT) - Matches BoxySlidableCard startActionPane
+      enabled: !isClosed,
+
       startActionPane: ActionPane(
         motion: const DrawerMotion(),
-        extentRatio: 0.25, 
+        extentRatio: 0.25,
         children: [
           CustomSlidableAction(
             onPressed: (_) => onEdit(),
@@ -50,8 +49,11 @@ class BudgetSummaryCard extends StatelessWidget {
               margin: const EdgeInsets.only(right: DesignTokens.spacingSm),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primaryContainer,
-                borderRadius: activeRadius, 
-                border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3), width: 1.2),
+                borderRadius: activeRadius,
+                border: Border.all(
+                  color: theme.colorScheme.primary.withOpacity(0.3),
+                  width: 1.2,
+                ),
               ),
               alignment: Alignment.center,
               child: const Column(
@@ -59,7 +61,10 @@ class BudgetSummaryCard extends StatelessWidget {
                 children: [
                   Icon(Icons.edit_rounded),
                   SizedBox(height: 4),
-                  Text('Edit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Edit',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
@@ -67,10 +72,9 @@ class BudgetSummaryCard extends StatelessWidget {
         ],
       ),
 
-      // SWIPE LEFT (CLOSE & DELETE) - Matches BoxySlidableCard endActionPane
       endActionPane: ActionPane(
         motion: const DrawerMotion(),
-        extentRatio: 0.50, 
+        extentRatio: 0.50,
         children: [
           CustomSlidableAction(
             onPressed: (_) => onClose(),
@@ -81,8 +85,11 @@ class BudgetSummaryCard extends StatelessWidget {
               margin: const EdgeInsets.only(left: DesignTokens.spacingSm),
               decoration: BoxDecoration(
                 color: theme.colorScheme.tertiaryContainer,
-                borderRadius: activeRadius, 
-                border: Border.all(color: theme.colorScheme.tertiary.withOpacity(0.3), width: 1.2),
+                borderRadius: activeRadius,
+                border: Border.all(
+                  color: theme.colorScheme.tertiary.withOpacity(0.3),
+                  width: 1.2,
+                ),
               ),
               alignment: Alignment.center,
               child: const Column(
@@ -90,7 +97,10 @@ class BudgetSummaryCard extends StatelessWidget {
                 children: [
                   Icon(Icons.lock_rounded),
                   SizedBox(height: 4),
-                  Text('Close', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Close',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
@@ -104,8 +114,11 @@ class BudgetSummaryCard extends StatelessWidget {
               margin: const EdgeInsets.only(left: DesignTokens.spacingSm),
               decoration: BoxDecoration(
                 color: theme.colorScheme.errorContainer,
-                borderRadius: activeRadius, 
-                border: Border.all(color: theme.colorScheme.error.withOpacity(0.3), width: 1.2),
+                borderRadius: activeRadius,
+                border: Border.all(
+                  color: theme.colorScheme.error.withOpacity(0.3),
+                  width: 1.2,
+                ),
               ),
               alignment: Alignment.center,
               child: const Column(
@@ -113,7 +126,10 @@ class BudgetSummaryCard extends StatelessWidget {
                 children: [
                   Icon(Icons.delete_outline_rounded),
                   SizedBox(height: 4),
-                  Text('Delete', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Delete',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
@@ -121,7 +137,6 @@ class BudgetSummaryCard extends StatelessWidget {
         ],
       ),
 
-      // CARD DESIGN - Exactly matches BoxySlidableCard
       child: Card(
         elevation: 0,
         margin: EdgeInsets.zero,
@@ -129,8 +144,8 @@ class BudgetSummaryCard extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: activeRadius,
           side: BorderSide(
-            color: theme.dividerColor.withOpacity(0.6), 
-            width: 1.2
+            color: theme.dividerColor.withOpacity(0.6),
+            width: 1.2,
           ),
         ),
         child: InkWell(
@@ -151,62 +166,100 @@ class BudgetSummaryCard extends StatelessWidget {
                         if (isClosed)
                           Container(
                             margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.error.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: theme.colorScheme.error.withOpacity(0.5)),
+                              border: Border.all(
+                                color: theme.colorScheme.error.withOpacity(0.5),
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.lock_rounded, size: 10, color: theme.colorScheme.error),
+                                Icon(
+                                  Icons.lock_rounded,
+                                  size: 10,
+                                  color: theme.colorScheme.error,
+                                ),
                                 const SizedBox(width: 4),
-                                Text('CLOSED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: theme.colorScheme.error, letterSpacing: 1.0)),
+                                Text(
+                                  'CLOSED',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                    color: theme.colorScheme.error,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                        
+
                         Row(
                           children: [
-                            Text(
-                              'EFFECTIVE INCOME',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.0,
-                                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
+                            Flexible(
+                              child: Text(
+                                'EFFECTIVE INCOME',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.0,
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withOpacity(0.8),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             const SizedBox(width: 4),
-                            Icon(Icons.open_in_new_rounded, size: 10, color: theme.colorScheme.primary.withOpacity(0.5)),
+                            Icon(
+                              Icons.open_in_new_rounded,
+                              size: 10,
+                              color: theme.colorScheme.primary.withOpacity(0.5),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
-                        CurrencyText(
-                          amount: effectiveIncome,
-                          sign: '₹',
-                          amountStyle: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                            color: isClosed ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary, 
-                          ),
-                          symbolStyle: TextStyle(
-                            fontSize: 14,
-                            color: (isClosed ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary).withOpacity(0.8),
+
+                        // --- FIX: SCALES DOWN DYNAMICALLY ---
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: CurrencyText(
+                            amount: effectiveIncome,
+                            sign: '₹ ',
+                            amountStyle: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                              color: isClosed
+                                  ? theme.colorScheme.onSurfaceVariant
+                                  : theme.colorScheme.primary,
+                            ),
+                            symbolStyle: TextStyle(
+                              fontSize: 14,
+                              color:
+                                  (isClosed
+                                          ? theme.colorScheme.onSurfaceVariant
+                                          : theme.colorScheme.primary)
+                                      .withOpacity(0.8),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  
+
                   // --- VERTICAL DIVIDER ---
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: VerticalDivider(
-                      width: 1, 
-                      thickness: 1, 
+                      width: 1,
+                      thickness: 1,
                       color: theme.dividerColor.withOpacity(0.5),
                     ),
                   ),
@@ -217,11 +270,30 @@ class BudgetSummaryCard extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildMiniRow('Salary', salaryIncome, Icons.work_outline_rounded, theme.colorScheme.primary, theme),
+                        _buildMiniRow(
+                          'Salary',
+                          salaryIncome,
+                          Icons.work_outline_rounded,
+                          theme.colorScheme.primary,
+                          theme,
+                        ),
                         const SizedBox(height: 8),
-                        _buildMiniRow('Extra', extraIncome, Icons.add_card_rounded, Colors.blueAccent.shade400, theme),
+                        _buildMiniRow(
+                          'Extra',
+                          extraIncome,
+                          Icons.add_card_rounded,
+                          Colors.blueAccent.shade400,
+                          theme,
+                        ),
                         const SizedBox(height: 8),
-                        _buildMiniRow('Deductions', deductions, Icons.remove_circle_outline_rounded, theme.colorScheme.error, theme, isDeduction: true),
+                        _buildMiniRow(
+                          'Deductions',
+                          deductions,
+                          Icons.remove_circle_outline_rounded,
+                          theme.colorScheme.error,
+                          theme,
+                          isDeduction: true,
+                        ),
                       ],
                     ),
                   ),
@@ -234,24 +306,61 @@ class BudgetSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildMiniRow(String title, double amount, IconData icon, Color color, ThemeData theme, {bool isDeduction = false}) {
+  Widget _buildMiniRow(
+    String title,
+    double amount,
+    IconData icon,
+    Color color,
+    ThemeData theme, {
+    bool isDeduction = false,
+  }) {
     final sign = isDeduction ? '-' : '+';
     final isZero = amount == 0.0;
-    
-    final displayColor = isClosed || isZero ? theme.colorScheme.onSurfaceVariant.withOpacity(0.4) : color;
-    final textColor = isClosed || isZero ? theme.colorScheme.onSurfaceVariant.withOpacity(0.4) : (isDeduction ? theme.colorScheme.error : theme.colorScheme.onSurface);
+
+    final displayColor = isClosed || isZero
+        ? theme.colorScheme.onSurfaceVariant.withOpacity(0.4)
+        : color;
+    final textColor = isClosed || isZero
+        ? theme.colorScheme.onSurfaceVariant.withOpacity(0.4)
+        : (isDeduction ? theme.colorScheme.error : theme.colorScheme.onSurface);
 
     return Row(
       children: [
-        Icon(icon, size: 12, color: displayColor), 
+        Icon(icon, size: 12, color: displayColor),
         const SizedBox(width: 6),
-        Text(title, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isZero ? displayColor : theme.colorScheme.onSurfaceVariant)),
-        const Spacer(),
-        CurrencyText(
-          amount: amount,
-          sign: '$sign₹',
-          amountStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: -0.2, color: textColor),
-          symbolStyle: TextStyle(fontSize: 9, color: textColor.withOpacity(0.7)),
+        Flexible(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: isZero ? displayColor : theme.colorScheme.onSurfaceVariant,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 4),
+        // --- FIX: REPLACED SPACER WITH EXPANDED + FITTEDBOX TO PREVENT OVERFLOW ---
+        Expanded(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: CurrencyText(
+              amount: amount,
+              sign: '$sign₹ ',
+              amountStyle: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.2,
+                color: textColor,
+              ),
+              symbolStyle: TextStyle(
+                fontSize: 9,
+                color: textColor.withOpacity(0.7),
+              ),
+            ),
+          ),
         ),
       ],
     );
