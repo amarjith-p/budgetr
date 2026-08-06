@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/core/database/app_database.dart';
+import 'package:budgetr/features/accounts/components/account_form_bottom_sheet.dart';
+import 'package:budgetr/features/accounts/components/premium_account_card.dart';
 import 'package:budgetr/features/transactions/views/account_transactions_page.dart';
 import 'package:budgetr/features/transactions/views/credit_transaction_page.dart';
 import 'package:budgetr/features/transactions/views/loan_transaction_page.dart';
@@ -13,8 +15,7 @@ import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../providers/account_provider.dart';
 import '../providers/loan_math_provider.dart';
-import '../components/premium_account_card.dart';
-import '../components/account_form_bottom_sheet.dart';
+import '../providers/credit_math_provider.dart'; // <-- ADDED CREDIT MATH IMPORT
 
 final selectionModeProvider = StateProvider.autoDispose<bool>((ref) => false);
 final selectedAccountsProvider = StateProvider.autoDispose<Set<String>>(
@@ -67,10 +68,14 @@ class AccountsTab extends ConsumerWidget {
             0.0,
             (sum, acc) => sum + acc.balance,
           );
-          final totalCreditBalance = creditCards.fold(
-            0.0,
-            (sum, acc) => sum + acc.balance,
-          );
+
+          // --- FIX: USE DYNAMIC CREDIT MATH FOR TOTAL OUTSTANDING ---
+          double totalCreditBalance = 0.0;
+          for (var card in creditCards) {
+            totalCreditBalance += ref
+                .watch(creditCardMetricsProvider(card))
+                .totalOutstanding;
+          }
 
           double totalLoanOutstanding = 0.0;
           for (var loan in activeLoans) {
@@ -84,6 +89,11 @@ class AccountsTab extends ConsumerWidget {
             if (selectedIds.contains(acc.id) && !acc.isClosed) {
               if (acc.type == 'Loan') {
                 customTotal -= ref.watch(loanTotalOutstandingProvider(acc));
+              } else if (acc.type == 'Credit Cards') {
+                // --- FIX: USE DYNAMIC MATH FOR MULTI-SELECT ENGINE ---
+                customTotal += ref
+                    .watch(creditCardMetricsProvider(acc))
+                    .totalOutstanding;
               } else {
                 customTotal += acc.balance;
               }
@@ -169,7 +179,6 @@ class AccountsTab extends ConsumerWidget {
 
   Widget _buildSectionHeader(BuildContext context, String title, double total) {
     final theme = Theme.of(context);
-    // --- FIX: ADDED SPACING TO SYMBOLS ---
     final signText = total < 0 ? '-₹ ' : (total > 0 ? '+₹ ' : '₹ ');
 
     return SliverToBoxAdapter(
@@ -201,7 +210,7 @@ class AccountsTab extends ConsumerWidget {
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerRight,
               child: CurrencyText(
-                amount: total,
+                amount: total.abs(),
                 sign: signText,
                 amountStyle: TextStyle(
                   color: theme.colorScheme.onSurface,
@@ -415,7 +424,6 @@ class _StickySelectionHeaderDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     final isDark = theme.brightness == Brightness.dark;
-    // --- FIX: ADDED SPACING TO SYMBOLS ---
     final customSign = customTotal < 0
         ? '-₹ '
         : (customTotal > 0 ? '+₹ ' : '₹ ');
@@ -463,7 +471,7 @@ class _StickySelectionHeaderDelegate extends SliverPersistentHeaderDelegate {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
                   child: CurrencyText(
-                    amount: customTotal,
+                    amount: customTotal.abs(),
                     sign: customSign,
                     amountStyle: TextStyle(
                       fontSize: 24,

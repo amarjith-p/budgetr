@@ -4,8 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/modern_boxy_button.dart';
+import '../../../core/components/modern_boxy_input.dart';
 import '../../../core/constants/date_time_constants.dart';
-import '../../../core/components/currency_text.dart'; // <-- IMPORTED CURRENCY UTILITY
+import '../../../core/components/currency_text.dart';
 import '../../category_manager/providers/category_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../providers/transaction_filter_provider.dart';
@@ -178,6 +179,8 @@ class _TransactionFilterBottomSheetState
   }) {
     final isSelected = value == currentValue;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () => onSelected(value),
       child: AnimatedContainer(
@@ -187,10 +190,12 @@ class _TransactionFilterBottomSheetState
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primary
-              : theme.colorScheme.surface,
+              : theme.colorScheme.surfaceContainerHighest.withOpacity(
+                  isDark ? 0.3 : 0.5,
+                ),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? theme.colorScheme.primary : theme.dividerColor,
+            color: isSelected ? theme.colorScheme.primary : Colors.transparent,
             width: 1.2,
           ),
         ),
@@ -216,6 +221,8 @@ class _TransactionFilterBottomSheetState
   }) {
     final isSelected = currentSet.contains(value);
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () {
         final newSet = Set<T>.from(currentSet);
@@ -232,10 +239,12 @@ class _TransactionFilterBottomSheetState
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primary
-              : theme.colorScheme.surface,
+              : theme.colorScheme.surfaceContainerHighest.withOpacity(
+                  isDark ? 0.3 : 0.5,
+                ),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? theme.colorScheme.primary : theme.dividerColor,
+            color: isSelected ? theme.colorScheme.primary : Colors.transparent,
             width: 1.2,
           ),
         ),
@@ -257,7 +266,8 @@ class _TransactionFilterBottomSheetState
     required String title,
     required Set<T> availableItems,
     required Set<T> selectedItems,
-    required String Function(T) labelBuilder,
+    required String Function(T) titleBuilder,
+    String? Function(T)? subtitleBuilder,
     required ValueChanged<Set<T>> onApply,
   }) {
     HapticFeedback.lightImpact();
@@ -279,13 +289,28 @@ class _TransactionFilterBottomSheetState
                   decoration: BoxDecoration(
                     color: theme.scaffoldBackgroundColor,
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(24),
+                      top: Radius.circular(DesignTokens.radiusLg),
                     ),
                   ),
                   child: Column(
                     children: [
+                      // --- MODERN DRAG HANDLE ---
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(
+                            bottom: DesignTokens.spacingMd,
+                            top: DesignTokens.spacingMd,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.dividerColor,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
+                        padding: const EdgeInsets.fromLTRB(24, 0, 16, 16),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -298,6 +323,7 @@ class _TransactionFilterBottomSheetState
                             ),
                             TextButton(
                               onPressed: () {
+                                HapticFeedback.lightImpact();
                                 setModalState(() => tempSelection.clear());
                               },
                               child: Text(
@@ -316,34 +342,73 @@ class _TransactionFilterBottomSheetState
                         child: ListView.builder(
                           controller: scrollController,
                           physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           itemCount: availableItems.length,
                           itemBuilder: (context, index) {
                             final item = availableItems.elementAt(index);
                             final isChecked = tempSelection.contains(item);
-                            return CheckboxListTile(
-                              value: isChecked,
-                              activeColor: theme.colorScheme.primary,
-                              title: Text(
-                                labelBuilder(item),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
+
+                            // --- MODERN CHECKBOX TILE ---
+                            return Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isChecked
+                                    ? theme.colorScheme.primaryContainer
+                                          .withOpacity(0.3)
+                                    : theme.colorScheme.surface,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isChecked
+                                      ? theme.colorScheme.primary
+                                      : theme.dividerColor.withOpacity(0.5),
                                 ),
                               ),
-                              onChanged: (bool? checked) {
-                                HapticFeedback.selectionClick();
-                                setModalState(() {
-                                  if (checked == true) {
-                                    tempSelection.add(item);
-                                  } else {
-                                    tempSelection.remove(item);
-                                  }
-                                });
-                              },
+                              child: CheckboxListTile(
+                                value: isChecked,
+                                activeColor: theme.colorScheme.primary,
+                                title: Text(
+                                  titleBuilder(item),
+                                  style: TextStyle(
+                                    fontWeight: isChecked
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
+                                    fontSize: 15,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                                subtitle:
+                                    subtitleBuilder != null &&
+                                        subtitleBuilder(item) != null
+                                    ? Text(
+                                        subtitleBuilder(item)!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                      )
+                                    : null,
+                                onChanged: (bool? checked) {
+                                  HapticFeedback.selectionClick();
+                                  setModalState(() {
+                                    if (checked == true) {
+                                      tempSelection.add(item);
+                                    } else {
+                                      tempSelection.remove(item);
+                                    }
+                                  });
+                                },
+                              ),
                             );
                           },
                         ),
                       ),
+
+                      // --- TWIN BUTTON DESIGN ---
                       Container(
                         padding: const EdgeInsets.all(DesignTokens.spacingLg),
                         decoration: BoxDecoration(
@@ -362,12 +427,31 @@ class _TransactionFilterBottomSheetState
                             ),
                           ],
                         ),
-                        child: ModernBoxyButton(
-                          onPressed: () {
-                            onApply(tempSelection);
-                            Navigator.pop(ctx);
-                          },
-                          label: 'DONE',
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ModernBoxyButton(
+                                onPressed: () {
+                                  HapticFeedback.lightImpact();
+                                  Navigator.pop(ctx);
+                                },
+                                label: 'CANCEL',
+                                isOutlined: true,
+                              ),
+                            ),
+                            const SizedBox(width: DesignTokens.spacingMd),
+                            Expanded(
+                              flex: 2,
+                              child: ModernBoxyButton(
+                                onPressed: () {
+                                  HapticFeedback.selectionClick();
+                                  onApply(tempSelection);
+                                  Navigator.pop(ctx);
+                                },
+                                label: 'APPLY',
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -396,16 +480,16 @@ class _TransactionFilterBottomSheetState
       ),
       child: InkWell(
         onTap: isEnabled ? onTap : null,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: isEnabled
-                ? theme.colorScheme.surface
-                : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(12),
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isActive ? theme.colorScheme.primary : theme.dividerColor,
+              color: isActive
+                  ? theme.colorScheme.primary.withOpacity(0.5)
+                  : theme.dividerColor.withOpacity(0.5),
               width: isActive ? 1.5 : 1.0,
             ),
           ),
@@ -444,6 +528,8 @@ class _TransactionFilterBottomSheetState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final rawCategories =
         ref.watch(categoriesStreamProvider).asData?.value ?? [];
     final rawBuckets = ref.watch(bucketsStreamProvider).asData?.value ?? [];
@@ -475,18 +561,35 @@ class _TransactionFilterBottomSheetState
         return Container(
           decoration: BoxDecoration(
             color: theme.scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(DesignTokens.radiusLg),
+            ),
           ),
           child: Column(
             children: [
+              // --- MODERN DRAG HANDLE ---
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(
+                    bottom: DesignTokens.spacingMd,
+                    top: DesignTokens.spacingMd,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
+                padding: const EdgeInsets.fromLTRB(24, 0, 16, 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'Filter & Sort',
-                      style: theme.textTheme.headlineSmall?.copyWith(
+                      style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
                       ),
@@ -507,6 +610,7 @@ class _TransactionFilterBottomSheetState
                   ],
                 ),
               ),
+              const Divider(height: 1),
               Expanded(
                 child: ListView(
                   controller: controller,
@@ -589,6 +693,7 @@ class _TransactionFilterBottomSheetState
                             onTap: _pickDateRange,
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
+                              margin: const EdgeInsets.only(right: 8),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 10,
@@ -597,13 +702,14 @@ class _TransactionFilterBottomSheetState
                                 color:
                                     _draft.timeframe == TimeframeOption.custom
                                     ? theme.colorScheme.primary
-                                    : theme.colorScheme.surface,
+                                    : theme.colorScheme.surfaceContainerHighest
+                                          .withOpacity(isDark ? 0.3 : 0.5),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color:
                                       _draft.timeframe == TimeframeOption.custom
                                       ? theme.colorScheme.primary
-                                      : theme.dividerColor,
+                                      : Colors.transparent,
                                   width: 1.2,
                                 ),
                               ),
@@ -616,7 +722,7 @@ class _TransactionFilterBottomSheetState
                                         _draft.timeframe ==
                                             TimeframeOption.custom
                                         ? theme.colorScheme.onPrimary
-                                        : theme.colorScheme.primary,
+                                        : theme.colorScheme.onSurfaceVariant,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
@@ -632,7 +738,7 @@ class _TransactionFilterBottomSheetState
                                           _draft.timeframe ==
                                               TimeframeOption.custom
                                           ? theme.colorScheme.onPrimary
-                                          : theme.colorScheme.primary,
+                                          : theme.colorScheme.onSurfaceVariant,
                                     ),
                                   ),
                                 ],
@@ -682,42 +788,19 @@ class _TransactionFilterBottomSheetState
                         ],
                       ),
                     ),
-                    _buildSectionTitle('AMOUNT THRESHOLD (₹)'),
+                    _buildSectionTitle('AMOUNT THRESHOLD'),
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: DesignTokens.spacingLg,
                       ),
                       child: Row(
                         children: [
+                          // --- MODERN BOXY INPUT ---
                           Expanded(
-                            child: TextField(
+                            child: ModernBoxyInput(
                               controller: _minCtrl,
+                              labelText: 'Minimum (₹)',
                               keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'Minimum',
-                                prefixText: '₹ ',
-                                filled: true,
-                                fillColor: theme.colorScheme.surface,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: theme.dividerColor,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: theme.dividerColor,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: theme.colorScheme.primary,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
                             ),
                           ),
                           Padding(
@@ -727,38 +810,16 @@ class _TransactionFilterBottomSheetState
                               style: TextStyle(
                                 fontWeight: FontWeight.w900,
                                 color: theme.dividerColor,
+                                fontSize: 18,
                               ),
                             ),
                           ),
+                          // --- MODERN BOXY INPUT ---
                           Expanded(
-                            child: TextField(
+                            child: ModernBoxyInput(
                               controller: _maxCtrl,
+                              labelText: 'Maximum (₹)',
                               keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'Maximum',
-                                prefixText: '₹ ',
-                                filled: true,
-                                fillColor: theme.colorScheme.surface,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: theme.dividerColor,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: theme.dividerColor,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: theme.colorScheme.primary,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
                             ),
                           ),
                         ],
@@ -780,13 +841,17 @@ class _TransactionFilterBottomSheetState
                                 .map((a) => a.id)
                                 .toSet(),
                             selectedItems: _draft.accountIds,
-                            labelBuilder: (id) {
+                            titleBuilder: (id) {
                               final acc = rawAccounts
                                   .where((a) => a.id == id)
                                   .firstOrNull;
-                              return acc != null
-                                  ? '${acc.name} - ${acc.providerName}'
-                                  : 'Unknown Account';
+                              return acc?.name ?? 'Unknown Account';
+                            },
+                            subtitleBuilder: (id) {
+                              final acc = rawAccounts
+                                  .where((a) => a.id == id)
+                                  .firstOrNull;
+                              return acc?.providerName;
                             },
                             onApply: (val) =>
                                 _updateState(_draft.copyWith(accountIds: val)),
@@ -802,7 +867,7 @@ class _TransactionFilterBottomSheetState
                         title: 'Select Categories',
                         availableItems: activeCatIds,
                         selectedItems: _draft.categoryIds,
-                        labelBuilder: (id) =>
+                        titleBuilder: (id) =>
                             rawCategories
                                 .where((c) => c.id == id)
                                 .firstOrNull
@@ -820,7 +885,7 @@ class _TransactionFilterBottomSheetState
                         title: 'Select Subcategories',
                         availableItems: activeSubCats,
                         selectedItems: _draft.subCategories,
-                        labelBuilder: (sub) => sub,
+                        titleBuilder: (sub) => sub,
                         onApply: (val) =>
                             _updateState(_draft.copyWith(subCategories: val)),
                       ),
@@ -833,7 +898,7 @@ class _TransactionFilterBottomSheetState
                         title: 'Select Buckets',
                         availableItems: activeBucketIds,
                         selectedItems: _draft.bucketIds.cast<int?>(),
-                        labelBuilder: (id) => id == null
+                        titleBuilder: (id) => id == null
                             ? 'Out of Bucket'
                             : rawBuckets
                                       .where((b) => b.id == id)
@@ -850,6 +915,8 @@ class _TransactionFilterBottomSheetState
                   ],
                 ),
               ),
+
+              // --- MAIN TWIN BUTTON DESIGN ---
               Container(
                 padding: const EdgeInsets.all(DesignTokens.spacingLg),
                 decoration: BoxDecoration(
@@ -865,17 +932,35 @@ class _TransactionFilterBottomSheetState
                     ),
                   ],
                 ),
-                child: ModernBoxyButton(
-                  onPressed: _liveMatchCount > 0 ? _apply : null,
-                  label: _liveMatchCount == 0
-                      ? 'NO MATCHES'
-                      : 'SHOW $_liveMatchCount TRANSACTIONS',
-                  backgroundColor: _liveMatchCount == 0
-                      ? theme.colorScheme.surfaceContainerHighest
-                      : theme.colorScheme.primary,
-                  foregroundColor: _liveMatchCount == 0
-                      ? theme.colorScheme.onSurfaceVariant
-                      : theme.colorScheme.onPrimary,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ModernBoxyButton(
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.pop(context);
+                        },
+                        label: 'CANCEL',
+                        isOutlined: true,
+                      ),
+                    ),
+                    const SizedBox(width: DesignTokens.spacingMd),
+                    Expanded(
+                      flex: 2,
+                      child: ModernBoxyButton(
+                        onPressed: _liveMatchCount > 0 ? _apply : null,
+                        label: _liveMatchCount == 0
+                            ? 'NO MATCHES'
+                            : 'SHOW ($_liveMatchCount)',
+                        backgroundColor: _liveMatchCount == 0
+                            ? theme.colorScheme.surfaceContainerHighest
+                            : theme.colorScheme.primary,
+                        foregroundColor: _liveMatchCount == 0
+                            ? theme.colorScheme.onSurfaceVariant
+                            : theme.colorScheme.onPrimary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

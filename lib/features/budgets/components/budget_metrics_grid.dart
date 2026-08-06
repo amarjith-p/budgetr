@@ -58,11 +58,14 @@ class BudgetMetricsGrid extends StatelessWidget {
                   alignment: CrossAxisAlignment.start,
                 ),
               ),
+              // --- FIX: Added Spacing so they don't stick together on huge amounts ---
+              const SizedBox(width: 12),
               Container(
                 width: 1,
                 height: 36,
                 color: theme.dividerColor.withOpacity(0.5),
               ),
+              const SizedBox(width: 12),
               Expanded(
                 child: _buildHeroMetric(
                   title: 'REMAINING',
@@ -135,6 +138,9 @@ class BudgetMetricsGrid extends StatelessWidget {
   }) {
     final color = isError ? theme.colorScheme.error : theme.colorScheme.primary;
     final sign = amount < 0 ? '-' : '';
+    final boxAlignment = alignment == CrossAxisAlignment.end
+        ? Alignment.centerRight
+        : Alignment.centerLeft;
 
     return Column(
       crossAxisAlignment: alignment,
@@ -147,18 +153,24 @@ class BudgetMetricsGrid extends StatelessWidget {
             letterSpacing: 1.0,
             color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 4),
-        CurrencyText(
-          amount: amount.abs(),
-          sign: '$sign₹ ', // <-- FIX: Added Space
-          amountStyle: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -1.0,
-            color: color,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: boxAlignment,
+          child: CurrencyText(
+            amount: amount.abs(),
+            sign: '$sign₹ ',
+            amountStyle: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1.0,
+              color: color,
+            ),
+            symbolStyle: TextStyle(fontSize: 12, color: color.withOpacity(0.8)),
           ),
-          symbolStyle: TextStyle(fontSize: 12, color: color.withOpacity(0.8)),
         ),
       ],
     );
@@ -222,16 +234,23 @@ class BudgetMetricsGrid extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          CurrencyText(
-            amount: amount.abs(),
-            sign: '$sign₹ ', // <-- FIX: Added Space
-            amountStyle: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.5,
-              color: color,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: CurrencyText(
+              amount: amount.abs(),
+              sign: '$sign₹ ',
+              amountStyle: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+                color: color,
+              ),
+              symbolStyle: TextStyle(
+                fontSize: 10,
+                color: color.withOpacity(0.8),
+              ),
             ),
-            symbolStyle: TextStyle(fontSize: 10, color: color.withOpacity(0.8)),
           ),
         ],
       ),

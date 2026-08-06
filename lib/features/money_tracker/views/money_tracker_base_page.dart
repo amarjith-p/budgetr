@@ -3,9 +3,11 @@ import 'package:budgetr/features/budgets/views/budget_management_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+
 import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_bottom_nav.dart';
 import '../../../core/theme/design_tokens.dart';
+
 import '../../accounts/views/accounts_tab.dart';
 import '../../accounts/components/account_form_bottom_sheet.dart';
 import '../../transactions/views/transaction_form_page.dart';
@@ -17,8 +19,12 @@ import '../providers/bottom_nav_provider.dart';
 import 'money_tracker_home_tab.dart';
 import '../../custom_budgets/views/custom_budget_dashboard_page.dart';
 
+import '../../analytics/components/balance_trend_widget.dart';
+import '../../analytics/components/cash_flow_widget.dart';
+import '../../analytics/components/spending_widget.dart';
+import '../../analytics/components/budget_simulator_widget.dart';
 // --- NEW IMPORT ---
-import '../../analytics/components/balance_trend_widget.dart'; 
+import '../../analytics/components/credit_tracker_widget.dart';
 
 class MoneyTrackerBasePage extends ConsumerWidget {
   const MoneyTrackerBasePage({Key? key}) : super(key: key);
@@ -51,29 +57,26 @@ class MoneyTrackerBasePage extends ConsumerWidget {
       const RecordsTab(),
       const AccountsTab(),
       const BudgetManagementTab(),
-      
-      // --- NEW: INJECT ANALYTICS WIDGET HERE ---
-      const _AnalyticsTab(), 
-      
+      const _AnalyticsTab(),
       const _PlaceholderTab(title: 'INSIGHTS'),
     ];
 
     final List<String> tabTitles = [
-      'Home', 
-      'Records', 
-      'Accounts', 
-      'Planning', 
-      'Metrics', 
-      'Cash Flow'
+      'Home',
+      'Records',
+      'Accounts',
+      'Planning',
+      'Metrics',
+      'Cash Flow',
     ];
-    
+
     final List<String> tabSubtitles = [
-      'OVERVIEW', 
-      'TRANSACTIONS', 
-      'PORTFOLIO', 
-      'BUDGETS', 
-      'ANALYTICS', 
-      'INSIGHTS'
+      'OVERVIEW',
+      'TRANSACTIONS',
+      'PORTFOLIO',
+      'BUDGETS',
+      'ANALYTICS',
+      'INSIGHTS',
     ];
 
     IconData? trailingIcon;
@@ -83,7 +86,9 @@ class MoneyTrackerBasePage extends ConsumerWidget {
     VoidCallback? onExtraTrailingPressed;
 
     if (currentIndex == 1) {
-      trailingIcon = globalFilterState.isActive ? Icons.filter_alt_rounded : Icons.filter_alt_outlined;
+      trailingIcon = globalFilterState.isActive
+          ? Icons.filter_alt_rounded
+          : Icons.filter_alt_outlined;
       onTrailingPressed = () {
         HapticFeedback.lightImpact();
         final allTxs = ref.read(allTransactionsProvider).asData?.value ?? [];
@@ -92,9 +97,12 @@ class MoneyTrackerBasePage extends ConsumerWidget {
     } else if (currentIndex == 2) {
       trailingIcon = Icons.add_card_rounded;
       onTrailingPressed = () => _openAddAccountForm(context);
-
-      extraTrailingIcon = isSelectionMode ? Icons.close_rounded : Icons.calculate_outlined;
-      extraIconColor = isSelectionMode ? Theme.of(context).colorScheme.primary : null;
+      extraTrailingIcon = isSelectionMode
+          ? Icons.close_rounded
+          : Icons.calculate_outlined;
+      extraIconColor = isSelectionMode
+          ? Theme.of(context).colorScheme.primary
+          : null;
       onExtraTrailingPressed = () {
         HapticFeedback.lightImpact();
         if (isSelectionMode) {
@@ -109,7 +117,7 @@ class MoneyTrackerBasePage extends ConsumerWidget {
       onTrailingPressed = () {
         HapticFeedback.lightImpact();
         Navigator.push(
-          context, 
+          context,
           MaterialPageRoute(builder: (_) => const CustomBudgetDashboardPage()),
         );
       };
@@ -143,7 +151,6 @@ class MoneyTrackerBasePage extends ConsumerWidget {
   }
 }
 
-// --- NEW: ANALYTICS TAB HOLDER ---
 class _AnalyticsTab extends StatelessWidget {
   const _AnalyticsTab({Key? key}) : super(key: key);
 
@@ -151,12 +158,14 @@ class _AnalyticsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 120), // Clear the bottom nav
+      padding: const EdgeInsets.only(bottom: 120),
       children: const [
         BalanceTrendWidget(),
-        
-        // As we build more widgets (like category pie charts or burn rates), 
-        // we will drop them right here!
+        CashFlowWidget(),
+        SpendingWidget(),
+        // <--- INJECTED NEW WIDGET HERE
+        CreditTrackerWidget(),
+        BudgetSimulatorWidget(),
       ],
     );
   }

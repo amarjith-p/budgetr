@@ -409,7 +409,6 @@ class _CreditSummaryCard extends StatelessWidget {
     required this.allTransactions,
   });
 
-  // --- LOAN STYLE MINI DATE BUILDER ---
   Widget _buildDateMini(String label, String value, ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -477,63 +476,98 @@ class _CreditSummaryCard extends StatelessWidget {
       }
     }
 
-    // Exact UNBILLED / BILLED separation requested previously
     double remainingDueNet = historicalNet + paymentsSinceStatement;
     double adjustedUnbilled = currentCycleNet;
     if (lastCycle != null && now.isAfter(lastCycle.dueDate)) {
       adjustedUnbilled += remainingDueNet;
     }
 
-    // Exact Total calculation mapped
     double totalOutstanding = currentCycleNet + remainingDueNet;
-    String totalSign = totalOutstanding < 0
+    String totalSign = totalOutstanding < -0.01
         ? '-₹ '
-        : (totalOutstanding > 0 ? '+₹ ' : '₹ ');
-    Color totalColor = totalOutstanding < 0
+        : (totalOutstanding > 0.01 ? '+₹ ' : '₹ ');
+    Color totalColor = totalOutstanding < -0.01
         ? theme.colorScheme.onSurface
         : Colors.green;
 
-    String unbilledSign = adjustedUnbilled < 0
+    String unbilledSign = adjustedUnbilled < -0.01
         ? '-₹ '
-        : (adjustedUnbilled > 0 ? '+₹ ' : '₹ ');
-    String statementSign = historicalNet < 0
+        : (adjustedUnbilled > 0.01 ? '+₹ ' : '₹ ');
+    String statementSign = historicalNet < -0.01
         ? '-₹ '
-        : (historicalNet > 0 ? '+₹ ' : '₹ ');
+        : (historicalNet > 0.01 ? '+₹ ' : '₹ ');
 
     String statusText = 'NO DUES';
     Color statusColor = theme.colorScheme.primary;
-    int daysUntilDue = 0;
+
+    // --- NEW: Contextual Sub-status Text ---
+    String subStatusText = '';
+    Color subStatusColor = theme.colorScheme.onSurfaceVariant;
+
+    // --- FIX: Intelligent Contextual Date Logic ---
+    DateTime activeDueDate = cycles.isNotEmpty ? cycles[0].dueDate : now;
+    String dueDateLabel = 'NEXT DUE DATE';
 
     if (lastCycle != null) {
-      daysUntilDue = lastCycle.dueDate.difference(now).inDays;
-      if (remainingDueNet < 0) {
+      final today = DateTime(now.year, now.month, now.day);
+      final dueDayOnly = DateTime(
+        lastCycle.dueDate.year,
+        lastCycle.dueDate.month,
+        lastCycle.dueDate.day,
+      );
+      int daysUntilDue = dueDayOnly.difference(today).inDays;
+
+      if (remainingDueNet < -0.01) {
+        // Still owe money: Lock onto the CURRENT Due Date
+        activeDueDate = lastCycle.dueDate;
+        dueDateLabel = 'CURRENT DUE DATE';
+
         if (daysUntilDue < 0) {
           statusText =
               'OVERDUE (- ₹${CurrencyFormatter.format(remainingDueNet.abs())})';
           statusColor = theme.colorScheme.error;
-        } else if (paymentsSinceStatement > 0) {
-          statusText =
-              'PARTIAL (- ₹${CurrencyFormatter.format(remainingDueNet.abs())} LEFT)';
-          statusColor = Colors.orangeAccent.shade700;
+          subStatusText = 'OVERDUE BY ${daysUntilDue.abs()} DAYS';
+          subStatusColor = theme.colorScheme.error;
         } else {
-          statusText = 'UNPAID';
-          statusColor = theme.colorScheme.error;
+          if (paymentsSinceStatement > 0) {
+            statusText =
+                'PARTIAL (- ₹${CurrencyFormatter.format(remainingDueNet.abs())} LEFT)';
+            statusColor = Colors.orangeAccent.shade700;
+          } else {
+            statusText = 'UNPAID';
+            statusColor = theme.colorScheme.error;
+          }
+
+          if (daysUntilDue == 0)
+            subStatusText = 'DUE TODAY';
+          else if (daysUntilDue == 1)
+            subStatusText = 'DUE TOMORROW';
+          else
+            subStatusText = 'DUE IN $daysUntilDue DAYS';
+
+          subStatusColor = daysUntilDue <= 3
+              ? theme.colorScheme.error
+              : theme.colorScheme.onSurfaceVariant;
         }
-      } else if (remainingDueNet > 0) {
+      } else if (remainingDueNet > 0.01) {
         statusText =
             'SURPLUS (+ ₹${CurrencyFormatter.format(remainingDueNet)})';
         statusColor = theme.colorScheme.primary;
-      } else if (remainingDueNet == 0 && historicalNet < 0) {
+        subStatusText = 'PAID IN FULL';
+        subStatusColor = Colors.green;
+      } else if (historicalNet < -0.01) {
         statusText = 'PAID IN FULL';
         statusColor = theme.colorScheme.primary;
+        subStatusText = 'NO DUES PENDING';
+        subStatusColor = Colors.green;
       }
     }
 
     String billDateStr = cycles.isNotEmpty
         ? '${cycles[0].endDate.day} ${DateTimeConstants.shortMonths[cycles[0].endDate.month - 1]} ${cycles[0].endDate.year}'
         : '--';
-    String dueDateStr = lastCycle != null
-        ? '${lastCycle.dueDate.day} ${DateTimeConstants.shortMonths[lastCycle.dueDate.month - 1]} ${lastCycle.dueDate.year}'
+    String dueDateStr = cycles.isNotEmpty
+        ? '${activeDueDate.day} ${DateTimeConstants.shortMonths[activeDueDate.month - 1]} ${activeDueDate.year}'
         : '--';
 
     final labelStyle = TextStyle(
@@ -605,7 +639,11 @@ class _CreditSummaryCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildDateMini('NEXT BILL DATE', billDateStr, theme),
-              _buildDateMini('PAYMENT DUE DATE', dueDateStr, theme),
+              _buildDateMini(
+                dueDateLabel,
+                dueDateStr,
+                theme,
+              ), // <-- Dynamically swaps label
             ],
           ),
 
@@ -640,12 +678,12 @@ class _CreditSummaryCard extends StatelessWidget {
                       ),
 
                       if (cycles.isNotEmpty &&
-                          remainingDueNet != 0 &&
+                          remainingDueNet < -0.01 &&
                           (lastCycle != null && now.isAfter(lastCycle.dueDate)))
                         Padding(
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
-                            'Includes ${remainingDueNet < 0 ? '-' : '+'}₹${CurrencyFormatter.format(remainingDueNet.abs())} prev.',
+                            'Includes -₹${CurrencyFormatter.format(remainingDueNet.abs())} prev.',
                             style: TextStyle(
                               fontSize: 8,
                               color: theme.colorScheme.onSurfaceVariant,
@@ -705,19 +743,15 @@ class _CreditSummaryCard extends StatelessWidget {
                         ),
                       ),
 
-                      if (lastCycle != null && remainingDueNet < 0)
+                      if (subStatusText.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
-                            daysUntilDue < 0
-                                ? 'Due passed'
-                                : 'Due in $daysUntilDue days',
+                            subStatusText,
                             style: TextStyle(
                               fontSize: 8,
                               fontWeight: FontWeight.w700,
-                              color: daysUntilDue < 0
-                                  ? theme.colorScheme.error
-                                  : theme.colorScheme.onSurfaceVariant,
+                              color: subStatusColor,
                             ),
                           ),
                         ),
