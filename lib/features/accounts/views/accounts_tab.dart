@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:budgetr/core/components/currency_text.dart';
+import 'package:budgetr/core/components/premium_empty_state.dart';
 import 'package:budgetr/core/database/app_database.dart';
 import 'package:budgetr/features/accounts/components/account_form_bottom_sheet.dart';
 import 'package:budgetr/features/accounts/components/premium_account_card.dart';
@@ -101,7 +102,12 @@ class AccountsTab extends ConsumerWidget {
           }
 
           if (accounts.isEmpty) {
-            return const Center(child: Text('No accounts added yet.'));
+            return const PremiumEmptyState(
+              title: 'No Accounts Found',
+              subtitle:
+                  'Add your account details to unlock insights and populate your dashboard.',
+              icon: Icons.account_balance_wallet_rounded,
+            );
           }
 
           return CustomScrollView(

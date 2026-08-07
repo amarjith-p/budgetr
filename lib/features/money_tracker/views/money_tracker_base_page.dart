@@ -1,4 +1,5 @@
 // features/money_tracker/views/money_tracker_base_page.dart
+import 'package:budgetr/features/analytics/providers/pinned_widgets_provider.dart';
 import 'package:budgetr/features/budgets/views/budget_management_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -151,21 +152,39 @@ class MoneyTrackerBasePage extends ConsumerWidget {
   }
 }
 
-class _AnalyticsTab extends StatelessWidget {
+class _AnalyticsTab extends ConsumerWidget {
   const _AnalyticsTab({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the pinned widgets state
+    final pinned = ref.watch(pinnedWidgetsProvider);
+
     return ListView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 120),
-      children: const [
-        BalanceTrendWidget(),
-        CashFlowWidget(),
-        SpendingWidget(),
-        // <--- INJECTED NEW WIDGET HERE
-        CreditTrackerWidget(),
-        BudgetSimulatorWidget(),
+      children: [
+        // Conditionally render only if NOT pinned
+        if (!pinned.contains('BALANCE_TREND')) const BalanceTrendWidget(),
+        if (!pinned.contains('CASH_FLOW')) const CashFlowWidget(),
+        if (!pinned.contains('SPENDING')) const SpendingWidget(),
+        if (!pinned.contains('CREDIT_TRACKER')) const CreditTrackerWidget(),
+        if (!pinned.contains('BUDGET_SIMULATOR')) const BudgetSimulatorWidget(),
+
+        // Edge case: If they manage to pin everything, show a nice empty state
+        if (pinned.length >= 5)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40.0),
+            child: Center(
+              child: Text(
+                'All widgets are pinned to your Home Tab.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

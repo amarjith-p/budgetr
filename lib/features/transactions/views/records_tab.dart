@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:budgetr/core/components/premium_empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/design_tokens.dart';
@@ -32,14 +33,11 @@ class RecordsTab extends ConsumerWidget {
               .toList();
 
           if (validTransactions.isEmpty) {
-            return Center(
-              child: Text(
-                'No transactions logged yet.',
-                style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            return const PremiumEmptyState(
+              title: 'No Transactions Found',
+              subtitle:
+                  'Add your first transaction to unlock insights and populate your records.',
+              icon: Icons.currency_rupee_rounded,
             );
           }
 

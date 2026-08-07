@@ -1,3 +1,4 @@
+import 'package:budgetr/core/components/premium_empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,9 @@ import '../../transactions/views/loan_transaction_page.dart';
 import '../components/mini_account_card.dart';
 import '../components/manage_accounts_bottom_sheet.dart';
 import '../components/credit_payable_bottom_sheet.dart';
+
+import '../../analytics/components/pinned_widgets_display.dart';
+import '../../analytics/providers/pinned_widgets_provider.dart';
 
 class MoneyTrackerHomeTab extends ConsumerWidget {
   const MoneyTrackerHomeTab({Key? key}) : super(key: key);
@@ -48,6 +52,8 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(accountsStreamProvider);
+    final pinnedWidgets = ref.watch(pinnedWidgetsProvider);
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -97,14 +103,11 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
           final debtAccounts = [...creditCards, ...loans];
 
           if (accounts.isEmpty) {
-            return Center(
-              child: Text(
-                'Add accounts to populate your dashboard',
-                style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            return const PremiumEmptyState(
+              title: 'Dashboard is Empty',
+              subtitle:
+                  'Add your first bank account, credit card, or loan to unlock insights and populate your dashboard.',
+              icon: Icons.dashboard_customize_rounded,
             );
           }
 
@@ -115,9 +118,9 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
                     DesignTokens.spacingLg,
-                    DesignTokens.spacingSm,
+                    8.0,
                     DesignTokens.spacingLg,
-                    DesignTokens.spacingSm,
+                    8.0,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -168,10 +171,6 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                 ),
               ),
 
-              const SliverToBoxAdapter(
-                child: SizedBox(height: DesignTokens.spacingSm),
-              ),
-
               if (bankAccounts.isNotEmpty) ...[
                 SliverToBoxAdapter(
                   child: _buildAccountCarousel(context, bankAccounts),
@@ -181,9 +180,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
               if (bankAccounts.isNotEmpty && debtAccounts.isNotEmpty) ...[
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: DesignTokens.spacingMd,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 6.0),
                     child: Divider(
                       indent: DesignTokens.spacingLg,
                       endIndent: DesignTokens.spacingLg,
@@ -200,23 +197,164 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                 ),
               ],
 
-              if (bankAccounts.isEmpty &&
-                  debtAccounts.isEmpty &&
-                  accounts.isNotEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: TextButton.icon(
-                      onPressed: () => _openManageSheet(context, accounts),
-                      icon: const Icon(Icons.visibility_off_rounded),
-                      label: const Text('All accounts hidden. Tap to manage.'),
-                    ),
+              if (pinnedWidgets.isNotEmpty)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 8.0),
+                    child: PinnedWidgetsDisplay(),
                   ),
                 ),
-              const SliverToBoxAdapter(child: SizedBox(height: 120)),
+
+              // Smart Spatially Aware Filling Sliver
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: 120.0,
+                  ), // Preserves NavBar clearance
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (bankAccounts.isEmpty &&
+                          debtAccounts.isEmpty &&
+                          accounts.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: TextButton.icon(
+                            onPressed: () =>
+                                _openManageSheet(context, accounts),
+                            icon: const Icon(Icons.visibility_off_rounded),
+                            label: const Text(
+                              'All accounts hidden. Tap to manage.',
+                            ),
+                          ),
+                        ),
+
+                      if (pinnedWidgets.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DesignTokens.spacingLg,
+                          ),
+                          child: _buildBoxyWidgetPrompt(
+                            context,
+                            accounts,
+                            theme,
+                            isDark,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           );
         },
+      ),
+    );
+  }
+
+  // --- REDESIGNED: Boxy, sleek, and professional workspace prompt ---
+  Widget _buildBoxyWidgetPrompt(
+    BuildContext context,
+    List<Account> accounts,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        _openManageSheet(context, accounts);
+      },
+      borderRadius: BorderRadius.circular(8), // Boxy sharpness
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(8), // Boxy sharpness
+          border: Border.all(color: theme.dividerColor, width: 1.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Structured Inner Icon Block
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(
+                  isDark ? 0.15 : 0.08,
+                ),
+                borderRadius: BorderRadius.circular(6), // Harder inner corner
+                border: Border.all(
+                  color: theme.colorScheme.primary.withOpacity(
+                    isDark ? 0.3 : 0.2,
+                  ),
+                  width: 1.0,
+                ),
+              ),
+              child: Icon(
+                Icons.widgets_outlined,
+                color: theme.colorScheme.primary,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 16),
+
+            // Professional Typography Layout
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'CUSTOMIZE DASHBOARD',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 10,
+                      letterSpacing: 1.0,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Pin analytics widgets here',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: theme.colorScheme.onSurface,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // High-Contrast Sleek Action Button
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: theme
+                    .colorScheme
+                    .onSurface, // Inverted for punchy modern contrast
+                borderRadius: BorderRadius.circular(6), // Boxy button
+              ),
+              child: Text(
+                'ADD',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.surface,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -275,7 +413,6 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                   width: 1.5,
                   color: theme.dividerColor,
                 ),
-                // --- FIX: VISUALLY FORCE LIABILITY TO SHOW AS NEGATIVE ---
                 _buildPillMetric(
                   'Cr:',
                   crBalance > 0 ? -crBalance : 0.0,
@@ -357,7 +494,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
             children: topRow
                 .map(
                   (acc) => Padding(
-                    padding: const EdgeInsets.only(right: 12.0, bottom: 12.0),
+                    padding: const EdgeInsets.only(right: 12.0, bottom: 8.0),
                     child: MiniAccountCard(
                       account: acc,
                       onTap: () => _navigateToAccount(context, acc),
