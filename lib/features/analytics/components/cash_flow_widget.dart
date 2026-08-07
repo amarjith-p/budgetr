@@ -1,3 +1,4 @@
+// features/analytics/components/cash_flow_widget.dart
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -89,7 +90,6 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
               ),
             ),
             const SizedBox(width: 12),
-            // --- FIX: FITTED BOX FOR HUGE NUMBERS ---
             Flexible(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -170,7 +170,6 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
               ),
             ),
             const SizedBox(width: 12),
-            // --- FIX: FITTED BOX FOR HUGE NUMBERS ---
             Flexible(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -361,22 +360,14 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
               if (date.isBefore(start) || date.isAfter(end)) continue;
 
               bool fromTarget = targetIds.contains(t.accountId);
-              bool toTarget = targetIds.contains(t.toAccountId);
               bool isOutOfBucket = t.bucketId == null || t.bucketId == -1;
 
+              // --- FIX: Strictly isolated to Income and Expense types ---
               if (t.type == 'Income' && fromTarget) {
                 totalIncome += t.amount;
               } else if (t.type == 'Expense' && fromTarget) {
                 if (_hideOutOfBucket && isOutOfBucket) continue;
                 totalExpense += t.amount;
-              } else if (t.type == 'Transfer') {
-                if (fromTarget && !toTarget) {
-                  if (_hideOutOfBucket && isOutOfBucket) continue;
-                  totalExpense += t.amount;
-                }
-                if (!fromTarget && toTarget) {
-                  totalIncome += t.amount;
-                }
               }
             }
 

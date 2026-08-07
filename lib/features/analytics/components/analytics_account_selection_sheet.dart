@@ -1,3 +1,4 @@
+// features/analytics/components/analytics_account_selection_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/database/app_database.dart';
@@ -70,7 +71,6 @@ class AnalyticsAccountSelectionSheet extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    // --- FIX: INCREASED FONT SIZE ---
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: isSelected
@@ -94,7 +94,6 @@ class AnalyticsAccountSelectionSheet extends StatelessWidget {
                 ],
               ),
             ),
-            // --- FIX: TIGHTLY ALIGNED TO RIGHT EDGE ---
             if (isSelected)
               Icon(
                 Icons.check_circle_rounded,
@@ -107,9 +106,70 @@ class AnalyticsAccountSelectionSheet extends StatelessWidget {
     );
   }
 
+  List<Widget> _buildAccountGroup(
+    BuildContext ctx,
+    List<Account> accountList,
+    String title,
+    IconData iconData,
+    ThemeData theme,
+  ) {
+    if (accountList.isEmpty) return [];
+
+    List<Widget> children = [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+      ),
+    ];
+
+    for (int i = 0; i < accountList.length; i++) {
+      final acc = accountList[i];
+      final isLast = i == accountList.length - 1;
+
+      children.add(
+        Column(
+          children: [
+            _buildSheetOption(
+              ctx,
+              acc.name,
+              acc.id,
+              iconData,
+              theme,
+              subtitle: acc.providerName,
+            ),
+            if (!isLast)
+              Divider(
+                height: 1,
+                color: theme.dividerColor.withOpacity(0.4),
+                indent: 24,
+                endIndent: 24,
+              ),
+          ],
+        ),
+      );
+    }
+    return children;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Filter accounts into categories, intentionally excluding Loans
+    final assets = accounts
+        .where((a) => a.type != 'Credit Cards' && a.type != 'Loan')
+        .toList();
+    final creditCards = accounts
+        .where((a) => a.type == 'Credit Cards')
+        .toList();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.5,
@@ -152,6 +212,7 @@ class AnalyticsAccountSelectionSheet extends StatelessWidget {
                   controller: scrollController,
                   physics: const BouncingScrollPhysics(),
                   children: [
+                    // --- STATIC ANALYTICS FILTERS ---
                     _buildSheetOption(
                       context,
                       'All Accounts',
@@ -159,12 +220,24 @@ class AnalyticsAccountSelectionSheet extends StatelessWidget {
                       Icons.language_rounded,
                       theme,
                     ),
+                    Divider(
+                      height: 1,
+                      color: theme.dividerColor.withOpacity(0.2),
+                      indent: 24,
+                      endIndent: 24,
+                    ),
                     _buildSheetOption(
                       context,
                       'Assets Only',
                       'ASSETS',
                       Icons.account_balance_rounded,
                       theme,
+                    ),
+                    Divider(
+                      height: 1,
+                      color: theme.dividerColor.withOpacity(0.2),
+                      indent: 24,
+                      endIndent: 24,
                     ),
                     _buildSheetOption(
                       context,
@@ -174,34 +247,27 @@ class AnalyticsAccountSelectionSheet extends StatelessWidget {
                       theme,
                     ),
 
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-                      child: Text(
-                        'SPECIFIC ACCOUNTS',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.5,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
+                    Divider(
+                      height: 24,
+                      thickness: 4,
+                      color: theme.dividerColor.withOpacity(0.05),
                     ),
 
-                    ...accounts
-                        .where((a) => a.type != 'Loan')
-                        .map(
-                          (acc) => _buildSheetOption(
-                            context,
-                            acc.name,
-                            acc.id,
-                            acc.type == 'Credit Cards'
-                                ? Icons.credit_card_rounded
-                                : Icons.account_balance_wallet_rounded,
-                            theme,
-                            subtitle: acc.providerName,
-                          ),
-                        )
-                        .toList(),
+                    // --- DYNAMIC GROUPED ACCOUNTS ---
+                    ..._buildAccountGroup(
+                      context,
+                      assets,
+                      'ASSETS',
+                      Icons.account_balance_wallet_rounded,
+                      theme,
+                    ),
+                    ..._buildAccountGroup(
+                      context,
+                      creditCards,
+                      'CREDIT CARDS',
+                      Icons.credit_card_rounded,
+                      theme,
+                    ),
                   ],
                 ),
               ),

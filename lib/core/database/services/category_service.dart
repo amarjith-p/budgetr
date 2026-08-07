@@ -117,8 +117,8 @@ class CategoryService {
         'Jewelry',
         'Personal Items',
         'Mobile/Accessories',
-        'Toiletries'
-            'Furniture',
+        'Toiletries',
+        'Furniture',
         'Appliances',
         'Security Systems',
         'Home Decor',
