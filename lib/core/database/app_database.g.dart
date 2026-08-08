@@ -2113,6 +2113,28 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _categoryNameMeta = const VerificationMeta(
+    'categoryName',
+  );
+  @override
+  late final GeneratedColumn<String> categoryName = GeneratedColumn<String>(
+    'category_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _categoryIconMeta = const VerificationMeta(
+    'categoryIcon',
+  );
+  @override
+  late final GeneratedColumn<int> categoryIcon = GeneratedColumn<int>(
+    'category_icon',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _subCategoryMeta = const VerificationMeta(
     'subCategory',
   );
@@ -2133,6 +2155,17 @@ class $TransactionsTable extends Transactions
     aliasedName,
     true,
     type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bucketNameMeta = const VerificationMeta(
+    'bucketName',
+  );
+  @override
+  late final GeneratedColumn<String> bucketName = GeneratedColumn<String>(
+    'bucket_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
   static const VerificationMeta _notesMeta = const VerificationMeta('notes');
@@ -2172,17 +2205,6 @@ class $TransactionsTable extends Transactions
       'CHECK ("is_settlement_verified" IN (0, 1))',
     ),
     defaultValue: const Constant(false),
-  );
-  static const VerificationMeta _bucketNameMeta = const VerificationMeta(
-    'bucketName',
-  );
-  @override
-  late final GeneratedColumn<String> bucketName = GeneratedColumn<String>(
-    'bucket_name',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
   );
   static const VerificationMeta _locationNameMeta = const VerificationMeta(
     'locationName',
@@ -2226,12 +2248,14 @@ class $TransactionsTable extends Transactions
     accountId,
     toAccountId,
     categoryId,
+    categoryName,
+    categoryIcon,
     subCategory,
     bucketId,
+    bucketName,
     notes,
     isSpillover,
     isSettlementVerified,
-    bucketName,
     locationName,
     latitude,
     longitude,
@@ -2300,6 +2324,24 @@ class $TransactionsTable extends Transactions
         categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
       );
     }
+    if (data.containsKey('category_name')) {
+      context.handle(
+        _categoryNameMeta,
+        categoryName.isAcceptableOrUnknown(
+          data['category_name']!,
+          _categoryNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('category_icon')) {
+      context.handle(
+        _categoryIconMeta,
+        categoryIcon.isAcceptableOrUnknown(
+          data['category_icon']!,
+          _categoryIconMeta,
+        ),
+      );
+    }
     if (data.containsKey('sub_category')) {
       context.handle(
         _subCategoryMeta,
@@ -2313,6 +2355,12 @@ class $TransactionsTable extends Transactions
       context.handle(
         _bucketIdMeta,
         bucketId.isAcceptableOrUnknown(data['bucket_id']!, _bucketIdMeta),
+      );
+    }
+    if (data.containsKey('bucket_name')) {
+      context.handle(
+        _bucketNameMeta,
+        bucketName.isAcceptableOrUnknown(data['bucket_name']!, _bucketNameMeta),
       );
     }
     if (data.containsKey('notes')) {
@@ -2337,12 +2385,6 @@ class $TransactionsTable extends Transactions
           data['is_settlement_verified']!,
           _isSettlementVerifiedMeta,
         ),
-      );
-    }
-    if (data.containsKey('bucket_name')) {
-      context.handle(
-        _bucketNameMeta,
-        bucketName.isAcceptableOrUnknown(data['bucket_name']!, _bucketNameMeta),
       );
     }
     if (data.containsKey('location_name')) {
@@ -2403,6 +2445,14 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}category_id'],
       ),
+      categoryName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_name'],
+      ),
+      categoryIcon: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}category_icon'],
+      ),
       subCategory: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sub_category'],
@@ -2410,6 +2460,10 @@ class $TransactionsTable extends Transactions
       bucketId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}bucket_id'],
+      ),
+      bucketName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bucket_name'],
       ),
       notes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -2423,10 +2477,6 @@ class $TransactionsTable extends Transactions
         DriftSqlType.bool,
         data['${effectivePrefix}is_settlement_verified'],
       )!,
-      bucketName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}bucket_name'],
-      ),
       locationName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}location_name'],
@@ -2457,12 +2507,14 @@ class TransactionRecord extends DataClass
   final String accountId;
   final String? toAccountId;
   final String? categoryId;
+  final String? categoryName;
+  final int? categoryIcon;
   final String? subCategory;
   final int? bucketId;
+  final String? bucketName;
   final String? notes;
   final bool isSpillover;
   final bool isSettlementVerified;
-  final String? bucketName;
   final String? locationName;
   final double? latitude;
   final double? longitude;
@@ -2474,12 +2526,14 @@ class TransactionRecord extends DataClass
     required this.accountId,
     this.toAccountId,
     this.categoryId,
+    this.categoryName,
+    this.categoryIcon,
     this.subCategory,
     this.bucketId,
+    this.bucketName,
     this.notes,
     required this.isSpillover,
     required this.isSettlementVerified,
-    this.bucketName,
     this.locationName,
     this.latitude,
     this.longitude,
@@ -2498,20 +2552,26 @@ class TransactionRecord extends DataClass
     if (!nullToAbsent || categoryId != null) {
       map['category_id'] = Variable<String>(categoryId);
     }
+    if (!nullToAbsent || categoryName != null) {
+      map['category_name'] = Variable<String>(categoryName);
+    }
+    if (!nullToAbsent || categoryIcon != null) {
+      map['category_icon'] = Variable<int>(categoryIcon);
+    }
     if (!nullToAbsent || subCategory != null) {
       map['sub_category'] = Variable<String>(subCategory);
     }
     if (!nullToAbsent || bucketId != null) {
       map['bucket_id'] = Variable<int>(bucketId);
     }
+    if (!nullToAbsent || bucketName != null) {
+      map['bucket_name'] = Variable<String>(bucketName);
+    }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
     map['is_spillover'] = Variable<bool>(isSpillover);
     map['is_settlement_verified'] = Variable<bool>(isSettlementVerified);
-    if (!nullToAbsent || bucketName != null) {
-      map['bucket_name'] = Variable<String>(bucketName);
-    }
     if (!nullToAbsent || locationName != null) {
       map['location_name'] = Variable<String>(locationName);
     }
@@ -2537,20 +2597,26 @@ class TransactionRecord extends DataClass
       categoryId: categoryId == null && nullToAbsent
           ? const Value.absent()
           : Value(categoryId),
+      categoryName: categoryName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryName),
+      categoryIcon: categoryIcon == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryIcon),
       subCategory: subCategory == null && nullToAbsent
           ? const Value.absent()
           : Value(subCategory),
       bucketId: bucketId == null && nullToAbsent
           ? const Value.absent()
           : Value(bucketId),
+      bucketName: bucketName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bucketName),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
       isSpillover: Value(isSpillover),
       isSettlementVerified: Value(isSettlementVerified),
-      bucketName: bucketName == null && nullToAbsent
-          ? const Value.absent()
-          : Value(bucketName),
       locationName: locationName == null && nullToAbsent
           ? const Value.absent()
           : Value(locationName),
@@ -2576,14 +2642,16 @@ class TransactionRecord extends DataClass
       accountId: serializer.fromJson<String>(json['accountId']),
       toAccountId: serializer.fromJson<String?>(json['toAccountId']),
       categoryId: serializer.fromJson<String?>(json['categoryId']),
+      categoryName: serializer.fromJson<String?>(json['categoryName']),
+      categoryIcon: serializer.fromJson<int?>(json['categoryIcon']),
       subCategory: serializer.fromJson<String?>(json['subCategory']),
       bucketId: serializer.fromJson<int?>(json['bucketId']),
+      bucketName: serializer.fromJson<String?>(json['bucketName']),
       notes: serializer.fromJson<String?>(json['notes']),
       isSpillover: serializer.fromJson<bool>(json['isSpillover']),
       isSettlementVerified: serializer.fromJson<bool>(
         json['isSettlementVerified'],
       ),
-      bucketName: serializer.fromJson<String?>(json['bucketName']),
       locationName: serializer.fromJson<String?>(json['locationName']),
       latitude: serializer.fromJson<double?>(json['latitude']),
       longitude: serializer.fromJson<double?>(json['longitude']),
@@ -2600,12 +2668,14 @@ class TransactionRecord extends DataClass
       'accountId': serializer.toJson<String>(accountId),
       'toAccountId': serializer.toJson<String?>(toAccountId),
       'categoryId': serializer.toJson<String?>(categoryId),
+      'categoryName': serializer.toJson<String?>(categoryName),
+      'categoryIcon': serializer.toJson<int?>(categoryIcon),
       'subCategory': serializer.toJson<String?>(subCategory),
       'bucketId': serializer.toJson<int?>(bucketId),
+      'bucketName': serializer.toJson<String?>(bucketName),
       'notes': serializer.toJson<String?>(notes),
       'isSpillover': serializer.toJson<bool>(isSpillover),
       'isSettlementVerified': serializer.toJson<bool>(isSettlementVerified),
-      'bucketName': serializer.toJson<String?>(bucketName),
       'locationName': serializer.toJson<String?>(locationName),
       'latitude': serializer.toJson<double?>(latitude),
       'longitude': serializer.toJson<double?>(longitude),
@@ -2620,12 +2690,14 @@ class TransactionRecord extends DataClass
     String? accountId,
     Value<String?> toAccountId = const Value.absent(),
     Value<String?> categoryId = const Value.absent(),
+    Value<String?> categoryName = const Value.absent(),
+    Value<int?> categoryIcon = const Value.absent(),
     Value<String?> subCategory = const Value.absent(),
     Value<int?> bucketId = const Value.absent(),
+    Value<String?> bucketName = const Value.absent(),
     Value<String?> notes = const Value.absent(),
     bool? isSpillover,
     bool? isSettlementVerified,
-    Value<String?> bucketName = const Value.absent(),
     Value<String?> locationName = const Value.absent(),
     Value<double?> latitude = const Value.absent(),
     Value<double?> longitude = const Value.absent(),
@@ -2637,12 +2709,14 @@ class TransactionRecord extends DataClass
     accountId: accountId ?? this.accountId,
     toAccountId: toAccountId.present ? toAccountId.value : this.toAccountId,
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    categoryName: categoryName.present ? categoryName.value : this.categoryName,
+    categoryIcon: categoryIcon.present ? categoryIcon.value : this.categoryIcon,
     subCategory: subCategory.present ? subCategory.value : this.subCategory,
     bucketId: bucketId.present ? bucketId.value : this.bucketId,
+    bucketName: bucketName.present ? bucketName.value : this.bucketName,
     notes: notes.present ? notes.value : this.notes,
     isSpillover: isSpillover ?? this.isSpillover,
     isSettlementVerified: isSettlementVerified ?? this.isSettlementVerified,
-    bucketName: bucketName.present ? bucketName.value : this.bucketName,
     locationName: locationName.present ? locationName.value : this.locationName,
     latitude: latitude.present ? latitude.value : this.latitude,
     longitude: longitude.present ? longitude.value : this.longitude,
@@ -2660,10 +2734,19 @@ class TransactionRecord extends DataClass
       categoryId: data.categoryId.present
           ? data.categoryId.value
           : this.categoryId,
+      categoryName: data.categoryName.present
+          ? data.categoryName.value
+          : this.categoryName,
+      categoryIcon: data.categoryIcon.present
+          ? data.categoryIcon.value
+          : this.categoryIcon,
       subCategory: data.subCategory.present
           ? data.subCategory.value
           : this.subCategory,
       bucketId: data.bucketId.present ? data.bucketId.value : this.bucketId,
+      bucketName: data.bucketName.present
+          ? data.bucketName.value
+          : this.bucketName,
       notes: data.notes.present ? data.notes.value : this.notes,
       isSpillover: data.isSpillover.present
           ? data.isSpillover.value
@@ -2671,9 +2754,6 @@ class TransactionRecord extends DataClass
       isSettlementVerified: data.isSettlementVerified.present
           ? data.isSettlementVerified.value
           : this.isSettlementVerified,
-      bucketName: data.bucketName.present
-          ? data.bucketName.value
-          : this.bucketName,
       locationName: data.locationName.present
           ? data.locationName.value
           : this.locationName,
@@ -2692,12 +2772,14 @@ class TransactionRecord extends DataClass
           ..write('accountId: $accountId, ')
           ..write('toAccountId: $toAccountId, ')
           ..write('categoryId: $categoryId, ')
+          ..write('categoryName: $categoryName, ')
+          ..write('categoryIcon: $categoryIcon, ')
           ..write('subCategory: $subCategory, ')
           ..write('bucketId: $bucketId, ')
+          ..write('bucketName: $bucketName, ')
           ..write('notes: $notes, ')
           ..write('isSpillover: $isSpillover, ')
           ..write('isSettlementVerified: $isSettlementVerified, ')
-          ..write('bucketName: $bucketName, ')
           ..write('locationName: $locationName, ')
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude')
@@ -2714,12 +2796,14 @@ class TransactionRecord extends DataClass
     accountId,
     toAccountId,
     categoryId,
+    categoryName,
+    categoryIcon,
     subCategory,
     bucketId,
+    bucketName,
     notes,
     isSpillover,
     isSettlementVerified,
-    bucketName,
     locationName,
     latitude,
     longitude,
@@ -2735,12 +2819,14 @@ class TransactionRecord extends DataClass
           other.accountId == this.accountId &&
           other.toAccountId == this.toAccountId &&
           other.categoryId == this.categoryId &&
+          other.categoryName == this.categoryName &&
+          other.categoryIcon == this.categoryIcon &&
           other.subCategory == this.subCategory &&
           other.bucketId == this.bucketId &&
+          other.bucketName == this.bucketName &&
           other.notes == this.notes &&
           other.isSpillover == this.isSpillover &&
           other.isSettlementVerified == this.isSettlementVerified &&
-          other.bucketName == this.bucketName &&
           other.locationName == this.locationName &&
           other.latitude == this.latitude &&
           other.longitude == this.longitude);
@@ -2754,12 +2840,14 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
   final Value<String> accountId;
   final Value<String?> toAccountId;
   final Value<String?> categoryId;
+  final Value<String?> categoryName;
+  final Value<int?> categoryIcon;
   final Value<String?> subCategory;
   final Value<int?> bucketId;
+  final Value<String?> bucketName;
   final Value<String?> notes;
   final Value<bool> isSpillover;
   final Value<bool> isSettlementVerified;
-  final Value<String?> bucketName;
   final Value<String?> locationName;
   final Value<double?> latitude;
   final Value<double?> longitude;
@@ -2772,12 +2860,14 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     this.accountId = const Value.absent(),
     this.toAccountId = const Value.absent(),
     this.categoryId = const Value.absent(),
+    this.categoryName = const Value.absent(),
+    this.categoryIcon = const Value.absent(),
     this.subCategory = const Value.absent(),
     this.bucketId = const Value.absent(),
+    this.bucketName = const Value.absent(),
     this.notes = const Value.absent(),
     this.isSpillover = const Value.absent(),
     this.isSettlementVerified = const Value.absent(),
-    this.bucketName = const Value.absent(),
     this.locationName = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
@@ -2791,12 +2881,14 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     required String accountId,
     this.toAccountId = const Value.absent(),
     this.categoryId = const Value.absent(),
+    this.categoryName = const Value.absent(),
+    this.categoryIcon = const Value.absent(),
     this.subCategory = const Value.absent(),
     this.bucketId = const Value.absent(),
+    this.bucketName = const Value.absent(),
     this.notes = const Value.absent(),
     this.isSpillover = const Value.absent(),
     this.isSettlementVerified = const Value.absent(),
-    this.bucketName = const Value.absent(),
     this.locationName = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
@@ -2814,12 +2906,14 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Expression<String>? accountId,
     Expression<String>? toAccountId,
     Expression<String>? categoryId,
+    Expression<String>? categoryName,
+    Expression<int>? categoryIcon,
     Expression<String>? subCategory,
     Expression<int>? bucketId,
+    Expression<String>? bucketName,
     Expression<String>? notes,
     Expression<bool>? isSpillover,
     Expression<bool>? isSettlementVerified,
-    Expression<String>? bucketName,
     Expression<String>? locationName,
     Expression<double>? latitude,
     Expression<double>? longitude,
@@ -2833,13 +2927,15 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       if (accountId != null) 'account_id': accountId,
       if (toAccountId != null) 'to_account_id': toAccountId,
       if (categoryId != null) 'category_id': categoryId,
+      if (categoryName != null) 'category_name': categoryName,
+      if (categoryIcon != null) 'category_icon': categoryIcon,
       if (subCategory != null) 'sub_category': subCategory,
       if (bucketId != null) 'bucket_id': bucketId,
+      if (bucketName != null) 'bucket_name': bucketName,
       if (notes != null) 'notes': notes,
       if (isSpillover != null) 'is_spillover': isSpillover,
       if (isSettlementVerified != null)
         'is_settlement_verified': isSettlementVerified,
-      if (bucketName != null) 'bucket_name': bucketName,
       if (locationName != null) 'location_name': locationName,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
@@ -2855,12 +2951,14 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Value<String>? accountId,
     Value<String?>? toAccountId,
     Value<String?>? categoryId,
+    Value<String?>? categoryName,
+    Value<int?>? categoryIcon,
     Value<String?>? subCategory,
     Value<int?>? bucketId,
+    Value<String?>? bucketName,
     Value<String?>? notes,
     Value<bool>? isSpillover,
     Value<bool>? isSettlementVerified,
-    Value<String?>? bucketName,
     Value<String?>? locationName,
     Value<double?>? latitude,
     Value<double?>? longitude,
@@ -2874,12 +2972,14 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       accountId: accountId ?? this.accountId,
       toAccountId: toAccountId ?? this.toAccountId,
       categoryId: categoryId ?? this.categoryId,
+      categoryName: categoryName ?? this.categoryName,
+      categoryIcon: categoryIcon ?? this.categoryIcon,
       subCategory: subCategory ?? this.subCategory,
       bucketId: bucketId ?? this.bucketId,
+      bucketName: bucketName ?? this.bucketName,
       notes: notes ?? this.notes,
       isSpillover: isSpillover ?? this.isSpillover,
       isSettlementVerified: isSettlementVerified ?? this.isSettlementVerified,
-      bucketName: bucketName ?? this.bucketName,
       locationName: locationName ?? this.locationName,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
@@ -2911,11 +3011,20 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     if (categoryId.present) {
       map['category_id'] = Variable<String>(categoryId.value);
     }
+    if (categoryName.present) {
+      map['category_name'] = Variable<String>(categoryName.value);
+    }
+    if (categoryIcon.present) {
+      map['category_icon'] = Variable<int>(categoryIcon.value);
+    }
     if (subCategory.present) {
       map['sub_category'] = Variable<String>(subCategory.value);
     }
     if (bucketId.present) {
       map['bucket_id'] = Variable<int>(bucketId.value);
+    }
+    if (bucketName.present) {
+      map['bucket_name'] = Variable<String>(bucketName.value);
     }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
@@ -2927,9 +3036,6 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       map['is_settlement_verified'] = Variable<bool>(
         isSettlementVerified.value,
       );
-    }
-    if (bucketName.present) {
-      map['bucket_name'] = Variable<String>(bucketName.value);
     }
     if (locationName.present) {
       map['location_name'] = Variable<String>(locationName.value);
@@ -2956,12 +3062,14 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
           ..write('accountId: $accountId, ')
           ..write('toAccountId: $toAccountId, ')
           ..write('categoryId: $categoryId, ')
+          ..write('categoryName: $categoryName, ')
+          ..write('categoryIcon: $categoryIcon, ')
           ..write('subCategory: $subCategory, ')
           ..write('bucketId: $bucketId, ')
+          ..write('bucketName: $bucketName, ')
           ..write('notes: $notes, ')
           ..write('isSpillover: $isSpillover, ')
           ..write('isSettlementVerified: $isSettlementVerified, ')
-          ..write('bucketName: $bucketName, ')
           ..write('locationName: $locationName, ')
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
@@ -6244,12 +6352,14 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       required String accountId,
       Value<String?> toAccountId,
       Value<String?> categoryId,
+      Value<String?> categoryName,
+      Value<int?> categoryIcon,
       Value<String?> subCategory,
       Value<int?> bucketId,
+      Value<String?> bucketName,
       Value<String?> notes,
       Value<bool> isSpillover,
       Value<bool> isSettlementVerified,
-      Value<String?> bucketName,
       Value<String?> locationName,
       Value<double?> latitude,
       Value<double?> longitude,
@@ -6264,12 +6374,14 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String> accountId,
       Value<String?> toAccountId,
       Value<String?> categoryId,
+      Value<String?> categoryName,
+      Value<int?> categoryIcon,
       Value<String?> subCategory,
       Value<int?> bucketId,
+      Value<String?> bucketName,
       Value<String?> notes,
       Value<bool> isSpillover,
       Value<bool> isSettlementVerified,
-      Value<String?> bucketName,
       Value<String?> locationName,
       Value<double?> latitude,
       Value<double?> longitude,
@@ -6320,6 +6432,16 @@ class $$TransactionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get categoryName => $composableBuilder(
+    column: $table.categoryName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get categoryIcon => $composableBuilder(
+    column: $table.categoryIcon,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get subCategory => $composableBuilder(
     column: $table.subCategory,
     builder: (column) => ColumnFilters(column),
@@ -6327,6 +6449,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<int> get bucketId => $composableBuilder(
     column: $table.bucketId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bucketName => $composableBuilder(
+    column: $table.bucketName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6342,11 +6469,6 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<bool> get isSettlementVerified => $composableBuilder(
     column: $table.isSettlementVerified,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get bucketName => $composableBuilder(
-    column: $table.bucketName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6410,6 +6532,16 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get categoryName => $composableBuilder(
+    column: $table.categoryName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get categoryIcon => $composableBuilder(
+    column: $table.categoryIcon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get subCategory => $composableBuilder(
     column: $table.subCategory,
     builder: (column) => ColumnOrderings(column),
@@ -6417,6 +6549,11 @@ class $$TransactionsTableOrderingComposer
 
   ColumnOrderings<int> get bucketId => $composableBuilder(
     column: $table.bucketId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bucketName => $composableBuilder(
+    column: $table.bucketName,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6432,11 +6569,6 @@ class $$TransactionsTableOrderingComposer
 
   ColumnOrderings<bool> get isSettlementVerified => $composableBuilder(
     column: $table.isSettlementVerified,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get bucketName => $composableBuilder(
-    column: $table.bucketName,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6490,6 +6622,16 @@ class $$TransactionsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get categoryName => $composableBuilder(
+    column: $table.categoryName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get categoryIcon => $composableBuilder(
+    column: $table.categoryIcon,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get subCategory => $composableBuilder(
     column: $table.subCategory,
     builder: (column) => column,
@@ -6497,6 +6639,11 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<int> get bucketId =>
       $composableBuilder(column: $table.bucketId, builder: (column) => column);
+
+  GeneratedColumn<String> get bucketName => $composableBuilder(
+    column: $table.bucketName,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
@@ -6508,11 +6655,6 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<bool> get isSettlementVerified => $composableBuilder(
     column: $table.isSettlementVerified,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get bucketName => $composableBuilder(
-    column: $table.bucketName,
     builder: (column) => column,
   );
 
@@ -6570,12 +6712,14 @@ class $$TransactionsTableTableManager
                 Value<String> accountId = const Value.absent(),
                 Value<String?> toAccountId = const Value.absent(),
                 Value<String?> categoryId = const Value.absent(),
+                Value<String?> categoryName = const Value.absent(),
+                Value<int?> categoryIcon = const Value.absent(),
                 Value<String?> subCategory = const Value.absent(),
                 Value<int?> bucketId = const Value.absent(),
+                Value<String?> bucketName = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<bool> isSpillover = const Value.absent(),
                 Value<bool> isSettlementVerified = const Value.absent(),
-                Value<String?> bucketName = const Value.absent(),
                 Value<String?> locationName = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
@@ -6588,12 +6732,14 @@ class $$TransactionsTableTableManager
                 accountId: accountId,
                 toAccountId: toAccountId,
                 categoryId: categoryId,
+                categoryName: categoryName,
+                categoryIcon: categoryIcon,
                 subCategory: subCategory,
                 bucketId: bucketId,
+                bucketName: bucketName,
                 notes: notes,
                 isSpillover: isSpillover,
                 isSettlementVerified: isSettlementVerified,
-                bucketName: bucketName,
                 locationName: locationName,
                 latitude: latitude,
                 longitude: longitude,
@@ -6608,12 +6754,14 @@ class $$TransactionsTableTableManager
                 required String accountId,
                 Value<String?> toAccountId = const Value.absent(),
                 Value<String?> categoryId = const Value.absent(),
+                Value<String?> categoryName = const Value.absent(),
+                Value<int?> categoryIcon = const Value.absent(),
                 Value<String?> subCategory = const Value.absent(),
                 Value<int?> bucketId = const Value.absent(),
+                Value<String?> bucketName = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<bool> isSpillover = const Value.absent(),
                 Value<bool> isSettlementVerified = const Value.absent(),
-                Value<String?> bucketName = const Value.absent(),
                 Value<String?> locationName = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
@@ -6626,12 +6774,14 @@ class $$TransactionsTableTableManager
                 accountId: accountId,
                 toAccountId: toAccountId,
                 categoryId: categoryId,
+                categoryName: categoryName,
+                categoryIcon: categoryIcon,
                 subCategory: subCategory,
                 bucketId: bucketId,
+                bucketName: bucketName,
                 notes: notes,
                 isSpillover: isSpillover,
                 isSettlementVerified: isSettlementVerified,
-                bucketName: bucketName,
                 locationName: locationName,
                 latitude: latitude,
                 longitude: longitude,

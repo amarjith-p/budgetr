@@ -17,7 +17,6 @@ final insightBucketBreakdownProvider =
       DateTime currentStart = DateTime(2000), currentEnd = DateTime(2100);
       DateTime prevStart = DateTime(1900), prevEnd = DateTime(1999);
 
-      // ... (Identical Date Switch logic as InsightCategoryProvider) ...
       switch (filter.timeFrame) {
         case 'Today':
           currentStart = DateTime(now.year, now.month, now.day);
@@ -108,14 +107,17 @@ final insightBucketBreakdownProvider =
         }
       }
 
-      // 3-Level Mapping for Previous Totals
       final Map<String, double> prevBucketTotals = {};
       final Map<String, double> prevCatTotals = {};
       final Map<String, double> prevSubTotals = {};
 
       for (var t in prevTxs) {
         final bucket = t.transaction.bucketName ?? 'Out of Bucket';
-        final cat = t.category?.name ?? 'Uncategorized';
+
+        // --- FIX: USE SNAPSHOT CATEGORY NAME ---
+        final cat =
+            t.transaction.categoryName ?? t.category?.name ?? 'Uncategorized';
+
         final sub = t.transaction.subCategory ?? 'Uncategorized';
 
         prevBucketTotals[bucket] =
@@ -130,6 +132,7 @@ final insightBucketBreakdownProvider =
         currentTxs,
         (t) => t.transaction.bucketName ?? 'Out of Bucket',
       );
+
       List<InsightBucketModel> result = [];
 
       groupedByBucket.forEach((bucketName, bucketTxs) {
@@ -138,27 +141,37 @@ final insightBucketBreakdownProvider =
 
         final groupedByCat = groupBy(
           bucketTxs,
-          (t) => t.category?.name ?? 'Uncategorized',
+          // --- FIX: USE SNAPSHOT CATEGORY NAME ---
+          (t) =>
+              t.transaction.categoryName ?? t.category?.name ?? 'Uncategorized',
         );
+
         List<InsightCategoryModel> categories = [];
 
         groupedByCat.forEach((catName, catTxs) {
           double catTotal = 0.0;
           for (var t in catTxs) catTotal += t.transaction.amount;
-          int? iconCode = catTxs
-              .firstWhereOrNull((t) => t.category?.iconCode != null)
-              ?.category
-              ?.iconCode;
+
+          // --- FIX: USE SNAPSHOT CATEGORY ICON ---
+          final match = catTxs.firstWhereOrNull(
+            (t) =>
+                t.transaction.categoryIcon != null ||
+                t.category?.iconCode != null,
+          );
+          int? iconCode =
+              match?.transaction.categoryIcon ?? match?.category?.iconCode;
 
           final groupedBySub = groupBy(
             catTxs,
             (t) => t.transaction.subCategory ?? 'Uncategorized',
           );
+
           List<InsightSubcategoryModel> subcategories = [];
 
           groupedBySub.forEach((subName, subTxs) {
             double subTotal = 0.0;
             for (var t in subTxs) subTotal += t.transaction.amount;
+
             subcategories.add(
               InsightSubcategoryModel(
                 name: subName,

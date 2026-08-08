@@ -15,7 +15,6 @@ final insightCategoryBreakdownProvider =
       final allTxs = ref.watch(allTransactionsProvider).asData?.value ?? [];
 
       final now = DateTime.now();
-
       DateTime currentStart = DateTime(2000), currentEnd = DateTime(2100);
       DateTime prevStart = DateTime(1900), prevEnd = DateTime(1999);
 
@@ -86,6 +85,8 @@ final insightCategoryBreakdownProvider =
       List<TransactionWithDetails> prevTxs = [];
       double grandTotal = 0.0;
 
+      final targetType = isExpense ? 'Expense' : 'Income';
+
       for (var t in allTxs) {
         final tx = t.transaction;
         final accType = t.account.type;
@@ -99,54 +100,57 @@ final insightCategoryBreakdownProvider =
             continue;
         }
 
-        if (tx.type == 'Transfer') continue;
-        if (tx.type == 'Income' &&
-            t.category?.name.toLowerCase() == 'repayment')
-          continue;
+        if (tx.type == 'Transfer' || tx.type != targetType) continue;
 
-        if ((isExpense && tx.type == 'Expense') ||
-            (!isExpense && tx.type == 'Income')) {
-          if (!tx.date.isBefore(currentStart) && !tx.date.isAfter(currentEnd)) {
-            currentTxs.add(t);
-            grandTotal += tx.amount;
-          } else if (!tx.date.isBefore(prevStart) &&
-              !tx.date.isAfter(prevEnd)) {
-            prevTxs.add(t);
-          }
+        if (!tx.date.isBefore(currentStart) && !tx.date.isAfter(currentEnd)) {
+          currentTxs.add(t);
+          grandTotal += tx.amount;
+        } else if (!tx.date.isBefore(prevStart) && !tx.date.isAfter(prevEnd)) {
+          prevTxs.add(t);
         }
       }
 
       final Map<String, double> prevCatTotals = {};
       final Map<String, double> prevSubTotals = {};
+
       for (var t in prevTxs) {
-        final catName = t.category?.name ?? 'Uncategorized';
-        final subName = t.transaction.subCategory ?? 'Uncategorized';
-        prevCatTotals[catName] =
-            (prevCatTotals[catName] ?? 0.0) + t.transaction.amount;
-        prevSubTotals['$catName|$subName'] =
-            (prevSubTotals['$catName|$subName'] ?? 0.0) + t.transaction.amount;
+        // --- FIX: USE SNAPSHOT CATEGORY NAME ---
+        final cat =
+            t.transaction.categoryName ?? t.category?.name ?? 'Uncategorized';
+        final sub = t.transaction.subCategory ?? 'Uncategorized';
+
+        prevCatTotals[cat] = (prevCatTotals[cat] ?? 0.0) + t.transaction.amount;
+        prevSubTotals['$cat|$sub'] =
+            (prevSubTotals['$cat|$sub'] ?? 0.0) + t.transaction.amount;
       }
 
       final groupedByCat = groupBy(
         currentTxs,
-        (t) => t.category?.name ?? 'Uncategorized',
+        // --- FIX: USE SNAPSHOT CATEGORY NAME ---
+        (t) =>
+            t.transaction.categoryName ?? t.category?.name ?? 'Uncategorized',
       );
+
       List<InsightCategoryModel> result = [];
 
       groupedByCat.forEach((catName, catTxs) {
         double catTotal = 0.0;
         for (var t in catTxs) catTotal += t.transaction.amount;
 
-        int? iconCode = catTxs
-            .firstWhereOrNull((t) => t.category?.iconCode != null)
-            ?.category
-            ?.iconCode;
+        // --- FIX: USE SNAPSHOT CATEGORY ICON ---
+        final match = catTxs.firstWhereOrNull(
+          (t) =>
+              t.transaction.categoryIcon != null ||
+              t.category?.iconCode != null,
+        );
+        int? iconCode =
+            match?.transaction.categoryIcon ?? match?.category?.iconCode;
 
-        // Subcategory Level Grouping
         final groupedBySub = groupBy(
           catTxs,
           (t) => t.transaction.subCategory ?? 'Uncategorized',
         );
+
         List<InsightSubcategoryModel> subcategories = [];
 
         groupedBySub.forEach((subName, subTxs) {

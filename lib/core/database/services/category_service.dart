@@ -235,10 +235,10 @@ class CategoryService {
       ],
       'icon': Icons.savings.codePoint,
     },
-    'Miscellaneous': {
+    'Other Expenses': {
       'subs': [
         'Emergency Expenses',
-        'Miscellaneous Purchases',
+        'Miscellaneous',
         'Unexpected',
         'Missing',
         'Uncategorized',
@@ -352,7 +352,7 @@ class CategoryService {
       ],
       'icon': Icons.sell.codePoint,
     },
-    'Others': {
+    'Other Income': {
       'subs': [
         'Miscellaneous',
         'Uncategorized',

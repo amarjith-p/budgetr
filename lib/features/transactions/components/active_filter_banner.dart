@@ -1,7 +1,8 @@
+// features/transactions/components/active_filter_banner.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/design_tokens.dart';
-import '../../../core/components/currency_text.dart'; // <-- IMPORTED CURRENCY UTILITY
+import '../../../core/components/currency_text.dart';
 import '../providers/transaction_filter_provider.dart';
 
 class ActiveFilterBanner extends StatelessWidget {
@@ -36,7 +37,6 @@ class ActiveFilterBanner extends StatelessWidget {
       }
     }
 
-    // --- APPLIED GLOBAL FORMATTER ---
     if (filterState.minAmount != null && filterState.maxAmount != null) {
       tags.add(
         '₹${CurrencyFormatter.format(filterState.minAmount!)} - ₹${CurrencyFormatter.format(filterState.maxAmount!)}',
@@ -49,12 +49,15 @@ class ActiveFilterBanner extends StatelessWidget {
 
     if (filterState.accountIds.isNotEmpty)
       tags.add('${filterState.accountIds.length} Accounts');
-    if (filterState.categoryIds.isNotEmpty)
-      tags.add('${filterState.categoryIds.length} Categories');
+
+    // --- FIX: USE SNAPSHOT NAMES GETTERS ---
+    if (filterState.categoryNames.isNotEmpty)
+      tags.add('${filterState.categoryNames.length} Categories');
     if (filterState.subCategories.isNotEmpty)
       tags.add('${filterState.subCategories.length} Subcats');
-    if (filterState.bucketIds.isNotEmpty)
-      tags.add('${filterState.bucketIds.length} Buckets');
+    if (filterState.bucketNames.isNotEmpty)
+      tags.add('${filterState.bucketNames.length} Buckets');
+
     return tags;
   }
 

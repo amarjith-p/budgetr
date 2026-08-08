@@ -1,3 +1,4 @@
+// features/transactions/services/transaction_service.dart
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
@@ -27,6 +28,7 @@ class TransactionService {
   Stream<List<TransactionWithDetails>> watchTransactionsForAccount(
     String accountId,
   ) {
+    // ... Keep exact existing watchTransactionsForAccount logic ...
     final toAccountAlias = _db.alias(_db.accounts, 'to_account');
     final query =
         _db.select(_db.transactions).join([
@@ -69,6 +71,7 @@ class TransactionService {
   }
 
   Stream<List<TransactionWithDetails>> watchAllTransactions() {
+    // ... Keep exact existing watchAllTransactions logic ...
     final toAccountAlias = _db.alias(_db.accounts, 'to_account');
     final query =
         _db.select(_db.transactions).join([
@@ -114,6 +117,8 @@ class TransactionService {
     required String accountId,
     String? toAccountId,
     String? categoryId,
+    String? categoryName, // <-- NEW
+    int? categoryIcon, // <-- NEW
     String? subCategory,
     int? bucketId,
     String? bucketName,
@@ -189,6 +194,8 @@ class TransactionService {
               accountId: dbAccountId,
               toAccountId: Value(dbToAccountId),
               categoryId: Value(categoryId),
+              categoryName: Value(categoryName), // <-- SAVED
+              categoryIcon: Value(categoryIcon), // <-- SAVED
               subCategory: Value(subCategory),
               bucketId: Value(bucketId),
               bucketName: Value(bucketName),
@@ -211,6 +218,8 @@ class TransactionService {
     required String accountId,
     String? toAccountId,
     String? categoryId,
+    String? categoryName, // <-- NEW
+    int? categoryIcon, // <-- NEW
     String? subCategory,
     int? bucketId,
     String? bucketName,
@@ -240,6 +249,8 @@ class TransactionService {
                 amount: amount,
                 date: date,
                 categoryId: Value(categoryId),
+                categoryName: Value(categoryName), // <-- SAVED
+                categoryIcon: Value(categoryIcon), // <-- SAVED
                 subCategory: Value(subCategory),
                 bucketId: Value(bucketId),
                 bucketName: Value(bucketName),
@@ -250,6 +261,7 @@ class TransactionService {
               ),
             );
 
+        // ... Keep existing exact loan sync logic ...
         final isSourceLeg = legType.startsWith('SOURCE');
         final isLoanLeg = legType.startsWith('LOAN');
 
@@ -296,7 +308,6 @@ class TransactionService {
               await _db
                   .update(_db.transactions)
                   .replace(oppTx.copyWith(amount: oppTx.amount + diff));
-
               if (oppositeLegId == '${prefix}_LOANPRIN') {
                 final oppAcc = await (_db.select(
                   _db.accounts,
@@ -320,7 +331,6 @@ class TransactionService {
                       ..where((t) => t.id.equals('${prefix}_SOURCETRANSFER')))
                     .getSingleOrNull();
           }
-
           if (oppTx != null) {
             await _db
                 .update(_db.transactions)
@@ -339,7 +349,6 @@ class TransactionService {
 
     String dbAccountId = accountId;
     String? dbToAccountId = toAccountId;
-
     if (type == 'Transfer') {
       if (accountId == 'EXTERNAL') {
         dbAccountId = toAccountId!;
@@ -441,6 +450,8 @@ class TransactionService {
               accountId: dbAccountId,
               toAccountId: Value(dbToAccountId),
               categoryId: Value(categoryId),
+              categoryName: Value(categoryName), // <-- SAVED
+              categoryIcon: Value(categoryIcon), // <-- SAVED
               subCategory: Value(subCategory),
               bucketId: Value(bucketId),
               bucketName: Value(bucketName),
@@ -455,36 +466,31 @@ class TransactionService {
     });
   }
 
+  // ... Keep deleteTransaction exactly the same ...
   Future<void> deleteTransaction(String transactionId) async {
-    // --- MULTI-LEG LOAN SYNCHRONIZATION ---
     if (transactionId.startsWith('LOAN_TX_')) {
       final parts = transactionId.split('_');
       final prefix = '${parts[0]}_${parts[1]}_${parts[2]}';
-
       await _db.transaction(() async {
         final allLegs = await (_db.select(
           _db.transactions,
         )..where((t) => t.id.like('$prefix%'))).get();
-
         for (final tx in allLegs) {
           final acc = await (_db.select(
             _db.accounts,
           )..where((a) => a.id.equals(tx.accountId))).getSingle();
-
-          if (tx.id.endsWith('_SOURCETRANSFER')) {
+          if (tx.id.endsWith('_SOURCETRANSFER'))
             await _db
                 .update(_db.accounts)
                 .replace(acc.copyWith(balance: acc.balance + tx.amount));
-          } else if (tx.id.contains('_SOURCE')) {
+          else if (tx.id.contains('_SOURCE'))
             await _db
                 .update(_db.accounts)
                 .replace(acc.copyWith(balance: acc.balance + tx.amount));
-          } else if (tx.id.endsWith('_LOANPRIN')) {
+          else if (tx.id.endsWith('_LOANPRIN'))
             await _db
                 .update(_db.accounts)
                 .replace(acc.copyWith(balance: acc.balance + tx.amount));
-          }
-
           await (_db.delete(
             _db.transactions,
           )..where((t) => t.id.equals(tx.id))).go();
@@ -492,7 +498,6 @@ class TransactionService {
       });
       return;
     }
-
     await _db.transaction(() async {
       final tx = await (_db.select(
         _db.transactions,
@@ -501,12 +506,10 @@ class TransactionService {
         _db.accounts,
       )..where((a) => a.id.equals(tx.accountId))).getSingle();
       double revSourceBalance = sourceAcc.balance;
-
       bool isLoanFee =
           tx.subCategory == 'Loan Interest' ||
           tx.subCategory == 'Tax on Interest' ||
           tx.subCategory == 'Bank Charges on Loan';
-
       if (tx.type == 'Expense' && !isLoanFee) revSourceBalance += tx.amount;
       if (tx.type == 'Income') revSourceBalance -= tx.amount;
       if (tx.type == 'Transfer') {
@@ -517,11 +520,9 @@ class TransactionService {
         else
           revSourceBalance += tx.amount;
       }
-
       await _db
           .update(_db.accounts)
           .replace(sourceAcc.copyWith(balance: revSourceBalance));
-
       if (tx.type == 'Transfer' &&
           tx.toAccountId != null &&
           !tx.toAccountId!.startsWith('EXTERNAL')) {
@@ -532,7 +533,6 @@ class TransactionService {
             .update(_db.accounts)
             .replace(destAcc.copyWith(balance: destAcc.balance - tx.amount));
       }
-
       await (_db.delete(
         _db.transactions,
       )..where((t) => t.id.equals(transactionId))).go();
@@ -547,6 +547,8 @@ class TransactionService {
     required String accountId,
     String? toAccountId,
     String? categoryId,
+    String? categoryName, // <-- NEW
+    int? categoryIcon, // <-- NEW
     String? subCategory,
     int? bucketId,
     String? bucketName,
@@ -563,11 +565,10 @@ class TransactionService {
       )..where((t) => t.id.equals(originalTxId))).getSingle();
       final newOrigAmount = origTx.amount - splitAmount;
 
-      if (newOrigAmount <= 0) {
+      if (newOrigAmount <= 0)
         throw Exception(
           "Split amount must be strictly less than the original amount.",
         );
-      }
 
       await updateTransaction(
         id: origTx.id,
@@ -577,6 +578,8 @@ class TransactionService {
         accountId: origTx.accountId,
         toAccountId: origTx.toAccountId,
         categoryId: origTx.categoryId,
+        categoryName: origTx.categoryName, // Retain original
+        categoryIcon: origTx.categoryIcon, // Retain original
         subCategory: origTx.subCategory,
         bucketId: origTx.bucketId,
         bucketName: origTx.bucketName,
@@ -595,6 +598,8 @@ class TransactionService {
         accountId: accountId,
         toAccountId: toAccountId,
         categoryId: categoryId,
+        categoryName: categoryName, // Pass newly selected
+        categoryIcon: categoryIcon, // Pass newly selected
         subCategory: subCategory,
         bucketId: bucketId,
         bucketName: bucketName,
@@ -608,6 +613,7 @@ class TransactionService {
     });
   }
 
+  // ... Keep verifySettlement, toggleSpillover, logLoanPayment exact logic ...
   Future<void> toggleSpillover(String transactionId, bool isSpillover) async {
     final tx = await (_db.select(
       _db.transactions,
@@ -649,13 +655,10 @@ class TransactionService {
       final loanAcc = await (_db.select(
         _db.accounts,
       )..where((a) => a.id.equals(accountId))).getSingle();
-
       if (principal > 0) {
-        double newBalance = loanAcc.balance - principal;
         await _db
             .update(_db.accounts)
-            .replace(loanAcc.copyWith(balance: newBalance));
-
+            .replace(loanAcc.copyWith(balance: loanAcc.balance - principal));
         await _db
             .into(_db.transactions)
             .insert(
@@ -670,8 +673,7 @@ class TransactionService {
               ),
             );
       }
-
-      if (interest > 0) {
+      if (interest > 0)
         await _db
             .into(_db.transactions)
             .insert(
@@ -685,9 +687,7 @@ class TransactionService {
                 notes: Value(notes != null && notes.isNotEmpty ? notes : null),
               ),
             );
-      }
-
-      if (tax > 0) {
+      if (tax > 0)
         await _db
             .into(_db.transactions)
             .insert(
@@ -701,9 +701,7 @@ class TransactionService {
                 notes: Value(notes != null && notes.isNotEmpty ? notes : null),
               ),
             );
-      }
-
-      if (bankCharges > 0) {
+      if (bankCharges > 0)
         await _db
             .into(_db.transactions)
             .insert(
@@ -717,7 +715,6 @@ class TransactionService {
                 notes: Value(notes != null && notes.isNotEmpty ? notes : null),
               ),
             );
-      }
     });
   }
 
@@ -769,6 +766,8 @@ class TransactionService {
           double amt,
           String idSuffix,
           String? catId,
+          String? catName,
+          int? catIcon,
           String subCat,
         ) async {
           if (amt > 0) {
@@ -782,6 +781,8 @@ class TransactionService {
                     date: date,
                     accountId: fromAccountId,
                     categoryId: Value(catId),
+                    categoryName: Value(catName), // <-- SAVED SNAPSHOT
+                    categoryIcon: Value(catIcon), // <-- SAVED SNAPSHOT
                     subCategory: Value(subCat),
                     bucketId: Value(bucketId),
                     bucketName: Value(bucketName),
@@ -796,18 +797,36 @@ class TransactionService {
           }
         }
 
-        await insertFromTx(principal, 'SOURCEPRIN', bfCat?.id, 'Loan EMIs');
+        await insertFromTx(
+          principal,
+          'SOURCEPRIN',
+          bfCat?.id,
+          bfCat?.name,
+          bfCat?.iconCode,
+          'Loan EMIs',
+        );
         await insertFromTx(
           interest,
           'SOURCEINT',
           bfCat?.id,
+          bfCat?.name,
+          bfCat?.iconCode,
           'Interest Charges',
         );
-        await insertFromTx(tax, 'SOURCETAX', taxCat?.id, 'GST');
+        await insertFromTx(
+          tax,
+          'SOURCETAX',
+          taxCat?.id,
+          taxCat?.name,
+          taxCat?.iconCode,
+          'GST',
+        );
         await insertFromTx(
           bankCharges,
           'SOURCEFEE',
           bfCat?.id,
+          bfCat?.name,
+          bfCat?.iconCode,
           'Processing Fees',
         );
       } else {
@@ -862,7 +881,6 @@ class TransactionService {
             .replace(loanAcc.copyWith(balance: loanAcc.balance - principal));
         await insertLoanTx(principal, 'LOANPRIN', 'Loan Principal');
       }
-
       await insertLoanTx(interest, 'LOANINT', 'Loan Interest');
       await insertLoanTx(tax, 'LOANTAX', 'Tax on Interest');
       await insertLoanTx(bankCharges, 'LOANFEE', 'Bank Charges on Loan');

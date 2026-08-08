@@ -1,3 +1,4 @@
+// features/analytics/components/spending_widget.dart
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -251,10 +252,15 @@ class _SpendingWidgetState extends ConsumerState<SpendingWidget> {
 
                 String keyName = '';
                 if (_viewMode == 0) {
-                  keyName = txData.category?.name ?? 'Uncategorized';
-                } else {
+                  // --- FIX: USE SNAPSHOT NAME ---
                   keyName =
-                      txData.bucket?.name ?? t.bucketName ?? 'Out of Bucket';
+                      t.categoryName ??
+                      txData.category?.name ??
+                      'Uncategorized';
+                } else {
+                  // --- FIX: USE SNAPSHOT BUCKET ---
+                  keyName =
+                      t.bucketName ?? txData.bucket?.name ?? 'Out of Bucket';
                 }
 
                 aggregatedData[keyName] =
@@ -440,9 +446,8 @@ class _SpendingWidgetState extends ConsumerState<SpendingWidget> {
                             ),
                           ),
 
-                          // --- FIX: STRICT SIZEDBOX FOR CENTER CONTENT TO PREVENT OVERLAP ---
                           SizedBox(
-                            width: 105, // Safely within the donut hole
+                            width: 105,
                             child: AnimatedSwitcher(
                               duration: const Duration(milliseconds: 300),
                               child: _selectedSliceIndex == null
@@ -462,7 +467,6 @@ class _SpendingWidgetState extends ConsumerState<SpendingWidget> {
                                           ),
                                         ),
                                         const SizedBox(height: 2),
-                                        // This will perfectly scale down any huge number
                                         FittedBox(
                                           fit: BoxFit.scaleDown,
                                           child: CurrencyText(

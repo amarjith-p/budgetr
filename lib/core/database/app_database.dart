@@ -1,3 +1,4 @@
+// core/database/app_database.dart
 import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -21,9 +22,9 @@ part 'app_database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
-  // --- BUMPED TO VERSION 18 ---
+  // --- BUMPED TO VERSION 21 ---
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -52,9 +53,8 @@ class AppDatabase extends _$AppDatabase {
       if (from < 13) await m.addColumn(accounts, accounts.isHidden);
       if (from < 14) await m.addColumn(accounts, accounts.isCreditPayable);
       if (from < 15) await m.createTable(customBudgets);
-      if (from < 16) {
+      if (from < 16)
         await m.addColumn(customBudgets, customBudgets.settledAmount);
-      }
       if (from < 17) {
         await m.addColumn(accounts, accounts.loanPurpose);
         await m.addColumn(accounts, accounts.loanPrincipal);
@@ -65,16 +65,15 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(accounts, accounts.loanEndDate);
       }
       if (from < 18) {
-        // --- NEW MIGRATION FOR PERSISTENT LOAN METRICS ---
         await m.addColumn(accounts, accounts.totalInterestPayable);
         await m.addColumn(accounts, accounts.totalTaxPayable);
       }
-      if (from < 19) {
-        await m.addColumn(accounts, accounts.isClosed);
-      }
-      if (from < 20) {
-        // --- NEW MIGRATION FOR BANK CHARGES ---
-        await m.addColumn(accounts, accounts.bankCharges);
+      if (from < 19) await m.addColumn(accounts, accounts.isClosed);
+      if (from < 20) await m.addColumn(accounts, accounts.bankCharges);
+      if (from < 21) {
+        // --- NEW MIGRATION: ADD IMMUTABLE SNAPSHOT FIELDS ---
+        await m.addColumn(transactions, transactions.categoryName);
+        await m.addColumn(transactions, transactions.categoryIcon);
       }
     },
   );

@@ -1,5 +1,4 @@
 // core/database/tables.dart
-
 import 'package:drift/drift.dart';
 
 class TransactionCategories extends Table {
@@ -29,14 +28,12 @@ class Accounts extends Table {
   TextColumn get last4 => text().nullable()();
   RealColumn get balance => real()();
 
-  // Existing Credit Card specific fields
   RealColumn get creditLimit => real().nullable()();
   IntColumn get billDate => integer().nullable()();
   IntColumn get dueDate => integer().nullable()();
   BoolColumn get isCreditPayable =>
       boolean().withDefault(const Constant(false))();
 
-  // --- NEW LOAN SPECIFIC FIELDS ---
   TextColumn get loanPurpose => text().nullable()();
   RealColumn get loanPrincipal => real().nullable()();
   RealColumn get interestRate => real().nullable()();
@@ -45,12 +42,10 @@ class Accounts extends Table {
   DateTimeColumn get loanStartDate => dateTime().nullable()();
   DateTimeColumn get loanEndDate => dateTime().nullable()();
 
-  // --- NEW PERSISTENT LOAN METRICS ---
   RealColumn get totalInterestPayable => real().nullable()();
   RealColumn get totalTaxPayable => real().nullable()();
   RealColumn get bankCharges => real().nullable()();
 
-  // System fields
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
   IntColumn get displayOrder => integer().nullable()();
   BoolColumn get isClosed => boolean().withDefault(const Constant(false))();
@@ -68,14 +63,21 @@ class Transactions extends Table {
   DateTimeColumn get date => dateTime()();
   TextColumn get accountId => text()();
   TextColumn get toAccountId => text().nullable()();
+
   TextColumn get categoryId => text().nullable()();
+  // --- NEW: IMMUTABLE SNAPSHOT FIELDS ---
+  TextColumn get categoryName => text().nullable()();
+  IntColumn get categoryIcon => integer().nullable()();
+
   TextColumn get subCategory => text().nullable()();
   IntColumn get bucketId => integer().nullable()();
+  TextColumn get bucketName => text().nullable()();
   TextColumn get notes => text().nullable()();
+
   BoolColumn get isSpillover => boolean().withDefault(const Constant(false))();
   BoolColumn get isSettlementVerified =>
       boolean().withDefault(const Constant(false))();
-  TextColumn get bucketName => text().nullable()();
+
   TextColumn get locationName => text().nullable()();
   RealColumn get latitude => real().nullable()();
   RealColumn get longitude => real().nullable()();
@@ -84,6 +86,7 @@ class Transactions extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+// ... Keep existing MonthlyBudgets, ClosedBudgetSnapshots, and CustomBudgets exactly the same ...
 @DataClassName('MonthlyBudget')
 class MonthlyBudgets extends Table {
   TextColumn get id => text()();
@@ -98,7 +101,6 @@ class MonthlyBudgets extends Table {
   RealColumn get closedOutOfBucket => real().nullable()();
   RealColumn get closedRemaining => real().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -117,7 +119,6 @@ class ClosedBudgetSnapshots extends Table {
   RealColumn get budgetedRemaining => real()();
   TextColumn get bucketDetailsJson => text()();
   DateTimeColumn get closedAt => dateTime().withDefault(currentDateAndTime)();
-
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -135,12 +136,8 @@ class CustomBudgets extends Table {
   IntColumn get bucketId => integer().nullable()();
   TextColumn get accountId => text().nullable()();
   BoolColumn get isSettled => boolean().withDefault(const Constant(false))();
-
-  // --- NEW: Freezes the exact spent amount upon settlement ---
   RealColumn get settledAmount => real().nullable()();
-
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-
   @override
   Set<Column> get primaryKey => {id};
 }

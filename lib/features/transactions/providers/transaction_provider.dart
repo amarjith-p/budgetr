@@ -1,3 +1,4 @@
+// features/transactions/providers/transaction_provider.dart
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -47,6 +48,8 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     required String accountId,
     String? toAccountId,
     String? categoryId,
+    String? categoryName, // <-- NEW
+    int? categoryIcon, // <-- NEW
     String? subCategory,
     int? bucketId,
     String? bucketName,
@@ -67,6 +70,8 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
           accountId: accountId,
           toAccountId: toAccountId,
           categoryId: categoryId,
+          categoryName: categoryName, // <-- PASSED
+          categoryIcon: categoryIcon, // <-- PASSED
           subCategory: subCategory,
           bucketId: bucketId,
           bucketName: bucketName,
@@ -86,6 +91,8 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
           accountId: accountId,
           toAccountId: toAccountId,
           categoryId: categoryId,
+          categoryName: categoryName, // <-- PASSED
+          categoryIcon: categoryIcon, // <-- PASSED
           subCategory: subCategory,
           bucketId: bucketId,
           bucketName: bucketName,
@@ -114,6 +121,8 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     required String accountId,
     String? toAccountId,
     String? categoryId,
+    String? categoryName, // <-- NEW
+    int? categoryIcon, // <-- NEW
     String? subCategory,
     int? bucketId,
     String? bucketName,
@@ -134,6 +143,8 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
         accountId: accountId,
         toAccountId: toAccountId,
         categoryId: categoryId,
+        categoryName: categoryName, // <-- PASSED
+        categoryIcon: categoryIcon, // <-- PASSED
         subCategory: subCategory,
         bucketId: bucketId,
         bucketName: bucketName,
@@ -146,6 +157,15 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
       );
     });
     return !state.hasError;
+  }
+
+  // ... Keep toggleSpillover, verifySettlement, logLoanPayment identical ...
+  Future<void> toggleSpillover(String id, bool isSpillover) async {
+    await AsyncValue.guard(() => _service.toggleSpillover(id, isSpillover));
+  }
+
+  Future<void> verifySettlement(String id, bool isVerified) async {
+    await AsyncValue.guard(() => _service.verifySettlement(id, isVerified));
   }
 
   Future<bool> logLoanPayment({
@@ -172,7 +192,6 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     return !state.hasError;
   }
 
-  // --- LOAN TRANSFER ACTION METHOD ---
   Future<bool> logLoanTransfer({
     required String fromAccountId,
     required String loanAccountId,
@@ -213,14 +232,6 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
       );
     });
     return !state.hasError;
-  }
-
-  Future<void> toggleSpillover(String id, bool isSpillover) async {
-    await AsyncValue.guard(() => _service.toggleSpillover(id, isSpillover));
-  }
-
-  Future<void> verifySettlement(String id, bool isVerified) async {
-    await AsyncValue.guard(() => _service.verifySettlement(id, isVerified));
   }
 }
 

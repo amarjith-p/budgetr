@@ -102,10 +102,16 @@ class TransactionCard extends ConsumerWidget {
       leadingIcon = Icons.payments_rounded;
       amountColor = theme.colorScheme.primary;
       sign = '+₹ ';
-    } else if (!isTransfer && data.category != null) {
-      leadingIcon = IconConstants.getIconByCode(data.category!.iconCode);
-      mainTitle = data.category!.name;
-      subTitle = tx.subCategory ?? data.category!.type;
+    } else if (!isTransfer) {
+      // --- FIX: RENDER USING IMMUTABLE SNAPSHOT ---
+      // Falls back to tx.categoryIcon and tx.categoryName if data.category is null
+      leadingIcon = IconConstants.getIconByCode(
+        data.category?.iconCode ??
+            tx.categoryIcon ??
+            Icons.help_outline.codePoint,
+      );
+      mainTitle = data.category?.name ?? tx.categoryName ?? 'Uncategorized';
+      subTitle = tx.subCategory ?? data.category?.type ?? tx.type;
     }
 
     Account? globalAccount;

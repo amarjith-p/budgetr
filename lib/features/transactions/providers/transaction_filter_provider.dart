@@ -1,3 +1,4 @@
+// features/transactions/providers/transaction_filter_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../services/transaction_service.dart';
@@ -6,11 +7,9 @@ enum SortOption { newest, oldest, highestAmount, lowestAmount }
 
 enum TimeframeOption { allTime, currentMonth, lastMonth, custom }
 
-/// Wrapper for Global Records to handle both perspective legs of an internal transfer
 class RecordItem {
   final TransactionWithDetails data;
   final String perspectiveAccountId;
-
   const RecordItem({required this.data, required this.perspectiveAccountId});
 }
 
@@ -20,8 +19,11 @@ class TransactionFilterState {
   final DateTime? customStartDate;
   final DateTime? customEndDate;
   final Set<String> types;
-  final Set<int> bucketIds;
-  final Set<String> categoryIds;
+
+  // --- FIX: USE SNAPSHOT NAMES INSTEAD OF IDS ---
+  final Set<String> bucketNames;
+  final Set<String> categoryNames;
+
   final Set<String> subCategories;
   final Set<String> accountIds;
   final double? minAmount;
@@ -33,8 +35,8 @@ class TransactionFilterState {
     this.customStartDate,
     this.customEndDate,
     this.types = const {},
-    this.bucketIds = const {},
-    this.categoryIds = const {},
+    this.bucketNames = const {},
+    this.categoryNames = const {},
     this.subCategories = const {},
     this.accountIds = const {},
     this.minAmount,
@@ -45,8 +47,8 @@ class TransactionFilterState {
       sortBy != SortOption.newest ||
       timeframe != TimeframeOption.allTime ||
       types.isNotEmpty ||
-      bucketIds.isNotEmpty ||
-      categoryIds.isNotEmpty ||
+      bucketNames.isNotEmpty ||
+      categoryNames.isNotEmpty ||
       subCategories.isNotEmpty ||
       accountIds.isNotEmpty ||
       minAmount != null ||
@@ -58,8 +60,8 @@ class TransactionFilterState {
     DateTime? customStartDate,
     DateTime? customEndDate,
     Set<String>? types,
-    Set<int>? bucketIds,
-    Set<String>? categoryIds,
+    Set<String>? bucketNames,
+    Set<String>? categoryNames,
     Set<String>? subCategories,
     Set<String>? accountIds,
     double? minAmount,
@@ -73,8 +75,8 @@ class TransactionFilterState {
       customStartDate: customStartDate ?? this.customStartDate,
       customEndDate: customEndDate ?? this.customEndDate,
       types: types ?? this.types,
-      bucketIds: bucketIds ?? this.bucketIds,
-      categoryIds: categoryIds ?? this.categoryIds,
+      bucketNames: bucketNames ?? this.bucketNames,
+      categoryNames: categoryNames ?? this.categoryNames,
       subCategories: subCategories ?? this.subCategories,
       accountIds: accountIds ?? this.accountIds,
       minAmount: clearMin ? null : (minAmount ?? this.minAmount),
@@ -89,7 +91,6 @@ final transactionFilterProvider = StateProvider.autoDispose
     });
 
 class TransactionFilterHelper {
-  /// Standard filter for individual account ledgers
   static List<TransactionWithDetails> apply(
     List<TransactionWithDetails> transactions,
     TransactionFilterState filter,
@@ -126,6 +127,7 @@ class TransactionFilterHelper {
         final isTransfer = tx.type == 'Transfer';
 
         bool isMoneyLeaving = isExpense;
+
         if (isTransfer) {
           if (tx.toAccountId == 'EXTERNAL_IN')
             isMoneyLeaving = false;
@@ -154,19 +156,24 @@ class TransactionFilterHelper {
       if (filter.maxAmount != null && tx.amount > filter.maxAmount!)
         return false;
 
-      if (filter.categoryIds.isNotEmpty) {
-        if (tx.categoryId == null ||
-            !filter.categoryIds.contains(tx.categoryId))
-          return false;
+      // --- FIX: USE SNAPSHOT NAME ---
+      if (filter.categoryNames.isNotEmpty) {
+        final catName =
+            tx.categoryName ?? data.category?.name ?? 'Uncategorized';
+        if (!filter.categoryNames.contains(catName)) return false;
       }
+
       if (filter.subCategories.isNotEmpty) {
         if (tx.subCategory == null ||
             !filter.subCategories.contains(tx.subCategory))
           return false;
       }
-      if (filter.bucketIds.isNotEmpty) {
-        int effectiveBucket = tx.bucketId ?? -1;
-        if (!filter.bucketIds.contains(effectiveBucket)) return false;
+
+      // --- FIX: USE SNAPSHOT NAME ---
+      if (filter.bucketNames.isNotEmpty) {
+        final bucketName =
+            tx.bucketName ?? data.bucket?.name ?? 'Out of Bucket';
+        if (!filter.bucketNames.contains(bucketName)) return false;
       }
 
       return true;
@@ -188,7 +195,6 @@ class TransactionFilterHelper {
     return filtered;
   }
 
-  /// Global Records filter that expands internal transfers into two distinct perspective legs
   static List<RecordItem> applyForRecords(
     List<TransactionWithDetails> transactions,
     TransactionFilterState filter,
@@ -197,10 +203,8 @@ class TransactionFilterHelper {
 
     for (var data in transactions) {
       final tx = data.transaction;
-      // Primary leg
       expanded.add(RecordItem(data: data, perspectiveAccountId: tx.accountId));
 
-      // Secondary leg for internal transfers
       if (tx.type == 'Transfer' &&
           tx.toAccountId != null &&
           !tx.toAccountId!.startsWith('EXTERNAL')) {
@@ -242,6 +246,7 @@ class TransactionFilterHelper {
         final isTransfer = tx.type == 'Transfer';
 
         bool isMoneyLeaving = isExpense;
+
         if (isTransfer) {
           if (tx.toAccountId == 'EXTERNAL_IN')
             isMoneyLeaving = false;
@@ -270,19 +275,24 @@ class TransactionFilterHelper {
       if (filter.maxAmount != null && tx.amount > filter.maxAmount!)
         return false;
 
-      if (filter.categoryIds.isNotEmpty) {
-        if (tx.categoryId == null ||
-            !filter.categoryIds.contains(tx.categoryId))
-          return false;
+      // --- FIX: USE SNAPSHOT NAME ---
+      if (filter.categoryNames.isNotEmpty) {
+        final catName =
+            tx.categoryName ?? item.data.category?.name ?? 'Uncategorized';
+        if (!filter.categoryNames.contains(catName)) return false;
       }
+
       if (filter.subCategories.isNotEmpty) {
         if (tx.subCategory == null ||
             !filter.subCategories.contains(tx.subCategory))
           return false;
       }
-      if (filter.bucketIds.isNotEmpty) {
-        int effectiveBucket = tx.bucketId ?? -1;
-        if (!filter.bucketIds.contains(effectiveBucket)) return false;
+
+      // --- FIX: USE SNAPSHOT NAME ---
+      if (filter.bucketNames.isNotEmpty) {
+        final bucketName =
+            tx.bucketName ?? item.data.bucket?.name ?? 'Out of Bucket';
+        if (!filter.bucketNames.contains(bucketName)) return false;
       }
 
       return true;

@@ -1,3 +1,4 @@
+// features/transactions/views/transaction_form_page.dart
 import 'dart:convert';
 import 'package:budgetr/core/models/transaction_category_model.dart';
 import 'package:budgetr/features/transactions/services/transaction_service.dart';
@@ -15,7 +16,7 @@ import '../../../core/components/docked_calculator_pad.dart';
 import '../../../core/utils/bodmas_calculator.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../../../core/components/global_selection_sheet.dart';
-import '../../../core/components/currency_text.dart'; // <-- ADDED GLOBAL FORMATTER
+import '../../../core/components/currency_text.dart';
 import '../../../core/utils/location_helper.dart';
 import '../../accounts/providers/account_provider.dart';
 import '../../category_manager/providers/category_provider.dart';
@@ -65,12 +66,18 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   late TextEditingController _amountController;
   late TextEditingController _notesCtrl;
   DateTime _selectedDateTime = DateTime.now();
+
   String? _selectedAccountId;
   String? _selectedToAccountId;
   String? _selectedCategoryId;
   String? _selectedSubCategory;
   int? _selectedBucketId;
   String? _historicalBucketName;
+
+  // --- NEW: STATE VARIABLES FOR CATEGORY SNAPSHOTS ---
+  String? _historicalCategoryName;
+  int? _historicalCategoryIcon;
+
   bool _showValidationErrors = false;
 
   String? _locationName;
@@ -130,7 +137,18 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           ? false
           : tx.isSettlementVerified;
       _notesCtrl = TextEditingController(text: tx.notes ?? '');
+
       _selectedCategoryId = widget.isSplit ? null : tx.categoryId;
+      // --- NEW: GRAB HISTORICAL SNAPSHOTS FROM DB ---
+      _historicalCategoryName = widget.isSplit
+          ? null
+          : (tx.categoryName ?? txDetails.category?.name);
+      _historicalCategoryIcon = widget.isSplit
+          ? null
+          : (tx.categoryIcon ??
+                txDetails.category?.iconCode ??
+                Icons.help_outline.codePoint);
+
       _selectedSubCategory = widget.isSplit ? null : tx.subCategory;
 
       _locationName = tx.locationName;
@@ -641,13 +659,16 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       context: context,
       title: 'Select Category',
       items: items,
-      selectedValue: selectedCatMatch?.name ?? '',
+      // --- FIX: Ensure the picker defaults to the legacy name if available ---
+      selectedValue: selectedCatMatch?.name ?? _historicalCategoryName ?? '',
     );
     if (selected != null && mounted) {
       setState(() {
         _selectedCategoryId = activeCategories
             .firstWhere((c) => c.name == selected)
             .id;
+        _historicalCategoryName =
+            null; // --- FIX: Clear historical name as they picked a new one
         _selectedSubCategory = null;
       });
     }
@@ -700,7 +721,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         .toList();
 
     List<String> getSmartSuggestions() {
-      final cat = selectedCatMatch?.name.toLowerCase() ?? '';
+      // --- FIX: Fallback to historical name for suggestions if category deleted ---
+      final cat = (selectedCatMatch?.name ?? _historicalCategoryName ?? '')
+          .toLowerCase();
 
       if (_typeIndex == 0) {
         if (cat.contains('food') ||
@@ -1182,13 +1205,17 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final origAmount = widget.existingTransaction?.transaction.amount ?? 0.0;
     final isOverSplit = widget.isSplit && amount >= origAmount;
 
+    // --- FIX: Validation safely ignores null category if we have an orphaned snapshot ---
     if (amount <= 0 ||
         hasDanglingOperator ||
         isOverSplit ||
         _selectedAccountId == null ||
         (isTransfer && _selectedToAccountId == null) ||
         (isTransfer && _selectedAccountId == _selectedToAccountId) ||
-        (!isTransfer && _selectedCategoryId == null && !isLoanRep) ||
+        (!isTransfer &&
+            _selectedCategoryId == null &&
+            _historicalCategoryName == null &&
+            !isLoanRep) ||
         (isExpense && _selectedBucketId == null && !isLoanRep)) {
       setState(() => _showValidationErrors = true);
       HapticFeedback.heavyImpact();
@@ -1217,6 +1244,23 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     }
 
     String? finalCategoryId = _selectedCategoryId;
+
+    // --- NEW: EXTRACT SNAPSHOT DATA FOR PERMANENT LEDGER RECORD ---
+    final selectedCatMatch = rawCategories
+        .where((c) => c.id == _selectedCategoryId)
+        .firstOrNull;
+
+    String? finalCategoryName;
+    int? finalCategoryIcon;
+
+    if (selectedCatMatch != null) {
+      finalCategoryName = selectedCatMatch.name;
+      finalCategoryIcon = selectedCatMatch.iconCode;
+    } else if (_historicalCategoryName != null) {
+      finalCategoryName = _historicalCategoryName;
+      finalCategoryIcon = _historicalCategoryIcon;
+    }
+
     String? finalSubCategory = _selectedSubCategory;
     String? finalNotes = _notesCtrl.text.trim();
     String? finalBucketName = _resolveBucketName(
@@ -1246,12 +1290,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       bool inWindow =
           txDate.isAfter(lastBillDate) &&
           txDate.isBefore(dueDate.add(const Duration(days: 1)));
-      final selectedCatName = rawCategories
-          .where((c) => c.id == _selectedCategoryId)
-          .firstOrNull
-          ?.name;
 
-      if (inWindow && selectedCatName != 'Repayment') {
+      if (inWindow && finalCategoryName != 'Repayment') {
         final isRepayment = await ConfirmationBottomSheet.show(
           context,
           title: 'Credit Card Repayment?',
@@ -1267,6 +1307,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               .firstOrNull;
           if (repaymentCat != null) {
             finalCategoryId = repaymentCat.id;
+            finalCategoryName = repaymentCat.name; // <-- SNAPSHOT OVERRIDE
+            finalCategoryIcon = repaymentCat.iconCode; // <-- SNAPSHOT OVERRIDE
             finalSubCategory = isTransfer
                 ? 'Credit Card Bill'
                 : 'Account Adjustments';
@@ -1289,6 +1331,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             accountId: _selectedAccountId!,
             toAccountId: _selectedToAccountId,
             categoryId: finalCategoryId,
+            categoryName: finalCategoryName, // <-- SAVED
+            categoryIcon: finalCategoryIcon, // <-- SAVED
             subCategory: finalSubCategory,
             bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
             bucketName: finalBucketName,
@@ -1318,6 +1362,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           accountId: _selectedAccountId!,
           toAccountId: _selectedToAccountId,
           categoryId: finalCategoryId,
+          categoryName: finalCategoryName, // <-- SAVED
+          categoryIcon: finalCategoryIcon, // <-- SAVED
           subCategory: finalSubCategory,
           bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
           bucketName: finalBucketName,
@@ -1529,15 +1575,24 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         ),
       );
     } else {
+      // --- FIX: Safely display orphaned category name if editing a legacy record ---
+      String? displayCategoryName = selectedCatMatch?.name;
+      if (displayCategoryName == null && _historicalCategoryName != null) {
+        displayCategoryName = '$_historicalCategoryName (Legacy)';
+      }
+
       cells.add(
         _buildTableCell(
           'CATEGORY',
-          isLoanRep ? 'Loan Repayment' : selectedCatMatch?.name,
+          isLoanRep ? 'Loan Repayment' : displayCategoryName,
           Icons.category_rounded,
           isLoanRep
               ? null
               : () => _pickCategory(activeCategories, selectedCatMatch),
-          _showValidationErrors && _selectedCategoryId == null && !isLoanRep,
+          _showValidationErrors &&
+              _selectedCategoryId == null &&
+              _historicalCategoryName == null &&
+              !isLoanRep,
         ),
       );
       if (activeSubCategories.isNotEmpty ||
@@ -1912,8 +1967,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                           onSelected: (index) => setState(() {
                             final oldIndex = _typeIndex;
                             _typeIndex = index;
+
+                            // --- FIX: CLEAR LEGACY CACHE WHEN SWITCHING TABS ---
                             _selectedCategoryId = null;
+                            _historicalCategoryName = null;
                             _selectedSubCategory = null;
+
                             if (index == 1) _selectedBucketId = null;
                             if (oldIndex == 2 && index != 2) {
                               _selectedAccountId = null;

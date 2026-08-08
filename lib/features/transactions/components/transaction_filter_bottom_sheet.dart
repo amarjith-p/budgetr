@@ -1,3 +1,4 @@
+// features/transactions/components/transaction_filter_bottom_sheet.dart
 import 'package:budgetr/features/accounts/providers/account_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -55,14 +56,17 @@ class _TransactionFilterBottomSheetState
   void initState() {
     super.initState();
     _draft = ref.read(transactionFilterProvider(widget.accountId));
+
     _minCtrl = TextEditingController(
       text: _draft.minAmount?.toStringAsFixed(0) ?? '',
     );
     _maxCtrl = TextEditingController(
       text: _draft.maxAmount?.toStringAsFixed(0) ?? '',
     );
+
     _minCtrl.addListener(_updateDraftFromInputs);
     _maxCtrl.addListener(_updateDraftFromInputs);
+
     _calculateLiveMatches();
   }
 
@@ -124,6 +128,7 @@ class _TransactionFilterBottomSheetState
         );
       },
     );
+
     if (picked != null) {
       _updateState(
         _draft.copyWith(
@@ -294,7 +299,6 @@ class _TransactionFilterBottomSheetState
                   ),
                   child: Column(
                     children: [
-                      // --- MODERN DRAG HANDLE ---
                       Center(
                         child: Container(
                           width: 40,
@@ -348,7 +352,6 @@ class _TransactionFilterBottomSheetState
                             final item = availableItems.elementAt(index);
                             final isChecked = tempSelection.contains(item);
 
-                            // --- MODERN CHECKBOX TILE ---
                             return Container(
                               margin: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -407,8 +410,6 @@ class _TransactionFilterBottomSheetState
                           },
                         ),
                       ),
-
-                      // --- TWIN BUTTON DESIGN ---
                       Container(
                         padding: const EdgeInsets.all(DesignTokens.spacingLg),
                         decoration: BoxDecoration(
@@ -473,6 +474,7 @@ class _TransactionFilterBottomSheetState
   }) {
     final theme = Theme.of(context);
     final isActive = count > 0;
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: DesignTokens.spacingLg,
@@ -530,22 +532,28 @@ class _TransactionFilterBottomSheetState
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final rawCategories =
-        ref.watch(categoriesStreamProvider).asData?.value ?? [];
-    final rawBuckets = ref.watch(bucketsStreamProvider).asData?.value ?? [];
-    final activeCatIds = widget.allTransactions
-        .map((t) => t.transaction.categoryId)
-        .whereType<String>()
-        .toSet();
-    final activeSubCats = widget.allTransactions
-        .map((t) => t.transaction.subCategory)
-        .whereType<String>()
-        .toSet();
-    final activeBucketIds = widget.allTransactions
-        .map((t) => t.transaction.bucketId)
-        .toSet();
-    String customDateText = 'Custom Range...';
+    final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
 
+    // --- FIX: USE SNAPSHOT NAMES FROM HISTORY ---
+    final activeCatNames = widget.allTransactions
+        .map(
+          (t) =>
+              t.transaction.categoryName ?? t.category?.name ?? 'Uncategorized',
+        )
+        .toSet();
+
+    final activeSubCats = widget.allTransactions
+        .map((t) => t.transaction.subCategory ?? 'Uncategorized')
+        .toSet();
+
+    // --- FIX: USE SNAPSHOT NAMES FROM HISTORY ---
+    final activeBucketNames = widget.allTransactions
+        .map(
+          (t) => t.transaction.bucketName ?? t.bucket?.name ?? 'Out of Bucket',
+        )
+        .toSet();
+
+    String customDateText = 'Custom Range...';
     if (_draft.timeframe == TimeframeOption.custom &&
         _draft.customStartDate != null &&
         _draft.customEndDate != null) {
@@ -582,6 +590,7 @@ class _TransactionFilterBottomSheetState
                   ),
                 ),
               ),
+
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 16, 8),
                 child: Row(
@@ -610,7 +619,9 @@ class _TransactionFilterBottomSheetState
                   ],
                 ),
               ),
+
               const Divider(height: 1),
+
               Expanded(
                 child: ListView(
                   controller: controller,
@@ -659,6 +670,7 @@ class _TransactionFilterBottomSheetState
                         ],
                       ),
                     ),
+
                     _buildSectionTitle('TIMEFRAME'),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -748,6 +760,7 @@ class _TransactionFilterBottomSheetState
                         ],
                       ),
                     ),
+
                     _buildSectionTitle('TRANSACTION TYPE'),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -788,6 +801,7 @@ class _TransactionFilterBottomSheetState
                         ],
                       ),
                     ),
+
                     _buildSectionTitle('AMOUNT THRESHOLD'),
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -795,7 +809,6 @@ class _TransactionFilterBottomSheetState
                       ),
                       child: Row(
                         children: [
-                          // --- MODERN BOXY INPUT ---
                           Expanded(
                             child: ModernBoxyInput(
                               controller: _minCtrl,
@@ -814,7 +827,6 @@ class _TransactionFilterBottomSheetState
                               ),
                             ),
                           ),
-                          // --- MODERN BOXY INPUT ---
                           Expanded(
                             child: ModernBoxyInput(
                               controller: _maxCtrl,
@@ -825,6 +837,7 @@ class _TransactionFilterBottomSheetState
                         ],
                       ),
                     ),
+
                     _buildSectionTitle('DATA FILTERS'),
                     if (widget.accountId == 'GLOBAL') ...[
                       _buildDropdownTrigger(
@@ -832,9 +845,6 @@ class _TransactionFilterBottomSheetState
                         count: _draft.accountIds.length,
                         isEnabled: true,
                         onTap: () {
-                          final rawAccounts =
-                              ref.read(accountsStreamProvider).asData?.value ??
-                              [];
                           _openMultiSelectSheet<String>(
                             title: 'Select Accounts',
                             availableItems: rawAccounts
@@ -859,24 +869,21 @@ class _TransactionFilterBottomSheetState
                         },
                       ),
                     ],
+
                     _buildDropdownTrigger(
                       label: 'Categories',
-                      count: _draft.categoryIds.length,
-                      isEnabled: activeCatIds.isNotEmpty,
+                      count: _draft.categoryNames.length,
+                      isEnabled: activeCatNames.isNotEmpty,
                       onTap: () => _openMultiSelectSheet<String>(
                         title: 'Select Categories',
-                        availableItems: activeCatIds,
-                        selectedItems: _draft.categoryIds,
-                        titleBuilder: (id) =>
-                            rawCategories
-                                .where((c) => c.id == id)
-                                .firstOrNull
-                                ?.name ??
-                            'Unknown',
+                        availableItems: activeCatNames,
+                        selectedItems: _draft.categoryNames,
+                        titleBuilder: (name) => name,
                         onApply: (val) =>
-                            _updateState(_draft.copyWith(categoryIds: val)),
+                            _updateState(_draft.copyWith(categoryNames: val)),
                       ),
                     ),
+
                     _buildDropdownTrigger(
                       label: 'Subcategories',
                       count: _draft.subCategories.length,
@@ -890,27 +897,21 @@ class _TransactionFilterBottomSheetState
                             _updateState(_draft.copyWith(subCategories: val)),
                       ),
                     ),
+
                     _buildDropdownTrigger(
                       label: 'Budget Buckets',
-                      count: _draft.bucketIds.length,
-                      isEnabled: activeBucketIds.isNotEmpty,
-                      onTap: () => _openMultiSelectSheet<int?>(
+                      count: _draft.bucketNames.length,
+                      isEnabled: activeBucketNames.isNotEmpty,
+                      onTap: () => _openMultiSelectSheet<String>(
                         title: 'Select Buckets',
-                        availableItems: activeBucketIds,
-                        selectedItems: _draft.bucketIds.cast<int?>(),
-                        titleBuilder: (id) => id == null
-                            ? 'Out of Bucket'
-                            : rawBuckets
-                                      .where((b) => b.id == id)
-                                      .firstOrNull
-                                      ?.name ??
-                                  'Unknown',
-                        onApply: (val) {
-                          final cleanedSet = val.map((e) => e ?? -1).toSet();
-                          _updateState(_draft.copyWith(bucketIds: cleanedSet));
-                        },
+                        availableItems: activeBucketNames,
+                        selectedItems: _draft.bucketNames,
+                        titleBuilder: (name) => name,
+                        onApply: (val) =>
+                            _updateState(_draft.copyWith(bucketNames: val)),
                       ),
                     ),
+
                     const SizedBox(height: 32),
                   ],
                 ),
