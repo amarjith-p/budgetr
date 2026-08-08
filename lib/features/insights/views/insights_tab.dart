@@ -8,12 +8,17 @@ import '../providers/insight_summary_provider.dart';
 import '../providers/insight_view_provider.dart';
 import '../providers/insight_category_provider.dart';
 import '../providers/insight_bucket_provider.dart';
+import '../models/insight_category_model.dart';
+import '../models/insight_bucket_model.dart';
 import '../components/insight_filter_bar.dart';
 import '../components/interactive_summary_card.dart';
 import '../components/insight_account_selection_sheet.dart';
 import '../components/insight_timeframe_selection_sheet.dart';
 import '../components/insight_category_card.dart';
 import '../components/insight_bucket_card.dart';
+import '../components/insight_donut_chart.dart';
+import '../components/insight_cash_flow_chart.dart'; // <-- IMPORT CHART
+import '../../transactions/providers/transaction_provider.dart';
 import '../../accounts/providers/account_provider.dart';
 
 class InsightsTab extends ConsumerWidget {
@@ -33,6 +38,9 @@ class InsightsTab extends ConsumerWidget {
     final bucketBreakdown = ref.watch(insightBucketBreakdownProvider);
     final accounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
 
+    final allTransactions =
+        ref.watch(allTransactionsProvider).asData?.value ?? [];
+
     String accountDisplayName = 'All Accounts';
     if (filterState.accountId == 'ASSETS') {
       accountDisplayName = 'Assets Only';
@@ -43,6 +51,49 @@ class InsightsTab extends ConsumerWidget {
           .where((a) => a.id == filterState.accountId)
           .firstOrNull;
       if (acc != null) accountDisplayName = acc.name;
+    }
+
+    final List<dynamic> activeBreakdown = (isExpense && isBucketView)
+        ? bucketBreakdown
+        : categoryBreakdown;
+    final List<ChartDataItem> chartData = [];
+    double othersTotal = 0;
+
+    for (int i = 0; i < activeBreakdown.length; i++) {
+      final item = activeBreakdown[i];
+      String name = '';
+      double amount = 0.0;
+
+      if (item is InsightBucketModel) {
+        name = item.name;
+        amount = item.totalAmount;
+      } else if (item is InsightCategoryModel) {
+        name = item.name;
+        amount = item.totalAmount;
+      }
+
+      if (i < 10) {
+        chartData.add(
+          ChartDataItem(
+            label: name,
+            amount: amount,
+            color:
+                InsightDonutChart.palette[i % InsightDonutChart.palette.length],
+          ),
+        );
+      } else {
+        othersTotal += amount;
+      }
+    }
+
+    if (othersTotal > 0) {
+      chartData.add(
+        ChartDataItem(
+          label: 'Others',
+          amount: othersTotal,
+          color: Colors.grey.shade600,
+        ),
+      );
     }
 
     return ListView(
@@ -261,6 +312,31 @@ class InsightsTab extends ConsumerWidget {
                 )
                 .toList(),
         ],
+
+        if (chartData.isNotEmpty) ...[
+          const SizedBox(height: DesignTokens.spacingXl),
+          Text(
+            isExpense ? 'TOP 10 EXPENSES' : 'TOP 10 INCOME SOURCES',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: DesignTokens.spacingMd),
+          InsightDonutChart(
+            isExpense: isExpense,
+            totalAmount: isExpense ? summary.totalExpense : summary.totalIncome,
+            data: chartData,
+          ),
+        ],
+
+        // --- PLACED THE CASH FLOW CHART AT THE BOTTOM ---
+        InsightCashFlowChart(
+          allTransactions: allTransactions,
+          filterState: filterState,
+        ),
       ],
     );
   }

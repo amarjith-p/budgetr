@@ -1,8 +1,8 @@
 // features/insights/components/insight_donut_chart.dart
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/components/currency_text.dart';
-import '../../../core/theme/design_tokens.dart';
 
 class ChartDataItem {
   final String label;
@@ -49,13 +49,14 @@ class _InsightDonutChartState extends State<InsightDonutChart>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  int? _selectedIndex; // <-- NEW: Tracks the interactive selection
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1200),
     );
     _animation = CurvedAnimation(
       parent: _controller,
@@ -69,6 +70,7 @@ class _InsightDonutChartState extends State<InsightDonutChart>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isExpense != widget.isExpense ||
         oldWidget.totalAmount != widget.totalAmount) {
+      _selectedIndex = null; // Reset selection on data change
       _controller.reset();
       _controller.forward();
     }
@@ -78,6 +80,55 @@ class _InsightDonutChartState extends State<InsightDonutChart>
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  // --- NEW: Handle Taps on Legend or Chart ---
+  void _handleSelection(int? index) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (_selectedIndex == index) {
+        _selectedIndex = null; // Toggle off if tapped again
+      } else {
+        _selectedIndex = index;
+      }
+    });
+  }
+
+  // --- NEW: Calculate which slice was tapped based on angle and radius ---
+  void _onChartTapDown(TapDownDetails details, double chartSize) {
+    if (widget.totalAmount <= 0) return;
+
+    final center = Offset(chartSize / 2, chartSize / 2);
+    final dx = details.localPosition.dx - center.dx;
+    final dy = details.localPosition.dy - center.dy;
+    final distance = math.sqrt(dx * dx + dy * dy);
+
+    final strokeWidth = 14.0;
+    final radius = chartSize / 2 - (strokeWidth / 2);
+
+    // Ensure tap is actually ON the donut ring, not the empty center
+    if (distance < radius - strokeWidth || distance > radius + strokeWidth) {
+      if (_selectedIndex != null) _handleSelection(null);
+      return;
+    }
+
+    // Calculate tap angle (adjusted for the -pi/2 starting point at the top)
+    double angle = math.atan2(dy, dx);
+    angle += math.pi / 2;
+    if (angle < 0) angle += 2 * math.pi;
+
+    double currentAngle = 0;
+    for (int i = 0; i < widget.data.length; i++) {
+      final sweepAngle =
+          (widget.data[i].amount / widget.totalAmount) * 2 * math.pi;
+      if (angle >= currentAngle && angle < currentAngle + sweepAngle) {
+        _handleSelection(i);
+        return;
+      }
+      currentAngle += sweepAngle;
+    }
+
+    if (_selectedIndex != null) _handleSelection(null);
   }
 
   @override
@@ -92,152 +143,219 @@ class _InsightDonutChartState extends State<InsightDonutChart>
       return const SizedBox.shrink();
     }
 
+    // Dynamic Center Text Data
+    String centerTitle = 'TOTAL';
+    double centerAmount = widget.totalAmount;
+    Color centerColor = primaryColor;
+    String? centerSubtitle;
+
+    if (_selectedIndex != null) {
+      final selectedItem = widget.data[_selectedIndex!];
+      centerTitle = selectedItem.label.toUpperCase();
+      centerAmount = selectedItem.amount;
+      centerColor = selectedItem.color;
+      final percent = (selectedItem.amount / widget.totalAmount) * 100;
+      centerSubtitle = '${percent.toStringAsFixed(1)}%';
+    }
+
     return Container(
-      padding: const EdgeInsets.all(DesignTokens.spacingLg),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: theme.dividerColor, width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // --- THE DONUT CHART VISUAL ---
-          SizedBox(
-            height: 220,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Inner Glow/Shadow
-                Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryColor.withOpacity(0.1),
-                        blurRadius: 30,
-                        spreadRadius: 10,
-                      ),
-                    ],
+          // --- INTERACTIVE DONUT CHART VISUAL ---
+          GestureDetector(
+            onTapDown: (details) => _onChartTapDown(details, 120.0),
+            child: SizedBox(
+              height: 120,
+              width: 120,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Dynamic Inner Glow
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: centerColor.withOpacity(0.15),
+                          blurRadius: 20,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                // Center Text
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'TOTAL',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                  // Dynamic Center Text
+                  Container(
+                    width: 80,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          centerTitle,
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 2),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: CurrencyText(
+                            amount: centerAmount,
+                            sign: widget.isExpense ? '-₹ ' : '+₹ ',
+                            amountStyle: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              color: centerColor,
+                              letterSpacing: -0.5,
+                            ),
+                            symbolStyle: TextStyle(
+                              fontSize: 10,
+                              color: centerColor.withOpacity(0.8),
+                            ),
+                          ),
+                        ),
+                        if (centerSubtitle != null) ...[
+                          const SizedBox(height: 1),
+                          Text(
+                            centerSubtitle,
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              color: centerColor.withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    CurrencyText(
-                      amount: widget.totalAmount,
-                      sign: widget.isExpense ? '-₹ ' : '+₹ ',
-                      amountStyle: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: primaryColor,
-                        letterSpacing: -0.5,
-                      ),
-                      symbolStyle: TextStyle(
-                        fontSize: 14,
-                        color: primaryColor.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
-                ),
-                // Animated Custom Painter
-                AnimatedBuilder(
-                  animation: _animation,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      size: const Size(220, 220),
-                      painter: _DonutChartPainter(
-                        items: widget.data,
-                        totalAmount: widget.totalAmount,
-                        progress: _animation.value,
-                        strokeWidth: 22.0,
-                      ),
-                    );
-                  },
-                ),
-              ],
+                  ),
+                  // Animated Custom Painter
+                  AnimatedBuilder(
+                    animation: _animation,
+                    builder: (context, child) {
+                      return CustomPaint(
+                        size: const Size(120, 120),
+                        painter: _DonutChartPainter(
+                          items: widget.data,
+                          totalAmount: widget.totalAmount,
+                          progress: _animation.value,
+                          strokeWidth: 14.0,
+                          selectedIndex:
+                              _selectedIndex, // Pass selection state to painter
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(width: 20),
 
-          // --- THE LEGEND ---
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: widget.data.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final item = widget.data[index];
-              final percentage = (item.amount / widget.totalAmount) * 100;
-              return Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: item.color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      item.label,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.onSurface,
+          // --- INTERACTIVE BOXY LEGEND ---
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(widget.data.length, (index) {
+                final item = widget.data[index];
+                final percentage = (item.amount / widget.totalAmount) * 100;
+
+                // Determine opacity based on selection state
+                final isSelected = _selectedIndex == index;
+                final isDimmed = _selectedIndex != null && !isSelected;
+
+                return GestureDetector(
+                  onTap: () => _handleSelection(index),
+                  behavior: HitTestBehavior
+                      .opaque, // Ensures the entire row is tappable
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 250),
+                    opacity: isDimmed ? 0.3 : 1.0,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Row(
+                        children: [
+                          // Boxy Square Indicator
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            width: isSelected
+                                ? 12
+                                : 10, // Pops out slightly if selected
+                            height: isSelected ? 12 : 10,
+                            decoration: BoxDecoration(
+                              color: item.color,
+                              borderRadius: BorderRadius.circular(2),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: item.color.withOpacity(0.4),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              item.label,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: isSelected
+                                    ? FontWeight.w900
+                                    : FontWeight.w700,
+                                color: isSelected
+                                    ? item.color
+                                    : theme.colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${percentage.toStringAsFixed(1)}%',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: isSelected
+                                  ? FontWeight.w900
+                                  : FontWeight.w800,
+                              color: isSelected
+                                  ? item.color
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${percentage.toStringAsFixed(1)}%',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  CurrencyText(
-                    amount: item.amount,
-                    sign: '₹ ',
-                    amountStyle: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                    symbolStyle: TextStyle(
-                      fontSize: 10,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              );
-            },
+                );
+              }),
+            ),
           ),
         ],
       ),
@@ -250,12 +368,14 @@ class _DonutChartPainter extends CustomPainter {
   final double totalAmount;
   final double progress;
   final double strokeWidth;
+  final int? selectedIndex;
 
   _DonutChartPainter({
     required this.items,
     required this.totalAmount,
     required this.progress,
     required this.strokeWidth,
+    required this.selectedIndex,
   });
 
   @override
@@ -267,25 +387,27 @@ class _DonutChartPainter extends CustomPainter {
     final rect = Rect.fromCircle(center: center, radius: radius);
 
     double startAngle = -math.pi / 2; // Start from top
-    final double gap = items.length > 1
-        ? 0.06
-        : 0.0; // The modern pill-gap between arcs
+    final double gap = items.length > 1 ? 0.04 : 0.0;
 
-    for (var item in items) {
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
       final sweepAngle = (item.amount / totalAmount) * 2 * math.pi * progress;
 
       if (sweepAngle > 0) {
+        final isSelected = selectedIndex == i;
+        final isDimmed = selectedIndex != null && !isSelected;
+
         final paint = Paint()
-          ..color = item.color
+          ..color = isDimmed ? item.color.withOpacity(0.15) : item.color
           ..style = PaintingStyle.stroke
-          ..strokeWidth = strokeWidth
+          // Selected slice pops out slightly thicker
+          ..strokeWidth = isSelected ? strokeWidth + 4.0 : strokeWidth
           ..strokeCap = StrokeCap.round;
 
-        // Prevent negative drawing angles for very tiny slices
         final drawAngle = sweepAngle > gap ? sweepAngle - gap : sweepAngle;
 
         canvas.drawArc(rect, startAngle, drawAngle, false, paint);
-        startAngle += sweepAngle; // Advance the pointer perfectly
+        startAngle += sweepAngle;
       }
     }
   }
@@ -293,6 +415,7 @@ class _DonutChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _DonutChartPainter oldDelegate) {
     return oldDelegate.progress != progress ||
-        oldDelegate.totalAmount != totalAmount;
+        oldDelegate.totalAmount != totalAmount ||
+        oldDelegate.selectedIndex != selectedIndex;
   }
 }
