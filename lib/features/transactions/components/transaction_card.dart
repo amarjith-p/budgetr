@@ -1,3 +1,4 @@
+// features/transactions/components/transaction_card.dart
 import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/core/database/app_database.dart';
 import 'package:budgetr/features/transactions/views/transaction_form_page.dart';
@@ -21,6 +22,7 @@ class TransactionCard extends ConsumerWidget {
   final String currentAccountId;
   final bool isGlobalView;
   final double? closingBalance;
+  final bool isCompactLayout; // <-- NEW: Optimizes layout for deep nesting
 
   const TransactionCard({
     Key? key,
@@ -28,6 +30,7 @@ class TransactionCard extends ConsumerWidget {
     required this.currentAccountId,
     this.isGlobalView = false,
     this.closingBalance,
+    this.isCompactLayout = false, // Defaults to false for normal Records Tab
   }) : super(key: key);
 
   @override
@@ -58,7 +61,6 @@ class TransactionCard extends ConsumerWidget {
     Color amountColor = TransactionColors.getTypeColor(tx.type, theme);
     String sign;
 
-    // --- FIX: ADDED RUPEE SYMBOLS DIRECTLY TO THE SIGN OVERRIDES ---
     if (isTransfer) {
       sign = isMoneyLeaving ? '-₹ ' : '+₹ ';
     } else if (isExpense) {
@@ -99,7 +101,6 @@ class TransactionCard extends ConsumerWidget {
       subTitle = tx.subCategory!;
       leadingIcon = Icons.payments_rounded;
       amountColor = theme.colorScheme.primary;
-      // --- FIX: POSITIVE RUPEE SYMBOL FOR LOAN REPAYMENT UI ---
       sign = '+₹ ';
     } else if (!isTransfer && data.category != null) {
       leadingIcon = IconConstants.getIconByCode(data.category!.iconCode);
@@ -193,7 +194,6 @@ class TransactionCard extends ConsumerWidget {
 
     final boxyRadius = BorderRadius.circular(DesignTokens.spacingXs);
 
-    // --- PROTECT THE ASSET-SIDE SOURCE LEGS ---
     final bool isMultiLeg = tx.id.startsWith('LOAN_TX_');
     final bool isLinkedSourceLeg = isMultiLeg && tx.id.contains('_SOURCE');
     final bool isTransferToLoan =
@@ -316,13 +316,14 @@ class TransactionCard extends ConsumerWidget {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(
-            horizontal: 16.0,
-            vertical: 4.0,
-          ),
+          // --- FIXED: REDUCE PADDING IN COMPACT MODE ---
+          tilePadding: isCompactLayout
+              ? const EdgeInsets.symmetric(horizontal: 10.0, vertical: 2.0)
+              : const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
           leading: Container(
-            width: 42,
-            height: 42,
+            // --- FIXED: SHRINK ICON CONTAINER IN COMPACT MODE ---
+            width: isCompactLayout ? 36 : 42,
+            height: isCompactLayout ? 36 : 42,
             decoration: BoxDecoration(
               color: cardBgColor != null
                   ? theme.colorScheme.surface
@@ -333,16 +334,18 @@ class TransactionCard extends ConsumerWidget {
             child: Icon(
               leadingIcon,
               color: theme.colorScheme.primary,
-              size: 22,
+              size: isCompactLayout ? 18 : 22,
             ),
           ),
           title: Text(
             mainTitle,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w800,
               letterSpacing: -0.2,
-              fontSize: 15,
+              fontSize: isCompactLayout ? 14 : 15,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,7 +354,7 @@ class TransactionCard extends ConsumerWidget {
               Text(
                 subTitle,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: isCompactLayout ? 11 : 12,
                   color:
                       isSpilloverEligible &&
                           !tx.isSpillover &&
@@ -367,18 +370,35 @@ class TransactionCard extends ConsumerWidget {
               ),
               if (isGlobalView && globalAccount != null) ...[
                 const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${globalAccount.name} - ${globalAccount.providerName}',
+                    style: TextStyle(
+                      fontSize: isCompactLayout ? 8 : 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                      color: globalAccount.type == 'Credit Cards'
+                          ? theme.colorScheme.error.withOpacity(0.7)
+                          : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
+                    // --- FIXED: ALLOW ACCOUNT NAME TO WRAP TO 2 LINES IF COMPACT ---
+                    maxLines: isCompactLayout ? 2 : 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+              // --- FIXED: MOVE DATE TO SUBTITLE IN COMPACT MODE TO SAVE WIDTH ---
+              if (isCompactLayout) ...[
+                const SizedBox(height: 4),
                 Text(
-                  '${globalAccount.name} - ${globalAccount.providerName}',
+                  compactDate,
                   style: TextStyle(
                     fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.2,
-                    color: globalAccount.type == 'Credit Cards'
-                        ? theme.colorScheme.error.withOpacity(0.7)
-                        : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
+                    fontWeight: FontWeight.bold,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ],
@@ -386,24 +406,24 @@ class TransactionCard extends ConsumerWidget {
           trailing: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
               CurrencyText(
                 amount: tx.amount,
                 sign: sign,
                 amountStyle: TextStyle(
                   fontWeight: FontWeight.w900,
-                  fontSize: 16,
+                  fontSize: isCompactLayout ? 14 : 16,
                   color: amountColor,
                   letterSpacing: -0.5,
                 ),
                 symbolStyle: TextStyle(color: amountColor.withOpacity(0.85)),
               ),
-
-              if (closingBalance != null) ...[
+              // --- FIXED: HIDE THESE IN COMPACT MODE TO FREE UP CENTER HORIZONTAL SPACE ---
+              if (!isCompactLayout && closingBalance != null) ...[
                 const SizedBox(height: 2),
                 CurrencyText(
                   amount: closingBalance!.abs(),
-                  // --- FIX: ADDED RUPEE SYMBOLS TO CLOSING BALANCE ---
                   sign: closingBalance! < 0 ? '-₹ ' : '₹ ',
                   amountStyle: TextStyle(
                     fontSize: 11,
@@ -417,15 +437,17 @@ class TransactionCard extends ConsumerWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: 4),
-              Text(
-                compactDate,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.bold,
+              if (!isCompactLayout) ...[
+                const SizedBox(height: 4),
+                Text(
+                  compactDate,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
           children: [
@@ -453,11 +475,15 @@ class TransactionCard extends ConsumerWidget {
                             color: theme.colorScheme.primary,
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            'Bucket: ${tx.bucketName ?? data.bucket?.name ?? ""}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                          Expanded(
+                            child: Text(
+                              'Bucket: ${tx.bucketName ?? data.bucket?.name ?? ""}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -472,12 +498,16 @@ class TransactionCard extends ConsumerWidget {
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          expandedDate,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
+                        Expanded(
+                          child: Text(
+                            expandedDate,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -569,22 +599,28 @@ class TransactionCard extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.rule_folder_outlined,
-                                  size: 16,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  'Carry Forward',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.rule_folder_outlined,
+                                    size: 16,
+                                    color: theme.colorScheme.primary,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: const Text(
+                                      'Carry Forward',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             Switch(
                               value: tx.isSpillover,
@@ -606,27 +642,35 @@ class TransactionCard extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  tx.isSettlementVerified
-                                      ? Icons.check_circle_rounded
-                                      : Icons.check_circle_outline_rounded,
-                                  size: 16,
-                                  color: Colors.green,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Settled in current bill',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    color: tx.isSettlementVerified
-                                        ? Colors.green
-                                        : theme.colorScheme.onSurfaceVariant,
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    tx.isSettlementVerified
+                                        ? Icons.check_circle_rounded
+                                        : Icons.check_circle_outline_rounded,
+                                    size: 16,
+                                    color: Colors.green,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Settled in current bill',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: tx.isSettlementVerified
+                                            ? Colors.green
+                                            : theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             TextButton(
                               onPressed: () {

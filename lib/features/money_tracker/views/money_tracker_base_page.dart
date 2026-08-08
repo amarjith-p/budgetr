@@ -24,8 +24,10 @@ import '../../analytics/components/balance_trend_widget.dart';
 import '../../analytics/components/cash_flow_widget.dart';
 import '../../analytics/components/spending_widget.dart';
 import '../../analytics/components/budget_simulator_widget.dart';
-// --- NEW IMPORT ---
 import '../../analytics/components/credit_tracker_widget.dart';
+
+// --- ADDED INSIGHTS IMPORT ---
+import '../../insights/views/insights_tab.dart';
 
 class MoneyTrackerBasePage extends ConsumerWidget {
   const MoneyTrackerBasePage({Key? key}) : super(key: key);
@@ -59,25 +61,25 @@ class MoneyTrackerBasePage extends ConsumerWidget {
       const AccountsTab(),
       const BudgetManagementTab(),
       const _AnalyticsTab(),
-      const _PlaceholderTab(title: 'INSIGHTS'),
+      const InsightsTab(), // --- REPLACED PLACEHOLDER ---
     ];
 
     final List<String> tabTitles = [
-      'Home',
-      'Records',
+      'Overview',
+      'Transactions',
       'Accounts',
-      'Planning',
-      'Metrics',
-      'Cash Flow',
+      'Budgets',
+      'Analytics',
+      'Insights',
     ];
 
     final List<String> tabSubtitles = [
-      'OVERVIEW',
-      'TRANSACTIONS',
-      'PORTFOLIO',
-      'BUDGETS',
-      'ANALYTICS',
-      'INSIGHTS',
+      'Financial snapshot',
+      'Complete Money Trail',
+      'Money, All in One Place',
+      'Control Your Spending',
+      'Explore Your Finances',
+      'Finance Health',
     ];
 
     IconData? trailingIcon;
@@ -186,25 +188,6 @@ class _AnalyticsTab extends ConsumerWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _PlaceholderTab extends StatelessWidget {
-  final String title;
-  const _PlaceholderTab({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w900,
-          letterSpacing: 2.0,
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-        ),
-      ),
     );
   }
 }
