@@ -1,12 +1,21 @@
+// main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/auth_page.dart';
 import 'features/auth/auth_state.dart';
 import 'features/dashboard/dashboard_page.dart';
-import 'core/providers/theme_provider.dart'; // 1. Added Import
+import 'core/providers/theme_provider.dart';
 
-void main() {
+// --- NEW IMPORTS ---
+import 'core/services/notification_service.dart';
+import 'features/notifications/providers/notification_provider.dart';
+
+void main() async {
+  // --- INITIALIZE NATIVE BINDINGS AND NOTIFICATIONS ---
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.instance.initialize();
+
   runApp(const ProviderScope(child: BudgetrApp()));
 }
 
@@ -17,12 +26,15 @@ class BudgetrApp extends ConsumerStatefulWidget {
   ConsumerState<BudgetrApp> createState() => _BudgetrAppState();
 }
 
-// Added WidgetsBindingObserver to track App Background/Foreground states
-class _BudgetrAppState extends ConsumerState<BudgetrApp> with WidgetsBindingObserver {
+class _BudgetrAppState extends ConsumerState<BudgetrApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // --- REQUEST PERMISSION ON APP LAUNCH ---
+    NotificationService.instance.requestPermissions();
   }
 
   @override
@@ -34,10 +46,8 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp> with WidgetsBindingObse
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      // App sent to background -> Lock the vault immediately
       ref.read(authProvider.notifier).lockApp();
     } else if (state == AppLifecycleState.resumed) {
-      // App brought back to foreground -> Attempt Biometric unlock
       ref.read(authProvider.notifier).attemptBiometricUnlock();
     }
   }
@@ -45,7 +55,10 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp> with WidgetsBindingObse
   @override
   Widget build(BuildContext context) {
     final authStatus = ref.watch(authProvider);
-    final currentThemeMode = ref.watch(themeModeProvider); // 2. Watch the theme state
+    final currentThemeMode = ref.watch(themeModeProvider);
+
+    // --- HOOK UP THE SILENT NOTIFICATION SCHEDULER ---
+    initializeNotificationScheduler(ref);
 
     Widget getHomeScreen() {
       switch (authStatus) {
@@ -68,7 +81,7 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp> with WidgetsBindingObse
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: currentThemeMode, // 3. Reactive theme mode
+      themeMode: currentThemeMode,
       home: getHomeScreen(),
     );
   }
