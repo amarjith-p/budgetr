@@ -589,8 +589,6 @@ class _AccountFormBottomSheetState
                         controller: _purposeCtrl,
                         focusNode: _focusNodes[_purposeCtrl],
                         labelText: 'Purpose of Loan',
-                        validator: (v) =>
-                            v == null || v.isEmpty ? 'Required' : null,
                         textInputAction: TextInputAction.next,
                         onTap: _closeCalculatorSafely,
                       ),
@@ -618,6 +616,8 @@ class _AccountFormBottomSheetState
                               labelText: 'Interest %',
                               readOnly: true,
                               onTap: () => _openCalculatorFor(_interestCtrl),
+                              validator: (v) =>
+                                  v == null || v.isEmpty ? 'Required' : null,
                             ),
                           ),
                         ],
@@ -634,6 +634,8 @@ class _AccountFormBottomSheetState
                               keyboardType: TextInputType.number,
                               textInputAction: TextInputAction.done,
                               onTap: _closeCalculatorSafely,
+                              validator: (v) =>
+                                  v == null || v.isEmpty ? 'Required' : null,
                             ),
                           ),
                           const SizedBox(width: DesignTokens.spacingMd),
@@ -643,7 +645,10 @@ class _AccountFormBottomSheetState
                               child: AbsorbPointer(
                                 child: ModernBoxyInput(
                                   controller: _emiDateCtrl,
-                                  labelText: 'EMI Start Date',
+                                  labelText: 'EMI Date',
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? 'Required'
+                                      : null,
                                   suffixIcon: const Icon(
                                     Icons.calendar_today_rounded,
                                     size: 16,
