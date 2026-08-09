@@ -1,6 +1,7 @@
+// features/budgets/components/budget_progress_card.dart
 import 'package:flutter/material.dart';
 import '../../../core/theme/design_tokens.dart';
-import '../../../core/components/currency_text.dart'; // <-- IMPORTED
+import '../../../core/components/currency_text.dart';
 
 class BudgetProgressCard extends StatelessWidget {
   final String bucketName;
@@ -77,9 +78,7 @@ class BudgetProgressCard extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 12),
-
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -100,7 +99,7 @@ class BudgetProgressCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          // --- FORMATTED WITH CURRENCY UTILITY ---
+                          // --- ALLOCATED/SPENT KEPT EXACTLY AS IT WAS ---
                           Text(
                             '₹${CurrencyFormatter.format(spent)} / ₹${CurrencyFormatter.format(allocated)}',
                             style: TextStyle(
@@ -113,9 +112,7 @@ class BudgetProgressCard extends StatelessWidget {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 6),
-
                       LayoutBuilder(
                         builder: (context, constraints) {
                           return Container(
@@ -157,13 +154,10 @@ class BudgetProgressCard extends StatelessWidget {
                           );
                         },
                       ),
-
                       const SizedBox(height: 6),
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // --- FORMATTED WITH CURRENCY UTILITY ---
                           Text(
                             left >= 0
                                 ? '₹${CurrencyFormatter.format(left)} Left'
@@ -176,9 +170,11 @@ class BudgetProgressCard extends StatelessWidget {
                                   : theme.colorScheme.error,
                             ),
                           ),
-                          if (isDanger || isWarning)
-                            Row(
-                              children: [
+                          // --- NEW: ONLY PERCENTAGE (AND WARNING IF APPLICABLE) AT BOTTOM RIGHT ---
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isDanger || isWarning) ...[
                                 Icon(
                                   Icons.warning_rounded,
                                   size: 10,
@@ -193,14 +189,25 @@ class BudgetProgressCard extends StatelessWidget {
                                     color: activeColor,
                                   ),
                                 ),
+                                const SizedBox(width: 8),
                               ],
-                            ),
+                              Text(
+                                '${(progress * 100).toStringAsFixed(1)}%',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDanger || isWarning
+                                      ? activeColor
+                                      : theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ],
                   ),
                 ),
-
                 const SizedBox(width: 8),
                 Icon(
                   Icons.chevron_right_rounded,

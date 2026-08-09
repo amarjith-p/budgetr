@@ -1,3 +1,4 @@
+// features/budgets/components/budget_summary_card.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../core/components/currency_text.dart';
@@ -35,7 +36,6 @@ class BudgetSummaryCard extends StatelessWidget {
     return Slidable(
       key: const ValueKey('budget_summary_card'),
       enabled: !isClosed,
-
       startActionPane: ActionPane(
         motion: const DrawerMotion(),
         extentRatio: 0.25,
@@ -71,7 +71,6 @@ class BudgetSummaryCard extends StatelessWidget {
           ),
         ],
       ),
-
       endActionPane: ActionPane(
         motion: const DrawerMotion(),
         extentRatio: 0.50,
@@ -136,7 +135,6 @@ class BudgetSummaryCard extends StatelessWidget {
           ),
         ],
       ),
-
       child: Card(
         elevation: 0,
         margin: EdgeInsets.zero,
@@ -198,7 +196,6 @@ class BudgetSummaryCard extends StatelessWidget {
                               ],
                             ),
                           ),
-
                         Row(
                           children: [
                             Flexible(
@@ -224,14 +221,12 @@ class BudgetSummaryCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 4),
-
-                        // --- FIX: SCALES DOWN DYNAMICALLY ---
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: CurrencyText(
                             amount: effectiveIncome,
-                            sign: '₹ ',
+                            sign: '₹ ', // --- FIX: RUPEE SYMBOL RESTORED ---
                             amountStyle: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
@@ -253,7 +248,6 @@ class BudgetSummaryCard extends StatelessWidget {
                       ],
                     ),
                   ),
-
                   // --- VERTICAL DIVIDER ---
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -263,7 +257,6 @@ class BudgetSummaryCard extends StatelessWidget {
                       color: theme.dividerColor.withOpacity(0.5),
                     ),
                   ),
-
                   // --- RIGHT COLUMN: DENSE BREAKDOWN ---
                   Expanded(
                     flex: 6,
@@ -316,7 +309,6 @@ class BudgetSummaryCard extends StatelessWidget {
   }) {
     final sign = isDeduction ? '-' : '+';
     final isZero = amount == 0.0;
-
     final displayColor = isClosed || isZero
         ? theme.colorScheme.onSurfaceVariant.withOpacity(0.4)
         : color;
@@ -324,31 +316,35 @@ class BudgetSummaryCard extends StatelessWidget {
         ? theme.colorScheme.onSurfaceVariant.withOpacity(0.4)
         : (isDeduction ? theme.colorScheme.error : theme.colorScheme.onSurface);
 
+    // --- FIX: SpaceBetween pulls labels left and amounts fully right ---
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Icon(icon, size: 12, color: displayColor),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: isZero ? displayColor : theme.colorScheme.onSurfaceVariant,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: displayColor),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: isZero
+                    ? displayColor
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          ],
         ),
         const SizedBox(width: 4),
-        // --- FIX: REPLACED SPACER WITH EXPANDED + FITTEDBOX TO PREVENT OVERFLOW ---
-        Expanded(
+        Flexible(
           child: FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerRight,
             child: CurrencyText(
               amount: amount,
-              sign: '$sign₹ ',
+              sign: '$sign ₹ ', // --- FIX: RUPEE SYMBOL RESTORED ---
               amountStyle: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
