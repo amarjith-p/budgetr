@@ -1,3 +1,4 @@
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:budgetr/core/components/premium_empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -60,7 +61,8 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: accountsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () =>
+            const Center(child: FuturisticLoader(size: 80, label: "LOADING..")),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (accounts) {
           final visibleAccounts = accounts.where((a) => !a.isHidden).toList();

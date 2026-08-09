@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/date_time_constants.dart';
@@ -11,7 +12,10 @@ class BudgetManagementTab extends ConsumerWidget {
 
   void _shiftMonth(WidgetRef ref, int offset) {
     final current = ref.read(budgetDateProvider);
-    ref.read(budgetDateProvider.notifier).state = DateTime(current.year, current.month + offset);
+    ref.read(budgetDateProvider.notifier).state = DateTime(
+      current.year,
+      current.month + offset,
+    );
   }
 
   @override
@@ -20,7 +24,8 @@ class BudgetManagementTab extends ConsumerWidget {
     final budgetAsync = ref.watch(monthlyBudgetStreamProvider);
     final theme = Theme.of(context);
 
-    final monthString = '${DateTimeConstants.fullMonths[selectedDate.month - 1]} ${selectedDate.year}';
+    final monthString =
+        '${DateTimeConstants.fullMonths[selectedDate.month - 1]} ${selectedDate.year}';
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -32,7 +37,10 @@ class BudgetManagementTab extends ConsumerWidget {
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               child: Container(
                 color: theme.scaffoldBackgroundColor.withOpacity(0.85),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -42,7 +50,12 @@ class BudgetManagementTab extends ConsumerWidget {
                     ),
                     Text(
                       monthString.toUpperCase(),
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 1.5, color: theme.colorScheme.primary),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        letterSpacing: 1.5,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.chevron_right_rounded),
@@ -53,11 +66,16 @@ class BudgetManagementTab extends ConsumerWidget {
               ),
             ),
           ),
-          
+
           // MAIN CONTENT
           Expanded(
             child: budgetAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(
+                child: FuturisticLoader(
+                  size: 80,
+                  label: "LOADING BUCKET CONFIGURATIONS..",
+                ),
+              ),
               error: (e, st) => Center(child: Text('Error: $e')),
               data: (budget) {
                 if (budget == null) {

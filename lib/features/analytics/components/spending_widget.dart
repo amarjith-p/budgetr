@@ -1,5 +1,6 @@
 // features/analytics/components/spending_widget.dart
 import 'dart:math';
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -152,7 +153,7 @@ class _SpendingWidgetState extends ConsumerState<SpendingWidget> {
     return accountsAsync.when(
       loading: () => const SizedBox(
         height: 250,
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: FuturisticLoader(size: 80, label: "LOADING..")),
       ),
       error: (e, st) =>
           SizedBox(height: 250, child: Center(child: Text('Error: $e'))),
@@ -160,7 +161,9 @@ class _SpendingWidgetState extends ConsumerState<SpendingWidget> {
         return transactionsAsync.when(
           loading: () => const SizedBox(
             height: 250,
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(
+              child: FuturisticLoader(size: 80, label: "LOADING.."),
+            ),
           ),
           error: (e, st) =>
               SizedBox(height: 250, child: Center(child: Text('Error: $e'))),

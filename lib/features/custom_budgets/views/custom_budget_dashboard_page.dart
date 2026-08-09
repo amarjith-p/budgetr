@@ -1,5 +1,6 @@
 // features/custom_budgets/views/custom_budget_dashboard_page.dart
 
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/modern_app_bar.dart';
@@ -14,10 +15,12 @@ class CustomBudgetDashboardPage extends ConsumerStatefulWidget {
   const CustomBudgetDashboardPage({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<CustomBudgetDashboardPage> createState() => _CustomBudgetDashboardPageState();
+  ConsumerState<CustomBudgetDashboardPage> createState() =>
+      _CustomBudgetDashboardPageState();
 }
 
-class _CustomBudgetDashboardPageState extends ConsumerState<CustomBudgetDashboardPage> {
+class _CustomBudgetDashboardPageState
+    extends ConsumerState<CustomBudgetDashboardPage> {
   int _selectedTabIndex = 0;
   final List<String> _tabs = ['Active', 'Settled'];
 
@@ -34,7 +37,9 @@ class _CustomBudgetDashboardPageState extends ConsumerState<CustomBudgetDashboar
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final provider = _selectedTabIndex == 0 ? activeCustomBudgetsProvider : settledCustomBudgetsProvider;
+    final provider = _selectedTabIndex == 0
+        ? activeCustomBudgetsProvider
+        : settledCustomBudgetsProvider;
     final budgetsAsync = ref.watch(provider);
 
     return Scaffold(
@@ -45,17 +50,20 @@ class _CustomBudgetDashboardPageState extends ConsumerState<CustomBudgetDashboar
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.pop(context),
       ),
-      floatingActionButton: _selectedTabIndex == 0 
-        ? ModernSquircleFab(
-            onPressed: _openAddSheet,
-            icon: Icons.add_rounded,
-            label: 'Budget',
-          )
-        : null,
+      floatingActionButton: _selectedTabIndex == 0
+          ? ModernSquircleFab(
+              onPressed: _openAddSheet,
+              icon: Icons.add_rounded,
+              label: 'Budget',
+            )
+          : null,
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd, vertical: DesignTokens.spacingSm),
+            padding: const EdgeInsets.symmetric(
+              horizontal: DesignTokens.spacingMd,
+              vertical: DesignTokens.spacingSm,
+            ),
             child: ModernBoxyToggle(
               labels: _tabs,
               selectedIndex: _selectedTabIndex,
@@ -64,14 +72,19 @@ class _CustomBudgetDashboardPageState extends ConsumerState<CustomBudgetDashboar
           ),
           Expanded(
             child: budgetsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(
+                child: FuturisticLoader(size: 80, label: "LOADING BUDGETS.."),
+              ),
               error: (e, st) => Center(child: Text('Error: $e')),
               data: (budgets) {
                 if (budgets.isEmpty) {
                   return Center(
                     child: Text(
                       'No ${_tabs[_selectedTabIndex].toLowerCase()} custom budgets found.',
-                      style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   );
                 }
@@ -82,7 +95,9 @@ class _CustomBudgetDashboardPageState extends ConsumerState<CustomBudgetDashboar
                   itemBuilder: (context, index) {
                     final bData = budgets[index];
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: DesignTokens.spacingMd),
+                      padding: const EdgeInsets.only(
+                        bottom: DesignTokens.spacingMd,
+                      ),
                       child: CustomBudgetCard(
                         data: bData,
                         isActive: _selectedTabIndex == 0,

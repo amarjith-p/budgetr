@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
@@ -42,39 +43,53 @@ class BudgetTransactionsPage extends ConsumerWidget {
         onLeadingPressed: () => Navigator.pop(context),
       ),
       body: transactionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(
+          child: FuturisticLoader(size: 80, label: "LOADING TRANSACTIONS.."),
+        ),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (transactions) {
-          
           // 1. FILTER TRANSACTIONS
           final bucketTransactions = transactions.where((data) {
             final tx = data.transaction;
-            return tx.type == 'Expense' && tx.date.month == month && tx.date.year == year && tx.bucketId == bucket.id;
+            return tx.type == 'Expense' &&
+                tx.date.month == month &&
+                tx.date.year == year &&
+                tx.bucketId == bucket.id;
           }).toList();
-          bucketTransactions.sort((a, b) => b.transaction.date.compareTo(a.transaction.date));
+          bucketTransactions.sort(
+            (a, b) => b.transaction.date.compareTo(a.transaction.date),
+          );
 
           // 2. MATHEMATICAL PROJECTION ENGINE
           final now = DateTime.now();
           final isCurrentMonth = now.month == month && now.year == year;
-          final isPastMonth = year < now.year || (year == now.year && month < now.month);
+          final isPastMonth =
+              year < now.year || (year == now.year && month < now.month);
           final daysInMonth = DateTime(year, month + 1, 0).day;
-          
-          final daysElapsed = isCurrentMonth ? now.day : (isPastMonth ? daysInMonth : 0);
+
+          final daysElapsed = isCurrentMonth
+              ? now.day
+              : (isPastMonth ? daysInMonth : 0);
           final remainingDays = daysInMonth - daysElapsed;
 
           double totalSpend = 0.0;
-          Map<int, double> dailySpendMap = {}; 
+          Map<int, double> dailySpendMap = {};
 
           for (var data in bucketTransactions) {
             final tx = data.transaction;
             totalSpend += tx.amount;
-            dailySpendMap[tx.date.day] = (dailySpendMap[tx.date.day] ?? 0.0) + tx.amount;
+            dailySpendMap[tx.date.day] =
+                (dailySpendMap[tx.date.day] ?? 0.0) + tx.amount;
           }
 
           final remainingBudget = allocatedAmount - totalSpend;
           final dailyAvg = daysElapsed > 0 ? totalSpend / daysElapsed : 0.0;
-          final projectedSpend = isCurrentMonth ? (dailyAvg * daysInMonth) : totalSpend;
-          final recDaily = remainingDays > 0 ? max(0.0, remainingBudget / remainingDays) : 0.0;
+          final projectedSpend = isCurrentMonth
+              ? (dailyAvg * daysInMonth)
+              : totalSpend;
+          final recDaily = remainingDays > 0
+              ? max(0.0, remainingBudget / remainingDays)
+              : 0.0;
 
           List<double> cumulativeData = [];
           double runningTotal = 0.0;
@@ -104,7 +119,7 @@ class BudgetTransactionsPage extends ConsumerWidget {
                         dailyAvg: dailyAvg,
                         recDaily: recDaily,
                       ),
-                      
+
                       const SizedBox(height: DesignTokens.spacingLg),
 
                       // --- POM COMPONENT 2: SMART CHART CONTAINER ---
@@ -113,30 +128,56 @@ class BudgetTransactionsPage extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: isOverBudget && isCurrentMonth ? theme.colorScheme.error.withOpacity(0.5) : theme.dividerColor),
+                          border: Border.all(
+                            color: isOverBudget && isCurrentMonth
+                                ? theme.colorScheme.error.withOpacity(0.5)
+                                : theme.dividerColor,
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                              ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('SPENDING TREND', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.0, color: theme.colorScheme.onSurfaceVariant)),
+                                  Text(
+                                    'SPENDING TREND',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.0,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
                                   if (isOverBudget && isCurrentMonth)
                                     Row(
                                       children: [
-                                        Icon(Icons.warning_rounded, color: theme.colorScheme.error, size: 14),
+                                        Icon(
+                                          Icons.warning_rounded,
+                                          color: theme.colorScheme.error,
+                                          size: 14,
+                                        ),
                                         const SizedBox(width: 4),
-                                        Text('OVER BUDGET', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: theme.colorScheme.error)),
+                                        Text(
+                                          'OVER BUDGET',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w900,
+                                            color: theme.colorScheme.error,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                 ],
                               ),
                             ),
                             const SizedBox(height: 16),
-                            
+
                             SmartBudgetChart(
                               cumulativeData: cumulativeData,
                               allocatedAmount: allocatedAmount,
@@ -150,40 +191,55 @@ class BudgetTransactionsPage extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 32),
-                      Text('Transaction History', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: theme.colorScheme.primary)),
+                      Text(
+                        'Transaction History',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-              
+
               if (bucketTransactions.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(child: Text('No transactions logged in this bucket.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),
+                  child: Center(
+                    child: Text(
+                      'No transactions logged in this bucket.',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 )
               else
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingLg),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DesignTokens.spacingLg,
+                  ),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final data = bucketTransactions[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: DesignTokens.spacingSm),
-                          child: TransactionCard(
-                            data: data,
-                            currentAccountId: data.transaction.accountId,
-                            isGlobalView: true, 
-                          ),
-                        );
-                      },
-                      childCount: bucketTransactions.length,
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final data = bucketTransactions[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(
+                          bottom: DesignTokens.spacingSm,
+                        ),
+                        child: TransactionCard(
+                          data: data,
+                          currentAccountId: data.transaction.accountId,
+                          isGlobalView: true,
+                        ),
+                      );
+                    }, childCount: bucketTransactions.length),
                   ),
                 ),
-                
+
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );

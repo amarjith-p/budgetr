@@ -108,7 +108,7 @@ class InsightExportService {
   ) async {
     try {
       final folderDate = DateFormat('MMM yyyy').format(DateTime.now());
-      final folderPath = 'Budgetr/Insights/$folderDate/$formatFolder';
+      final folderPath = 'FinStack 360/Insights/$folderDate/$formatFolder';
 
       Directory publicDir;
       if (Platform.isAndroid) {

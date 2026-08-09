@@ -32,14 +32,16 @@ class AuthService {
 
   Future<bool> authenticateWithBiometrics() async {
     try {
-      final canCheck = await _localAuth.canCheckBiometrics || await _localAuth.isDeviceSupported();
+      final canCheck =
+          await _localAuth.canCheckBiometrics ||
+          await _localAuth.isDeviceSupported();
       if (!canCheck) return false;
 
       return await _localAuth.authenticate(
-        localizedReason: 'Unlock Budgetr to access your dashboard',
+        localizedReason: 'Unlock FinStack 360 to access your dashboard',
       );
     } catch (e) {
-      return false; 
+      return false;
     }
   }
 }

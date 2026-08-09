@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:drift/drift.dart' show BooleanExpressionOperators;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -378,7 +379,7 @@ class _BudgetSimulatorWidgetState extends ConsumerState<BudgetSimulatorWidget> {
             loading: () => const Center(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(),
+                child: FuturisticLoader(size: 80, label: "LOADING.."),
               ),
             ),
             error: (_, __) => const Text('Error loading budget data.'),
@@ -445,7 +446,9 @@ class _BudgetSimulatorWidgetState extends ConsumerState<BudgetSimulatorWidget> {
             budgetAsync.when(
               loading: () => const SizedBox(
                 height: 200,
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(
+                  child: FuturisticLoader(size: 80, label: "LOADING.."),
+                ),
               ),
               error: (e, st) => SizedBox(
                 height: 200,
@@ -475,7 +478,9 @@ class _BudgetSimulatorWidgetState extends ConsumerState<BudgetSimulatorWidget> {
                 return transactionsAsync.when(
                   loading: () => const SizedBox(
                     height: 200,
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(
+                      child: FuturisticLoader(size: 80, label: "LOADING.."),
+                    ),
                   ),
                   error: (e, st) => SizedBox(
                     height: 200,

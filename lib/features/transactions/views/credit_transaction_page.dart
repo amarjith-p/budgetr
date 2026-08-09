@@ -1,6 +1,7 @@
 // features/transactions/views/credit_transaction_page.dart
 import 'dart:ui';
 import 'package:budgetr/core/components/currency_text.dart';
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:budgetr/features/transactions/components/active_filter_banner.dart';
 import 'package:budgetr/features/transactions/components/transaction_filter_bottom_sheet.dart';
 import 'package:budgetr/features/transactions/providers/transaction_filter_provider.dart';
@@ -234,7 +235,9 @@ class CreditTransactionPage extends ConsumerWidget {
         label: 'Log',
       ),
       body: transactionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(
+          child: FuturisticLoader(size: 80, label: "LOADING TRANSACTIONS.."),
+        ),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (transactions) {
           final closingBalances = <String, double>{};

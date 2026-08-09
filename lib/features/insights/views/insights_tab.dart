@@ -652,7 +652,7 @@ class InsightExportUI {
                       Navigator.pop(ctx);
                       Share.shareXFiles([
                         XFile(result.safeCachePath),
-                      ], text: "Budgetr Comprehensive $format Export");
+                      ], text: "FinStack 360 Comprehensive $format Export");
                     },
                   ),
                 ),

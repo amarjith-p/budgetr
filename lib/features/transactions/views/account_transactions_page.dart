@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
@@ -11,33 +12,42 @@ import 'transaction_form_page.dart';
 
 import '../providers/transaction_filter_provider.dart';
 import '../components/transaction_filter_bottom_sheet.dart';
-import '../components/active_filter_banner.dart'; 
+import '../components/active_filter_banner.dart';
 import '../../accounts/providers/account_provider.dart';
 
 class AccountTransactionsPage extends ConsumerWidget {
   final Account account;
 
-  const AccountTransactionsPage({Key? key, required this.account}) : super(key: key);
+  const AccountTransactionsPage({Key? key, required this.account})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transactionsAsync = ref.watch(accountTransactionsProvider(account.id));
+    final transactionsAsync = ref.watch(
+      accountTransactionsProvider(account.id),
+    );
     final filterState = ref.watch(transactionFilterProvider(account.id));
-    
+
     final accountsAsync = ref.watch(accountsStreamProvider);
-    final liveAccount = accountsAsync.asData?.value.where((a) => a.id == account.id).firstOrNull ?? account;
-    
+    final liveAccount =
+        accountsAsync.asData?.value
+            .where((a) => a.id == account.id)
+            .firstOrNull ??
+        account;
+
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, 
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: ModernAppBar(
         title: liveAccount.providerName.toUpperCase(),
         subtitle: liveAccount.name.toUpperCase(),
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.pop(context),
-        
-        trailingIcon: filterState.isActive ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
+
+        trailingIcon: filterState.isActive
+            ? Icons.filter_alt_rounded
+            : Icons.filter_alt_outlined,
         onTrailingPressed: () {
           final txList = transactionsAsync.asData?.value ?? [];
           TransactionFilterBottomSheet.show(context, liveAccount.id, txList);
@@ -45,17 +55,33 @@ class AccountTransactionsPage extends ConsumerWidget {
       ),
       floatingActionButton: ModernSquircleFab(
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => TransactionFormPage(preSelectedAccountId: liveAccount.id)));
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  TransactionFormPage(preSelectedAccountId: liveAccount.id),
+            ),
+          );
         },
         icon: Icons.add_rounded,
         label: 'Log',
       ),
       body: transactionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(
+          child: FuturisticLoader(size: 80, label: "LOADING TRANSACTIONS.."),
+        ),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (transactions) {
           if (transactions.isEmpty) {
-            return Center(child: Text('No transactions logged yet.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold)));
+            return Center(
+              child: Text(
+                'No transactions logged yet.',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            );
           }
 
           // --- FIX: EXACT CHRONOLOGICAL ALIGNMENT VIA REVERSE ITERATION ---
@@ -78,7 +104,7 @@ class AccountTransactionsPage extends ConsumerWidget {
           }
 
           double runningBal = liveAccount.balance - totalNetImpact;
-          
+
           // Iterating reversed guarantees identical timestamps walk forward logically
           for (var txData in transactions.reversed) {
             final t = txData.transaction;
@@ -97,10 +123,27 @@ class AccountTransactionsPage extends ConsumerWidget {
           }
           // ------------------------------------------------
 
-          final filteredTransactions = TransactionFilterHelper.apply(transactions, filterState, liveAccount.id);
+          final filteredTransactions = TransactionFilterHelper.apply(
+            transactions,
+            filterState,
+            liveAccount.id,
+          );
 
           final groupedTransactions = <String, List<dynamic>>{};
-          const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+          const fullMonths = [
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December',
+          ];
 
           for (var txData in filteredTransactions) {
             final tx = txData.transaction;
@@ -114,47 +157,73 @@ class AccountTransactionsPage extends ConsumerWidget {
               if (filterState.isActive)
                 SliverToBoxAdapter(
                   child: ActiveFilterBanner(
-                    filterState: filterState, 
-                    onClear: () => ref.read(transactionFilterProvider(liveAccount.id).notifier).state = const TransactionFilterState(),
+                    filterState: filterState,
+                    onClear: () =>
+                        ref
+                                .read(
+                                  transactionFilterProvider(
+                                    liveAccount.id,
+                                  ).notifier,
+                                )
+                                .state =
+                            const TransactionFilterState(),
                   ),
                 ),
-                
-              const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
-              
+
+              const SliverToBoxAdapter(
+                child: SizedBox(height: DesignTokens.spacingMd),
+              ),
+
               if (filteredTransactions.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(child: Text('No results match your filters.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold))),
+                  child: Center(
+                    child: Text(
+                      'No results match your filters.',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 )
               else
                 ...groupedTransactions.entries.map((entry) {
                   return SliverMainAxisGroup(
                     slivers: [
                       SliverPersistentHeader(
-                        pinned: true, 
-                        delegate: _StickyMonthHeaderDelegate(title: entry.key, theme: theme),
-                      ),
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: DesignTokens.spacingMd),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final txData = entry.value[index];
-                              return TransactionCard(
-                                data: txData, 
-                                currentAccountId: liveAccount.id,
-                                closingBalance: closingBalances[txData.transaction.id], 
-                              );
-                            },
-                            childCount: entry.value.length,
-                          ),
+                        pinned: true,
+                        delegate: _StickyMonthHeaderDelegate(
+                          title: entry.key,
+                          theme: theme,
                         ),
                       ),
-                      const SliverToBoxAdapter(child: SizedBox(height: DesignTokens.spacingMd)),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DesignTokens.spacingMd,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final txData = entry.value[index];
+                            return TransactionCard(
+                              data: txData,
+                              currentAccountId: liveAccount.id,
+                              closingBalance:
+                                  closingBalances[txData.transaction.id],
+                            );
+                          }, childCount: entry.value.length),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: DesignTokens.spacingMd),
+                      ),
                     ],
                   );
                 }).toList(),
-              
+
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );
@@ -171,7 +240,11 @@ class _StickyMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   _StickyMonthHeaderDelegate({required this.title, required this.theme});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
@@ -198,5 +271,6 @@ class _StickyMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   double get minExtent => 40.0;
   @override
-  bool shouldRebuild(covariant _StickyMonthHeaderDelegate oldDelegate) => title != oldDelegate.title;
+  bool shouldRebuild(covariant _StickyMonthHeaderDelegate oldDelegate) =>
+      title != oldDelegate.title;
 }

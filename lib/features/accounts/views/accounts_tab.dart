@@ -1,6 +1,7 @@
 // features/accounts/views/accounts_tab.dart
 import 'dart:ui';
 import 'package:budgetr/core/components/currency_text.dart';
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:budgetr/core/components/premium_empty_state.dart';
 import 'package:budgetr/core/database/app_database.dart';
 import 'package:budgetr/features/accounts/components/account_form_bottom_sheet.dart';
@@ -50,7 +51,9 @@ class AccountsTab extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: accountsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(
+          child: FuturisticLoader(size: 80, label: "LOADING ACCOUNTS.."),
+        ),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (accounts) {
           final creditCards = accounts

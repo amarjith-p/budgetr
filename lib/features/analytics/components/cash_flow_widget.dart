@@ -1,5 +1,6 @@
 // features/analytics/components/cash_flow_widget.dart
 import 'dart:math';
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -268,7 +269,7 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
     return accountsAsync.when(
       loading: () => const SizedBox(
         height: 180,
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: FuturisticLoader(size: 80, label: "LOADING..")),
       ),
       error: (e, st) =>
           SizedBox(height: 180, child: Center(child: Text('Error: $e'))),
@@ -276,7 +277,9 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
         return transactionsAsync.when(
           loading: () => const SizedBox(
             height: 180,
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(
+              child: FuturisticLoader(size: 80, label: "LOADING.."),
+            ),
           ),
           error: (e, st) =>
               SizedBox(height: 180, child: Center(child: Text('Error: $e'))),

@@ -571,7 +571,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 ctx,
                 'EXTERNAL',
                 'External Account',
-                'Outside of Budgetr',
+                'Outside of FinStack 360',
                 Icons.sync_alt_rounded,
                 selectedId,
                 theme,

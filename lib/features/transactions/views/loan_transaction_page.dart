@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:ui';
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,7 +57,9 @@ class LoanTransactionPage extends ConsumerWidget {
               label: 'Log',
             ),
       body: transactionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(
+          child: FuturisticLoader(size: 80, label: "LOADING TRANSACTIONS.."),
+        ),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (transactions) {
           final validTransactions = transactions

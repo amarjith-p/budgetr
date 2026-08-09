@@ -1,3 +1,4 @@
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -631,7 +632,7 @@ class CreditTrackerWidget extends ConsumerWidget {
     return accountsAsync.when(
       loading: () => const SizedBox(
         height: 200,
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: FuturisticLoader(size: 80, label: "LOADING..")),
       ),
       error: (e, st) => const SizedBox(
         height: 200,
@@ -641,7 +642,9 @@ class CreditTrackerWidget extends ConsumerWidget {
         return transactionsAsync.when(
           loading: () => const SizedBox(
             height: 200,
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(
+              child: FuturisticLoader(size: 80, label: "LOADING.."),
+            ),
           ),
           error: (e, st) => const SizedBox(
             height: 200,

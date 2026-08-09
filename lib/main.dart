@@ -77,7 +77,7 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp>
     }
 
     return MaterialApp(
-      title: 'Budgetr Improved',
+      title: 'FinStack 360',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

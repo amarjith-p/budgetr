@@ -68,19 +68,37 @@ class DashboardPage extends ConsumerWidget {
     final int liveBucketsCount = bucketsAsync.asData?.value.length ?? 0;
 
     return Scaffold(
-      appBar: ModernAppBar(
-        title: 'BUDGETR',
-        subtitle: 'OVERVIEW',
-        leadingIcon: null,
-        trailingIcon: null,
-        onTitleLongPress: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const DeveloperSupportPage(),
+      appBar: AppBar(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        scrolledUnderElevation: 0, // Prevents native shadow on scroll
+        centerTitle: false,
+        titleSpacing: 0,
+        leading: const Padding(
+          padding: EdgeInsets.all(10.0),
+          child: CircleAvatar(
+            backgroundColor: Colors
+                .transparent, // Ensures no boxy background shows behind transparent PNGs
+            backgroundImage: AssetImage('assets/icon/fs360.png'),
+          ),
+        ),
+        title: GestureDetector(
+          onLongPress: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DeveloperSupportPage(),
+              ),
+            );
+          },
+          child: Text(
+            'FINSTACK 360',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
             ),
-          );
-        },
+          ),
+        ),
       ),
       body: SafeArea(
         child: CustomScrollView(
