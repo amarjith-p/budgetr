@@ -173,7 +173,6 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
                   ).subtract(const Duration(days: 29));
                   break;
 
-                // --- ADDED NEW DATES FOR THE CHART RENDERING ---
                 case TrendTimeframe.currentMonth:
                   start = DateTime(now.year, now.month, 1);
                   break;
@@ -407,6 +406,8 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
                           startDateText: _formatShortDate(start),
                           endDateText: _formatShortDate(end),
                           touchX: _touchX,
+                          isLiabilityView:
+                              isLiabilityView, // <-- Passed into painter
                         ),
                       ),
                     ),
@@ -441,6 +442,7 @@ class _BoxyGridChartPainter extends CustomPainter {
   final String startDateText;
   final String endDateText;
   final double? touchX;
+  final bool isLiabilityView;
 
   _BoxyGridChartPainter({
     required this.data,
@@ -454,13 +456,39 @@ class _BoxyGridChartPainter extends CustomPainter {
     required this.startDateText,
     required this.endDateText,
     required this.touchX,
+    required this.isLiabilityView,
   });
 
-  String _formatK(double value) {
-    if (value.abs() >= 1000000)
-      return '${(value / 1000000).toStringAsFixed(1)}M';
-    if (value.abs() >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
-    return value.toStringAsFixed(0);
+  // --- REPLICATES CurrencyText STYLING FOR AXIS LABELS ---
+  TextPainter _getAxisLabelPainter(double value, TextStyle baseStyle) {
+    final absVal = value.abs();
+    final sign = (value < 0 || isLiabilityView) ? '-₹ ' : '₹ ';
+    String amountStr;
+    String suffix = '';
+
+    // Enforce 2 decimal digits across the board
+    if (absVal >= 1000000) {
+      amountStr = (absVal / 1000000).toStringAsFixed(2);
+      suffix = 'M';
+    } else if (absVal >= 1000) {
+      amountStr = (absVal / 1000).toStringAsFixed(2);
+      suffix = 'K';
+    } else {
+      amountStr = absVal.toStringAsFixed(2);
+    }
+
+    return TextPainter(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: sign,
+            style: baseStyle.copyWith(fontSize: baseStyle.fontSize! - 1),
+          ),
+          TextSpan(text: '$amountStr$suffix', style: baseStyle),
+        ],
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
   }
 
   @override
@@ -473,18 +501,9 @@ class _BoxyGridChartPainter extends CustomPainter {
       fontWeight: FontWeight.w600,
     );
 
-    final maxLabel = TextPainter(
-      text: TextSpan(text: _formatK(maxY), style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    final midLabel = TextPainter(
-      text: TextSpan(text: _formatK((maxY + minY) / 2), style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    final minLabel = TextPainter(
-      text: TextSpan(text: _formatK(minY), style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
+    final maxLabel = _getAxisLabelPainter(maxY, textStyle);
+    final midLabel = _getAxisLabelPainter((maxY + minY) / 2, textStyle);
+    final minLabel = _getAxisLabelPainter(minY, textStyle);
 
     final leftPadding =
         [maxLabel.width, midLabel.width, minLabel.width].reduce(max) + 8.0;
@@ -625,24 +644,38 @@ class _BoxyGridChartPainter extends CustomPainter {
       canvas.drawCircle(p, 2.0, Paint()..color = Colors.white);
 
       final rawVal = data[closestIndex];
-      final valStr = rawVal < 0
-          ? '-₹ ${rawVal.abs().toStringAsFixed(0)}'
-          : '₹ ${rawVal.toStringAsFixed(0)}';
+      final signStr = (rawVal < 0 || isLiabilityView) ? '-₹ ' : '₹ ';
+
       final dateStr =
           '${dates[closestIndex].day} ${DateTimeConstants.shortMonths[dates[closestIndex].month - 1]}';
 
+      // --- REPLICATES CurrencyText IN TOOLTIP ---
       final valuePainter = TextPainter(
         text: TextSpan(
-          text: valStr,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 11,
-            letterSpacing: -0.5,
-          ),
+          children: [
+            TextSpan(
+              text: signStr,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontWeight: FontWeight.w700,
+                fontSize: 9,
+              ),
+            ),
+            TextSpan(
+              // Using CurrencyFormatter to safely format exactly to 2 decimals with commas
+              text: CurrencyFormatter.format(rawVal.abs()),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 11,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
         ),
         textDirection: TextDirection.ltr,
       )..layout();
+
       final datePainter = TextPainter(
         text: TextSpan(
           text: dateStr,
@@ -673,10 +706,14 @@ class _BoxyGridChartPainter extends CustomPainter {
       canvas.drawShadow(Path()..addRRect(rect), Colors.black, 4, false);
       canvas.drawRRect(rect, Paint()..color = Colors.grey.shade900);
 
-      valuePainter.paint(canvas, Offset(ttX + 8, ttY + 6));
+      // Centers text inside the tooltip
+      final valXOffset = (ttWidth - valuePainter.width) / 2;
+      final dateXOffset = (ttWidth - datePainter.width) / 2;
+
+      valuePainter.paint(canvas, Offset(ttX + valXOffset, ttY + 6));
       datePainter.paint(
         canvas,
-        Offset(ttX + 8, ttY + 6 + valuePainter.height + 2),
+        Offset(ttX + dateXOffset, ttY + 6 + valuePainter.height + 2),
       );
     }
   }
@@ -687,6 +724,7 @@ class _BoxyGridChartPainter extends CustomPainter {
         oldDelegate.minY != minY ||
         oldDelegate.maxY != maxY ||
         oldDelegate.lineColor != lineColor ||
-        oldDelegate.touchX != touchX;
+        oldDelegate.touchX != touchX ||
+        oldDelegate.isLiabilityView != isLiabilityView;
   }
 }
