@@ -16,17 +16,17 @@ import '../../transactions/views/records_tab.dart';
 import '../../transactions/providers/transaction_provider.dart';
 import '../../transactions/providers/transaction_filter_provider.dart';
 import '../../transactions/components/transaction_filter_bottom_sheet.dart';
+
 import '../providers/bottom_nav_provider.dart';
 import 'money_tracker_home_tab.dart';
-import '../../custom_budgets/views/custom_budget_dashboard_page.dart';
 
+import '../../custom_budgets/views/custom_budget_dashboard_page.dart';
 import '../../analytics/components/balance_trend_widget.dart';
 import '../../analytics/components/cash_flow_widget.dart';
 import '../../analytics/components/spending_widget.dart';
 import '../../analytics/components/budget_simulator_widget.dart';
 import '../../analytics/components/credit_tracker_widget.dart';
 
-// --- ADDED INSIGHTS IMPORT ---
 import '../../insights/views/insights_tab.dart';
 
 class MoneyTrackerBasePage extends ConsumerWidget {
@@ -61,7 +61,7 @@ class MoneyTrackerBasePage extends ConsumerWidget {
       const AccountsTab(),
       const BudgetManagementTab(),
       const _AnalyticsTab(),
-      const InsightsTab(), // --- REPLACED PLACEHOLDER ---
+      const InsightsTab(),
     ];
 
     final List<String> tabTitles = [
@@ -84,6 +84,7 @@ class MoneyTrackerBasePage extends ConsumerWidget {
 
     IconData? trailingIcon;
     VoidCallback? onTrailingPressed;
+
     IconData? extraTrailingIcon;
     Color? extraIconColor;
     VoidCallback? onExtraTrailingPressed;
@@ -124,6 +125,13 @@ class MoneyTrackerBasePage extends ConsumerWidget {
           MaterialPageRoute(builder: (_) => const CustomBudgetDashboardPage()),
         );
       };
+    } else if (currentIndex == 5) {
+      // --- EXPORT BUTTON DELEGATED TO THE MASTER APPBAR ---
+      trailingIcon = Icons.ios_share_rounded;
+      onTrailingPressed = () {
+        HapticFeedback.lightImpact();
+        InsightExportUI.show(context, ref);
+      };
     }
 
     return Scaffold(
@@ -159,21 +167,16 @@ class _AnalyticsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the pinned widgets state
     final pinned = ref.watch(pinnedWidgetsProvider);
-
     return ListView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 120),
       children: [
-        // Conditionally render only if NOT pinned
         if (!pinned.contains('BALANCE_TREND')) const BalanceTrendWidget(),
         if (!pinned.contains('CASH_FLOW')) const CashFlowWidget(),
         if (!pinned.contains('SPENDING')) const SpendingWidget(),
         if (!pinned.contains('CREDIT_TRACKER')) const CreditTrackerWidget(),
         if (!pinned.contains('BUDGET_SIMULATOR')) const BudgetSimulatorWidget(),
-
-        // Edge case: If they manage to pin everything, show a nice empty state
         if (pinned.length >= 5)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 40.0),
