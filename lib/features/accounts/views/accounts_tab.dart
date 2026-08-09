@@ -1,3 +1,4 @@
+// features/accounts/views/accounts_tab.dart
 import 'dart:ui';
 import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/core/components/premium_empty_state.dart';
@@ -11,12 +12,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../providers/account_provider.dart';
 import '../providers/loan_math_provider.dart';
-import '../providers/credit_math_provider.dart'; // <-- ADDED CREDIT MATH IMPORT
+import '../providers/credit_math_provider.dart';
+import '../components/global_summary_card.dart';
 
 final selectionModeProvider = StateProvider.autoDispose<bool>((ref) => false);
 final selectedAccountsProvider = StateProvider.autoDispose<Set<String>>(
@@ -41,7 +44,6 @@ class AccountsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(accountsStreamProvider);
     final theme = Theme.of(context);
-
     final isSelectionMode = ref.watch(selectionModeProvider);
     final selectedIds = ref.watch(selectedAccountsProvider);
 
@@ -57,7 +59,6 @@ class AccountsTab extends ConsumerWidget {
           final bankAccounts = accounts
               .where((a) => a.type != 'Credit Cards' && a.type != 'Loan')
               .toList();
-
           final activeLoans = accounts
               .where((a) => a.type == 'Loan' && !a.isClosed)
               .toList();
@@ -70,7 +71,6 @@ class AccountsTab extends ConsumerWidget {
             (sum, acc) => sum + acc.balance,
           );
 
-          // --- FIX: USE DYNAMIC CREDIT MATH FOR TOTAL OUTSTANDING ---
           double totalCreditBalance = 0.0;
           for (var card in creditCards) {
             totalCreditBalance += ref
@@ -91,7 +91,6 @@ class AccountsTab extends ConsumerWidget {
               if (acc.type == 'Loan') {
                 customTotal -= ref.watch(loanTotalOutstandingProvider(acc));
               } else if (acc.type == 'Credit Cards') {
-                // --- FIX: USE DYNAMIC MATH FOR MULTI-SELECT ENGINE ---
                 customTotal += ref
                     .watch(creditCardMetricsProvider(acc))
                     .totalOutstanding;
@@ -122,6 +121,15 @@ class AccountsTab extends ConsumerWidget {
                     theme: theme,
                   ),
                 ),
+
+              SliverToBoxAdapter(
+                child: GlobalSummaryCard(
+                  assets: totalBankBalance, // Passes as positive
+                  liabilities: totalCreditBalance, // Naturally negative if owed
+                  loans:
+                      -totalLoanOutstanding, // --- FIXED: FORCED NEGATIVE SO IT DEDUCTS CORRECTLY ---
+                ),
+              ),
 
               if (bankAccounts.isNotEmpty) ...[
                 _buildSectionHeader(context, 'ACCOUNTS', totalBankBalance),
@@ -174,7 +182,6 @@ class AccountsTab extends ConsumerWidget {
                   isSettled: true,
                 ),
               ],
-
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );
@@ -185,8 +192,8 @@ class AccountsTab extends ConsumerWidget {
 
   Widget _buildSectionHeader(BuildContext context, String title, double total) {
     final theme = Theme.of(context);
-    final signText = total < 0 ? '-₹ ' : (total > 0 ? '+₹ ' : '₹ ');
-
+    // --- FIXED: RESTORED THE RUPEE SYMBOLS ---
+    final signText = total < 0 ? '- ₹ ' : (total > 0 ? '+ ₹ ' : '₹ ');
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -250,12 +257,10 @@ class AccountsTab extends ConsumerWidget {
         itemCount: items.length,
         onReorder: (int oldIndex, int newIndex) {
           if (isSelectionMode || isSettled) return;
-
           if (oldIndex < newIndex) newIndex -= 1;
           final mutableList = List<Account>.from(items);
           final item = mutableList.removeAt(oldIndex);
           mutableList.insert(newIndex, item);
-
           ref.read(accountActionProvider.notifier).reorderAccounts(mutableList);
         },
         itemBuilder: (context, index) {
@@ -305,7 +310,6 @@ class AccountsTab extends ConsumerWidget {
             onEdit: (isSelectionMode || isSettled)
                 ? null
                 : () => _openForm(context, existingAccount: acc),
-
             onSettle: (isSelectionMode || !isLoan || isSettled)
                 ? null
                 : () {
@@ -320,7 +324,6 @@ class AccountsTab extends ConsumerWidget {
                           .settleLoan(acc.id),
                     );
                   },
-
             onDelete: isSelectionMode
                 ? null
                 : () {
@@ -339,7 +342,6 @@ class AccountsTab extends ConsumerWidget {
             child: Stack(
               children: [
                 PremiumAccountCard(account: acc, onCardTap: handleTapAction),
-
                 if (isSelectionMode && !isSettled)
                   Positioned.fill(
                     child: IgnorePointer(
@@ -430,9 +432,10 @@ class _StickySelectionHeaderDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     final isDark = theme.brightness == Brightness.dark;
+    // --- FIXED: RESTORED THE RUPEE SYMBOLS ---
     final customSign = customTotal < 0
-        ? '-₹ '
-        : (customTotal > 0 ? '+₹ ' : '₹ ');
+        ? '- ₹ '
+        : (customTotal > 0 ? '+ ₹ ' : '₹ ');
 
     return ClipRect(
       child: BackdropFilter(
@@ -500,8 +503,10 @@ class _StickySelectionHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   double get maxExtent => 90.0;
+
   @override
   double get minExtent => 90.0;
+
   @override
   bool shouldRebuild(covariant _StickySelectionHeaderDelegate oldDelegate) {
     return customTotal != oldDelegate.customTotal ||
