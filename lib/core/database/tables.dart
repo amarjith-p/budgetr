@@ -1,4 +1,4 @@
-// core/database/tables.dart
+// lib/core/database/tables.dart
 import 'package:drift/drift.dart';
 
 class TransactionCategories extends Table {
@@ -65,7 +65,6 @@ class Transactions extends Table {
   TextColumn get toAccountId => text().nullable()();
 
   TextColumn get categoryId => text().nullable()();
-  // --- NEW: IMMUTABLE SNAPSHOT FIELDS ---
   TextColumn get categoryName => text().nullable()();
   IntColumn get categoryIcon => integer().nullable()();
 
@@ -86,7 +85,6 @@ class Transactions extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-// ... Keep existing MonthlyBudgets, ClosedBudgetSnapshots, and CustomBudgets exactly the same ...
 @DataClassName('MonthlyBudget')
 class MonthlyBudgets extends Table {
   TextColumn get id => text()();
@@ -138,6 +136,53 @@ class CustomBudgets extends Table {
   BoolColumn get isSettled => boolean().withDefault(const Constant(false))();
   RealColumn get settledAmount => real().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class Investments extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get type => text()();
+  TextColumn get provider => text()();
+  TextColumn get providerUrl => text().nullable()();
+  TextColumn get specialTag => text().nullable()();
+
+  RealColumn get initialAmount => real()();
+  RealColumn get currentValue => real().withDefault(const Constant(0.0))();
+  RealColumn get targetAmount => real().nullable()();
+
+  DateTimeColumn get startDate => dateTime()();
+  DateTimeColumn get expectedEndDate => dateTime().nullable()();
+  RealColumn get expectedReturn => real().nullable()();
+
+  TextColumn get folioNo => text().nullable()();
+  RealColumn get units => real().nullable()();
+  TextColumn get brokerName => text().nullable()();
+
+  TextColumn get linkedAccountNo => text().nullable()();
+  TextColumn get linkedAccountIfsc => text().nullable()();
+  TextColumn get linkedBankName => text().nullable()();
+
+  TextColumn get purpose => text().nullable()();
+  TextColumn get notes => text().nullable()();
+
+  // --- NEW: Lifecycle Management Fields ---
+  BoolColumn get isClosed => boolean().withDefault(const Constant(false))();
+  TextColumn get closeReason => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class InvestmentLogs extends Table {
+  TextColumn get id => text()();
+  TextColumn get investmentId => text()();
+  TextColumn get type => text()(); // 'Deposit', 'Withdrawal', or 'Update'
+  RealColumn get amount => real()();
+  DateTimeColumn get date => dateTime()();
+  TextColumn get notes => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

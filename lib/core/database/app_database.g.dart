@@ -5337,6 +5337,1670 @@ class CustomBudgetsCompanion extends UpdateCompanion<CustomBudget> {
   }
 }
 
+class $InvestmentsTable extends Investments
+    with TableInfo<$InvestmentsTable, Investment> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InvestmentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _providerMeta = const VerificationMeta(
+    'provider',
+  );
+  @override
+  late final GeneratedColumn<String> provider = GeneratedColumn<String>(
+    'provider',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _providerUrlMeta = const VerificationMeta(
+    'providerUrl',
+  );
+  @override
+  late final GeneratedColumn<String> providerUrl = GeneratedColumn<String>(
+    'provider_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _specialTagMeta = const VerificationMeta(
+    'specialTag',
+  );
+  @override
+  late final GeneratedColumn<String> specialTag = GeneratedColumn<String>(
+    'special_tag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _initialAmountMeta = const VerificationMeta(
+    'initialAmount',
+  );
+  @override
+  late final GeneratedColumn<double> initialAmount = GeneratedColumn<double>(
+    'initial_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _currentValueMeta = const VerificationMeta(
+    'currentValue',
+  );
+  @override
+  late final GeneratedColumn<double> currentValue = GeneratedColumn<double>(
+    'current_value',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _targetAmountMeta = const VerificationMeta(
+    'targetAmount',
+  );
+  @override
+  late final GeneratedColumn<double> targetAmount = GeneratedColumn<double>(
+    'target_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _startDateMeta = const VerificationMeta(
+    'startDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startDate = GeneratedColumn<DateTime>(
+    'start_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _expectedEndDateMeta = const VerificationMeta(
+    'expectedEndDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> expectedEndDate =
+      GeneratedColumn<DateTime>(
+        'expected_end_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _expectedReturnMeta = const VerificationMeta(
+    'expectedReturn',
+  );
+  @override
+  late final GeneratedColumn<double> expectedReturn = GeneratedColumn<double>(
+    'expected_return',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _folioNoMeta = const VerificationMeta(
+    'folioNo',
+  );
+  @override
+  late final GeneratedColumn<String> folioNo = GeneratedColumn<String>(
+    'folio_no',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _unitsMeta = const VerificationMeta('units');
+  @override
+  late final GeneratedColumn<double> units = GeneratedColumn<double>(
+    'units',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _brokerNameMeta = const VerificationMeta(
+    'brokerName',
+  );
+  @override
+  late final GeneratedColumn<String> brokerName = GeneratedColumn<String>(
+    'broker_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _linkedAccountNoMeta = const VerificationMeta(
+    'linkedAccountNo',
+  );
+  @override
+  late final GeneratedColumn<String> linkedAccountNo = GeneratedColumn<String>(
+    'linked_account_no',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _linkedAccountIfscMeta = const VerificationMeta(
+    'linkedAccountIfsc',
+  );
+  @override
+  late final GeneratedColumn<String> linkedAccountIfsc =
+      GeneratedColumn<String>(
+        'linked_account_ifsc',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _linkedBankNameMeta = const VerificationMeta(
+    'linkedBankName',
+  );
+  @override
+  late final GeneratedColumn<String> linkedBankName = GeneratedColumn<String>(
+    'linked_bank_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _purposeMeta = const VerificationMeta(
+    'purpose',
+  );
+  @override
+  late final GeneratedColumn<String> purpose = GeneratedColumn<String>(
+    'purpose',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isClosedMeta = const VerificationMeta(
+    'isClosed',
+  );
+  @override
+  late final GeneratedColumn<bool> isClosed = GeneratedColumn<bool>(
+    'is_closed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_closed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _closeReasonMeta = const VerificationMeta(
+    'closeReason',
+  );
+  @override
+  late final GeneratedColumn<String> closeReason = GeneratedColumn<String>(
+    'close_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    type,
+    provider,
+    providerUrl,
+    specialTag,
+    initialAmount,
+    currentValue,
+    targetAmount,
+    startDate,
+    expectedEndDate,
+    expectedReturn,
+    folioNo,
+    units,
+    brokerName,
+    linkedAccountNo,
+    linkedAccountIfsc,
+    linkedBankName,
+    purpose,
+    notes,
+    isClosed,
+    closeReason,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'investments';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Investment> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('provider')) {
+      context.handle(
+        _providerMeta,
+        provider.isAcceptableOrUnknown(data['provider']!, _providerMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_providerMeta);
+    }
+    if (data.containsKey('provider_url')) {
+      context.handle(
+        _providerUrlMeta,
+        providerUrl.isAcceptableOrUnknown(
+          data['provider_url']!,
+          _providerUrlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('special_tag')) {
+      context.handle(
+        _specialTagMeta,
+        specialTag.isAcceptableOrUnknown(data['special_tag']!, _specialTagMeta),
+      );
+    }
+    if (data.containsKey('initial_amount')) {
+      context.handle(
+        _initialAmountMeta,
+        initialAmount.isAcceptableOrUnknown(
+          data['initial_amount']!,
+          _initialAmountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_initialAmountMeta);
+    }
+    if (data.containsKey('current_value')) {
+      context.handle(
+        _currentValueMeta,
+        currentValue.isAcceptableOrUnknown(
+          data['current_value']!,
+          _currentValueMeta,
+        ),
+      );
+    }
+    if (data.containsKey('target_amount')) {
+      context.handle(
+        _targetAmountMeta,
+        targetAmount.isAcceptableOrUnknown(
+          data['target_amount']!,
+          _targetAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('start_date')) {
+      context.handle(
+        _startDateMeta,
+        startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startDateMeta);
+    }
+    if (data.containsKey('expected_end_date')) {
+      context.handle(
+        _expectedEndDateMeta,
+        expectedEndDate.isAcceptableOrUnknown(
+          data['expected_end_date']!,
+          _expectedEndDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('expected_return')) {
+      context.handle(
+        _expectedReturnMeta,
+        expectedReturn.isAcceptableOrUnknown(
+          data['expected_return']!,
+          _expectedReturnMeta,
+        ),
+      );
+    }
+    if (data.containsKey('folio_no')) {
+      context.handle(
+        _folioNoMeta,
+        folioNo.isAcceptableOrUnknown(data['folio_no']!, _folioNoMeta),
+      );
+    }
+    if (data.containsKey('units')) {
+      context.handle(
+        _unitsMeta,
+        units.isAcceptableOrUnknown(data['units']!, _unitsMeta),
+      );
+    }
+    if (data.containsKey('broker_name')) {
+      context.handle(
+        _brokerNameMeta,
+        brokerName.isAcceptableOrUnknown(data['broker_name']!, _brokerNameMeta),
+      );
+    }
+    if (data.containsKey('linked_account_no')) {
+      context.handle(
+        _linkedAccountNoMeta,
+        linkedAccountNo.isAcceptableOrUnknown(
+          data['linked_account_no']!,
+          _linkedAccountNoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('linked_account_ifsc')) {
+      context.handle(
+        _linkedAccountIfscMeta,
+        linkedAccountIfsc.isAcceptableOrUnknown(
+          data['linked_account_ifsc']!,
+          _linkedAccountIfscMeta,
+        ),
+      );
+    }
+    if (data.containsKey('linked_bank_name')) {
+      context.handle(
+        _linkedBankNameMeta,
+        linkedBankName.isAcceptableOrUnknown(
+          data['linked_bank_name']!,
+          _linkedBankNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('purpose')) {
+      context.handle(
+        _purposeMeta,
+        purpose.isAcceptableOrUnknown(data['purpose']!, _purposeMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('is_closed')) {
+      context.handle(
+        _isClosedMeta,
+        isClosed.isAcceptableOrUnknown(data['is_closed']!, _isClosedMeta),
+      );
+    }
+    if (data.containsKey('close_reason')) {
+      context.handle(
+        _closeReasonMeta,
+        closeReason.isAcceptableOrUnknown(
+          data['close_reason']!,
+          _closeReasonMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Investment map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Investment(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      provider: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider'],
+      )!,
+      providerUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_url'],
+      ),
+      specialTag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}special_tag'],
+      ),
+      initialAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}initial_amount'],
+      )!,
+      currentValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}current_value'],
+      )!,
+      targetAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}target_amount'],
+      ),
+      startDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_date'],
+      )!,
+      expectedEndDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}expected_end_date'],
+      ),
+      expectedReturn: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}expected_return'],
+      ),
+      folioNo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}folio_no'],
+      ),
+      units: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}units'],
+      ),
+      brokerName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}broker_name'],
+      ),
+      linkedAccountNo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}linked_account_no'],
+      ),
+      linkedAccountIfsc: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}linked_account_ifsc'],
+      ),
+      linkedBankName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}linked_bank_name'],
+      ),
+      purpose: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}purpose'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      isClosed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_closed'],
+      )!,
+      closeReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}close_reason'],
+      ),
+    );
+  }
+
+  @override
+  $InvestmentsTable createAlias(String alias) {
+    return $InvestmentsTable(attachedDatabase, alias);
+  }
+}
+
+class Investment extends DataClass implements Insertable<Investment> {
+  final String id;
+  final String name;
+  final String type;
+  final String provider;
+  final String? providerUrl;
+  final String? specialTag;
+  final double initialAmount;
+  final double currentValue;
+  final double? targetAmount;
+  final DateTime startDate;
+  final DateTime? expectedEndDate;
+  final double? expectedReturn;
+  final String? folioNo;
+  final double? units;
+  final String? brokerName;
+  final String? linkedAccountNo;
+  final String? linkedAccountIfsc;
+  final String? linkedBankName;
+  final String? purpose;
+  final String? notes;
+  final bool isClosed;
+  final String? closeReason;
+  const Investment({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.provider,
+    this.providerUrl,
+    this.specialTag,
+    required this.initialAmount,
+    required this.currentValue,
+    this.targetAmount,
+    required this.startDate,
+    this.expectedEndDate,
+    this.expectedReturn,
+    this.folioNo,
+    this.units,
+    this.brokerName,
+    this.linkedAccountNo,
+    this.linkedAccountIfsc,
+    this.linkedBankName,
+    this.purpose,
+    this.notes,
+    required this.isClosed,
+    this.closeReason,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['type'] = Variable<String>(type);
+    map['provider'] = Variable<String>(provider);
+    if (!nullToAbsent || providerUrl != null) {
+      map['provider_url'] = Variable<String>(providerUrl);
+    }
+    if (!nullToAbsent || specialTag != null) {
+      map['special_tag'] = Variable<String>(specialTag);
+    }
+    map['initial_amount'] = Variable<double>(initialAmount);
+    map['current_value'] = Variable<double>(currentValue);
+    if (!nullToAbsent || targetAmount != null) {
+      map['target_amount'] = Variable<double>(targetAmount);
+    }
+    map['start_date'] = Variable<DateTime>(startDate);
+    if (!nullToAbsent || expectedEndDate != null) {
+      map['expected_end_date'] = Variable<DateTime>(expectedEndDate);
+    }
+    if (!nullToAbsent || expectedReturn != null) {
+      map['expected_return'] = Variable<double>(expectedReturn);
+    }
+    if (!nullToAbsent || folioNo != null) {
+      map['folio_no'] = Variable<String>(folioNo);
+    }
+    if (!nullToAbsent || units != null) {
+      map['units'] = Variable<double>(units);
+    }
+    if (!nullToAbsent || brokerName != null) {
+      map['broker_name'] = Variable<String>(brokerName);
+    }
+    if (!nullToAbsent || linkedAccountNo != null) {
+      map['linked_account_no'] = Variable<String>(linkedAccountNo);
+    }
+    if (!nullToAbsent || linkedAccountIfsc != null) {
+      map['linked_account_ifsc'] = Variable<String>(linkedAccountIfsc);
+    }
+    if (!nullToAbsent || linkedBankName != null) {
+      map['linked_bank_name'] = Variable<String>(linkedBankName);
+    }
+    if (!nullToAbsent || purpose != null) {
+      map['purpose'] = Variable<String>(purpose);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['is_closed'] = Variable<bool>(isClosed);
+    if (!nullToAbsent || closeReason != null) {
+      map['close_reason'] = Variable<String>(closeReason);
+    }
+    return map;
+  }
+
+  InvestmentsCompanion toCompanion(bool nullToAbsent) {
+    return InvestmentsCompanion(
+      id: Value(id),
+      name: Value(name),
+      type: Value(type),
+      provider: Value(provider),
+      providerUrl: providerUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(providerUrl),
+      specialTag: specialTag == null && nullToAbsent
+          ? const Value.absent()
+          : Value(specialTag),
+      initialAmount: Value(initialAmount),
+      currentValue: Value(currentValue),
+      targetAmount: targetAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetAmount),
+      startDate: Value(startDate),
+      expectedEndDate: expectedEndDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expectedEndDate),
+      expectedReturn: expectedReturn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expectedReturn),
+      folioNo: folioNo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(folioNo),
+      units: units == null && nullToAbsent
+          ? const Value.absent()
+          : Value(units),
+      brokerName: brokerName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(brokerName),
+      linkedAccountNo: linkedAccountNo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkedAccountNo),
+      linkedAccountIfsc: linkedAccountIfsc == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkedAccountIfsc),
+      linkedBankName: linkedBankName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkedBankName),
+      purpose: purpose == null && nullToAbsent
+          ? const Value.absent()
+          : Value(purpose),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      isClosed: Value(isClosed),
+      closeReason: closeReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closeReason),
+    );
+  }
+
+  factory Investment.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Investment(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      type: serializer.fromJson<String>(json['type']),
+      provider: serializer.fromJson<String>(json['provider']),
+      providerUrl: serializer.fromJson<String?>(json['providerUrl']),
+      specialTag: serializer.fromJson<String?>(json['specialTag']),
+      initialAmount: serializer.fromJson<double>(json['initialAmount']),
+      currentValue: serializer.fromJson<double>(json['currentValue']),
+      targetAmount: serializer.fromJson<double?>(json['targetAmount']),
+      startDate: serializer.fromJson<DateTime>(json['startDate']),
+      expectedEndDate: serializer.fromJson<DateTime?>(json['expectedEndDate']),
+      expectedReturn: serializer.fromJson<double?>(json['expectedReturn']),
+      folioNo: serializer.fromJson<String?>(json['folioNo']),
+      units: serializer.fromJson<double?>(json['units']),
+      brokerName: serializer.fromJson<String?>(json['brokerName']),
+      linkedAccountNo: serializer.fromJson<String?>(json['linkedAccountNo']),
+      linkedAccountIfsc: serializer.fromJson<String?>(
+        json['linkedAccountIfsc'],
+      ),
+      linkedBankName: serializer.fromJson<String?>(json['linkedBankName']),
+      purpose: serializer.fromJson<String?>(json['purpose']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      isClosed: serializer.fromJson<bool>(json['isClosed']),
+      closeReason: serializer.fromJson<String?>(json['closeReason']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'type': serializer.toJson<String>(type),
+      'provider': serializer.toJson<String>(provider),
+      'providerUrl': serializer.toJson<String?>(providerUrl),
+      'specialTag': serializer.toJson<String?>(specialTag),
+      'initialAmount': serializer.toJson<double>(initialAmount),
+      'currentValue': serializer.toJson<double>(currentValue),
+      'targetAmount': serializer.toJson<double?>(targetAmount),
+      'startDate': serializer.toJson<DateTime>(startDate),
+      'expectedEndDate': serializer.toJson<DateTime?>(expectedEndDate),
+      'expectedReturn': serializer.toJson<double?>(expectedReturn),
+      'folioNo': serializer.toJson<String?>(folioNo),
+      'units': serializer.toJson<double?>(units),
+      'brokerName': serializer.toJson<String?>(brokerName),
+      'linkedAccountNo': serializer.toJson<String?>(linkedAccountNo),
+      'linkedAccountIfsc': serializer.toJson<String?>(linkedAccountIfsc),
+      'linkedBankName': serializer.toJson<String?>(linkedBankName),
+      'purpose': serializer.toJson<String?>(purpose),
+      'notes': serializer.toJson<String?>(notes),
+      'isClosed': serializer.toJson<bool>(isClosed),
+      'closeReason': serializer.toJson<String?>(closeReason),
+    };
+  }
+
+  Investment copyWith({
+    String? id,
+    String? name,
+    String? type,
+    String? provider,
+    Value<String?> providerUrl = const Value.absent(),
+    Value<String?> specialTag = const Value.absent(),
+    double? initialAmount,
+    double? currentValue,
+    Value<double?> targetAmount = const Value.absent(),
+    DateTime? startDate,
+    Value<DateTime?> expectedEndDate = const Value.absent(),
+    Value<double?> expectedReturn = const Value.absent(),
+    Value<String?> folioNo = const Value.absent(),
+    Value<double?> units = const Value.absent(),
+    Value<String?> brokerName = const Value.absent(),
+    Value<String?> linkedAccountNo = const Value.absent(),
+    Value<String?> linkedAccountIfsc = const Value.absent(),
+    Value<String?> linkedBankName = const Value.absent(),
+    Value<String?> purpose = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+    bool? isClosed,
+    Value<String?> closeReason = const Value.absent(),
+  }) => Investment(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    type: type ?? this.type,
+    provider: provider ?? this.provider,
+    providerUrl: providerUrl.present ? providerUrl.value : this.providerUrl,
+    specialTag: specialTag.present ? specialTag.value : this.specialTag,
+    initialAmount: initialAmount ?? this.initialAmount,
+    currentValue: currentValue ?? this.currentValue,
+    targetAmount: targetAmount.present ? targetAmount.value : this.targetAmount,
+    startDate: startDate ?? this.startDate,
+    expectedEndDate: expectedEndDate.present
+        ? expectedEndDate.value
+        : this.expectedEndDate,
+    expectedReturn: expectedReturn.present
+        ? expectedReturn.value
+        : this.expectedReturn,
+    folioNo: folioNo.present ? folioNo.value : this.folioNo,
+    units: units.present ? units.value : this.units,
+    brokerName: brokerName.present ? brokerName.value : this.brokerName,
+    linkedAccountNo: linkedAccountNo.present
+        ? linkedAccountNo.value
+        : this.linkedAccountNo,
+    linkedAccountIfsc: linkedAccountIfsc.present
+        ? linkedAccountIfsc.value
+        : this.linkedAccountIfsc,
+    linkedBankName: linkedBankName.present
+        ? linkedBankName.value
+        : this.linkedBankName,
+    purpose: purpose.present ? purpose.value : this.purpose,
+    notes: notes.present ? notes.value : this.notes,
+    isClosed: isClosed ?? this.isClosed,
+    closeReason: closeReason.present ? closeReason.value : this.closeReason,
+  );
+  Investment copyWithCompanion(InvestmentsCompanion data) {
+    return Investment(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      type: data.type.present ? data.type.value : this.type,
+      provider: data.provider.present ? data.provider.value : this.provider,
+      providerUrl: data.providerUrl.present
+          ? data.providerUrl.value
+          : this.providerUrl,
+      specialTag: data.specialTag.present
+          ? data.specialTag.value
+          : this.specialTag,
+      initialAmount: data.initialAmount.present
+          ? data.initialAmount.value
+          : this.initialAmount,
+      currentValue: data.currentValue.present
+          ? data.currentValue.value
+          : this.currentValue,
+      targetAmount: data.targetAmount.present
+          ? data.targetAmount.value
+          : this.targetAmount,
+      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      expectedEndDate: data.expectedEndDate.present
+          ? data.expectedEndDate.value
+          : this.expectedEndDate,
+      expectedReturn: data.expectedReturn.present
+          ? data.expectedReturn.value
+          : this.expectedReturn,
+      folioNo: data.folioNo.present ? data.folioNo.value : this.folioNo,
+      units: data.units.present ? data.units.value : this.units,
+      brokerName: data.brokerName.present
+          ? data.brokerName.value
+          : this.brokerName,
+      linkedAccountNo: data.linkedAccountNo.present
+          ? data.linkedAccountNo.value
+          : this.linkedAccountNo,
+      linkedAccountIfsc: data.linkedAccountIfsc.present
+          ? data.linkedAccountIfsc.value
+          : this.linkedAccountIfsc,
+      linkedBankName: data.linkedBankName.present
+          ? data.linkedBankName.value
+          : this.linkedBankName,
+      purpose: data.purpose.present ? data.purpose.value : this.purpose,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      isClosed: data.isClosed.present ? data.isClosed.value : this.isClosed,
+      closeReason: data.closeReason.present
+          ? data.closeReason.value
+          : this.closeReason,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Investment(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('provider: $provider, ')
+          ..write('providerUrl: $providerUrl, ')
+          ..write('specialTag: $specialTag, ')
+          ..write('initialAmount: $initialAmount, ')
+          ..write('currentValue: $currentValue, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('startDate: $startDate, ')
+          ..write('expectedEndDate: $expectedEndDate, ')
+          ..write('expectedReturn: $expectedReturn, ')
+          ..write('folioNo: $folioNo, ')
+          ..write('units: $units, ')
+          ..write('brokerName: $brokerName, ')
+          ..write('linkedAccountNo: $linkedAccountNo, ')
+          ..write('linkedAccountIfsc: $linkedAccountIfsc, ')
+          ..write('linkedBankName: $linkedBankName, ')
+          ..write('purpose: $purpose, ')
+          ..write('notes: $notes, ')
+          ..write('isClosed: $isClosed, ')
+          ..write('closeReason: $closeReason')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    name,
+    type,
+    provider,
+    providerUrl,
+    specialTag,
+    initialAmount,
+    currentValue,
+    targetAmount,
+    startDate,
+    expectedEndDate,
+    expectedReturn,
+    folioNo,
+    units,
+    brokerName,
+    linkedAccountNo,
+    linkedAccountIfsc,
+    linkedBankName,
+    purpose,
+    notes,
+    isClosed,
+    closeReason,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Investment &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.type == this.type &&
+          other.provider == this.provider &&
+          other.providerUrl == this.providerUrl &&
+          other.specialTag == this.specialTag &&
+          other.initialAmount == this.initialAmount &&
+          other.currentValue == this.currentValue &&
+          other.targetAmount == this.targetAmount &&
+          other.startDate == this.startDate &&
+          other.expectedEndDate == this.expectedEndDate &&
+          other.expectedReturn == this.expectedReturn &&
+          other.folioNo == this.folioNo &&
+          other.units == this.units &&
+          other.brokerName == this.brokerName &&
+          other.linkedAccountNo == this.linkedAccountNo &&
+          other.linkedAccountIfsc == this.linkedAccountIfsc &&
+          other.linkedBankName == this.linkedBankName &&
+          other.purpose == this.purpose &&
+          other.notes == this.notes &&
+          other.isClosed == this.isClosed &&
+          other.closeReason == this.closeReason);
+}
+
+class InvestmentsCompanion extends UpdateCompanion<Investment> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> type;
+  final Value<String> provider;
+  final Value<String?> providerUrl;
+  final Value<String?> specialTag;
+  final Value<double> initialAmount;
+  final Value<double> currentValue;
+  final Value<double?> targetAmount;
+  final Value<DateTime> startDate;
+  final Value<DateTime?> expectedEndDate;
+  final Value<double?> expectedReturn;
+  final Value<String?> folioNo;
+  final Value<double?> units;
+  final Value<String?> brokerName;
+  final Value<String?> linkedAccountNo;
+  final Value<String?> linkedAccountIfsc;
+  final Value<String?> linkedBankName;
+  final Value<String?> purpose;
+  final Value<String?> notes;
+  final Value<bool> isClosed;
+  final Value<String?> closeReason;
+  final Value<int> rowid;
+  const InvestmentsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.type = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.providerUrl = const Value.absent(),
+    this.specialTag = const Value.absent(),
+    this.initialAmount = const Value.absent(),
+    this.currentValue = const Value.absent(),
+    this.targetAmount = const Value.absent(),
+    this.startDate = const Value.absent(),
+    this.expectedEndDate = const Value.absent(),
+    this.expectedReturn = const Value.absent(),
+    this.folioNo = const Value.absent(),
+    this.units = const Value.absent(),
+    this.brokerName = const Value.absent(),
+    this.linkedAccountNo = const Value.absent(),
+    this.linkedAccountIfsc = const Value.absent(),
+    this.linkedBankName = const Value.absent(),
+    this.purpose = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.isClosed = const Value.absent(),
+    this.closeReason = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InvestmentsCompanion.insert({
+    required String id,
+    required String name,
+    required String type,
+    required String provider,
+    this.providerUrl = const Value.absent(),
+    this.specialTag = const Value.absent(),
+    required double initialAmount,
+    this.currentValue = const Value.absent(),
+    this.targetAmount = const Value.absent(),
+    required DateTime startDate,
+    this.expectedEndDate = const Value.absent(),
+    this.expectedReturn = const Value.absent(),
+    this.folioNo = const Value.absent(),
+    this.units = const Value.absent(),
+    this.brokerName = const Value.absent(),
+    this.linkedAccountNo = const Value.absent(),
+    this.linkedAccountIfsc = const Value.absent(),
+    this.linkedBankName = const Value.absent(),
+    this.purpose = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.isClosed = const Value.absent(),
+    this.closeReason = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       type = Value(type),
+       provider = Value(provider),
+       initialAmount = Value(initialAmount),
+       startDate = Value(startDate);
+  static Insertable<Investment> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? type,
+    Expression<String>? provider,
+    Expression<String>? providerUrl,
+    Expression<String>? specialTag,
+    Expression<double>? initialAmount,
+    Expression<double>? currentValue,
+    Expression<double>? targetAmount,
+    Expression<DateTime>? startDate,
+    Expression<DateTime>? expectedEndDate,
+    Expression<double>? expectedReturn,
+    Expression<String>? folioNo,
+    Expression<double>? units,
+    Expression<String>? brokerName,
+    Expression<String>? linkedAccountNo,
+    Expression<String>? linkedAccountIfsc,
+    Expression<String>? linkedBankName,
+    Expression<String>? purpose,
+    Expression<String>? notes,
+    Expression<bool>? isClosed,
+    Expression<String>? closeReason,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (type != null) 'type': type,
+      if (provider != null) 'provider': provider,
+      if (providerUrl != null) 'provider_url': providerUrl,
+      if (specialTag != null) 'special_tag': specialTag,
+      if (initialAmount != null) 'initial_amount': initialAmount,
+      if (currentValue != null) 'current_value': currentValue,
+      if (targetAmount != null) 'target_amount': targetAmount,
+      if (startDate != null) 'start_date': startDate,
+      if (expectedEndDate != null) 'expected_end_date': expectedEndDate,
+      if (expectedReturn != null) 'expected_return': expectedReturn,
+      if (folioNo != null) 'folio_no': folioNo,
+      if (units != null) 'units': units,
+      if (brokerName != null) 'broker_name': brokerName,
+      if (linkedAccountNo != null) 'linked_account_no': linkedAccountNo,
+      if (linkedAccountIfsc != null) 'linked_account_ifsc': linkedAccountIfsc,
+      if (linkedBankName != null) 'linked_bank_name': linkedBankName,
+      if (purpose != null) 'purpose': purpose,
+      if (notes != null) 'notes': notes,
+      if (isClosed != null) 'is_closed': isClosed,
+      if (closeReason != null) 'close_reason': closeReason,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InvestmentsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? type,
+    Value<String>? provider,
+    Value<String?>? providerUrl,
+    Value<String?>? specialTag,
+    Value<double>? initialAmount,
+    Value<double>? currentValue,
+    Value<double?>? targetAmount,
+    Value<DateTime>? startDate,
+    Value<DateTime?>? expectedEndDate,
+    Value<double?>? expectedReturn,
+    Value<String?>? folioNo,
+    Value<double?>? units,
+    Value<String?>? brokerName,
+    Value<String?>? linkedAccountNo,
+    Value<String?>? linkedAccountIfsc,
+    Value<String?>? linkedBankName,
+    Value<String?>? purpose,
+    Value<String?>? notes,
+    Value<bool>? isClosed,
+    Value<String?>? closeReason,
+    Value<int>? rowid,
+  }) {
+    return InvestmentsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      provider: provider ?? this.provider,
+      providerUrl: providerUrl ?? this.providerUrl,
+      specialTag: specialTag ?? this.specialTag,
+      initialAmount: initialAmount ?? this.initialAmount,
+      currentValue: currentValue ?? this.currentValue,
+      targetAmount: targetAmount ?? this.targetAmount,
+      startDate: startDate ?? this.startDate,
+      expectedEndDate: expectedEndDate ?? this.expectedEndDate,
+      expectedReturn: expectedReturn ?? this.expectedReturn,
+      folioNo: folioNo ?? this.folioNo,
+      units: units ?? this.units,
+      brokerName: brokerName ?? this.brokerName,
+      linkedAccountNo: linkedAccountNo ?? this.linkedAccountNo,
+      linkedAccountIfsc: linkedAccountIfsc ?? this.linkedAccountIfsc,
+      linkedBankName: linkedBankName ?? this.linkedBankName,
+      purpose: purpose ?? this.purpose,
+      notes: notes ?? this.notes,
+      isClosed: isClosed ?? this.isClosed,
+      closeReason: closeReason ?? this.closeReason,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (provider.present) {
+      map['provider'] = Variable<String>(provider.value);
+    }
+    if (providerUrl.present) {
+      map['provider_url'] = Variable<String>(providerUrl.value);
+    }
+    if (specialTag.present) {
+      map['special_tag'] = Variable<String>(specialTag.value);
+    }
+    if (initialAmount.present) {
+      map['initial_amount'] = Variable<double>(initialAmount.value);
+    }
+    if (currentValue.present) {
+      map['current_value'] = Variable<double>(currentValue.value);
+    }
+    if (targetAmount.present) {
+      map['target_amount'] = Variable<double>(targetAmount.value);
+    }
+    if (startDate.present) {
+      map['start_date'] = Variable<DateTime>(startDate.value);
+    }
+    if (expectedEndDate.present) {
+      map['expected_end_date'] = Variable<DateTime>(expectedEndDate.value);
+    }
+    if (expectedReturn.present) {
+      map['expected_return'] = Variable<double>(expectedReturn.value);
+    }
+    if (folioNo.present) {
+      map['folio_no'] = Variable<String>(folioNo.value);
+    }
+    if (units.present) {
+      map['units'] = Variable<double>(units.value);
+    }
+    if (brokerName.present) {
+      map['broker_name'] = Variable<String>(brokerName.value);
+    }
+    if (linkedAccountNo.present) {
+      map['linked_account_no'] = Variable<String>(linkedAccountNo.value);
+    }
+    if (linkedAccountIfsc.present) {
+      map['linked_account_ifsc'] = Variable<String>(linkedAccountIfsc.value);
+    }
+    if (linkedBankName.present) {
+      map['linked_bank_name'] = Variable<String>(linkedBankName.value);
+    }
+    if (purpose.present) {
+      map['purpose'] = Variable<String>(purpose.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (isClosed.present) {
+      map['is_closed'] = Variable<bool>(isClosed.value);
+    }
+    if (closeReason.present) {
+      map['close_reason'] = Variable<String>(closeReason.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvestmentsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('provider: $provider, ')
+          ..write('providerUrl: $providerUrl, ')
+          ..write('specialTag: $specialTag, ')
+          ..write('initialAmount: $initialAmount, ')
+          ..write('currentValue: $currentValue, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('startDate: $startDate, ')
+          ..write('expectedEndDate: $expectedEndDate, ')
+          ..write('expectedReturn: $expectedReturn, ')
+          ..write('folioNo: $folioNo, ')
+          ..write('units: $units, ')
+          ..write('brokerName: $brokerName, ')
+          ..write('linkedAccountNo: $linkedAccountNo, ')
+          ..write('linkedAccountIfsc: $linkedAccountIfsc, ')
+          ..write('linkedBankName: $linkedBankName, ')
+          ..write('purpose: $purpose, ')
+          ..write('notes: $notes, ')
+          ..write('isClosed: $isClosed, ')
+          ..write('closeReason: $closeReason, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $InvestmentLogsTable extends InvestmentLogs
+    with TableInfo<$InvestmentLogsTable, InvestmentLog> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InvestmentLogsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _investmentIdMeta = const VerificationMeta(
+    'investmentId',
+  );
+  @override
+  late final GeneratedColumn<String> investmentId = GeneratedColumn<String>(
+    'investment_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    investmentId,
+    type,
+    amount,
+    date,
+    notes,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'investment_logs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<InvestmentLog> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('investment_id')) {
+      context.handle(
+        _investmentIdMeta,
+        investmentId.isAcceptableOrUnknown(
+          data['investment_id']!,
+          _investmentIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_investmentIdMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  InvestmentLog map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InvestmentLog(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      investmentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}investment_id'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+    );
+  }
+
+  @override
+  $InvestmentLogsTable createAlias(String alias) {
+    return $InvestmentLogsTable(attachedDatabase, alias);
+  }
+}
+
+class InvestmentLog extends DataClass implements Insertable<InvestmentLog> {
+  final String id;
+  final String investmentId;
+  final String type;
+  final double amount;
+  final DateTime date;
+  final String? notes;
+  const InvestmentLog({
+    required this.id,
+    required this.investmentId,
+    required this.type,
+    required this.amount,
+    required this.date,
+    this.notes,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['investment_id'] = Variable<String>(investmentId);
+    map['type'] = Variable<String>(type);
+    map['amount'] = Variable<double>(amount);
+    map['date'] = Variable<DateTime>(date);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    return map;
+  }
+
+  InvestmentLogsCompanion toCompanion(bool nullToAbsent) {
+    return InvestmentLogsCompanion(
+      id: Value(id),
+      investmentId: Value(investmentId),
+      type: Value(type),
+      amount: Value(amount),
+      date: Value(date),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+    );
+  }
+
+  factory InvestmentLog.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InvestmentLog(
+      id: serializer.fromJson<String>(json['id']),
+      investmentId: serializer.fromJson<String>(json['investmentId']),
+      type: serializer.fromJson<String>(json['type']),
+      amount: serializer.fromJson<double>(json['amount']),
+      date: serializer.fromJson<DateTime>(json['date']),
+      notes: serializer.fromJson<String?>(json['notes']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'investmentId': serializer.toJson<String>(investmentId),
+      'type': serializer.toJson<String>(type),
+      'amount': serializer.toJson<double>(amount),
+      'date': serializer.toJson<DateTime>(date),
+      'notes': serializer.toJson<String?>(notes),
+    };
+  }
+
+  InvestmentLog copyWith({
+    String? id,
+    String? investmentId,
+    String? type,
+    double? amount,
+    DateTime? date,
+    Value<String?> notes = const Value.absent(),
+  }) => InvestmentLog(
+    id: id ?? this.id,
+    investmentId: investmentId ?? this.investmentId,
+    type: type ?? this.type,
+    amount: amount ?? this.amount,
+    date: date ?? this.date,
+    notes: notes.present ? notes.value : this.notes,
+  );
+  InvestmentLog copyWithCompanion(InvestmentLogsCompanion data) {
+    return InvestmentLog(
+      id: data.id.present ? data.id.value : this.id,
+      investmentId: data.investmentId.present
+          ? data.investmentId.value
+          : this.investmentId,
+      type: data.type.present ? data.type.value : this.type,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      date: data.date.present ? data.date.value : this.date,
+      notes: data.notes.present ? data.notes.value : this.notes,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvestmentLog(')
+          ..write('id: $id, ')
+          ..write('investmentId: $investmentId, ')
+          ..write('type: $type, ')
+          ..write('amount: $amount, ')
+          ..write('date: $date, ')
+          ..write('notes: $notes')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, investmentId, type, amount, date, notes);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InvestmentLog &&
+          other.id == this.id &&
+          other.investmentId == this.investmentId &&
+          other.type == this.type &&
+          other.amount == this.amount &&
+          other.date == this.date &&
+          other.notes == this.notes);
+}
+
+class InvestmentLogsCompanion extends UpdateCompanion<InvestmentLog> {
+  final Value<String> id;
+  final Value<String> investmentId;
+  final Value<String> type;
+  final Value<double> amount;
+  final Value<DateTime> date;
+  final Value<String?> notes;
+  final Value<int> rowid;
+  const InvestmentLogsCompanion({
+    this.id = const Value.absent(),
+    this.investmentId = const Value.absent(),
+    this.type = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.date = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InvestmentLogsCompanion.insert({
+    required String id,
+    required String investmentId,
+    required String type,
+    required double amount,
+    required DateTime date,
+    this.notes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       investmentId = Value(investmentId),
+       type = Value(type),
+       amount = Value(amount),
+       date = Value(date);
+  static Insertable<InvestmentLog> custom({
+    Expression<String>? id,
+    Expression<String>? investmentId,
+    Expression<String>? type,
+    Expression<double>? amount,
+    Expression<DateTime>? date,
+    Expression<String>? notes,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (investmentId != null) 'investment_id': investmentId,
+      if (type != null) 'type': type,
+      if (amount != null) 'amount': amount,
+      if (date != null) 'date': date,
+      if (notes != null) 'notes': notes,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InvestmentLogsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? investmentId,
+    Value<String>? type,
+    Value<double>? amount,
+    Value<DateTime>? date,
+    Value<String?>? notes,
+    Value<int>? rowid,
+  }) {
+    return InvestmentLogsCompanion(
+      id: id ?? this.id,
+      investmentId: investmentId ?? this.investmentId,
+      type: type ?? this.type,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      notes: notes ?? this.notes,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (investmentId.present) {
+      map['investment_id'] = Variable<String>(investmentId.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvestmentLogsCompanion(')
+          ..write('id: $id, ')
+          ..write('investmentId: $investmentId, ')
+          ..write('type: $type, ')
+          ..write('amount: $amount, ')
+          ..write('date: $date, ')
+          ..write('notes: $notes, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5349,6 +7013,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ClosedBudgetSnapshotsTable closedBudgetSnapshots =
       $ClosedBudgetSnapshotsTable(this);
   late final $CustomBudgetsTable customBudgets = $CustomBudgetsTable(this);
+  late final $InvestmentsTable investments = $InvestmentsTable(this);
+  late final $InvestmentLogsTable investmentLogs = $InvestmentLogsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5361,6 +7027,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     monthlyBudgets,
     closedBudgetSnapshots,
     customBudgets,
+    investments,
+    investmentLogs,
   ];
 }
 
@@ -7891,6 +9559,776 @@ typedef $$CustomBudgetsTableProcessedTableManager =
       CustomBudget,
       PrefetchHooks Function()
     >;
+typedef $$InvestmentsTableCreateCompanionBuilder =
+    InvestmentsCompanion Function({
+      required String id,
+      required String name,
+      required String type,
+      required String provider,
+      Value<String?> providerUrl,
+      Value<String?> specialTag,
+      required double initialAmount,
+      Value<double> currentValue,
+      Value<double?> targetAmount,
+      required DateTime startDate,
+      Value<DateTime?> expectedEndDate,
+      Value<double?> expectedReturn,
+      Value<String?> folioNo,
+      Value<double?> units,
+      Value<String?> brokerName,
+      Value<String?> linkedAccountNo,
+      Value<String?> linkedAccountIfsc,
+      Value<String?> linkedBankName,
+      Value<String?> purpose,
+      Value<String?> notes,
+      Value<bool> isClosed,
+      Value<String?> closeReason,
+      Value<int> rowid,
+    });
+typedef $$InvestmentsTableUpdateCompanionBuilder =
+    InvestmentsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> type,
+      Value<String> provider,
+      Value<String?> providerUrl,
+      Value<String?> specialTag,
+      Value<double> initialAmount,
+      Value<double> currentValue,
+      Value<double?> targetAmount,
+      Value<DateTime> startDate,
+      Value<DateTime?> expectedEndDate,
+      Value<double?> expectedReturn,
+      Value<String?> folioNo,
+      Value<double?> units,
+      Value<String?> brokerName,
+      Value<String?> linkedAccountNo,
+      Value<String?> linkedAccountIfsc,
+      Value<String?> linkedBankName,
+      Value<String?> purpose,
+      Value<String?> notes,
+      Value<bool> isClosed,
+      Value<String?> closeReason,
+      Value<int> rowid,
+    });
+
+class $$InvestmentsTableFilterComposer
+    extends Composer<_$AppDatabase, $InvestmentsTable> {
+  $$InvestmentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get providerUrl => $composableBuilder(
+    column: $table.providerUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get specialTag => $composableBuilder(
+    column: $table.specialTag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get initialAmount => $composableBuilder(
+    column: $table.initialAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get currentValue => $composableBuilder(
+    column: $table.currentValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get expectedEndDate => $composableBuilder(
+    column: $table.expectedEndDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get expectedReturn => $composableBuilder(
+    column: $table.expectedReturn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get folioNo => $composableBuilder(
+    column: $table.folioNo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get units => $composableBuilder(
+    column: $table.units,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get brokerName => $composableBuilder(
+    column: $table.brokerName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get linkedAccountNo => $composableBuilder(
+    column: $table.linkedAccountNo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get linkedAccountIfsc => $composableBuilder(
+    column: $table.linkedAccountIfsc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get linkedBankName => $composableBuilder(
+    column: $table.linkedBankName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get purpose => $composableBuilder(
+    column: $table.purpose,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isClosed => $composableBuilder(
+    column: $table.isClosed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get closeReason => $composableBuilder(
+    column: $table.closeReason,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$InvestmentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $InvestmentsTable> {
+  $$InvestmentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get providerUrl => $composableBuilder(
+    column: $table.providerUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get specialTag => $composableBuilder(
+    column: $table.specialTag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get initialAmount => $composableBuilder(
+    column: $table.initialAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get currentValue => $composableBuilder(
+    column: $table.currentValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get expectedEndDate => $composableBuilder(
+    column: $table.expectedEndDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get expectedReturn => $composableBuilder(
+    column: $table.expectedReturn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get folioNo => $composableBuilder(
+    column: $table.folioNo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get units => $composableBuilder(
+    column: $table.units,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get brokerName => $composableBuilder(
+    column: $table.brokerName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get linkedAccountNo => $composableBuilder(
+    column: $table.linkedAccountNo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get linkedAccountIfsc => $composableBuilder(
+    column: $table.linkedAccountIfsc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get linkedBankName => $composableBuilder(
+    column: $table.linkedBankName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get purpose => $composableBuilder(
+    column: $table.purpose,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isClosed => $composableBuilder(
+    column: $table.isClosed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get closeReason => $composableBuilder(
+    column: $table.closeReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$InvestmentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $InvestmentsTable> {
+  $$InvestmentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get provider =>
+      $composableBuilder(column: $table.provider, builder: (column) => column);
+
+  GeneratedColumn<String> get providerUrl => $composableBuilder(
+    column: $table.providerUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get specialTag => $composableBuilder(
+    column: $table.specialTag,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get initialAmount => $composableBuilder(
+    column: $table.initialAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get currentValue => $composableBuilder(
+    column: $table.currentValue,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get expectedEndDate => $composableBuilder(
+    column: $table.expectedEndDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get expectedReturn => $composableBuilder(
+    column: $table.expectedReturn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get folioNo =>
+      $composableBuilder(column: $table.folioNo, builder: (column) => column);
+
+  GeneratedColumn<double> get units =>
+      $composableBuilder(column: $table.units, builder: (column) => column);
+
+  GeneratedColumn<String> get brokerName => $composableBuilder(
+    column: $table.brokerName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get linkedAccountNo => $composableBuilder(
+    column: $table.linkedAccountNo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get linkedAccountIfsc => $composableBuilder(
+    column: $table.linkedAccountIfsc,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get linkedBankName => $composableBuilder(
+    column: $table.linkedBankName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get purpose =>
+      $composableBuilder(column: $table.purpose, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<bool> get isClosed =>
+      $composableBuilder(column: $table.isClosed, builder: (column) => column);
+
+  GeneratedColumn<String> get closeReason => $composableBuilder(
+    column: $table.closeReason,
+    builder: (column) => column,
+  );
+}
+
+class $$InvestmentsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $InvestmentsTable,
+          Investment,
+          $$InvestmentsTableFilterComposer,
+          $$InvestmentsTableOrderingComposer,
+          $$InvestmentsTableAnnotationComposer,
+          $$InvestmentsTableCreateCompanionBuilder,
+          $$InvestmentsTableUpdateCompanionBuilder,
+          (
+            Investment,
+            BaseReferences<_$AppDatabase, $InvestmentsTable, Investment>,
+          ),
+          Investment,
+          PrefetchHooks Function()
+        > {
+  $$InvestmentsTableTableManager(_$AppDatabase db, $InvestmentsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InvestmentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InvestmentsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InvestmentsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String> provider = const Value.absent(),
+                Value<String?> providerUrl = const Value.absent(),
+                Value<String?> specialTag = const Value.absent(),
+                Value<double> initialAmount = const Value.absent(),
+                Value<double> currentValue = const Value.absent(),
+                Value<double?> targetAmount = const Value.absent(),
+                Value<DateTime> startDate = const Value.absent(),
+                Value<DateTime?> expectedEndDate = const Value.absent(),
+                Value<double?> expectedReturn = const Value.absent(),
+                Value<String?> folioNo = const Value.absent(),
+                Value<double?> units = const Value.absent(),
+                Value<String?> brokerName = const Value.absent(),
+                Value<String?> linkedAccountNo = const Value.absent(),
+                Value<String?> linkedAccountIfsc = const Value.absent(),
+                Value<String?> linkedBankName = const Value.absent(),
+                Value<String?> purpose = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<bool> isClosed = const Value.absent(),
+                Value<String?> closeReason = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InvestmentsCompanion(
+                id: id,
+                name: name,
+                type: type,
+                provider: provider,
+                providerUrl: providerUrl,
+                specialTag: specialTag,
+                initialAmount: initialAmount,
+                currentValue: currentValue,
+                targetAmount: targetAmount,
+                startDate: startDate,
+                expectedEndDate: expectedEndDate,
+                expectedReturn: expectedReturn,
+                folioNo: folioNo,
+                units: units,
+                brokerName: brokerName,
+                linkedAccountNo: linkedAccountNo,
+                linkedAccountIfsc: linkedAccountIfsc,
+                linkedBankName: linkedBankName,
+                purpose: purpose,
+                notes: notes,
+                isClosed: isClosed,
+                closeReason: closeReason,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String type,
+                required String provider,
+                Value<String?> providerUrl = const Value.absent(),
+                Value<String?> specialTag = const Value.absent(),
+                required double initialAmount,
+                Value<double> currentValue = const Value.absent(),
+                Value<double?> targetAmount = const Value.absent(),
+                required DateTime startDate,
+                Value<DateTime?> expectedEndDate = const Value.absent(),
+                Value<double?> expectedReturn = const Value.absent(),
+                Value<String?> folioNo = const Value.absent(),
+                Value<double?> units = const Value.absent(),
+                Value<String?> brokerName = const Value.absent(),
+                Value<String?> linkedAccountNo = const Value.absent(),
+                Value<String?> linkedAccountIfsc = const Value.absent(),
+                Value<String?> linkedBankName = const Value.absent(),
+                Value<String?> purpose = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<bool> isClosed = const Value.absent(),
+                Value<String?> closeReason = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InvestmentsCompanion.insert(
+                id: id,
+                name: name,
+                type: type,
+                provider: provider,
+                providerUrl: providerUrl,
+                specialTag: specialTag,
+                initialAmount: initialAmount,
+                currentValue: currentValue,
+                targetAmount: targetAmount,
+                startDate: startDate,
+                expectedEndDate: expectedEndDate,
+                expectedReturn: expectedReturn,
+                folioNo: folioNo,
+                units: units,
+                brokerName: brokerName,
+                linkedAccountNo: linkedAccountNo,
+                linkedAccountIfsc: linkedAccountIfsc,
+                linkedBankName: linkedBankName,
+                purpose: purpose,
+                notes: notes,
+                isClosed: isClosed,
+                closeReason: closeReason,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$InvestmentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $InvestmentsTable,
+      Investment,
+      $$InvestmentsTableFilterComposer,
+      $$InvestmentsTableOrderingComposer,
+      $$InvestmentsTableAnnotationComposer,
+      $$InvestmentsTableCreateCompanionBuilder,
+      $$InvestmentsTableUpdateCompanionBuilder,
+      (
+        Investment,
+        BaseReferences<_$AppDatabase, $InvestmentsTable, Investment>,
+      ),
+      Investment,
+      PrefetchHooks Function()
+    >;
+typedef $$InvestmentLogsTableCreateCompanionBuilder =
+    InvestmentLogsCompanion Function({
+      required String id,
+      required String investmentId,
+      required String type,
+      required double amount,
+      required DateTime date,
+      Value<String?> notes,
+      Value<int> rowid,
+    });
+typedef $$InvestmentLogsTableUpdateCompanionBuilder =
+    InvestmentLogsCompanion Function({
+      Value<String> id,
+      Value<String> investmentId,
+      Value<String> type,
+      Value<double> amount,
+      Value<DateTime> date,
+      Value<String?> notes,
+      Value<int> rowid,
+    });
+
+class $$InvestmentLogsTableFilterComposer
+    extends Composer<_$AppDatabase, $InvestmentLogsTable> {
+  $$InvestmentLogsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get investmentId => $composableBuilder(
+    column: $table.investmentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$InvestmentLogsTableOrderingComposer
+    extends Composer<_$AppDatabase, $InvestmentLogsTable> {
+  $$InvestmentLogsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get investmentId => $composableBuilder(
+    column: $table.investmentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$InvestmentLogsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $InvestmentLogsTable> {
+  $$InvestmentLogsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get investmentId => $composableBuilder(
+    column: $table.investmentId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+}
+
+class $$InvestmentLogsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $InvestmentLogsTable,
+          InvestmentLog,
+          $$InvestmentLogsTableFilterComposer,
+          $$InvestmentLogsTableOrderingComposer,
+          $$InvestmentLogsTableAnnotationComposer,
+          $$InvestmentLogsTableCreateCompanionBuilder,
+          $$InvestmentLogsTableUpdateCompanionBuilder,
+          (
+            InvestmentLog,
+            BaseReferences<_$AppDatabase, $InvestmentLogsTable, InvestmentLog>,
+          ),
+          InvestmentLog,
+          PrefetchHooks Function()
+        > {
+  $$InvestmentLogsTableTableManager(
+    _$AppDatabase db,
+    $InvestmentLogsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InvestmentLogsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InvestmentLogsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InvestmentLogsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> investmentId = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<DateTime> date = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InvestmentLogsCompanion(
+                id: id,
+                investmentId: investmentId,
+                type: type,
+                amount: amount,
+                date: date,
+                notes: notes,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String investmentId,
+                required String type,
+                required double amount,
+                required DateTime date,
+                Value<String?> notes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InvestmentLogsCompanion.insert(
+                id: id,
+                investmentId: investmentId,
+                type: type,
+                amount: amount,
+                date: date,
+                notes: notes,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$InvestmentLogsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $InvestmentLogsTable,
+      InvestmentLog,
+      $$InvestmentLogsTableFilterComposer,
+      $$InvestmentLogsTableOrderingComposer,
+      $$InvestmentLogsTableAnnotationComposer,
+      $$InvestmentLogsTableCreateCompanionBuilder,
+      $$InvestmentLogsTableUpdateCompanionBuilder,
+      (
+        InvestmentLog,
+        BaseReferences<_$AppDatabase, $InvestmentLogsTable, InvestmentLog>,
+      ),
+      InvestmentLog,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7909,4 +10347,8 @@ class $AppDatabaseManager {
       $$ClosedBudgetSnapshotsTableTableManager(_db, _db.closedBudgetSnapshots);
   $$CustomBudgetsTableTableManager get customBudgets =>
       $$CustomBudgetsTableTableManager(_db, _db.customBudgets);
+  $$InvestmentsTableTableManager get investments =>
+      $$InvestmentsTableTableManager(_db, _db.investments);
+  $$InvestmentLogsTableTableManager get investmentLogs =>
+      $$InvestmentLogsTableTableManager(_db, _db.investmentLogs);
 }

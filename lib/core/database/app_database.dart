@@ -1,4 +1,4 @@
-// core/database/app_database.dart
+// lib/core/database/app_database.dart
 import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -17,14 +17,16 @@ part 'app_database.g.dart';
     MonthlyBudgets,
     ClosedBudgetSnapshots,
     CustomBudgets,
+    Investments,
+    InvestmentLogs,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
-  // --- BUMPED TO VERSION 21 ---
+  // --- BUMPED TO VERSION 25 ---
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -71,9 +73,19 @@ class AppDatabase extends _$AppDatabase {
       if (from < 19) await m.addColumn(accounts, accounts.isClosed);
       if (from < 20) await m.addColumn(accounts, accounts.bankCharges);
       if (from < 21) {
-        // --- NEW MIGRATION: ADD IMMUTABLE SNAPSHOT FIELDS ---
         await m.addColumn(transactions, transactions.categoryName);
         await m.addColumn(transactions, transactions.categoryIcon);
+      }
+      if (from < 23) {
+        await m.createTable(investments);
+      }
+      if (from < 24) {
+        await m.createTable(investmentLogs);
+      }
+      if (from < 25) {
+        // --- NEW MIGRATION: INVESTMENT CLOSURE ---
+        await m.addColumn(investments, investments.isClosed);
+        await m.addColumn(investments, investments.closeReason);
       }
     },
   );

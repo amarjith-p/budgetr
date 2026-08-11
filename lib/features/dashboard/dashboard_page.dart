@@ -1,5 +1,6 @@
 // features/dashboard/views/dashboard_page.dart
 import 'package:budgetr/features/developer/views/developer_support_page.dart';
+import 'package:budgetr/features/investments/views/investment_dashboard_page.dart';
 import 'package:budgetr/features/money_tracker/views/money_tracker_base_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -302,7 +303,15 @@ class DashboardPage extends ConsumerWidget {
                       icon: Icons.trending_up_rounded, // <-- NEW ICON
                       height: 120,
                       color: darkTileColor,
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const InvestmentDashboardPage(),
+                          ),
+                        );
+                      },
                       customContent: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisAlignment: MainAxisAlignment.center,
