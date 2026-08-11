@@ -18,6 +18,9 @@ import '../accounts/providers/credit_math_provider.dart';
 import '../accounts/providers/loan_math_provider.dart';
 import '../transactions/providers/transaction_provider.dart';
 
+// --- ADDED: Investment Provider Import ---
+import '../investments/providers/investment_provider.dart';
+
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
@@ -67,6 +70,27 @@ class DashboardPage extends ConsumerWidget {
     // --- LIVE BUCKET COUNT ---
     final bucketsAsync = ref.watch(bucketsStreamProvider);
     final int liveBucketsCount = bucketsAsync.asData?.value.length ?? 0;
+
+    // --- LIVE INVESTMENT CALCULATION ---
+    final investmentsAsync = ref.watch(investmentsStreamProvider);
+    final rawInvestments = investmentsAsync.asData?.value ?? [];
+
+    double totalInvestmentValue = 0.0;
+    double totalInvestedAmount = 0.0;
+
+    // Only calculate active (open) investments for the dashboard summary
+    for (var inv in rawInvestments) {
+      if (!inv.isClosed) {
+        totalInvestmentValue += inv.currentValue;
+        totalInvestedAmount += inv.initialAmount;
+      }
+    }
+
+    final double invGainLoss = totalInvestmentValue - totalInvestedAmount;
+    final double invReturnPct = totalInvestedAmount > 0
+        ? (invGainLoss / totalInvestedAmount) * 100
+        : 0.0;
+    final String invReturnSign = invReturnPct >= 0 ? '+' : '';
 
     return Scaffold(
       appBar: AppBar(
@@ -297,10 +321,10 @@ class DashboardPage extends ConsumerWidget {
 
                     const SizedBox(height: tileGap),
 
-                    // --- ROW 2: INVESTMENT TRACKER (Renamed from Monthly Burn) ---
+                    // --- ROW 2: INVESTMENT TRACKER ---
                     _buildWideMetroTile(
-                      title: 'INVESTMENT TRACKER', // <-- RENAMED
-                      icon: Icons.trending_up_rounded, // <-- NEW ICON
+                      title: 'INVESTMENT TRACKER',
+                      icon: Icons.trending_up_rounded,
                       height: 120,
                       color: darkTileColor,
                       onTap: () {
@@ -317,9 +341,9 @@ class DashboardPage extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           CurrencyText(
-                            amount:
-                                3210.00, // You can replace this with live data later!
-                            sign: '₹ ',
+                            amount: totalInvestmentValue
+                                .abs(), // --- UPDATED TO LIVE DATA ---
+                            sign: totalInvestmentValue < 0 ? '-₹ ' : '₹ ',
                             amountStyle: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
@@ -332,24 +356,29 @@ class DashboardPage extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.zero,
-                            ),
-                            child: const Text(
-                              '+12.4% vs Last',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                          if (totalInvestedAmount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: invReturnPct >= 0
+                                    ? Colors.green.withOpacity(0.2)
+                                    : Colors.redAccent.withOpacity(0.2),
+                                borderRadius: BorderRadius.zero,
+                              ),
+                              child: Text(
+                                '$invReturnSign${invReturnPct.toStringAsFixed(1)}% Return', // --- DYNAMIC RETURN PERCENTAGE ---
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: invReturnPct >= 0
+                                      ? Colors.greenAccent
+                                      : Colors.redAccent,
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),

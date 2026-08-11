@@ -36,20 +36,40 @@ class InvestmentDashboardPage extends ConsumerStatefulWidget {
 
 class _InvestmentDashboardPageState
     extends ConsumerState<InvestmentDashboardPage> {
-  final Set<String> _collapsedGroups = {};
+  // --- INVERTED: Use Expanded Groups so default state is Collapsed ---
+  final Set<String> _expandedGroups = {};
 
-  // --- NEW STATE VARIABLES ---
   bool _viewClosed = false;
   String _selectedTag = 'All';
   InvestmentSortOption _currentSort = InvestmentSortOption.groupByType;
 
+  // --- SEARCH BAR CONTROLLERS ---
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl.addListener(() {
+      setState(() {
+        _searchQuery = _searchCtrl.text.trim().toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
   void _toggleGroup(String groupName) {
     HapticFeedback.selectionClick();
     setState(() {
-      if (_collapsedGroups.contains(groupName)) {
-        _collapsedGroups.remove(groupName);
+      if (_expandedGroups.contains(groupName)) {
+        _expandedGroups.remove(groupName);
       } else {
-        _collapsedGroups.add(groupName);
+        _expandedGroups.add(groupName);
       }
     });
   }
@@ -259,8 +279,7 @@ class _InvestmentDashboardPageState
     final theme = Theme.of(context);
     final investmentsAsync = ref.watch(investmentsStreamProvider);
 
-    // --- FORCED GROUPING LOGIC ---
-    // If a tag is selected, we ALWAYS group by type regardless of the base sort option
+    // Forced grouping logic: Group by type if a tag is active, OR if sort option is groupByType
     final bool isGrouped =
         _currentSort == InvestmentSortOption.groupByType ||
         _selectedTag != 'All';
@@ -316,7 +335,7 @@ class _InvestmentDashboardPageState
           ];
 
           // 3. Apply Special ID / Tag Filter
-          final finalInvestments = _selectedTag == 'All'
+          final tagFilteredInvestments = _selectedTag == 'All'
               ? statusFilteredInvestments
               : statusFilteredInvestments.where((inv) {
                   final tag =
@@ -324,7 +343,17 @@ class _InvestmentDashboardPageState
                   return tag == _selectedTag;
                 }).toList();
 
-          // 4. Apply Sorting (Only for flat list. Grouped items are sorted inside their slivers)
+          // 4. Apply Dynamic Search Query Filter (Influences Summary Card)
+          final finalInvestments = _searchQuery.isEmpty
+              ? tagFilteredInvestments
+              : tagFilteredInvestments.where((inv) {
+                  return inv.name.toLowerCase().contains(_searchQuery) ||
+                      inv.type.toLowerCase().contains(_searchQuery) ||
+                      (inv.specialTag?.toLowerCase().contains(_searchQuery) ??
+                          false);
+                }).toList();
+
+          // 5. Apply Sorting (Only for flat list. Grouped items are sorted inside their slivers)
           if (!isGrouped) {
             _sortInvestments(finalInvestments);
           }
@@ -337,7 +366,9 @@ class _InvestmentDashboardPageState
               ),
 
               // --- GLOBAL SUMMARY CARD ---
-              if (finalInvestments.isNotEmpty || _selectedTag != 'All')
+              if (finalInvestments.isNotEmpty ||
+                  _selectedTag != 'All' ||
+                  _searchQuery.isNotEmpty)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -349,14 +380,78 @@ class _InvestmentDashboardPageState
                   ),
                 ),
 
+              if (finalInvestments.isNotEmpty ||
+                  _selectedTag != 'All' ||
+                  _searchQuery.isNotEmpty)
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: DesignTokens.spacingMd),
+                ),
+
+              // --- SEARCH BAR ---
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DesignTokens.spacingMd,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: theme.dividerColor),
+                    ),
+                    child: TextField(
+                      controller: _searchCtrl,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search portfolio...',
+                        hintStyle: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                            0.5,
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 20,
+                        ),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.close_rounded,
+                                  color: theme.colorScheme.error,
+                                  size: 18,
+                                ),
+                                onPressed: () {
+                                  HapticFeedback.lightImpact();
+                                  _searchCtrl.clear();
+                                  FocusScope.of(context).unfocus();
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SliverToBoxAdapter(
+                child: SizedBox(height: DesignTokens.spacingMd),
+              ),
+
               // --- STATUS & TAG CONTROLS ---
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    DesignTokens.spacingMd,
-                    DesignTokens.spacingMd,
-                    DesignTokens.spacingMd,
-                    0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DesignTokens.spacingMd,
                   ),
                   child: Column(
                     children: [
@@ -503,7 +598,7 @@ class _InvestmentDashboardPageState
                 ),
               ),
 
-              // --- ACTIVE SORT BANNER (Shows if sorting is applied inside the flattened OR grouped views) ---
+              // --- ACTIVE SORT BANNER ---
               if (_currentSort != InvestmentSortOption.groupByType &&
                   finalInvestments.isNotEmpty)
                 SliverToBoxAdapter(
@@ -582,10 +677,10 @@ class _InvestmentDashboardPageState
 
                     return sortedGroupNames.map((groupName) {
                       final groupItems = groupedData[groupName]!;
-                      final isCollapsed = _collapsedGroups.contains(groupName);
+                      // --- INVERTED: True if NOT explicitly expanded ---
+                      final isCollapsed = !_expandedGroups.contains(groupName);
 
                       // --- INNER SORTING ---
-                      // Sorts items within this specific type block
                       _sortInvestments(groupItems);
 
                       double gInv = 0;
@@ -666,7 +761,8 @@ class _InvestmentDashboardPageState
                     final groupName = _viewClosed
                         ? 'ALL CLOSED ASSETS'
                         : 'ALL ACTIVE ASSETS';
-                    final isCollapsed = _collapsedGroups.contains(groupName);
+                    // --- INVERTED: True if NOT explicitly expanded ---
+                    final isCollapsed = !_expandedGroups.contains(groupName);
 
                     double gInv = 0;
                     double gCur = 0;
@@ -740,20 +836,21 @@ class _InvestmentDashboardPageState
                     ];
                   }(),
               ] else ...[
-                // EMPTY STATE IF FILTERED
-                if (_selectedTag != 'All')
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Text(
-                        'No ${_viewClosed ? "closed" : "active"} investments found for $_selectedTag.',
-                        style: TextStyle(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.bold,
-                        ),
+                // EMPTY STATE IF FILTERED / SEARCHED
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Text(
+                      _searchQuery.isNotEmpty
+                          ? 'No results found for "$_searchQuery"'
+                          : 'No ${_viewClosed ? "closed" : "active"} investments found for $_selectedTag.',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
+                ),
               ],
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
@@ -807,9 +904,10 @@ class _StickySectionHeaderDelegate extends SliverPersistentHeaderDelegate {
       color = theme.colorScheme.onSurface;
     }
 
+    // --- FIXED: Explicitly include the Rupee (₹) symbol so it isn't overwritten ---
     final sign = isPct
         ? (isPositive ? '+' : '')
-        : (value < 0 ? '-  ' : (value > 0 ? '+  ' : '  '));
+        : (value < 0 ? '- ₹ ' : (value > 0 ? '+ ₹ ' : '₹ '));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -835,7 +933,6 @@ class _StickySectionHeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
           )
         else
-          // --- CURRENCYTEXT FOR RUPEE SYMBOL ENFORCEMENT ---
           CurrencyText(
             amount: value.abs(),
             sign: sign,
@@ -953,8 +1050,7 @@ class _StickySectionHeaderDelegate extends SliverPersistentHeaderDelegate {
                           totalCurrent!,
                           false,
                           theme,
-                          compareValue:
-                              totalInvested!, // Pass Invested amount to trigger color change
+                          compareValue: totalInvested!,
                         ),
                         _buildMiniMetric('RETURN', returnPct!, true, theme),
                       ],
