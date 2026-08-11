@@ -312,10 +312,9 @@ class _InvestmentDashboardPageState
         data: (investments) {
           if (investments.isEmpty) {
             return const PremiumEmptyState(
-              title: 'No Investments Yet',
-              subtitle:
-                  'Tap + to add your first asset and start tracking your portfolio.',
-              icon: Icons.stacked_line_chart_rounded,
+              title: 'No Investments Found',
+              subtitle: 'No investments found,Add your first Investment',
+              icon: Icons.search_off_rounded,
             );
           }
 
@@ -836,19 +835,15 @@ class _InvestmentDashboardPageState
                     ];
                   }(),
               ] else ...[
-                // EMPTY STATE IF FILTERED / SEARCHED
+                // --- PREMIUM EMPTY STATE FOR FILTERS & SEARCH ---
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(
-                    child: Text(
-                      _searchQuery.isNotEmpty
-                          ? 'No results found for "$_searchQuery"'
-                          : 'No ${_viewClosed ? "closed" : "active"} investments found for $_selectedTag.',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  child: PremiumEmptyState(
+                    title: 'No Results Found',
+                    subtitle: _searchQuery.isNotEmpty
+                        ? 'No investments match "$_searchQuery".'
+                        : 'No ${_viewClosed ? "closed" : "active"} investments found for $_selectedTag.',
+                    icon: Icons.search_off_rounded,
                   ),
                 ),
               ],

@@ -9,7 +9,7 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onLeadingPressed;
   final IconData? trailingIcon;
   final VoidCallback? onTrailingPressed;
-  
+
   // --- NEW: Optional extra action ---
   final IconData? extraTrailingIcon;
   final VoidCallback? onExtraTrailingPressed;
@@ -38,7 +38,7 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final titleColor = theme.colorScheme.onSurface;
     final subtitleColor = theme.colorScheme.onSurfaceVariant;
 
@@ -46,7 +46,7 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
       bottom: false,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: DesignTokens.spacingLg, 
+          horizontal: DesignTokens.spacingLg,
           vertical: DesignTokens.spacingMd,
         ),
         child: Row(
@@ -58,13 +58,13 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
                 isDark: isDark,
               )
             else
-              const SizedBox(width: 44), 
+              const SizedBox(width: 44),
             const SizedBox(width: DesignTokens.spacingMd),
-            
+
             Expanded(
               child: GestureDetector(
                 onLongPress: onTitleLongPress,
-                behavior: HitTestBehavior.opaque, 
+                behavior: HitTestBehavior.opaque,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -74,7 +74,7 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
                       subtitle.toUpperCase(),
                       style: TextStyle(
                         color: subtitleColor,
-                        fontSize: 10,
+                        fontSize: 9,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 2.0,
                       ),
@@ -84,7 +84,7 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
                       title,
                       style: TextStyle(
                         color: titleColor,
-                        fontSize: 20,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         letterSpacing: -0.5,
                       ),
@@ -95,7 +95,7 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
             ),
-            
+
             // --- NEW: EXTRA ACTION BUTTON ---
             if (extraTrailingIcon != null) ...[
               _GlassIconButton(
@@ -126,7 +126,7 @@ class _GlassIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
   final bool isDark;
-  final Color? customColor; 
+  final Color? customColor;
 
   const _GlassIconButton({
     required this.icon,
@@ -138,15 +138,17 @@ class _GlassIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Material(
-          color: customColor?.withOpacity(0.1) ?? (isDark 
-               ? Colors.white.withOpacity(0.05) 
-               : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5)),
+          color:
+              customColor?.withOpacity(0.1) ??
+              (isDark
+                  ? Colors.white.withOpacity(0.05)
+                  : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5)),
           child: InkWell(
             onTap: onTap,
             child: Container(
@@ -154,8 +156,8 @@ class _GlassIconButton extends StatelessWidget {
               height: 44,
               alignment: Alignment.center,
               child: Icon(
-                icon, 
-                color: customColor ?? theme.colorScheme.onSurface, 
+                icon,
+                color: customColor ?? theme.colorScheme.onSurface,
                 size: 20,
               ),
             ),
