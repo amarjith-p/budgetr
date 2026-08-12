@@ -19,6 +19,8 @@ part 'app_database.g.dart';
     CustomBudgets,
     Investments,
     InvestmentLogs,
+    SmartTrackerTemplates,
+    SmartTrackerRecords,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -26,7 +28,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMPED TO VERSION 25 ---
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 27;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -86,6 +88,12 @@ class AppDatabase extends _$AppDatabase {
         // --- NEW MIGRATION: INVESTMENT CLOSURE ---
         await m.addColumn(investments, investments.isClosed);
         await m.addColumn(investments, investments.closeReason);
+      }
+      if (from < 26) {
+        await m.createTable(smartTrackerTemplates);
+      }
+      if (from < 27) {
+        await m.createTable(smartTrackerRecords);
       }
     },
   );

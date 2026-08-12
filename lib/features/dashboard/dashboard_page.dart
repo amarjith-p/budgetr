@@ -2,6 +2,7 @@
 import 'package:budgetr/features/developer/views/developer_support_page.dart';
 import 'package:budgetr/features/investments/views/investment_dashboard_page.dart';
 import 'package:budgetr/features/money_tracker/views/money_tracker_base_page.dart';
+import 'package:budgetr/features/smart_trackers/views/smart_trackers_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -427,13 +428,18 @@ class DashboardPage extends ConsumerWidget {
                         Expanded(
                           flex: 7,
                           child: _buildMetroTile(
-                            title: 'CUSTOM ENTRY',
+                            title: 'SMART TRACKERS',
                             icon: Icons.post_add_rounded,
                             height: 120,
                             color: darkTileColor,
                             onTap: () {
-                              HapticFeedback.lightImpact();
-                              // Add navigation or action here later
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const SmartTrackersDashboardPage(),
+                                ),
+                              );
                             },
                           ),
                         ),

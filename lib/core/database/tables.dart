@@ -186,3 +186,27 @@ class InvestmentLogs extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+@DataClassName('SmartTrackerTemplate')
+class SmartTrackerTemplates extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  // We store the dynamic form fields as a JSON string
+  TextColumn get schemaJson => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('SmartTrackerRecord')
+class SmartTrackerRecords extends Table {
+  TextColumn get id => text()();
+  TextColumn get templateId => text()();
+  // Stores the user's answers as a JSON map (Field ID -> Value)
+  TextColumn get dataJson => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

@@ -7001,6 +7001,631 @@ class InvestmentLogsCompanion extends UpdateCompanion<InvestmentLog> {
   }
 }
 
+class $SmartTrackerTemplatesTable extends SmartTrackerTemplates
+    with TableInfo<$SmartTrackerTemplatesTable, SmartTrackerTemplate> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SmartTrackerTemplatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _schemaJsonMeta = const VerificationMeta(
+    'schemaJson',
+  );
+  @override
+  late final GeneratedColumn<String> schemaJson = GeneratedColumn<String>(
+    'schema_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, schemaJson, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'smart_tracker_templates';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SmartTrackerTemplate> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('schema_json')) {
+      context.handle(
+        _schemaJsonMeta,
+        schemaJson.isAcceptableOrUnknown(data['schema_json']!, _schemaJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_schemaJsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SmartTrackerTemplate map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SmartTrackerTemplate(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      schemaJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}schema_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SmartTrackerTemplatesTable createAlias(String alias) {
+    return $SmartTrackerTemplatesTable(attachedDatabase, alias);
+  }
+}
+
+class SmartTrackerTemplate extends DataClass
+    implements Insertable<SmartTrackerTemplate> {
+  final String id;
+  final String name;
+  final String schemaJson;
+  final DateTime createdAt;
+  const SmartTrackerTemplate({
+    required this.id,
+    required this.name,
+    required this.schemaJson,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['schema_json'] = Variable<String>(schemaJson);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  SmartTrackerTemplatesCompanion toCompanion(bool nullToAbsent) {
+    return SmartTrackerTemplatesCompanion(
+      id: Value(id),
+      name: Value(name),
+      schemaJson: Value(schemaJson),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory SmartTrackerTemplate.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SmartTrackerTemplate(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      schemaJson: serializer.fromJson<String>(json['schemaJson']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'schemaJson': serializer.toJson<String>(schemaJson),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  SmartTrackerTemplate copyWith({
+    String? id,
+    String? name,
+    String? schemaJson,
+    DateTime? createdAt,
+  }) => SmartTrackerTemplate(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    schemaJson: schemaJson ?? this.schemaJson,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  SmartTrackerTemplate copyWithCompanion(SmartTrackerTemplatesCompanion data) {
+    return SmartTrackerTemplate(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      schemaJson: data.schemaJson.present
+          ? data.schemaJson.value
+          : this.schemaJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SmartTrackerTemplate(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('schemaJson: $schemaJson, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, schemaJson, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SmartTrackerTemplate &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.schemaJson == this.schemaJson &&
+          other.createdAt == this.createdAt);
+}
+
+class SmartTrackerTemplatesCompanion
+    extends UpdateCompanion<SmartTrackerTemplate> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> schemaJson;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const SmartTrackerTemplatesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.schemaJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SmartTrackerTemplatesCompanion.insert({
+    required String id,
+    required String name,
+    required String schemaJson,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       schemaJson = Value(schemaJson),
+       createdAt = Value(createdAt);
+  static Insertable<SmartTrackerTemplate> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? schemaJson,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (schemaJson != null) 'schema_json': schemaJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SmartTrackerTemplatesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? schemaJson,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return SmartTrackerTemplatesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      schemaJson: schemaJson ?? this.schemaJson,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (schemaJson.present) {
+      map['schema_json'] = Variable<String>(schemaJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SmartTrackerTemplatesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('schemaJson: $schemaJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SmartTrackerRecordsTable extends SmartTrackerRecords
+    with TableInfo<$SmartTrackerRecordsTable, SmartTrackerRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SmartTrackerRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _templateIdMeta = const VerificationMeta(
+    'templateId',
+  );
+  @override
+  late final GeneratedColumn<String> templateId = GeneratedColumn<String>(
+    'template_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dataJsonMeta = const VerificationMeta(
+    'dataJson',
+  );
+  @override
+  late final GeneratedColumn<String> dataJson = GeneratedColumn<String>(
+    'data_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, templateId, dataJson, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'smart_tracker_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SmartTrackerRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('template_id')) {
+      context.handle(
+        _templateIdMeta,
+        templateId.isAcceptableOrUnknown(data['template_id']!, _templateIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_templateIdMeta);
+    }
+    if (data.containsKey('data_json')) {
+      context.handle(
+        _dataJsonMeta,
+        dataJson.isAcceptableOrUnknown(data['data_json']!, _dataJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dataJsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SmartTrackerRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SmartTrackerRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      templateId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}template_id'],
+      )!,
+      dataJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}data_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SmartTrackerRecordsTable createAlias(String alias) {
+    return $SmartTrackerRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class SmartTrackerRecord extends DataClass
+    implements Insertable<SmartTrackerRecord> {
+  final String id;
+  final String templateId;
+  final String dataJson;
+  final DateTime createdAt;
+  const SmartTrackerRecord({
+    required this.id,
+    required this.templateId,
+    required this.dataJson,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['template_id'] = Variable<String>(templateId);
+    map['data_json'] = Variable<String>(dataJson);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  SmartTrackerRecordsCompanion toCompanion(bool nullToAbsent) {
+    return SmartTrackerRecordsCompanion(
+      id: Value(id),
+      templateId: Value(templateId),
+      dataJson: Value(dataJson),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory SmartTrackerRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SmartTrackerRecord(
+      id: serializer.fromJson<String>(json['id']),
+      templateId: serializer.fromJson<String>(json['templateId']),
+      dataJson: serializer.fromJson<String>(json['dataJson']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'templateId': serializer.toJson<String>(templateId),
+      'dataJson': serializer.toJson<String>(dataJson),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  SmartTrackerRecord copyWith({
+    String? id,
+    String? templateId,
+    String? dataJson,
+    DateTime? createdAt,
+  }) => SmartTrackerRecord(
+    id: id ?? this.id,
+    templateId: templateId ?? this.templateId,
+    dataJson: dataJson ?? this.dataJson,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  SmartTrackerRecord copyWithCompanion(SmartTrackerRecordsCompanion data) {
+    return SmartTrackerRecord(
+      id: data.id.present ? data.id.value : this.id,
+      templateId: data.templateId.present
+          ? data.templateId.value
+          : this.templateId,
+      dataJson: data.dataJson.present ? data.dataJson.value : this.dataJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SmartTrackerRecord(')
+          ..write('id: $id, ')
+          ..write('templateId: $templateId, ')
+          ..write('dataJson: $dataJson, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, templateId, dataJson, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SmartTrackerRecord &&
+          other.id == this.id &&
+          other.templateId == this.templateId &&
+          other.dataJson == this.dataJson &&
+          other.createdAt == this.createdAt);
+}
+
+class SmartTrackerRecordsCompanion extends UpdateCompanion<SmartTrackerRecord> {
+  final Value<String> id;
+  final Value<String> templateId;
+  final Value<String> dataJson;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const SmartTrackerRecordsCompanion({
+    this.id = const Value.absent(),
+    this.templateId = const Value.absent(),
+    this.dataJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SmartTrackerRecordsCompanion.insert({
+    required String id,
+    required String templateId,
+    required String dataJson,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       templateId = Value(templateId),
+       dataJson = Value(dataJson),
+       createdAt = Value(createdAt);
+  static Insertable<SmartTrackerRecord> custom({
+    Expression<String>? id,
+    Expression<String>? templateId,
+    Expression<String>? dataJson,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (templateId != null) 'template_id': templateId,
+      if (dataJson != null) 'data_json': dataJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SmartTrackerRecordsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? templateId,
+    Value<String>? dataJson,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return SmartTrackerRecordsCompanion(
+      id: id ?? this.id,
+      templateId: templateId ?? this.templateId,
+      dataJson: dataJson ?? this.dataJson,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (templateId.present) {
+      map['template_id'] = Variable<String>(templateId.value);
+    }
+    if (dataJson.present) {
+      map['data_json'] = Variable<String>(dataJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SmartTrackerRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('templateId: $templateId, ')
+          ..write('dataJson: $dataJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7015,6 +7640,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CustomBudgetsTable customBudgets = $CustomBudgetsTable(this);
   late final $InvestmentsTable investments = $InvestmentsTable(this);
   late final $InvestmentLogsTable investmentLogs = $InvestmentLogsTable(this);
+  late final $SmartTrackerTemplatesTable smartTrackerTemplates =
+      $SmartTrackerTemplatesTable(this);
+  late final $SmartTrackerRecordsTable smartTrackerRecords =
+      $SmartTrackerRecordsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7029,6 +7658,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     customBudgets,
     investments,
     investmentLogs,
+    smartTrackerTemplates,
+    smartTrackerRecords,
   ];
 }
 
@@ -10329,6 +10960,407 @@ typedef $$InvestmentLogsTableProcessedTableManager =
       InvestmentLog,
       PrefetchHooks Function()
     >;
+typedef $$SmartTrackerTemplatesTableCreateCompanionBuilder =
+    SmartTrackerTemplatesCompanion Function({
+      required String id,
+      required String name,
+      required String schemaJson,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$SmartTrackerTemplatesTableUpdateCompanionBuilder =
+    SmartTrackerTemplatesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> schemaJson,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$SmartTrackerTemplatesTableFilterComposer
+    extends Composer<_$AppDatabase, $SmartTrackerTemplatesTable> {
+  $$SmartTrackerTemplatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get schemaJson => $composableBuilder(
+    column: $table.schemaJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SmartTrackerTemplatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SmartTrackerTemplatesTable> {
+  $$SmartTrackerTemplatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get schemaJson => $composableBuilder(
+    column: $table.schemaJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SmartTrackerTemplatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SmartTrackerTemplatesTable> {
+  $$SmartTrackerTemplatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get schemaJson => $composableBuilder(
+    column: $table.schemaJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$SmartTrackerTemplatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SmartTrackerTemplatesTable,
+          SmartTrackerTemplate,
+          $$SmartTrackerTemplatesTableFilterComposer,
+          $$SmartTrackerTemplatesTableOrderingComposer,
+          $$SmartTrackerTemplatesTableAnnotationComposer,
+          $$SmartTrackerTemplatesTableCreateCompanionBuilder,
+          $$SmartTrackerTemplatesTableUpdateCompanionBuilder,
+          (
+            SmartTrackerTemplate,
+            BaseReferences<
+              _$AppDatabase,
+              $SmartTrackerTemplatesTable,
+              SmartTrackerTemplate
+            >,
+          ),
+          SmartTrackerTemplate,
+          PrefetchHooks Function()
+        > {
+  $$SmartTrackerTemplatesTableTableManager(
+    _$AppDatabase db,
+    $SmartTrackerTemplatesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SmartTrackerTemplatesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$SmartTrackerTemplatesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SmartTrackerTemplatesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> schemaJson = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SmartTrackerTemplatesCompanion(
+                id: id,
+                name: name,
+                schemaJson: schemaJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String schemaJson,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => SmartTrackerTemplatesCompanion.insert(
+                id: id,
+                name: name,
+                schemaJson: schemaJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SmartTrackerTemplatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SmartTrackerTemplatesTable,
+      SmartTrackerTemplate,
+      $$SmartTrackerTemplatesTableFilterComposer,
+      $$SmartTrackerTemplatesTableOrderingComposer,
+      $$SmartTrackerTemplatesTableAnnotationComposer,
+      $$SmartTrackerTemplatesTableCreateCompanionBuilder,
+      $$SmartTrackerTemplatesTableUpdateCompanionBuilder,
+      (
+        SmartTrackerTemplate,
+        BaseReferences<
+          _$AppDatabase,
+          $SmartTrackerTemplatesTable,
+          SmartTrackerTemplate
+        >,
+      ),
+      SmartTrackerTemplate,
+      PrefetchHooks Function()
+    >;
+typedef $$SmartTrackerRecordsTableCreateCompanionBuilder =
+    SmartTrackerRecordsCompanion Function({
+      required String id,
+      required String templateId,
+      required String dataJson,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$SmartTrackerRecordsTableUpdateCompanionBuilder =
+    SmartTrackerRecordsCompanion Function({
+      Value<String> id,
+      Value<String> templateId,
+      Value<String> dataJson,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$SmartTrackerRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $SmartTrackerRecordsTable> {
+  $$SmartTrackerRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dataJson => $composableBuilder(
+    column: $table.dataJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SmartTrackerRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SmartTrackerRecordsTable> {
+  $$SmartTrackerRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dataJson => $composableBuilder(
+    column: $table.dataJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SmartTrackerRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SmartTrackerRecordsTable> {
+  $$SmartTrackerRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get dataJson =>
+      $composableBuilder(column: $table.dataJson, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$SmartTrackerRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SmartTrackerRecordsTable,
+          SmartTrackerRecord,
+          $$SmartTrackerRecordsTableFilterComposer,
+          $$SmartTrackerRecordsTableOrderingComposer,
+          $$SmartTrackerRecordsTableAnnotationComposer,
+          $$SmartTrackerRecordsTableCreateCompanionBuilder,
+          $$SmartTrackerRecordsTableUpdateCompanionBuilder,
+          (
+            SmartTrackerRecord,
+            BaseReferences<
+              _$AppDatabase,
+              $SmartTrackerRecordsTable,
+              SmartTrackerRecord
+            >,
+          ),
+          SmartTrackerRecord,
+          PrefetchHooks Function()
+        > {
+  $$SmartTrackerRecordsTableTableManager(
+    _$AppDatabase db,
+    $SmartTrackerRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SmartTrackerRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SmartTrackerRecordsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SmartTrackerRecordsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> templateId = const Value.absent(),
+                Value<String> dataJson = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SmartTrackerRecordsCompanion(
+                id: id,
+                templateId: templateId,
+                dataJson: dataJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String templateId,
+                required String dataJson,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => SmartTrackerRecordsCompanion.insert(
+                id: id,
+                templateId: templateId,
+                dataJson: dataJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SmartTrackerRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SmartTrackerRecordsTable,
+      SmartTrackerRecord,
+      $$SmartTrackerRecordsTableFilterComposer,
+      $$SmartTrackerRecordsTableOrderingComposer,
+      $$SmartTrackerRecordsTableAnnotationComposer,
+      $$SmartTrackerRecordsTableCreateCompanionBuilder,
+      $$SmartTrackerRecordsTableUpdateCompanionBuilder,
+      (
+        SmartTrackerRecord,
+        BaseReferences<
+          _$AppDatabase,
+          $SmartTrackerRecordsTable,
+          SmartTrackerRecord
+        >,
+      ),
+      SmartTrackerRecord,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10351,4 +11383,8 @@ class $AppDatabaseManager {
       $$InvestmentsTableTableManager(_db, _db.investments);
   $$InvestmentLogsTableTableManager get investmentLogs =>
       $$InvestmentLogsTableTableManager(_db, _db.investmentLogs);
+  $$SmartTrackerTemplatesTableTableManager get smartTrackerTemplates =>
+      $$SmartTrackerTemplatesTableTableManager(_db, _db.smartTrackerTemplates);
+  $$SmartTrackerRecordsTableTableManager get smartTrackerRecords =>
+      $$SmartTrackerRecordsTableTableManager(_db, _db.smartTrackerRecords);
 }
