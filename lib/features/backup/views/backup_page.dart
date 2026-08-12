@@ -7,17 +7,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:restart_app/restart_app.dart';
-import 'package:share_plus/share_plus.dart'; // <-- IMPORT SHARE_PLUS
+import 'package:share_plus/share_plus.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_boxy_button.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
-import '../../../core/components/global_selection_sheet.dart'; // <-- IMPORT GLOBAL SELECTOR
+import '../../../core/components/global_selection_sheet.dart';
 import '../../../core/components/custom_snackbars.dart';
 import '../../../core/components/futuristic_loader.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/database/database_provider.dart';
 import '../services/backup_service.dart';
+import 'wifi_scanner_page.dart';
 
 class BackupPage extends ConsumerStatefulWidget {
   const BackupPage({Key? key}) : super(key: key);
@@ -30,8 +32,8 @@ class _BackupPageState extends ConsumerState<BackupPage> {
   bool _isLoading = false;
   String _loadingLabel = 'PROCESSING...';
 
-  // Controls the destination logic
-  bool _exportLocally = true;
+  // Removed Wi-Fi from here, keeping standard exports clean
+  String _exportTarget = 'Local Folder';
 
   Map<String, dynamic>? _dbInfo;
   Map<String, dynamic>? _latestBackup;
@@ -64,24 +66,23 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
   }
 
-  // --- TARGET SELECTION SHEET ---
   Future<void> _selectExportTarget() async {
     HapticFeedback.lightImpact();
     final selected = await GlobalSelectionSheet.showSimple(
       context: context,
       title: 'Export Target',
-      items: ['Local Folder', 'Share / Google Drive'],
-      selectedValue: _exportLocally ? 'Local Folder' : 'Share / Google Drive',
+      items: const ['Local Folder', 'Share / Google Drive'],
+      selectedValue: _exportTarget,
     );
 
     if (selected != null && mounted) {
       setState(() {
-        _exportLocally = selected == 'Local Folder';
+        _exportTarget = selected;
       });
     }
   }
 
-  // --- EXPORT LOGIC ---
+  // --- STANDARD EXPORT ---
   Future<void> _handleExport() async {
     HapticFeedback.selectionClick();
     setState(() {
@@ -89,7 +90,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       _loadingLabel = 'PREPARING BACKUP...';
     });
 
-    if (_exportLocally) {
+    if (_exportTarget == 'Local Folder') {
       final error = await ref.read(backupServiceProvider).exportDatabase();
       if (mounted) {
         setState(() => _isLoading = false);
@@ -103,21 +104,18 @@ class _BackupPageState extends ConsumerState<BackupPage> {
           _loadMetrics();
         }
       }
-    } else {
+    } else if (_exportTarget == 'Share / Google Drive') {
       final result = await ref
           .read(backupServiceProvider)
           .exportDatabaseExternal();
       if (mounted) {
-        // Crucial: Dismiss loader BEFORE opening the native share sheet
         setState(() => _isLoading = false);
-
         if (result != null && result.startsWith('ERROR:')) {
           CustomSnackbars.showError(
             context,
             message: result.replaceFirst('ERROR: ', ''),
           );
         } else if (result != null) {
-          // result contains the temporary file path
           await Share.shareXFiles([
             XFile(result),
           ], subject: 'FinStack 360 Ledger Backup');
@@ -126,6 +124,161 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     }
   }
 
+  // --- WI-FI GENERATOR (HOST) ---
+  Future<void> _startWifiHost() async {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _isLoading = true;
+      _loadingLabel = 'STARTING LOCAL SERVER...';
+    });
+
+    final result = await ref.read(backupServiceProvider).startWifiShare();
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+      if (result != null && result.startsWith('ERROR:')) {
+        CustomSnackbars.showError(
+          context,
+          message: result.replaceFirst('ERROR: ', ''),
+        );
+      } else if (result != null) {
+        _showQrHostSheet(result);
+      }
+    }
+  }
+
+  void _showQrHostSheet(String url) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final theme = Theme.of(context);
+
+        return Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            left: 24,
+            right: 24,
+            top: 24,
+          ),
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Wi-Fi Sync Active',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Scan this QR code from another device on the same network to pull your ledger data.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: QrImageView(
+                  data: url,
+                  version: QrVersions.auto,
+                  size: 200.0,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: Colors.black87,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              ModernBoxyButton(
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  ref.read(backupServiceProvider).stopWifiShare();
+                  Navigator.pop(ctx);
+                },
+                label: 'STOP SHARING',
+                isOutlined: true,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- WI-FI SCANNER (CLIENT) ---
+  Future<void> _handleWifiRestore() async {
+    final scannedUrl = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const WifiScannerPage()),
+    );
+
+    if (scannedUrl == null || !mounted) return;
+
+    final confirm = await ConfirmationBottomSheet.show(
+      context,
+      title: 'Sync Over Wi-Fi?',
+      description:
+          'This will completely overwrite your current data with the database retrieved from the host device. Proceed?',
+      confirmText: 'SYNC NOW',
+      isDestructive: true,
+      onConfirm: () {},
+    );
+
+    if (confirm != true || !mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _loadingLabel = 'DOWNLOADING FROM HOST...';
+    });
+
+    try {
+      final activeDb = ref.read(databaseProvider);
+      try {
+        await activeDb.close().timeout(const Duration(milliseconds: 500));
+      } catch (_) {}
+
+      final error = await ref
+          .read(backupServiceProvider)
+          .downloadAndRestoreFromWifi(scannedUrl);
+
+      if (error != null && mounted) {
+        setState(() => _isLoading = false);
+        CustomSnackbars.showError(context, message: error);
+        return;
+      }
+
+      Restart.restartApp();
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showRestartDialog();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        CustomSnackbars.showError(context, message: 'Sync failed: $e');
+      }
+    }
+  }
+
+  // --- STANDARD RESTORE ---
   Future<void> _handleRestore(File file) async {
     HapticFeedback.heavyImpact();
 
@@ -330,7 +483,23 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     );
   }
 
-  // --- UPDATED METRIC CARD TO SUPPORT INTERACTION ---
+  // --- COMPACT SECTION HEADER HELPER ---
+  Widget _buildSectionHeader(ThemeData theme, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.5,
+          color: theme.colorScheme.primary,
+        ),
+      ),
+    );
+  }
+
+  // --- FULLY COMPACTED METRIC CARD FOR SINGLE SCREEN VIEW ---
   Widget _buildMetricCard({
     required String label,
     required String title,
@@ -346,8 +515,8 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: DesignTokens.spacingLg),
-        padding: const EdgeInsets.all(16.0),
+        margin: const EdgeInsets.only(bottom: 8.0), // Compact Margin
+        padding: const EdgeInsets.all(12.0), // Compact Padding
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
@@ -368,14 +537,14 @@ class _BackupPageState extends ConsumerState<BackupPage> {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10), // Scaled Icon Container
               decoration: BoxDecoration(
                 color: theme.colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: theme.colorScheme.primary, size: 24),
+              child: Icon(icon, color: theme.colorScheme.primary, size: 20),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,17 +552,17 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                   Text(
                     label.toUpperCase(),
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 9, // Scaled down
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 14, // Scaled down
                       fontWeight: FontWeight.w800,
                       color: theme.colorScheme.onSurface,
                       letterSpacing: -0.3,
@@ -405,10 +574,12 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11, // Scaled down
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.primary,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -417,6 +588,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
               Icon(
                 Icons.keyboard_arrow_down_rounded,
                 color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                size: 20,
               ),
           ],
         ),
@@ -427,6 +599,13 @@ class _BackupPageState extends ConsumerState<BackupPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    IconData targetIcon = Icons.folder_rounded;
+    String targetSub = 'Local Device Storage';
+    if (_exportTarget == 'Share / Google Drive') {
+      targetIcon = Icons.cloud_upload_rounded;
+      targetSub = 'Google Drive, Email, etc.';
+    }
 
     return Stack(
       children: [
@@ -439,22 +618,18 @@ class _BackupPageState extends ConsumerState<BackupPage> {
             onLeadingPressed: _isLoading ? () {} : () => Navigator.pop(context),
           ),
           body: SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(DesignTokens.spacingLg),
+            // Removed SingleChildScrollView and replaced with a stretching Column.
+            // Spacers distribute empty space evenly across the single screen view.
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DesignTokens.spacingLg,
+                vertical: 8.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'SYSTEM STATUS',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: DesignTokens.spacingMd),
+                  // --- 1. SYSTEM STATUS ---
+                  _buildSectionHeader(theme, 'SYSTEM STATUS'),
                   _buildMetricCard(
                     theme: theme,
                     label: 'Active Database',
@@ -465,51 +640,31 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                     icon: Icons.shield_rounded,
                   ),
 
-                  const SizedBox(height: DesignTokens.spacingMd),
-                  Text(
-                    'EXPORT DESTINATION',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: DesignTokens.spacingMd),
+                  const Spacer(flex: 2),
 
-                  // --- NEW INTERACTIVE EXPORT TARGET CARD ---
+                  // --- 2. EXPORT DESTINATION ---
+                  _buildSectionHeader(theme, 'EXPORT DESTINATION'),
                   _buildMetricCard(
                     theme: theme,
                     label: 'Save Target',
-                    title: _exportLocally ? _backupPath : 'External Share',
-                    subtitle: _exportLocally
-                        ? 'Local Device Storage'
-                        : 'Google Drive, Email, etc.',
-                    icon: _exportLocally
-                        ? Icons.folder_rounded
-                        : Icons.cloud_upload_rounded,
+                    title: _exportTarget == 'Local Folder'
+                        ? _backupPath
+                        : _exportTarget,
+                    subtitle: targetSub,
+                    icon: targetIcon,
                     onTap: _selectExportTarget,
                     showDropdown: true,
                   ),
-
                   ModernBoxyButton(
                     onPressed: _isLoading ? null : _handleExport,
                     label: 'EXPORT BACKUP',
                     icon: Icons.upload_rounded,
                   ),
 
-                  const SizedBox(height: 32),
-                  Text(
-                    'RESTORE TARGET',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: DesignTokens.spacingMd),
+                  const Spacer(flex: 2),
 
+                  // --- 3. RESTORE TARGET ---
+                  _buildSectionHeader(theme, 'RESTORE TARGET'),
                   if (_latestBackup != null) ...[
                     _buildMetricCard(
                       theme: theme,
@@ -547,7 +702,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                     ),
                   ] else ...[
                     Container(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(16), // Compressed Padding
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHighest
                             .withOpacity(0.3),
@@ -569,7 +724,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: DesignTokens.spacingMd),
+                    const SizedBox(height: 8), // Compressed Margin
                     ModernBoxyButton(
                       onPressed: _isLoading ? null : _showLocalBackupsSheet,
                       label: 'BROWSE LOCAL FILES',
@@ -577,6 +732,40 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                       icon: Icons.search_rounded,
                     ),
                   ],
+
+                  const Spacer(flex: 2),
+
+                  // --- 4. PEER-TO-PEER SYNC ---
+                  _buildSectionHeader(theme, 'PEER-TO-PEER SYNC'),
+                  _buildMetricCard(
+                    theme: theme,
+                    label: 'Wi-Fi Network',
+                    title: 'Local Device Transfer',
+                    subtitle: 'Host or Scan to sync directly',
+                    icon: Icons.wifi_tethering_rounded,
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ModernBoxyButton(
+                          onPressed: _isLoading ? null : _startWifiHost,
+                          label: 'HOST (QR)',
+                          icon: Icons.qr_code_2_rounded,
+                        ),
+                      ),
+                      const SizedBox(width: DesignTokens.spacingMd),
+                      Expanded(
+                        child: ModernBoxyButton(
+                          onPressed: _isLoading ? null : _handleWifiRestore,
+                          label: 'SCAN (QR)',
+                          isOutlined: true,
+                          icon: Icons.qr_code_scanner_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const Spacer(flex: 1),
                 ],
               ),
             ),
