@@ -11,6 +11,7 @@ import '../models/tracker_field_model.dart';
 import '../providers/smart_tracker_provider.dart';
 import '../views/smart_tracker_entry_page.dart';
 import 'add_formula_bottom_sheet.dart';
+import 'smart_tracker_filter_sheet.dart';
 
 class SmartTrackerTable extends ConsumerStatefulWidget {
   final SmartTrackerTemplate template;
@@ -30,6 +31,12 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
   // --- SORTING STATE ---
   String? _sortColumnId;
   bool _isAscending = true;
+
+  // --- PROFESSIONAL FILTER STATE ---
+  TrackerField? _filterField;
+  String _filterOperator = '==';
+  List<String> _filterValues = [];
+  String _filterSingleValue = '';
 
   String _getExcelColumnName(int columnIndex) {
     String columnName = "";
@@ -186,15 +193,14 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
     );
   }
 
-  // --- CORE SORTING ENGINE ---
   void _onSortTapped(TrackerField field) {
     HapticFeedback.selectionClick();
     setState(() {
       if (_sortColumnId == field.id) {
-        if (_isAscending) {
-          _isAscending = false; // Switch to descending
-        } else {
-          _sortColumnId = null; // 3rd tap removes sorting (Default view)
+        if (_isAscending)
+          _isAscending = false;
+        else {
+          _sortColumnId = null;
           _isAscending = true;
         }
       } else {
@@ -204,23 +210,80 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
     });
   }
 
-  List<SmartTrackerRecord> _getSortedRecords(List<TrackerField> fields) {
+  // --- CORE FILTER & SORT ENGINE ---
+  List<SmartTrackerRecord> _getProcessedRecords(List<TrackerField> fields) {
+    // 1. FILTERING
+    var filteredList = widget.records.where((record) {
+      if (_filterField == null) return true;
+
+      final dataMap = jsonDecode(record.dataJson);
+      final rawVal = dataMap[_filterField!.id];
+      final formattedVal = _formatValue(_filterField!, rawVal);
+
+      // MATHEMATICAL FILTER
+      if (['>', '<', '>=', '<='].contains(_filterOperator)) {
+        if (_filterSingleValue.isEmpty) return true;
+        double actual =
+            double.tryParse(
+              rawVal?.toString().replaceAll(RegExp(r'[^0-9.\-]'), '') ?? '',
+            ) ??
+            0.0;
+        double target =
+            double.tryParse(
+              _filterSingleValue.replaceAll(RegExp(r'[^0-9.\-]'), ''),
+            ) ??
+            0.0;
+        switch (_filterOperator) {
+          case '>':
+            return actual > target;
+          case '<':
+            return actual < target;
+          case '>=':
+            return actual >= target;
+          case '<=':
+            return actual <= target;
+        }
+      }
+      // STRING MATCH FILTER
+      else if ([
+        'Contains',
+        'Starts With',
+        'Ends With',
+      ].contains(_filterOperator)) {
+        if (_filterSingleValue.isEmpty) return true;
+        final actualStr = formattedVal.toLowerCase();
+        final targetStr = _filterSingleValue.toLowerCase();
+        switch (_filterOperator) {
+          case 'Contains':
+            return actualStr.contains(targetStr);
+          case 'Starts With':
+            return actualStr.startsWith(targetStr);
+          case 'Ends With':
+            return actualStr.endsWith(targetStr);
+        }
+      }
+      // EXACT MULTI-MATCH FILTER
+      else {
+        if (_filterValues.isEmpty) return true;
+        bool isMatch = _filterValues.contains(formattedVal);
+        return _filterOperator == '==' ? isMatch : !isMatch;
+      }
+      return true;
+    }).toList();
+
+    // 2. SORTING
     if (_sortColumnId == null) {
-      // Default: Newest first (chronological entry)
-      return widget.records.reversed.toList();
+      return filteredList.reversed.toList();
     }
 
     final field = fields.firstWhere((f) => f.id == _sortColumnId);
-    final sortedList = List<SmartTrackerRecord>.from(widget.records);
-
-    sortedList.sort((a, b) {
+    filteredList.sort((a, b) {
       final aMap = jsonDecode(a.dataJson);
       final bMap = jsonDecode(b.dataJson);
       final aVal = aMap[_sortColumnId]?.toString() ?? '';
       final bVal = bMap[_sortColumnId]?.toString() ?? '';
 
       int comparison = 0;
-
       if (field.type == TrackerFieldType.number ||
           field.type == TrackerFieldType.currency ||
           field.type == TrackerFieldType.formula) {
@@ -238,11 +301,10 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
       } else {
         comparison = aVal.toLowerCase().compareTo(bVal.toLowerCase());
       }
-
       return _isAscending ? comparison : -comparison;
     });
 
-    return sortedList;
+    return filteredList;
   }
 
   // --- UI BUILDERS ---
@@ -274,7 +336,7 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
             ),
             color: isSorted
                 ? theme.colorScheme.primary.withOpacity(0.1)
-                : Colors.transparent, // Highlight sorted column
+                : Colors.transparent,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -307,7 +369,6 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
     );
   }
 
-  // ... (Other helper cells remain the same, just extracted into component)
   Widget _buildCornerCell(ThemeData theme) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     alignment: Alignment.center,
@@ -532,257 +593,441 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
     final List<dynamic> decodedSchema = jsonDecode(widget.template.schemaJson);
     final fields = decodedSchema.map((e) => TrackerField.fromJson(e)).toList();
 
-    // Process records through sorting engine
-    final processedRecords = _getSortedRecords(fields);
+    final processedRecords = _getProcessedRecords(fields);
 
-    return Container(
-      margin: const EdgeInsets.only(left: 4, right: 4, top: 8, bottom: 24),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.dividerColor, width: 1.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InteractiveViewer(
-        constrained: false,
-        boundaryMargin: const EdgeInsets.all(0),
-        minScale: 1.0,
-        maxScale: 1.0,
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          scrollDirection: Axis.vertical,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            scrollDirection: Axis.horizontal,
-            child: Table(
-              defaultColumnWidth: const IntrinsicColumnWidth(),
-              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-              children: [
-                // --- ROW 0: PURE EXCEL COLUMN LETTERS ---
-                TableRow(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withOpacity(isDark ? 0.4 : 0.2),
-                  ),
-                  children: [
-                    _buildCornerCell(theme),
-                    ...fields
-                        .asMap()
-                        .entries
-                        .map(
-                          (e) => _buildAxisLetterCell(
-                            theme,
-                            _getExcelColumnName(e.key),
-                          ),
-                        )
-                        .toList(),
-                    _buildAxisLetterCell(theme, '+'),
-                  ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // --- SLEEK HEADER ROW FOR FILTERS ---
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${processedRecords.length} RECORDS MATCHED',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
+              ),
 
-                // --- ROW 1: TABLE HEADERS (Interactive) ---
-                TableRow(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withOpacity(
-                      isDark ? 0.2 : 0.1,
+              if (_filterField != null) ...[
+                // ACTIVE FILTER CHIP
+                GestureDetector(
+                  onTap: () {
+                    SmartTrackerFilterSheet.show(
+                      context,
+                      fields: fields,
+                      records: widget.records,
+                      initialField: _filterField,
+                      initialOperator: _filterOperator,
+                      initialValues: _filterValues,
+                      initialSingleValue: _filterSingleValue,
+                      onApplyFilter: (f, op, values, singleVal) => setState(() {
+                        _filterField = f;
+                        _filterOperator = op;
+                        _filterValues = values;
+                        _filterSingleValue = singleVal;
+                      }),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.filter_alt_rounded,
+                          size: 12,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_filterField!.name} $_filterOperator ${['==', '!='].contains(_filterOperator) ? '${_filterValues.length} Vals' : _filterSingleValue}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() {
+                              _filterField = null;
+                              _filterValues = [];
+                              _filterSingleValue = '';
+                            });
+                          },
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 14,
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  children: [
-                    _buildRowNumberCell(theme, '1', isHeaderRow: true),
-                    ...fields
-                        .asMap()
-                        .entries
-                        .map(
-                          (e) => _buildFieldHeaderCell(
-                            theme,
-                            e.value,
-                            '${_getExcelColumnName(e.key)}1',
-                          ),
-                        )
-                        .toList(),
-
-                    // --- + ADD COLUMN BUTTON ---
-                    GestureDetector(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          useSafeArea: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (ctx) => AddFormulaBottomSheet(
-                            existingFields: fields,
-                            onColumnAdded: (newField) {
-                              ref
-                                  .read(smartTrackerActionProvider.notifier)
-                                  .addFormulaColumn(widget.template, newField);
-                            },
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
+                ),
+              ] else ...[
+                // INACTIVE FILTER BUTTON
+                GestureDetector(
+                  onTap: () {
+                    SmartTrackerFilterSheet.show(
+                      context,
+                      fields: fields,
+                      records: widget.records,
+                      initialField: null,
+                      initialOperator: '==',
+                      initialValues: [],
+                      initialSingleValue: '',
+                      onApplyFilter: (f, op, values, singleVal) => setState(() {
+                        _filterField = f;
+                        _filterOperator = op;
+                        _filterValues = values;
+                        _filterSingleValue = singleVal;
+                      }),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: theme.dividerColor),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.filter_list_rounded,
+                          size: 14,
+                          color: theme.colorScheme.onSurface,
                         ),
-                        alignment: Alignment.center,
+                        const SizedBox(width: 6),
+                        Text(
+                          'FILTER',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: theme.colorScheme.onSurface,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+
+        // --- THE TABLE ---
+        Expanded(
+          child: Container(
+            margin: const EdgeInsets.only(
+              left: 4,
+              right: 4,
+              bottom: 24,
+              top: 4,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: theme.dividerColor, width: 1.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InteractiveViewer(
+              constrained: false,
+              boundaryMargin: const EdgeInsets.all(0),
+              minScale: 1.0,
+              maxScale: 1.0,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                scrollDirection: Axis.vertical,
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  scrollDirection: Axis.horizontal,
+                  child: Table(
+                    defaultColumnWidth: const IntrinsicColumnWidth(),
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                    children: [
+                      // --- ROW 0: PURE EXCEL COLUMN LETTERS ---
+                      TableRow(
                         decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withOpacity(isDark ? 0.4 : 0.2),
+                        ),
+                        children: [
+                          _buildCornerCell(theme),
+                          ...fields
+                              .asMap()
+                              .entries
+                              .map(
+                                (e) => _buildAxisLetterCell(
+                                  theme,
+                                  _getExcelColumnName(e.key),
+                                ),
+                              )
+                              .toList(),
+                          _buildAxisLetterCell(theme, '+'),
+                        ],
+                      ),
+
+                      // --- ROW 1: TABLE HEADERS ---
+                      TableRow(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer.withOpacity(
+                            isDark ? 0.2 : 0.1,
+                          ),
+                        ),
+                        children: [
+                          _buildRowNumberCell(theme, '1', isHeaderRow: true),
+                          ...fields
+                              .asMap()
+                              .entries
+                              .map(
+                                (e) => _buildFieldHeaderCell(
+                                  theme,
+                                  e.value,
+                                  '${_getExcelColumnName(e.key)}1',
+                                ),
+                              )
+                              .toList(),
+
+                          // --- + ADD COLUMN BUTTON ---
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                useSafeArea: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (ctx) => AddFormulaBottomSheet(
+                                  existingFields: fields,
+                                  onColumnAdded: (newField) {
+                                    ref
+                                        .read(
+                                          smartTrackerActionProvider.notifier,
+                                        )
+                                        .addFormulaColumn(
+                                          widget.template,
+                                          newField,
+                                        );
+                                  },
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: theme.colorScheme.primary
+                                        .withOpacity(0.4),
+                                    width: 2.0,
+                                  ),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.add_rounded,
+                                color: theme.colorScheme.primary,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // --- ROWS 2..N: DATA RECORDS ---
+                      if (processedRecords.isEmpty)
+                        TableRow(
+                          children: [
+                            _buildRowNumberCell(theme, '-'),
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'No results match your filter.',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            ...List.generate(
+                              fields.length - 1,
+                              (index) => const SizedBox.shrink(),
+                            ),
+                            const SizedBox.shrink(),
+                          ],
+                        )
+                      else
+                        ...processedRecords.asMap().entries.map((rowEntry) {
+                          final rowIndex = rowEntry.key + 2;
+                          final Map<String, dynamic> dataMap = jsonDecode(
+                            rowEntry.value.dataJson,
+                          );
+                          final rowBgColor = (rowIndex % 2 == 0)
+                              ? Colors.transparent
+                              : theme.colorScheme.surfaceContainerHighest
+                                    .withOpacity(isDark ? 0.2 : 0.4);
+
+                          return TableRow(
+                            decoration: BoxDecoration(color: rowBgColor),
+                            children: [
+                              _buildRowNumberCell(theme, rowIndex.toString()),
+                              ...fields.asMap().entries.map((colEntry) {
+                                return _buildDataCell(
+                                  theme,
+                                  _formatValue(
+                                    colEntry.value,
+                                    dataMap[colEntry.value.id],
+                                  ),
+                                  '${_getExcelColumnName(colEntry.key)}$rowIndex',
+                                );
+                              }).toList(),
+                              _buildActionCell(
+                                theme,
+                                rowEntry.value,
+                                rowIndex.toString(),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+
+                      // --- FOOTER ROW: TABLE AGGREGATES ---
+                      TableRow(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer.withOpacity(
+                            isDark ? 0.3 : 0.1,
+                          ),
                           border: Border(
-                            bottom: BorderSide(
-                              color: theme.colorScheme.primary.withOpacity(0.4),
+                            top: BorderSide(
+                              color: theme.colorScheme.primary.withOpacity(0.6),
                               width: 2.0,
                             ),
                           ),
                         ),
-                        child: Icon(
-                          Icons.add_rounded,
-                          color: theme.colorScheme.primary,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                        children: [
+                          _buildAggregateCornerCell(theme),
+                          ...fields.map((field) {
+                            final canAggregate =
+                                field.type == TrackerFieldType.number ||
+                                field.type == TrackerFieldType.currency ||
+                                field.type == TrackerFieldType.formula;
+                            if (!canAggregate)
+                              return _buildAggregateDataCell(theme, '', '');
 
-                // --- ROWS 2..N: DATA RECORDS ---
-                ...processedRecords.asMap().entries.map((rowEntry) {
-                  final rowIndex = rowEntry.key + 2;
-                  final Map<String, dynamic> dataMap = jsonDecode(
-                    rowEntry.value.dataJson,
-                  );
-                  final rowBgColor = (rowIndex % 2 == 0)
-                      ? Colors.transparent
-                      : theme.colorScheme.surfaceContainerHighest.withOpacity(
-                          isDark ? 0.2 : 0.4,
-                        );
+                            double sum = 0;
+                            double minVal = double.infinity;
+                            double maxVal = double.negativeInfinity;
+                            int count = 0;
 
-                  return TableRow(
-                    decoration: BoxDecoration(color: rowBgColor),
-                    children: [
-                      _buildRowNumberCell(theme, rowIndex.toString()),
-                      ...fields.asMap().entries.map((colEntry) {
-                        return _buildDataCell(
-                          theme,
-                          _formatValue(
-                            colEntry.value,
-                            dataMap[colEntry.value.id],
-                          ),
-                          '${_getExcelColumnName(colEntry.key)}$rowIndex',
-                        );
-                      }).toList(),
-                      _buildActionCell(
-                        theme,
-                        rowEntry.value,
-                        rowIndex.toString(),
+                            for (var record in processedRecords) {
+                              final dataMap = jsonDecode(record.dataJson);
+                              final val = double.tryParse(
+                                dataMap[field.id]?.toString() ?? '',
+                              );
+                              if (val != null) {
+                                sum += val;
+                                count++;
+                                if (val < minVal) minVal = val;
+                                if (val > maxVal) maxVal = val;
+                              }
+                            }
+
+                            String result = '-';
+                            if (count > 0 &&
+                                field.aggregate != null &&
+                                field.aggregate != 'NONE') {
+                              if (field.aggregate == 'SUM')
+                                result = sum.toStringAsFixed(2);
+                              if (field.aggregate == 'AVG')
+                                result = (sum / count).toStringAsFixed(2);
+                              if (field.aggregate == 'MAX')
+                                result = maxVal.toStringAsFixed(2);
+                              if (field.aggregate == 'MIN')
+                                result = minVal.toStringAsFixed(2);
+                              if (field.type == TrackerFieldType.currency)
+                                result = '${field.currencySymbol ?? ''} $result'
+                                    .trim();
+                            }
+
+                            return GestureDetector(
+                              onTap: () async {
+                                HapticFeedback.lightImpact();
+                                final selected =
+                                    await GlobalSelectionSheet.showSimple(
+                                      context: context,
+                                      title: 'Set Aggregate for ${field.name}',
+                                      items: [
+                                        'NONE',
+                                        'SUM',
+                                        'AVG',
+                                        'MAX',
+                                        'MIN',
+                                      ],
+                                      selectedValue: field.aggregate ?? 'NONE',
+                                    );
+                                if (selected != null) {
+                                  ref
+                                      .read(smartTrackerActionProvider.notifier)
+                                      .updateColumnAggregate(
+                                        widget.template,
+                                        field.id,
+                                        selected,
+                                      );
+                                }
+                              },
+                              child: _buildAggregateDataCell(
+                                theme,
+                                result,
+                                field.aggregate ?? 'Tap to Set',
+                              ),
+                            );
+                          }).toList(),
+                          _buildAggregateDataCell(theme, '', ''),
+                        ],
                       ),
                     ],
-                  );
-                }).toList(),
-
-                // --- FOOTER ROW: TABLE AGGREGATES ---
-                TableRow(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withOpacity(
-                      isDark ? 0.3 : 0.1,
-                    ),
-                    border: Border(
-                      top: BorderSide(
-                        color: theme.colorScheme.primary.withOpacity(0.6),
-                        width: 2.0,
-                      ),
-                    ),
                   ),
-                  children: [
-                    _buildAggregateCornerCell(theme),
-                    ...fields.map((field) {
-                      final canAggregate =
-                          field.type == TrackerFieldType.number ||
-                          field.type == TrackerFieldType.currency ||
-                          field.type == TrackerFieldType.formula;
-                      if (!canAggregate)
-                        return _buildAggregateDataCell(theme, '', '');
-
-                      double sum = 0;
-                      double minVal = double.infinity;
-                      double maxVal = double.negativeInfinity;
-                      int count = 0;
-
-                      for (var record in widget.records) {
-                        final dataMap = jsonDecode(record.dataJson);
-                        final val = double.tryParse(
-                          dataMap[field.id]?.toString() ?? '',
-                        );
-                        if (val != null) {
-                          sum += val;
-                          count++;
-                          if (val < minVal) minVal = val;
-                          if (val > maxVal) maxVal = val;
-                        }
-                      }
-
-                      String result = '-';
-                      if (count > 0 &&
-                          field.aggregate != null &&
-                          field.aggregate != 'NONE') {
-                        if (field.aggregate == 'SUM')
-                          result = sum.toStringAsFixed(2);
-                        if (field.aggregate == 'AVG')
-                          result = (sum / count).toStringAsFixed(2);
-                        if (field.aggregate == 'MAX')
-                          result = maxVal.toStringAsFixed(2);
-                        if (field.aggregate == 'MIN')
-                          result = minVal.toStringAsFixed(2);
-                        if (field.type == TrackerFieldType.currency)
-                          result = '${field.currencySymbol ?? ''} $result'
-                              .trim();
-                      }
-
-                      return GestureDetector(
-                        onTap: () async {
-                          HapticFeedback.lightImpact();
-                          final selected =
-                              await GlobalSelectionSheet.showSimple(
-                                context: context,
-                                title: 'Set Aggregate for ${field.name}',
-                                items: ['NONE', 'SUM', 'AVG', 'MAX', 'MIN'],
-                                selectedValue: field.aggregate ?? 'NONE',
-                              );
-                          if (selected != null) {
-                            ref
-                                .read(smartTrackerActionProvider.notifier)
-                                .updateColumnAggregate(
-                                  widget.template,
-                                  field.id,
-                                  selected,
-                                );
-                          }
-                        },
-                        child: _buildAggregateDataCell(
-                          theme,
-                          result,
-                          field.aggregate ?? 'Tap to Set',
-                        ),
-                      );
-                    }).toList(),
-                    _buildAggregateDataCell(
-                      theme,
-                      '',
-                      '',
-                    ), // Empty space under Actions
-                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

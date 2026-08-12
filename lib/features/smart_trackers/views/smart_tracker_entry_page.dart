@@ -17,7 +17,7 @@ import '../utils/tracker_formula_evaluator.dart';
 class SmartTrackerEntryPage extends ConsumerStatefulWidget {
   final SmartTrackerTemplate template;
   final int existingRecordCount;
-  final SmartTrackerRecord? existingRecord; // --- NEW: Supports Edit Mode ---
+  final SmartTrackerRecord? existingRecord;
 
   const SmartTrackerEntryPage({
     Key? key,
@@ -38,13 +38,17 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   final Map<String, dynamic> _formData = {};
   final Map<String, TextEditingController> _controllers = {};
 
+  // --- FOCUS MANAGEMENT STATE ---
+  final Map<String, FocusNode> _focusNodes = {};
+  final List<String> _focusableFieldIds =
+      []; // Keeps track of the exact order of text inputs
+
   @override
   void initState() {
     super.initState();
     final List<dynamic> decoded = jsonDecode(widget.template.schemaJson);
     _fields = decoded.map((e) => TrackerField.fromJson(e)).toList();
 
-    // --- NEW: Load existing data if editing ---
     Map<String, dynamic> existingData = {};
     if (widget.existingRecord != null) {
       existingData =
@@ -82,7 +86,51 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
         _formData[field.id] = val;
         _controllers[field.id] = TextEditingController(text: val);
         _controllers[field.id]!.addListener(_recalculateFormulas);
+
+        // --- REGISTER FOCUS NODES ONLY FOR TYPABLE INPUTS ---
+        if (field.type == TrackerFieldType.text ||
+            field.type == TrackerFieldType.number ||
+            field.type == TrackerFieldType.currency) {
+          _focusNodes[field.id] = FocusNode();
+          _focusableFieldIds.add(field.id);
+        }
       }
+    }
+
+    // --- AUTO-FOCUS THE FIRST TEXT FIELD ON LOAD ---
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_focusableFieldIds.isNotEmpty && mounted) {
+        _focusNodes[_focusableFieldIds.first]?.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    for (var ctrl in _controllers.values) {
+      ctrl.dispose();
+    }
+    for (var node in _focusNodes.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  // --- FOCUS JUMPING LOGIC ---
+  bool _isLastFocusable(String id) {
+    return _focusableFieldIds.isNotEmpty && _focusableFieldIds.last == id;
+  }
+
+  void _focusNextField(String currentId) {
+    final currentIndex = _focusableFieldIds.indexOf(currentId);
+    if (currentIndex >= 0 && currentIndex < _focusableFieldIds.length - 1) {
+      // Jump to next text input, bypassing dropdowns/dates
+      FocusScope.of(
+        context,
+      ).requestFocus(_focusNodes[_focusableFieldIds[currentIndex + 1]]);
+    } else {
+      // Last field reached, close keyboard
+      FocusScope.of(context).unfocus();
     }
   }
 
@@ -114,16 +162,11 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
     }
   }
 
-  @override
-  void dispose() {
-    for (var ctrl in _controllers.values) {
-      ctrl.dispose();
-    }
-    super.dispose();
-  }
-
   Future<void> _pickDate(String fieldId) async {
+    // Close keyboard if open
+    FocusScope.of(context).unfocus();
     HapticFeedback.lightImpact();
+
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -142,6 +185,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus(); // Ensure keyboard closes
 
     for (var field in _fields) {
       if (field.type == TrackerFieldType.text ||
@@ -188,6 +232,11 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
       case TrackerFieldType.text:
         return ModernBoxyInput(
           controller: _controllers[field.id]!,
+          focusNode: _focusNodes[field.id], // Bound Focus Node
+          textInputAction: _isLastFocusable(field.id)
+              ? TextInputAction.done
+              : TextInputAction.next, // Smart Enter Key
+          onFieldSubmitted: (_) => _focusNextField(field.id), // Jump Logic
           labelText: field.name,
           validator: (v) => v == null || v.isEmpty ? 'Required' : null,
         );
@@ -195,6 +244,11 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
       case TrackerFieldType.number:
         return ModernBoxyInput(
           controller: _controllers[field.id]!,
+          focusNode: _focusNodes[field.id],
+          textInputAction: _isLastFocusable(field.id)
+              ? TextInputAction.done
+              : TextInputAction.next,
+          onFieldSubmitted: (_) => _focusNextField(field.id),
           labelText: field.name,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           validator: (v) => v == null || v.isEmpty ? 'Required' : null,
@@ -203,6 +257,11 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
       case TrackerFieldType.currency:
         return ModernBoxyInput(
           controller: _controllers[field.id]!,
+          focusNode: _focusNodes[field.id],
+          textInputAction: _isLastFocusable(field.id)
+              ? TextInputAction.done
+              : TextInputAction.next,
+          onFieldSubmitted: (_) => _focusNextField(field.id),
           labelText: field.name,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           prefixIcon: Padding(
@@ -239,6 +298,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
       case TrackerFieldType.dropdown:
         return GestureDetector(
           onTap: () async {
+            FocusScope.of(context).unfocus(); // Close keyboard before sheet
             HapticFeedback.lightImpact();
             final selected = await GlobalSelectionSheet.showSimple(
               context: context,
@@ -296,6 +356,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                   value: _formData[field.id] ?? false,
                   activeColor: theme.colorScheme.primary,
                   onChanged: (val) {
+                    FocusScope.of(context).unfocus();
                     HapticFeedback.lightImpact();
                     setState(() => _formData[field.id] = val);
                   },
@@ -326,6 +387,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                 final isSelected = _formData[field.id] == opt;
                 return GestureDetector(
                   onTap: () {
+                    FocusScope.of(context).unfocus();
                     HapticFeedback.selectionClick();
                     setState(() => _formData[field.id] = opt);
                   },
@@ -417,6 +479,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                 final isChecked = currentList.contains(opt);
                 return GestureDetector(
                   onTap: () {
+                    FocusScope.of(context).unfocus();
                     HapticFeedback.selectionClick();
                     setState(() {
                       if (isChecked)
