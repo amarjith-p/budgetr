@@ -14,7 +14,6 @@ final smartTrackerTemplatesProvider =
       return db.select(db.smartTrackerTemplates).watch();
     });
 
-// --- NEW: Watch a specific template for instant schema updates ---
 final singleSmartTrackerTemplateProvider =
     StreamProvider.family<SmartTrackerTemplate, String>((ref, id) {
       final db = ref.watch(databaseProvider);
@@ -99,6 +98,36 @@ class SmartTrackerActionNotifier extends Notifier<void> {
               createdAt: DateTime.now(),
             ),
           );
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // --- NEW: UPDATE SPECIFIC RECORD ---
+  Future<bool> updateTrackerRecord(
+    String recordId,
+    Map<String, dynamic> formData,
+  ) async {
+    try {
+      final record = await (_db.select(
+        _db.smartTrackerRecords,
+      )..where((r) => r.id.equals(recordId))).getSingle();
+      await _db
+          .update(_db.smartTrackerRecords)
+          .replace(record.copyWith(dataJson: jsonEncode(formData)));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // --- NEW: DELETE SPECIFIC RECORD ---
+  Future<bool> deleteTrackerRecord(String recordId) async {
+    try {
+      await (_db.delete(
+        _db.smartTrackerRecords,
+      )..where((r) => r.id.equals(recordId))).go();
       return true;
     } catch (e) {
       return false;
@@ -190,6 +219,7 @@ class SmartTrackerActionNotifier extends Notifier<void> {
           }
         }
       }
+
       if (changed) {
         await _db
             .update(_db.smartTrackerRecords)

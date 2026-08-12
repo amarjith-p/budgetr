@@ -9,6 +9,7 @@ import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_squircle_fab.dart';
 import '../../../core/components/premium_empty_state.dart';
 import '../../../core/components/global_selection_sheet.dart';
+import '../../../core/components/confirmation_bottom_sheet.dart'; // <-- Needed for delete
 import '../../../core/theme/design_tokens.dart';
 import '../models/tracker_field_model.dart';
 import '../providers/smart_tracker_provider.dart';
@@ -81,14 +82,116 @@ class SmartTrackerDetailPage extends ConsumerWidget {
     );
   }
 
+  // --- SHOWS THE EDIT / DELETE ACTION MENU FOR A ROW ---
+  void _showRowActions(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    SmartTrackerRecord record,
+    String rowIndex,
+    SmartTrackerTemplate liveTemplate,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Row $rowIndex Actions',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // EDIT ACTION
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  tileColor: theme.colorScheme.surface,
+                  leading: Icon(
+                    Icons.edit_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: const Text(
+                    'Edit Record',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SmartTrackerEntryPage(
+                          template: liveTemplate,
+                          existingRecordCount: 0,
+                          existingRecord:
+                              record, // <-- Passes record for editing
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+
+                // DELETE ACTION
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  tileColor: theme.colorScheme.error.withOpacity(0.1),
+                  leading: Icon(
+                    Icons.delete_rounded,
+                    color: theme.colorScheme.error,
+                  ),
+                  title: Text(
+                    'Delete Record',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    ConfirmationBottomSheet.show(
+                      context,
+                      title: 'Delete Record?',
+                      description:
+                          'This will permanently remove Row $rowIndex. This action cannot be undone.',
+                      confirmText: 'DELETE',
+                      isDestructive: true,
+                      onConfirm: () {
+                        ref
+                            .read(smartTrackerActionProvider.notifier)
+                            .deleteTrackerRecord(record.id);
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     final recordsAsync = ref.watch(smartTrackerRecordsProvider(template.id));
-
-    // --- FIXED: INSTANT LIVE WATCHER FOR SCHEMA CHANGES ---
     final templateAsync = ref.watch(
       singleSmartTrackerTemplateProvider(template.id),
     );
@@ -221,6 +324,7 @@ class SmartTrackerDetailPage extends ConsumerWidget {
                                       ),
                                     )
                                     .toList(),
+
                                 // --- + ADD COLUMN BUTTON ---
                                 GestureDetector(
                                   onTap: () {
@@ -270,6 +374,7 @@ class SmartTrackerDetailPage extends ConsumerWidget {
                                 ),
                               ],
                             ),
+
                             // --- ROWS 2..N: DATA RECORDS ---
                             ...ascendingRecords.asMap().entries.map((rowEntry) {
                               final rowIndex = rowEntry.key + 2;
@@ -299,7 +404,16 @@ class SmartTrackerDetailPage extends ConsumerWidget {
                                       '${_getExcelColumnName(colEntry.key)}$rowIndex',
                                     );
                                   }).toList(),
-                                  _buildDataCell(context, theme, '', ''),
+
+                                  // --- THE NEW ACTION MENU CELL ---
+                                  _buildActionCell(
+                                    context,
+                                    ref,
+                                    theme,
+                                    rowEntry.value,
+                                    rowIndex.toString(),
+                                    liveTemplate,
+                                  ),
                                 ],
                               );
                             }).toList(),
@@ -324,7 +438,6 @@ class SmartTrackerDetailPage extends ConsumerWidget {
                                       field.type == TrackerFieldType.number ||
                                       field.type == TrackerFieldType.currency ||
                                       field.type == TrackerFieldType.formula;
-
                                   if (!canAggregate)
                                     return _buildAggregateDataCell(
                                       theme,
@@ -386,7 +499,6 @@ class SmartTrackerDetailPage extends ConsumerWidget {
                                             selectedValue:
                                                 field.aggregate ?? 'NONE',
                                           );
-
                                       if (selected != null) {
                                         ref
                                             .read(
@@ -407,7 +519,11 @@ class SmartTrackerDetailPage extends ConsumerWidget {
                                     ),
                                   );
                                 }).toList(),
-                                _buildAggregateDataCell(theme, '', ''),
+                                _buildAggregateDataCell(
+                                  theme,
+                                  '',
+                                  '',
+                                ), // Empty space under Actions
                               ],
                             ),
                           ],
@@ -578,6 +694,44 @@ class SmartTrackerDetailPage extends ConsumerWidget {
             fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface,
           ),
+        ),
+      ),
+    ),
+  );
+
+  // --- THE NEW ACTION CELL COMPONENT ---
+  Widget _buildActionCell(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    SmartTrackerRecord record,
+    String rowIndex,
+    SmartTrackerTemplate template,
+  ) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        _showRowActions(context, ref, theme, record, rowIndex, template);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: Border(
+            right: BorderSide(
+              color: theme.dividerColor.withOpacity(0.3),
+              width: 1.0,
+            ),
+            bottom: BorderSide(
+              color: theme.dividerColor.withOpacity(0.3),
+              width: 1.0,
+            ),
+          ),
+        ),
+        child: Icon(
+          Icons.more_horiz_rounded,
+          color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
     ),

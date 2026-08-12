@@ -1,6 +1,5 @@
 // lib/features/smart_trackers/views/smart_tracker_entry_page.dart
 import 'dart:convert';
-import 'package:budgetr/features/smart_trackers/utils/tracker_formula_evaluator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,15 +12,18 @@ import '../../../core/components/global_selection_sheet.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../models/tracker_field_model.dart';
 import '../providers/smart_tracker_provider.dart';
+import '../utils/tracker_formula_evaluator.dart';
 
 class SmartTrackerEntryPage extends ConsumerStatefulWidget {
   final SmartTrackerTemplate template;
-  final int existingRecordCount; // Used for Serial No generation
+  final int existingRecordCount;
+  final SmartTrackerRecord? existingRecord; // --- NEW: Supports Edit Mode ---
 
   const SmartTrackerEntryPage({
     Key? key,
     required this.template,
     required this.existingRecordCount,
+    this.existingRecord,
   }) : super(key: key);
 
   @override
@@ -33,10 +35,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   final _formKey = GlobalKey<FormState>();
   late List<TrackerField> _fields;
 
-  // Stores the user input mapped to the Field ID
   final Map<String, dynamic> _formData = {};
-
-  // Controllers for text-based inputs
   final Map<String, TextEditingController> _controllers = {};
 
   @override
@@ -45,30 +44,49 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
     final List<dynamic> decoded = jsonDecode(widget.template.schemaJson);
     _fields = decoded.map((e) => TrackerField.fromJson(e)).toList();
 
+    // --- NEW: Load existing data if editing ---
+    Map<String, dynamic> existingData = {};
+    if (widget.existingRecord != null) {
+      existingData =
+          jsonDecode(widget.existingRecord!.dataJson) as Map<String, dynamic>;
+    }
+
     for (var field in _fields) {
       if (field.type == TrackerFieldType.serialNo) {
-        final serialNumber = (widget.existingRecordCount + 1)
-            .toString()
-            .padLeft(4, '0');
-        _formData[field.id] =
-            '${field.prefix ?? ''}$serialNumber${field.suffix ?? ''}';
+        if (widget.existingRecord != null && existingData[field.id] != null) {
+          _formData[field.id] = existingData[field.id];
+        } else {
+          final serialNumber = (widget.existingRecordCount + 1)
+              .toString()
+              .padLeft(4, '0');
+          _formData[field.id] =
+              '${field.prefix ?? ''}$serialNumber${field.suffix ?? ''}';
+        }
         _controllers[field.id] = TextEditingController(
           text: _formData[field.id],
         );
       } else if (field.type == TrackerFieldType.checkbox) {
-        _formData[field.id] = <String>[];
+        if (widget.existingRecord != null && existingData[field.id] != null) {
+          _formData[field.id] =
+              (existingData[field.id] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              <String>[];
+        } else {
+          _formData[field.id] = <String>[];
+        }
       } else if (field.type == TrackerFieldType.toggle) {
-        _formData[field.id] = false;
+        _formData[field.id] = existingData[field.id] == true;
       } else {
-        _controllers[field.id] = TextEditingController();
-        // --- NEW: Add listener to trigger recalculation ---
+        final val = existingData[field.id]?.toString() ?? '';
+        _formData[field.id] = val;
+        _controllers[field.id] = TextEditingController(text: val);
         _controllers[field.id]!.addListener(_recalculateFormulas);
       }
     }
   }
 
   void _recalculateFormulas() {
-    // Sync text controllers to formData
     for (var f in _fields) {
       if (f.type == TrackerFieldType.text ||
           f.type == TrackerFieldType.number ||
@@ -77,7 +95,6 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
       }
     }
 
-    // Calculate Formulas
     for (var field in _fields.where(
       (f) => f.type == TrackerFieldType.formula,
     )) {
@@ -110,19 +127,10 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
-      firstDate: DateTime(1900), // --- UPDATED TO 1900 ---
-      lastDate: DateTime(2200), // --- UPDATED TO 2200 ---
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          child: child!,
-        );
-      },
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2200),
     );
+
     if (picked != null) {
       final formatted = DateFormat('dd MMM yyyy').format(picked);
       setState(() {
@@ -135,7 +143,6 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Save text controller values to form data
     for (var field in _fields) {
       if (field.type == TrackerFieldType.text ||
           field.type == TrackerFieldType.number ||
@@ -145,16 +152,23 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
     }
 
     HapticFeedback.selectionClick();
-    final success = await ref
-        .read(smartTrackerActionProvider.notifier)
-        .saveTrackerRecord(widget.template.id, _formData);
+
+    bool success;
+    if (widget.existingRecord != null) {
+      success = await ref
+          .read(smartTrackerActionProvider.notifier)
+          .updateTrackerRecord(widget.existingRecord!.id, _formData);
+    } else {
+      success = await ref
+          .read(smartTrackerActionProvider.notifier)
+          .saveTrackerRecord(widget.template.id, _formData);
+    }
 
     if (success && mounted) {
       Navigator.pop(context);
     }
   }
 
-  // --- PREMIUM METRO UI DYNAMIC WIDGET GENERATOR ---
   Widget _buildDynamicField(TrackerField field, ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
 
@@ -222,7 +236,6 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
           ),
         );
 
-      // --- NEW: REPLACED NATIVE DROPDOWN WITH GLOBAL SELECTION SHEET ---
       case TrackerFieldType.dropdown:
         return GestureDetector(
           onTap: () async {
@@ -369,11 +382,12 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
             ),
           ],
         );
+
       case TrackerFieldType.formula:
         return ModernBoxyInput(
           controller: _controllers[field.id]!,
           labelText: field.name,
-          readOnly: true, // Formulas are calculated, not typed!
+          readOnly: true,
           prefixIcon: Icon(
             Icons.functions_rounded,
             color: theme.colorScheme.primary,
@@ -405,11 +419,10 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                   onTap: () {
                     HapticFeedback.selectionClick();
                     setState(() {
-                      if (isChecked) {
+                      if (isChecked)
                         currentList.remove(opt);
-                      } else {
+                      else
                         currentList.add(opt);
-                      }
                     });
                   },
                   child: AnimatedContainer(
@@ -471,11 +484,12 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isEditing = widget.existingRecord != null;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: ModernAppBar(
-        title: 'New Entry',
+        title: isEditing ? 'Edit Record' : 'New Entry',
         subtitle: widget.template.name.toUpperCase(),
         leadingIcon: Icons.arrow_back_rounded,
       ),
@@ -513,7 +527,6 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                   },
                 ),
               ),
-              // --- APP STANDARD TWIN ACTION BUTTONS ---
               Container(
                 padding: const EdgeInsets.all(DesignTokens.spacingLg),
                 decoration: BoxDecoration(
@@ -543,7 +556,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                       flex: 2,
                       child: ModernBoxyButton(
                         onPressed: _submit,
-                        label: 'SAVE RECORD',
+                        label: isEditing ? 'UPDATE RECORD' : 'SAVE RECORD',
                       ),
                     ),
                   ],
