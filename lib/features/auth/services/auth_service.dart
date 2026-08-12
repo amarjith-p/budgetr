@@ -1,3 +1,4 @@
+// lib/features/auth/services/auth_service.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
@@ -9,10 +10,21 @@ class AuthService {
   final _localAuth = LocalAuthentication();
   static const String _pinKey = 'secure_user_pin';
   static const String _bioKey = 'use_biometrics';
+  static const String _appLockKey = 'use_app_lock';
 
   Future<bool> hasRegisteredPin() async {
     final pin = await _storage.read(key: _pinKey);
     return pin != null;
+  }
+
+  // --- NEW: Master App Lock Setting ---
+  Future<bool> isAppLockEnabled() async {
+    final enabled = await _storage.read(key: _appLockKey);
+    return enabled != 'false'; // Defaults to true
+  }
+
+  Future<void> setAppLockEnabled(bool enable) async {
+    await _storage.write(key: _appLockKey, value: enable.toString());
   }
 
   Future<bool> isBiometricEnabled() async {
@@ -20,9 +32,14 @@ class AuthService {
     return enabled == 'true';
   }
 
+  Future<void> setBiometricEnabled(bool enable) async {
+    await _storage.write(key: _bioKey, value: enable.toString());
+  }
+
   Future<void> registerPin(String pin, bool enableBiometrics) async {
     await _storage.write(key: _pinKey, value: pin);
     await _storage.write(key: _bioKey, value: enableBiometrics.toString());
+    await _storage.write(key: _appLockKey, value: 'true');
   }
 
   Future<bool> verifyPin(String enteredPin) async {

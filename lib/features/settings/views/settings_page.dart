@@ -1,17 +1,20 @@
 // features/settings/views/settings_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/theme_switcher_card.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../notifications/views/notification_manager_screen.dart';
+import '../../auth/auth_state.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final securitySettings = ref.watch(securitySettingsProvider);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -27,9 +30,40 @@ class SettingsPage extends StatelessWidget {
           _buildSectionHeader('PREFERENCES', theme),
           const SizedBox(height: 8),
 
-          // --- YOUR EXISTING THEME SWITCHER LOGIC ---
-          // (Update the UI inside this file using the snippet below)
+          // --- EXISTING THEME SWITCHER ---
           const ThemeSwitcherCard(),
+
+          const SizedBox(height: 24),
+
+          // --- NEW: SECURITY SECTION ---
+          _buildSectionHeader('SECURITY', theme),
+          const SizedBox(height: 8),
+          _buildBoxySettingsGroup(
+            context,
+            children: [
+              _buildBoxyToggleRow(
+                context,
+                title: 'App Lock (Passcode)',
+                subtitle: 'Require PIN to open the app',
+                value: securitySettings.appLockEnabled,
+                onChanged: (val) => ref
+                    .read(securitySettingsProvider.notifier)
+                    .toggleAppLock(val),
+              ),
+              _buildDivider(theme),
+              _buildBoxyToggleRow(
+                context,
+                title: 'Biometric Unlock',
+                subtitle: 'Use fingerprint or face ID',
+                value: securitySettings.biometricsEnabled,
+                onChanged: securitySettings.appLockEnabled
+                    ? (val) => ref
+                          .read(securitySettingsProvider.notifier)
+                          .toggleBiometrics(val)
+                    : null, // Disabled if App Lock is off
+              ),
+            ],
+          ),
 
           const SizedBox(height: 24),
 
@@ -85,14 +119,72 @@ class SettingsPage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(8), // Boxy sharp corner
-        border: Border.all(
-          color: theme.dividerColor,
-          width: 1.0,
-        ), // Rigid border
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.dividerColor, width: 1.0),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(children: children),
+    );
+  }
+
+  Widget _buildBoxyToggleRow(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool>? onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final isEnabled = onChanged != null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: isEnabled
+                        ? theme.colorScheme.onSurface
+                        : theme.colorScheme.onSurface.withOpacity(0.4),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                      isEnabled ? 1.0 : 0.6,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 0.85,
+            child: Switch(
+              value: value,
+              onChanged: isEnabled
+                  ? (val) {
+                      HapticFeedback.lightImpact();
+                      onChanged(val);
+                    }
+                  : null,
+              activeColor: theme.colorScheme.primary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -122,9 +214,7 @@ class SettingsPage extends StatelessWidget {
                   color: theme.colorScheme.primary.withOpacity(
                     isDark ? 0.15 : 0.1,
                   ),
-                  borderRadius: BorderRadius.circular(
-                    4,
-                  ), // Sharp square icon background
+                  borderRadius: BorderRadius.circular(4),
                   border: Border.all(
                     color: theme.colorScheme.primary.withOpacity(0.3),
                   ),
@@ -167,5 +257,9 @@ class SettingsPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildDivider(ThemeData theme) {
+    return Divider(height: 1, color: theme.dividerColor.withOpacity(0.5));
   }
 }

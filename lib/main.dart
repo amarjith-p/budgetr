@@ -32,7 +32,6 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
     // --- REQUEST PERMISSION ON APP LAUNCH ---
     NotificationService.instance.requestPermissions();
   }
@@ -60,29 +59,46 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp>
     // --- HOOK UP THE SILENT NOTIFICATION SCHEDULER ---
     initializeNotificationScheduler(ref);
 
-    Widget getHomeScreen() {
-      switch (authStatus) {
-        case AuthStatus.loading:
-          return Scaffold(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            body: const Center(child: CircularProgressIndicator()),
-          );
-        case AuthStatus.authenticated:
-          return const DashboardPage();
-        case AuthStatus.setupRequired:
-        case AuthStatus.unauthenticated:
-        default:
-          return const AuthPage();
-      }
-    }
-
     return MaterialApp(
       title: 'FinStack 360',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: currentThemeMode,
-      home: getHomeScreen(),
+
+      // The underlying app ALWAYS natively routes to the Dashboard
+      home: const DashboardPage(),
+
+      // --- GLOBAL APP LOCK LAYER ---
+      // This guarantees 100% security against route-popping.
+      // It physically stacks the AuthPage over the ENTIRE running app.
+      builder: (context, child) {
+        return Stack(
+          children: [
+            child!, // The real application running normally
+
+            if (authStatus != AuthStatus.authenticated)
+              Positioned.fill(
+                child: MaterialApp(
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.lightTheme,
+                  darkTheme: AppTheme.darkTheme,
+                  themeMode: currentThemeMode,
+                  home: authStatus == AuthStatus.loading
+                      ? Scaffold(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).scaffoldBackgroundColor,
+                          body: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      : const AuthPage(),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

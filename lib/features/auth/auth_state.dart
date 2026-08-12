@@ -1,4 +1,6 @@
+// lib/features/auth/auth_state.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'services/auth_service.dart';
 
 enum AuthStatus { loading, setupRequired, unauthenticated, authenticated }
@@ -9,27 +11,30 @@ class AuthNotifier extends Notifier<AuthStatus> {
 
   @override
   AuthStatus build() {
-    _initAuth();
+    initAuth();
     return AuthStatus.loading;
   }
 
-  Future<void> _initAuth() async {
+  Future<void> initAuth() async {
     final authService = ref.read(authServiceProvider);
+
+    final lockEnabled = await authService.isAppLockEnabled();
     final hasPin = await authService.hasRegisteredPin();
-    
+
+    if (!lockEnabled) {
+      state = AuthStatus.authenticated;
+      return;
+    }
+
     if (!hasPin) {
       state = AuthStatus.setupRequired;
       return;
     }
-    
-    // FIX: Immediately transition out of 'loading' to 'unauthenticated'.
-    // This renders the PIN pad in the background and satisfies the 
-    // safety check inside attemptBiometricUnlock().
+
     state = AuthStatus.unauthenticated;
 
     final useBio = await authService.isBiometricEnabled();
     if (useBio) {
-      // Now this will successfully trigger because the state is unauthenticated.
       await attemptBiometricUnlock();
     }
   }
@@ -43,7 +48,7 @@ class AuthNotifier extends Notifier<AuthStatus> {
   Future<void> unlockWithPin(String pin) async {
     final authService = ref.read(authServiceProvider);
     final isValid = await authService.verifyPin(pin);
-    
+
     if (isValid) {
       state = AuthStatus.authenticated;
     } else {
@@ -52,7 +57,11 @@ class AuthNotifier extends Notifier<AuthStatus> {
   }
 
   /// Instantly revokes access when the app goes to the background.
-  void lockApp() {
+  Future<void> lockApp() async {
+    final authService = ref.read(authServiceProvider);
+    final lockEnabled = await authService.isAppLockEnabled();
+    if (!lockEnabled) return;
+
     // DO NOT lock if the "pause" was just the biometric overlay popping up!
     if (state == AuthStatus.authenticated && !_isBiometricPromptOpen) {
       state = AuthStatus.unauthenticated;
@@ -61,14 +70,17 @@ class AuthNotifier extends Notifier<AuthStatus> {
 
   /// Triggers when the app is resumed from the background or manual button press.
   Future<void> attemptBiometricUnlock() async {
+    final authService = ref.read(authServiceProvider);
+    final lockEnabled = await authService.isAppLockEnabled();
+    if (!lockEnabled) return;
+
     // Only attempt if locked AND the prompt isn't already open
     if (state == AuthStatus.unauthenticated && !_isBiometricPromptOpen) {
-      final authService = ref.read(authServiceProvider);
       final useBio = await authService.isBiometricEnabled();
-      
+
       if (useBio) {
         _isBiometricPromptOpen = true; // Lock the lifecycle
-        
+
         try {
           final success = await authService.authenticateWithBiometrics();
           if (success) {
@@ -86,4 +98,63 @@ class AuthNotifier extends Notifier<AuthStatus> {
   }
 }
 
-final authProvider = NotifierProvider<AuthNotifier, AuthStatus>(() => AuthNotifier());
+final authProvider = NotifierProvider<AuthNotifier, AuthStatus>(
+  () => AuthNotifier(),
+);
+
+// --- NEW: Security Settings Provider ---
+class SecuritySettings {
+  final bool appLockEnabled;
+  final bool biometricsEnabled;
+  SecuritySettings({
+    required this.appLockEnabled,
+    required this.biometricsEnabled,
+  });
+}
+
+class SecuritySettingsNotifier extends StateNotifier<SecuritySettings> {
+  final Ref ref;
+  SecuritySettingsNotifier(this.ref)
+    : super(SecuritySettings(appLockEnabled: true, biometricsEnabled: false)) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final service = ref.read(authServiceProvider);
+    final lock = await service.isAppLockEnabled();
+    final bio = await service.isBiometricEnabled();
+    state = SecuritySettings(appLockEnabled: lock, biometricsEnabled: bio);
+  }
+
+  Future<void> toggleAppLock(bool enable) async {
+    final service = ref.read(authServiceProvider);
+    await service.setAppLockEnabled(enable);
+    state = SecuritySettings(
+      appLockEnabled: enable,
+      biometricsEnabled: state.biometricsEnabled,
+    );
+
+    if (!enable) {
+      ref
+          .read(authProvider.notifier)
+          .initAuth(); // Instantly unlocks if disabled
+    } else {
+      final hasPin = await service.hasRegisteredPin();
+      if (!hasPin) ref.read(authProvider.notifier).initAuth(); // Triggers setup
+    }
+  }
+
+  Future<void> toggleBiometrics(bool enable) async {
+    final service = ref.read(authServiceProvider);
+    await service.setBiometricEnabled(enable);
+    state = SecuritySettings(
+      appLockEnabled: state.appLockEnabled,
+      biometricsEnabled: enable,
+    );
+  }
+}
+
+final securitySettingsProvider =
+    StateNotifierProvider<SecuritySettingsNotifier, SecuritySettings>(
+      (ref) => SecuritySettingsNotifier(ref),
+    );

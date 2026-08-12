@@ -1,8 +1,9 @@
-// features/dashboard/views/dashboard_page.dart
+// lib/features/dashboard/views/dashboard_page.dart
 import 'package:budgetr/features/developer/views/developer_support_page.dart';
 import 'package:budgetr/features/investments/views/investment_dashboard_page.dart';
 import 'package:budgetr/features/money_tracker/views/money_tracker_base_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/components/modern_app_bar.dart';
@@ -411,6 +412,44 @@ class DashboardPage extends ConsumerWidget {
                                   builder: (context) => const SettingsPage(),
                                 ),
                               );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: tileGap),
+
+                    // --- ROW 4: Custom Entry & Backup ---
+                    Row(
+                      children: [
+                        // Expanded Flex 7 mathematically spans from the left all the way to the right column gap
+                        Expanded(
+                          flex: 7,
+                          child: _buildMetroTile(
+                            title: 'CUSTOM ENTRY',
+                            icon: Icons.post_add_rounded,
+                            height: 120,
+                            color: darkTileColor,
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              // Add navigation or action here later
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: tileGap),
+                        // Expanded Flex 2 is mathematically identical to the width of the CATEGORIES tile
+                        Expanded(
+                          flex: 2,
+                          child: _buildMetroTile(
+                            title: 'BACKUP',
+                            icon: Icons.cloud_sync_rounded,
+                            height: 120,
+                            color: darkTileColor,
+                            verticalText: true,
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              // Add navigation or action here later
                             },
                           ),
                         ),
