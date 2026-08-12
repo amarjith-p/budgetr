@@ -15,7 +15,7 @@ import '../components/add_field_bottom_sheet.dart';
 import '../utils/tracker_field_ui_helper.dart';
 
 class SmartTrackerBuilderPage extends ConsumerStatefulWidget {
-  final SmartTrackerTemplate? existingTemplate; // <-- NEW: Used for editing
+  final SmartTrackerTemplate? existingTemplate;
 
   const SmartTrackerBuilderPage({Key? key, this.existingTemplate})
     : super(key: key);
@@ -38,7 +38,6 @@ class _SmartTrackerBuilderPageState
       text: widget.existingTemplate?.name ?? '',
     );
 
-    // Load existing fields if editing
     if (widget.existingTemplate != null) {
       final List<dynamic> decoded = jsonDecode(
         widget.existingTemplate!.schemaJson,
@@ -61,15 +60,14 @@ class _SmartTrackerBuilderPageState
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => AddFieldBottomSheet(
-        existingField: editIndex != null
-            ? _fields[editIndex]
-            : null, // <-- Pass field if editing
+        existingField: editIndex != null ? _fields[editIndex] : null,
+        // --- REMOVED existingSchemaFields AS FORMULAS ARE NOW IN THE DETAIL PAGE ---
         onFieldAdded: (field) {
           setState(() {
             if (editIndex != null) {
-              _fields[editIndex] = field; // Update existing
+              _fields[editIndex] = field;
             } else {
-              _fields.add(field); // Add new
+              _fields.add(field);
             }
           });
         },
@@ -108,6 +106,9 @@ class _SmartTrackerBuilderPageState
   }
 
   String _buildMetadataString(TrackerField field) {
+    if (field.type == TrackerFieldType.formula) {
+      return 'FORMULA: ${field.formulaConfig?.type.toUpperCase() ?? "COMPUTED"}';
+    }
     if (field.type == TrackerFieldType.currency) {
       return '${TrackerFieldUIHelper.formatEnumName(field.type.name).toUpperCase()} (${field.currencySymbol})';
     }
@@ -140,16 +141,13 @@ class _SmartTrackerBuilderPageState
         child: Column(
           children: [
             Expanded(
-              // --- NATIVE REORDERABLE LIST VIEW ---
               child: ReorderableListView(
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.all(DesignTokens.spacingLg),
                 onReorder: (oldIndex, newIndex) {
                   HapticFeedback.selectionClick();
                   setState(() {
-                    if (newIndex > oldIndex) {
-                      newIndex -= 1;
-                    }
+                    if (newIndex > oldIndex) newIndex -= 1;
                     final item = _fields.removeAt(oldIndex);
                     _fields.insert(newIndex, item);
                   });
@@ -305,9 +303,7 @@ class _SmartTrackerBuilderPageState
                   );
 
                   return Container(
-                    key: ValueKey(
-                      field.id,
-                    ), // <-- Crucial for ReorderableListView
+                    key: ValueKey(field.id),
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
@@ -328,9 +324,7 @@ class _SmartTrackerBuilderPageState
                           Container(width: 6, color: typeColor),
                           Expanded(
                             child: InkWell(
-                              onTap: () => _openAddFieldSheet(
-                                editIndex: index,
-                              ), // <-- Tap to Edit!
+                              onTap: () => _openAddFieldSheet(editIndex: index),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Row(
@@ -377,6 +371,8 @@ class _SmartTrackerBuilderPageState
                                                   .onSurfaceVariant,
                                               fontSize: 9,
                                             ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),
@@ -390,7 +386,6 @@ class _SmartTrackerBuilderPageState
                                       ),
                                       onPressed: () => _removeField(index),
                                     ),
-                                    // Reorder Handle Indicator
                                     Icon(
                                       Icons.drag_indicator_rounded,
                                       color: theme.colorScheme.onSurfaceVariant

@@ -10,8 +10,7 @@ import '../models/tracker_field_model.dart';
 import '../utils/tracker_field_ui_helper.dart';
 
 class AddFieldBottomSheet extends StatefulWidget {
-  final TrackerField?
-  existingField; // <-- NEW: Allows editing an existing field
+  final TrackerField? existingField;
   final ValueChanged<TrackerField> onFieldAdded;
 
   const AddFieldBottomSheet({
@@ -36,6 +35,11 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
 
   final List<String> _currencySymbols = ['₹', '\$', '€', '£', '¥'];
 
+  // Exclude Formula from the initial builder grid (It is added from the Detail Page)
+  final List<TrackerFieldType> _availableTypes = TrackerFieldType.values
+      .where((t) => t != TrackerFieldType.formula)
+      .toList();
+
   bool get _requiresOptions =>
       _selectedType == TrackerFieldType.dropdown ||
       _selectedType == TrackerFieldType.radio ||
@@ -44,7 +48,6 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
   @override
   void initState() {
     super.initState();
-    // Initialize with existing data if editing
     _nameCtrl = TextEditingController(text: widget.existingField?.name ?? '');
     _optionsCtrl = TextEditingController(
       text: widget.existingField?.options?.join(', ') ?? '',
@@ -91,7 +94,6 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
 
     HapticFeedback.selectionClick();
     final newField = TrackerField(
-      // --- CRITICAL: Must preserve original ID when editing so old records retain data ---
       id: widget.existingField?.id ?? const Uuid().v4(),
       name: _nameCtrl.text.trim(),
       type: _selectedType,
@@ -109,6 +111,9 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
       currencySymbol: _selectedType == TrackerFieldType.currency
           ? _selectedCurrency
           : null,
+      // Aggregates and Formulas are handled in the Detail Page now
+      formulaConfig: widget.existingField?.formulaConfig,
+      aggregate: widget.existingField?.aggregate,
     );
 
     widget.onFieldAdded(newField);
@@ -117,10 +122,6 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // ... Keep exact same UI build method from your previous AddFieldBottomSheet ...
-    // Note: Change the button label at the bottom to reflect edit mode:
-    // label: widget.existingField != null ? 'UPDATE FIELD' : 'ADD FIELD',
-
     final theme = Theme.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
@@ -187,9 +188,9 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
                   mainAxisSpacing: 8,
                   childAspectRatio: 1.4,
                 ),
-                itemCount: TrackerFieldType.values.length,
+                itemCount: _availableTypes.length,
                 itemBuilder: (context, index) {
-                  final type = TrackerFieldType.values[index];
+                  final type = _availableTypes[index];
                   final isSelected = _selectedType == type;
 
                   return Material(

@@ -6,11 +6,21 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../models/tracker_field_model.dart';
+import '../utils/tracker_formula_evaluator.dart';
 
 final smartTrackerTemplatesProvider =
     StreamProvider<List<SmartTrackerTemplate>>((ref) {
       final db = ref.watch(databaseProvider);
       return db.select(db.smartTrackerTemplates).watch();
+    });
+
+// --- NEW: Watch a specific template for instant schema updates ---
+final singleSmartTrackerTemplateProvider =
+    StreamProvider.family<SmartTrackerTemplate, String>((ref, id) {
+      final db = ref.watch(databaseProvider);
+      return (db.select(
+        db.smartTrackerTemplates,
+      )..where((t) => t.id.equals(id))).watchSingle();
     });
 
 final smartTrackerRecordsProvider =
@@ -38,9 +48,7 @@ class SmartTrackerActionNotifier extends Notifier<void> {
   }) async {
     try {
       final schemaJson = jsonEncode(fields.map((f) => f.toJson()).toList());
-
       if (existingId == null) {
-        // Create New
         await _db
             .into(_db.smartTrackerTemplates)
             .insert(
@@ -52,7 +60,6 @@ class SmartTrackerActionNotifier extends Notifier<void> {
               ),
             );
       } else {
-        // Update Existing
         final template = await (_db.select(
           _db.smartTrackerTemplates,
         )..where((t) => t.id.equals(existingId))).getSingle();
@@ -68,11 +75,9 @@ class SmartTrackerActionNotifier extends Notifier<void> {
 
   Future<void> deleteTrackerTemplate(String id) async {
     await _db.transaction(() async {
-      // Delete all cascading records first
       await (_db.delete(
         _db.smartTrackerRecords,
       )..where((r) => r.templateId.equals(id))).go();
-      // Delete the template
       await (_db.delete(
         _db.smartTrackerTemplates,
       )..where((t) => t.id.equals(id))).go();
@@ -97,6 +102,99 @@ class SmartTrackerActionNotifier extends Notifier<void> {
       return true;
     } catch (e) {
       return false;
+    }
+  }
+
+  Future<bool> addFormulaColumn(
+    SmartTrackerTemplate template,
+    TrackerField formulaField,
+  ) async {
+    try {
+      final List<dynamic> decoded = jsonDecode(template.schemaJson);
+      List<TrackerField> fields = decoded
+          .map((e) => TrackerField.fromJson(e))
+          .toList();
+      fields.add(formulaField);
+
+      await saveTrackerTemplate(
+        existingId: template.id,
+        name: template.name,
+        fields: fields,
+      );
+      await _recalculateAllRecords(template.id, fields);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> updateColumnAggregate(
+    SmartTrackerTemplate template,
+    String fieldId,
+    String aggregateType,
+  ) async {
+    try {
+      final List<dynamic> decoded = jsonDecode(template.schemaJson);
+      List<TrackerField> fields = decoded
+          .map((e) => TrackerField.fromJson(e))
+          .toList();
+      final index = fields.indexWhere((f) => f.id == fieldId);
+
+      if (index != -1) {
+        final oldField = fields[index];
+        fields[index] = TrackerField(
+          id: oldField.id,
+          name: oldField.name,
+          type: oldField.type,
+          options: oldField.options,
+          prefix: oldField.prefix,
+          suffix: oldField.suffix,
+          currencySymbol: oldField.currencySymbol,
+          formulaConfig: oldField.formulaConfig,
+          aggregate: aggregateType,
+        );
+        await saveTrackerTemplate(
+          existingId: template.id,
+          name: template.name,
+          fields: fields,
+        );
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> _recalculateAllRecords(
+    String templateId,
+    List<TrackerField> fields,
+  ) async {
+    final records = await (_db.select(
+      _db.smartTrackerRecords,
+    )..where((r) => r.templateId.equals(templateId))).get();
+    for (var record in records) {
+      Map<String, dynamic> dataMap = jsonDecode(record.dataJson);
+      bool changed = false;
+
+      for (var field in fields) {
+        if (field.type == TrackerFieldType.formula &&
+            field.formulaConfig != null) {
+          final newValue = TrackerFormulaEvaluator.evaluate(
+            field.formulaConfig!,
+            dataMap,
+            fields,
+          );
+          if (dataMap[field.id] != newValue) {
+            dataMap[field.id] = newValue;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        await _db
+            .update(_db.smartTrackerRecords)
+            .replace(record.copyWith(dataJson: jsonEncode(dataMap)));
+      }
     }
   }
 }

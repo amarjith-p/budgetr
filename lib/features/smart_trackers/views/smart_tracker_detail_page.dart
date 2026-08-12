@@ -8,9 +8,11 @@ import '../../../core/database/app_database.dart';
 import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_squircle_fab.dart';
 import '../../../core/components/premium_empty_state.dart';
+import '../../../core/components/global_selection_sheet.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../models/tracker_field_model.dart';
 import '../providers/smart_tracker_provider.dart';
+import '../components/add_formula_bottom_sheet.dart';
 import 'smart_tracker_entry_page.dart';
 
 class SmartTrackerDetailPage extends ConsumerWidget {
@@ -19,7 +21,6 @@ class SmartTrackerDetailPage extends ConsumerWidget {
   const SmartTrackerDetailPage({Key? key, required this.template})
     : super(key: key);
 
-  // --- EXCEL COLUMN NAMING LOGIC (0 = A, 1 = B, 26 = AA, etc.) ---
   String _getExcelColumnName(int columnIndex) {
     String columnName = "";
     int temp = columnIndex;
@@ -30,32 +31,27 @@ class SmartTrackerDetailPage extends ConsumerWidget {
     return columnName;
   }
 
-  // --- DATA FORMATTER ---
   String _formatValue(TrackerField field, dynamic value) {
     if (value == null || value.toString().isEmpty) return '-';
-
     try {
-      if (field.type == TrackerFieldType.checkbox && value is List) {
+      if (field.type == TrackerFieldType.checkbox && value is List)
         return value.join(', ');
-      } else if (field.type == TrackerFieldType.currency) {
+      if (field.type == TrackerFieldType.currency)
         return '${field.currencySymbol ?? ''} $value'.trim();
-      } else if (field.type == TrackerFieldType.date) {
+      if (field.type == TrackerFieldType.date)
         return DateFormat(
           'dd MMM yyyy',
         ).format(DateTime.parse(value.toString()));
-      } else if (field.type == TrackerFieldType.toggle) {
+      if (field.type == TrackerFieldType.toggle)
         return value == true ? 'Yes' : 'No';
-      }
       return value.toString();
     } catch (e) {
       return value.toString();
     }
   }
 
-  // --- CELL REFERENCE TOOLTIP / SNACKBAR ---
   void _showCellReference(BuildContext context, String cellRef) {
     HapticFeedback.heavyImpact();
-
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -90,17 +86,21 @@ class SmartTrackerDetailPage extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Watch records for THIS specific template
     final recordsAsync = ref.watch(smartTrackerRecordsProvider(template.id));
 
-    // Parse Schema to get Field Names for columns
-    final List<dynamic> decodedSchema = jsonDecode(template.schemaJson);
+    // --- FIXED: INSTANT LIVE WATCHER FOR SCHEMA CHANGES ---
+    final templateAsync = ref.watch(
+      singleSmartTrackerTemplateProvider(template.id),
+    );
+    final liveTemplate = templateAsync.asData?.value ?? template;
+
+    final List<dynamic> decodedSchema = jsonDecode(liveTemplate.schemaJson);
     final fields = decodedSchema.map((e) => TrackerField.fromJson(e)).toList();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: ModernAppBar(
-        title: template.name,
+        title: liveTemplate.name,
         subtitle: 'SMART TRACKER LEDGER',
         leadingIcon: Icons.arrow_back_rounded,
       ),
@@ -112,7 +112,7 @@ class SmartTrackerDetailPage extends ConsumerWidget {
             context,
             MaterialPageRoute(
               builder: (_) => SmartTrackerEntryPage(
-                template: template,
+                template: liveTemplate,
                 existingRecordCount: count,
               ),
             ),
@@ -129,12 +129,11 @@ class SmartTrackerDetailPage extends ConsumerWidget {
             return PremiumEmptyState(
               title: 'Ledger is Empty',
               subtitle:
-                  'Tap Log Data to create your first entry in ${template.name}.',
+                  'Tap Log Data to create your first entry in ${liveTemplate.name}.',
               icon: Icons.grid_on_rounded,
             );
           }
 
-          // ASCENDING ORDER (Oldest at the top, Newest at the bottom)
           final ascendingRecords = records.reversed.toList();
 
           return Column(
@@ -142,7 +141,6 @@ class SmartTrackerDetailPage extends ConsumerWidget {
             children: [
               Expanded(
                 child: Container(
-                  // Minimized margins for edge-to-edge feel
                   margin: const EdgeInsets.only(
                     left: 4,
                     right: 4,
@@ -162,7 +160,6 @@ class SmartTrackerDetailPage extends ConsumerWidget {
                     ],
                   ),
                   clipBehavior: Clip.antiAlias,
-                  // BIDIRECTIONAL SCROLLING
                   child: InteractiveViewer(
                     constrained: false,
                     boundaryMargin: const EdgeInsets.all(0),
@@ -179,7 +176,7 @@ class SmartTrackerDetailPage extends ConsumerWidget {
                           defaultVerticalAlignment:
                               TableCellVerticalAlignment.middle,
                           children: [
-                            // --- ROW 0: PURE EXCEL COLUMN LETTERS (A, B, C...) ---
+                            // --- ROW 0: PURE EXCEL COLUMN LETTERS ---
                             TableRow(
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.surfaceContainerHighest
@@ -187,16 +184,20 @@ class SmartTrackerDetailPage extends ConsumerWidget {
                               ),
                               children: [
                                 _buildCornerCell(theme),
-                                ...fields.asMap().entries.map((entry) {
-                                  final colLetter = _getExcelColumnName(
-                                    entry.key,
-                                  );
-                                  return _buildAxisLetterCell(theme, colLetter);
-                                }).toList(),
+                                ...fields
+                                    .asMap()
+                                    .entries
+                                    .map(
+                                      (e) => _buildAxisLetterCell(
+                                        theme,
+                                        _getExcelColumnName(e.key),
+                                      ),
+                                    )
+                                    .toList(),
+                                _buildAxisLetterCell(theme, '+'),
                               ],
                             ),
-
-                            // --- ROW 1: TABLE HEADERS / FIELD NAMES (A1, B1, C1...) ---
+                            // --- ROW 1: TABLE HEADERS ---
                             TableRow(
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.primaryContainer
@@ -208,32 +209,74 @@ class SmartTrackerDetailPage extends ConsumerWidget {
                                   '1',
                                   isHeaderRow: true,
                                 ),
-                                ...fields.asMap().entries.map((entry) {
-                                  final colLetter = _getExcelColumnName(
-                                    entry.key,
-                                  );
-                                  return _buildFieldHeaderCell(
-                                    context,
-                                    theme,
-                                    entry.value.name,
-                                    '${colLetter}1',
-                                  );
-                                }).toList(),
+                                ...fields
+                                    .asMap()
+                                    .entries
+                                    .map(
+                                      (e) => _buildFieldHeaderCell(
+                                        context,
+                                        theme,
+                                        e.value.name,
+                                        '${_getExcelColumnName(e.key)}1',
+                                      ),
+                                    )
+                                    .toList(),
+                                // --- + ADD COLUMN BUTTON ---
+                                GestureDetector(
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      useSafeArea: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (ctx) => AddFormulaBottomSheet(
+                                        existingFields: fields,
+                                        onColumnAdded: (newField) {
+                                          ref
+                                              .read(
+                                                smartTrackerActionProvider
+                                                    .notifier,
+                                              )
+                                              .addFormulaColumn(
+                                                liveTemplate,
+                                                newField,
+                                              );
+                                        },
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 16,
+                                    ),
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: theme.colorScheme.primary
+                                              .withOpacity(0.4),
+                                          width: 2.0,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.add_rounded,
+                                      color: theme.colorScheme.primary,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
-
                             // --- ROWS 2..N: DATA RECORDS ---
                             ...ascendingRecords.asMap().entries.map((rowEntry) {
-                              final record = rowEntry.value;
-                              // Data starts at Row 2 mathematically
                               final rowIndex = rowEntry.key + 2;
                               final Map<String, dynamic> dataMap = jsonDecode(
-                                record.dataJson,
+                                rowEntry.value.dataJson,
                               );
-
-                              // ZEBRA STRIPING
-                              final isEvenRow = rowIndex % 2 == 0;
-                              final rowBgColor = isEvenRow
+                              final rowBgColor = (rowIndex % 2 == 0)
                                   ? Colors.transparent
                                   : theme.colorScheme.surfaceContainerHighest
                                         .withOpacity(isDark ? 0.2 : 0.4);
@@ -241,38 +284,132 @@ class SmartTrackerDetailPage extends ConsumerWidget {
                               return TableRow(
                                 decoration: BoxDecoration(color: rowBgColor),
                                 children: [
-                                  // Row Number Column (2, 3, 4...)
                                   _buildRowNumberCell(
                                     theme,
                                     rowIndex.toString(),
                                   ),
-
-                                  // Data Cells (A2, B2, C2...)
                                   ...fields.asMap().entries.map((colEntry) {
-                                    final colIndex = colEntry.key;
-                                    final field = colEntry.value;
-
-                                    final colLetter = _getExcelColumnName(
-                                      colIndex,
-                                    );
-                                    final cellRef = '$colLetter$rowIndex';
-
-                                    final rawValue = dataMap[field.id];
-                                    final displayValue = _formatValue(
-                                      field,
-                                      rawValue,
-                                    );
-
                                     return _buildDataCell(
                                       context,
                                       theme,
-                                      displayValue,
-                                      cellRef,
+                                      _formatValue(
+                                        colEntry.value,
+                                        dataMap[colEntry.value.id],
+                                      ),
+                                      '${_getExcelColumnName(colEntry.key)}$rowIndex',
                                     );
                                   }).toList(),
+                                  _buildDataCell(context, theme, '', ''),
                                 ],
                               );
                             }).toList(),
+
+                            // --- FOOTER ROW: TABLE AGGREGATES ---
+                            TableRow(
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer
+                                    .withOpacity(isDark ? 0.3 : 0.1),
+                                border: Border(
+                                  top: BorderSide(
+                                    color: theme.colorScheme.primary
+                                        .withOpacity(0.6),
+                                    width: 2.0,
+                                  ),
+                                ),
+                              ),
+                              children: [
+                                _buildAggregateCornerCell(theme),
+                                ...fields.map((field) {
+                                  final canAggregate =
+                                      field.type == TrackerFieldType.number ||
+                                      field.type == TrackerFieldType.currency ||
+                                      field.type == TrackerFieldType.formula;
+
+                                  if (!canAggregate)
+                                    return _buildAggregateDataCell(
+                                      theme,
+                                      '',
+                                      '',
+                                    );
+
+                                  double sum = 0;
+                                  double minVal = double.infinity;
+                                  double maxVal = double.negativeInfinity;
+                                  int count = 0;
+
+                                  for (var record in ascendingRecords) {
+                                    final dataMap = jsonDecode(record.dataJson);
+                                    final val = double.tryParse(
+                                      dataMap[field.id]?.toString() ?? '',
+                                    );
+                                    if (val != null) {
+                                      sum += val;
+                                      count++;
+                                      if (val < minVal) minVal = val;
+                                      if (val > maxVal) maxVal = val;
+                                    }
+                                  }
+
+                                  String result = '-';
+                                  if (count > 0 &&
+                                      field.aggregate != null &&
+                                      field.aggregate != 'NONE') {
+                                    if (field.aggregate == 'SUM')
+                                      result = sum.toStringAsFixed(2);
+                                    if (field.aggregate == 'AVG')
+                                      result = (sum / count).toStringAsFixed(2);
+                                    if (field.aggregate == 'MAX')
+                                      result = maxVal.toStringAsFixed(2);
+                                    if (field.aggregate == 'MIN')
+                                      result = minVal.toStringAsFixed(2);
+                                    if (field.type == TrackerFieldType.currency)
+                                      result =
+                                          '${field.currencySymbol ?? ''} $result'
+                                              .trim();
+                                  }
+
+                                  return GestureDetector(
+                                    onTap: () async {
+                                      HapticFeedback.lightImpact();
+                                      final selected =
+                                          await GlobalSelectionSheet.showSimple(
+                                            context: context,
+                                            title:
+                                                'Set Aggregate for ${field.name}',
+                                            items: [
+                                              'NONE',
+                                              'SUM',
+                                              'AVG',
+                                              'MAX',
+                                              'MIN',
+                                            ],
+                                            selectedValue:
+                                                field.aggregate ?? 'NONE',
+                                          );
+
+                                      if (selected != null) {
+                                        ref
+                                            .read(
+                                              smartTrackerActionProvider
+                                                  .notifier,
+                                            )
+                                            .updateColumnAggregate(
+                                              liveTemplate,
+                                              field.id,
+                                              selected,
+                                            );
+                                      }
+                                    },
+                                    child: _buildAggregateDataCell(
+                                      theme,
+                                      result,
+                                      field.aggregate ?? 'Tap to Set',
+                                    ),
+                                  );
+                                }).toList(),
+                                _buildAggregateDataCell(theme, '', ''),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -287,181 +424,226 @@ class SmartTrackerDetailPage extends ConsumerWidget {
     );
   }
 
-  // --- TABLE CELL BUILDERS ---
+  Widget _buildCornerCell(ThemeData theme) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(
+          color: theme.colorScheme.primary.withOpacity(0.6),
+          width: 2.0,
+        ),
+        right: BorderSide(
+          color: theme.colorScheme.primary.withOpacity(0.6),
+          width: 2.0,
+        ),
+      ),
+    ),
+    child: Icon(
+      Icons.grid_3x3_rounded,
+      size: 14,
+      color: theme.colorScheme.primary.withOpacity(0.6),
+    ),
+  );
 
-  Widget _buildCornerCell(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.primary.withOpacity(0.6),
-            width: 2.0,
-          ),
-          right: BorderSide(
-            color: theme.colorScheme.primary.withOpacity(0.6),
-            width: 2.0,
-          ),
+  Widget _buildAxisLetterCell(ThemeData theme, String letter) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(
+          color: theme.colorScheme.primary.withOpacity(0.6),
+          width: 2.0,
+        ),
+        right: BorderSide(
+          color: theme.dividerColor.withOpacity(0.4),
+          width: 1.0,
         ),
       ),
-      child: Icon(
-        Icons.grid_3x3_rounded,
-        size: 14,
-        color: theme.colorScheme.primary.withOpacity(0.6),
+    ),
+    child: Text(
+      letter,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w900,
+        color: theme.colorScheme.primary.withOpacity(0.7),
       ),
-    );
-  }
-
-  Widget _buildAxisLetterCell(ThemeData theme, String letter) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.primary.withOpacity(0.6),
-            width: 2.0,
-          ),
-          right: BorderSide(
-            color: theme.dividerColor.withOpacity(0.4),
-            width: 1.0,
-          ),
-        ),
-      ),
-      child: Text(
-        letter,
-        style: TextStyle(
-          fontSize: 11, // Very small, purely reference
-          fontWeight: FontWeight.w900,
-          color: theme.colorScheme.primary.withOpacity(0.7),
-        ),
-      ),
-    );
-  }
+    ),
+  );
 
   Widget _buildFieldHeaderCell(
     BuildContext context,
     ThemeData theme,
     String fieldName,
     String cellRef,
-  ) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onLongPress: () => _showCellReference(context, cellRef),
-        splashColor: theme.colorScheme.primary.withOpacity(0.1),
-        highlightColor: theme.colorScheme.primary.withOpacity(0.05),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          alignment: Alignment.centerLeft,
-          decoration: BoxDecoration(
-            border: Border(
-              // Noticeable border to separate Header Row 1 from Data Row 2
-              bottom: BorderSide(
-                color: theme.colorScheme.primary.withOpacity(0.4),
-                width: 2.0,
-              ),
-              right: BorderSide(
-                color: theme.dividerColor.withOpacity(0.3),
-                width: 1.0,
-              ),
+  ) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onLongPress: () => _showCellReference(context, cellRef),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: theme.colorScheme.primary.withOpacity(0.4),
+              width: 2.0,
             ),
-          ),
-          child: Text(
-            fieldName,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: theme.colorScheme.onSurface,
-              letterSpacing: 0.5,
+            right: BorderSide(
+              color: theme.dividerColor.withOpacity(0.3),
+              width: 1.0,
             ),
           ),
         ),
+        child: Text(
+          fieldName,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+            color: theme.colorScheme.onSurface,
+            letterSpacing: 0.5,
+          ),
+        ),
       ),
-    );
-  }
+    ),
+  );
 
   Widget _buildRowNumberCell(
     ThemeData theme,
     String number, {
     bool isHeaderRow = false,
-  }) {
-    final isDark = theme.brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: isHeaderRow
-            ? Colors.transparent
-            : theme.colorScheme.surfaceContainerHighest.withOpacity(
-                isDark ? 0.3 : 0.1,
-              ),
-        border: Border(
-          // THICK RIGHT BORDER defines the vertical axis line
-          right: BorderSide(
-            color: theme.colorScheme.primary.withOpacity(0.6),
-            width: 2.0,
-          ),
-          bottom: BorderSide(
-            color: isHeaderRow
-                ? theme.colorScheme.primary.withOpacity(0.4)
-                : theme.dividerColor.withOpacity(0.4),
-            width: isHeaderRow ? 2.0 : 1.0,
-          ),
+  }) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: isHeaderRow
+          ? Colors.transparent
+          : theme.colorScheme.surfaceContainerHighest.withOpacity(
+              theme.brightness == Brightness.dark ? 0.3 : 0.1,
+            ),
+      border: Border(
+        right: BorderSide(
+          color: theme.colorScheme.primary.withOpacity(0.6),
+          width: 2.0,
         ),
-      ),
-      child: Text(
-        number,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w900,
+        bottom: BorderSide(
           color: isHeaderRow
-              ? theme.colorScheme.primary
-              : theme.colorScheme.onSurfaceVariant,
+              ? theme.colorScheme.primary.withOpacity(0.4)
+              : theme.dividerColor.withOpacity(0.4),
+          width: isHeaderRow ? 2.0 : 1.0,
         ),
       ),
-    );
-  }
+    ),
+    child: Text(
+      number,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w900,
+        color: isHeaderRow
+            ? theme.colorScheme.primary
+            : theme.colorScheme.onSurfaceVariant,
+      ),
+    ),
+  );
 
   Widget _buildDataCell(
     BuildContext context,
     ThemeData theme,
     String value,
     String cellRef,
-  ) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onLongPress: () => _showCellReference(context, cellRef),
-        splashColor: theme.colorScheme.primary.withOpacity(0.1),
-        highlightColor: theme.colorScheme.primary.withOpacity(0.05),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          alignment: Alignment.centerLeft,
-          decoration: BoxDecoration(
-            border: Border(
-              // Faint grid lines for the data cells
-              right: BorderSide(
-                color: theme.dividerColor.withOpacity(0.3),
-                width: 1.0,
-              ),
-              bottom: BorderSide(
-                color: theme.dividerColor.withOpacity(0.3),
-                width: 1.0,
-              ),
+  ) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onLongPress: () =>
+          cellRef.isEmpty ? null : _showCellReference(context, cellRef),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          border: Border(
+            right: BorderSide(
+              color: theme.dividerColor.withOpacity(0.3),
+              width: 1.0,
             ),
-          ),
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurface,
+            bottom: BorderSide(
+              color: theme.dividerColor.withOpacity(0.3),
+              width: 1.0,
             ),
           ),
         ),
+        child: Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
       ),
-    );
-  }
+    ),
+  );
+
+  Widget _buildAggregateCornerCell(ThemeData theme) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      border: Border(
+        right: BorderSide(
+          color: theme.colorScheme.primary.withOpacity(0.6),
+          width: 2.0,
+        ),
+      ),
+    ),
+    child: Text(
+      'Σ',
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w900,
+        color: theme.colorScheme.primary,
+      ),
+    ),
+  );
+
+  Widget _buildAggregateDataCell(
+    ThemeData theme,
+    String value,
+    String aggType,
+  ) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+    alignment: Alignment.centerLeft,
+    decoration: BoxDecoration(
+      border: Border(
+        right: BorderSide(
+          color: theme.dividerColor.withOpacity(0.3),
+          width: 1.0,
+        ),
+      ),
+    ),
+    child: aggType.isEmpty
+        ? const SizedBox.shrink()
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                aggType.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.primary.withOpacity(0.8),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+  );
 }

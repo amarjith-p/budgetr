@@ -1,5 +1,6 @@
 // lib/features/smart_trackers/views/smart_tracker_entry_page.dart
 import 'dart:convert';
+import 'package:budgetr/features/smart_trackers/utils/tracker_formula_evaluator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,29 +42,57 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   @override
   void initState() {
     super.initState();
-    // 1. Parse Schema back to Models
     final List<dynamic> decoded = jsonDecode(widget.template.schemaJson);
     _fields = decoded.map((e) => TrackerField.fromJson(e)).toList();
 
-    // 2. Initialize Controllers & Auto-Generated Fields
     for (var field in _fields) {
       if (field.type == TrackerFieldType.serialNo) {
-        // Auto-generate Serial Number
         final serialNumber = (widget.existingRecordCount + 1)
             .toString()
             .padLeft(4, '0');
-        final prefix = field.prefix ?? '';
-        final suffix = field.suffix ?? '';
-        final finalSerial = '$prefix$serialNumber$suffix';
-
-        _formData[field.id] = finalSerial;
-        _controllers[field.id] = TextEditingController(text: finalSerial);
+        _formData[field.id] =
+            '${field.prefix ?? ''}$serialNumber${field.suffix ?? ''}';
+        _controllers[field.id] = TextEditingController(
+          text: _formData[field.id],
+        );
       } else if (field.type == TrackerFieldType.checkbox) {
-        _formData[field.id] = <String>[]; // Empty list for multiple choices
+        _formData[field.id] = <String>[];
       } else if (field.type == TrackerFieldType.toggle) {
-        _formData[field.id] = false; // Default false
+        _formData[field.id] = false;
       } else {
         _controllers[field.id] = TextEditingController();
+        // --- NEW: Add listener to trigger recalculation ---
+        _controllers[field.id]!.addListener(_recalculateFormulas);
+      }
+    }
+  }
+
+  void _recalculateFormulas() {
+    // Sync text controllers to formData
+    for (var f in _fields) {
+      if (f.type == TrackerFieldType.text ||
+          f.type == TrackerFieldType.number ||
+          f.type == TrackerFieldType.currency) {
+        _formData[f.id] = _controllers[f.id]!.text;
+      }
+    }
+
+    // Calculate Formulas
+    for (var field in _fields.where(
+      (f) => f.type == TrackerFieldType.formula,
+    )) {
+      if (field.formulaConfig != null) {
+        final result = TrackerFormulaEvaluator.evaluate(
+          field.formulaConfig!,
+          _formData,
+          _fields,
+        );
+        if (_formData[field.id] != result) {
+          setState(() {
+            _formData[field.id] = result;
+            _controllers[field.id]!.text = result;
+          });
+        }
       }
     }
   }
@@ -339,6 +368,17 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
               }).toList(),
             ),
           ],
+        );
+      case TrackerFieldType.formula:
+        return ModernBoxyInput(
+          controller: _controllers[field.id]!,
+          labelText: field.name,
+          readOnly: true, // Formulas are calculated, not typed!
+          prefixIcon: Icon(
+            Icons.functions_rounded,
+            color: theme.colorScheme.primary,
+            size: 18,
+          ),
         );
 
       case TrackerFieldType.checkbox:

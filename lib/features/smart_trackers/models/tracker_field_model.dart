@@ -2,23 +2,82 @@
 enum TrackerFieldType {
   text,
   number,
-  currency, // <-- NEW
+  currency,
   date,
   dropdown,
   toggle,
   radio,
   checkbox,
-  serialNo, // <-- NEW
+  serialNo,
+  formula,
+}
+
+class FormulaConfig {
+  final String type; // 'math' or 'logic'
+
+  // --- Math Configuration ---
+  final String? field1Id;
+  final String? mathOperator; // '+', '-', '*', '/'
+  final String? field2Id;
+
+  // --- Logic Configuration ---
+  final String? logicFieldId;
+  final String? logicOperator; // '==', '!=', '>', '<'
+  final String? logicTargetValue;
+  final String? trueResult; // Can be a static string, or another field ID
+  final String? falseResult; // Can be a static string, or another field ID
+
+  FormulaConfig({
+    required this.type,
+    this.field1Id,
+    this.mathOperator,
+    this.field2Id,
+    this.logicFieldId,
+    this.logicOperator,
+    this.logicTargetValue,
+    this.trueResult,
+    this.falseResult,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'field1Id': field1Id,
+      'mathOperator': mathOperator,
+      'field2Id': field2Id,
+      'logicFieldId': logicFieldId,
+      'logicOperator': logicOperator,
+      'logicTargetValue': logicTargetValue,
+      'trueResult': trueResult,
+      'falseResult': falseResult,
+    };
+  }
+
+  factory FormulaConfig.fromJson(Map<String, dynamic> json) {
+    return FormulaConfig(
+      type: json['type'] as String,
+      field1Id: json['field1Id'] as String?,
+      mathOperator: json['mathOperator'] as String?,
+      field2Id: json['field2Id'] as String?,
+      logicFieldId: json['logicFieldId'] as String?,
+      logicOperator: json['logicOperator'] as String?,
+      logicTargetValue: json['logicTargetValue'] as String?,
+      trueResult: json['trueResult'] as String?,
+      falseResult: json['falseResult'] as String?,
+    );
+  }
 }
 
 class TrackerField {
   final String id;
   final String name;
   final TrackerFieldType type;
-  final List<String>? options; // For dropdowns, radios, checkboxes
-  final String? prefix; // For Serial No
-  final String? suffix; // For Serial No
-  final String? currencySymbol; // For Currency
+  final List<String>? options;
+  final String? prefix;
+  final String? suffix;
+  final String? currencySymbol;
+  final FormulaConfig? formulaConfig; // <-- REPLACED RAW STRING
+  final String? aggregate; // "NONE", "SUM", "AVG", "MIN", "MAX"
 
   TrackerField({
     required this.id,
@@ -28,6 +87,8 @@ class TrackerField {
     this.prefix,
     this.suffix,
     this.currencySymbol,
+    this.formulaConfig,
+    this.aggregate,
   });
 
   Map<String, dynamic> toJson() {
@@ -39,6 +100,8 @@ class TrackerField {
       'prefix': prefix,
       'suffix': suffix,
       'currencySymbol': currencySymbol,
+      'formulaConfig': formulaConfig?.toJson(),
+      'aggregate': aggregate,
     };
   }
 
@@ -53,6 +116,10 @@ class TrackerField {
       prefix: json['prefix'] as String?,
       suffix: json['suffix'] as String?,
       currencySymbol: json['currencySymbol'] as String?,
+      formulaConfig: json['formulaConfig'] != null
+          ? FormulaConfig.fromJson(json['formulaConfig'])
+          : null,
+      aggregate: json['aggregate'] as String?,
     );
   }
 }

@@ -23,6 +23,8 @@ class TrackerFieldUIHelper {
         return Colors.indigoAccent.shade200;
       case TrackerFieldType.serialNo:
         return Colors.redAccent.shade400;
+      case TrackerFieldType.formula:
+        return Colors.cyanAccent.shade700; // <-- ADDED
     }
   }
 
@@ -46,6 +48,8 @@ class TrackerFieldUIHelper {
         return Icons.check_box_rounded;
       case TrackerFieldType.serialNo:
         return Icons.pin_rounded;
+      case TrackerFieldType.formula:
+        return Icons.functions_rounded; // <-- ADDED
     }
   }
 
