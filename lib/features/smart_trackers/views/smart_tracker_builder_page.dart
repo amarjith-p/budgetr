@@ -11,7 +11,7 @@ import '../../../core/components/custom_snackbars.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../models/tracker_field_model.dart';
 import '../providers/smart_tracker_provider.dart';
-import '../components/add_field_bottom_sheet.dart';
+import '../components/add_field_bottom_sheet.dart'; // Strict Import
 import '../utils/tracker_field_ui_helper.dart';
 
 class SmartTrackerBuilderPage extends ConsumerStatefulWidget {
@@ -61,7 +61,6 @@ class _SmartTrackerBuilderPageState
       backgroundColor: Colors.transparent,
       builder: (ctx) => AddFieldBottomSheet(
         existingField: editIndex != null ? _fields[editIndex] : null,
-        // --- REMOVED existingSchemaFields AS FORMULAS ARE NOW IN THE DETAIL PAGE ---
         onFieldAdded: (field) {
           setState(() {
             if (editIndex != null) {
@@ -120,7 +119,7 @@ class _SmartTrackerBuilderPageState
         meta += ' | Suffix: ${field.suffix}';
       return meta;
     }
-    return '${TrackerFieldUIHelper.formatEnumName(field.type.name).toUpperCase()} FIELD${field.options != null ? ' • ${field.options!.length} OPTIONS' : ''}';
+    return '${TrackerFieldUIHelper.formatEnumName(field.type.name).toUpperCase()} FIELD${field.options != null ? '   ${field.options!.length} OPTIONS' : ''}';
   }
 
   @override
@@ -172,7 +171,6 @@ class _SmartTrackerBuilderPageState
                           v == null || v.isEmpty ? 'Name required' : null,
                     ),
                     const SizedBox(height: DesignTokens.spacingXl),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -196,7 +194,6 @@ class _SmartTrackerBuilderPageState
                       ],
                     ),
                     const SizedBox(height: DesignTokens.spacingMd),
-
                     if (_fields.isEmpty)
                       GestureDetector(
                         onTap: () => _openAddFieldSheet(),

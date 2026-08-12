@@ -27,10 +27,8 @@ class _AddFormulaBottomSheetState extends State<AddFormulaBottomSheet> {
 
   bool _isMathMode = true;
 
-  // --- Math State ---
-  String? _mathField1;
-  String _mathOp = '+';
-  String? _mathField2;
+  // --- Freeform Math State ---
+  final _mathExprCtrl = TextEditingController();
 
   // --- Logic State ---
   String? _logicField;
@@ -39,10 +37,39 @@ class _AddFormulaBottomSheetState extends State<AddFormulaBottomSheet> {
   final _trueResultCtrl = TextEditingController();
   final _falseResultCtrl = TextEditingController();
 
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _mathExprCtrl.dispose();
+    _logicTargetCtrl.dispose();
+    _trueResultCtrl.dispose();
+    _falseResultCtrl.dispose();
+    super.dispose();
+  }
+
+  // --- INSERTS SMART CHIPS INTO THE TEXT BOX ---
+  void _insertTextToMath(String text) {
+    HapticFeedback.lightImpact();
+    final int cursorPos = _mathExprCtrl.selection.baseOffset >= 0
+        ? _mathExprCtrl.selection.baseOffset
+        : _mathExprCtrl.text.length;
+
+    final String currentText = _mathExprCtrl.text;
+    final String newText =
+        currentText.substring(0, cursorPos) +
+        text +
+        currentText.substring(cursorPos);
+
+    _mathExprCtrl.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: cursorPos + text.length),
+    );
+  }
+
   void _save() {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_isMathMode && (_mathField1 == null || _mathField2 == null)) {
+    if (_isMathMode && _mathExprCtrl.text.trim().isEmpty) {
       HapticFeedback.heavyImpact();
       return;
     }
@@ -55,9 +82,7 @@ class _AddFormulaBottomSheetState extends State<AddFormulaBottomSheet> {
 
     final config = FormulaConfig(
       type: _isMathMode ? 'math' : 'logic',
-      field1Id: _mathField1,
-      mathOperator: _mathOp,
-      field2Id: _mathField2,
+      mathExpression: _mathExprCtrl.text.trim(), // Saves advanced formula
       logicFieldId: _logicField,
       logicOperator: _logicOp,
       logicTargetValue: _logicTargetCtrl.text.trim(),
@@ -147,6 +172,38 @@ class _AddFormulaBottomSheetState extends State<AddFormulaBottomSheet> {
           ),
           Padding(padding: const EdgeInsets.all(16), child: child),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSmartChip(
+    String label,
+    ThemeData theme, {
+    bool isOperator = false,
+  }) {
+    return GestureDetector(
+      onTap: () => _insertTextToMath(isOperator ? ' $label ' : '[$label]'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isOperator
+              ? theme.colorScheme.primaryContainer.withOpacity(0.5)
+              : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isOperator ? theme.colorScheme.primary : theme.dividerColor,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+            color: isOperator
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface,
+          ),
+        ),
       ),
     );
   }
@@ -272,60 +329,60 @@ class _AddFormulaBottomSheetState extends State<AddFormulaBottomSheet> {
               ),
               const SizedBox(height: 24),
 
-              // --- MATH UI ---
+              // --- ADVANCED MATH UI ---
               if (_isMathMode) ...[
-                _buildBoxyDropdown(
-                  hint: 'Select Numeric Field 1',
-                  value: _mathField1,
-                  items: mathFields
-                      .map(
-                        (f) => DropdownMenuItem(
-                          value: f.id,
-                          child: Text(
-                            f.name,
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _mathField1 = v),
+                ModernBoxyInput(
+                  controller: _mathExprCtrl,
+                  labelText: 'Formula Expression',
+                  hintText: 'e.g. ([Price] * [Qty]) / 100',
+                  keyboardType: TextInputType.text,
                 ),
-                const SizedBox(height: 12),
-                _buildBoxyDropdown(
-                  hint: 'Operator',
-                  value: _mathOp,
-                  items: ['+', '-', '*', '/']
-                      .map(
-                        (op) => DropdownMenuItem(
-                          value: op,
-                          child: Text(
-                            ' $op ',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _mathOp = v!),
+                const SizedBox(height: 16),
+
+                Text(
+                  'TAP TO INSERT VARIABLES',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                _buildBoxyDropdown(
-                  hint: 'Select Numeric Field 2',
-                  value: _mathField2,
-                  items: mathFields
-                      .map(
-                        (f) => DropdownMenuItem(
-                          value: f.id,
-                          child: Text(
-                            f.name,
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                        ),
-                      )
+                const SizedBox(height: 8),
+                if (mathFields.isEmpty)
+                  Text(
+                    'No numeric fields available.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.error,
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: mathFields
+                        .map((f) => _buildSmartChip(f.name, theme))
+                        .toList(),
+                  ),
+
+                const SizedBox(height: 16),
+                Text(
+                  'TAP TO INSERT OPERATORS',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: ['+', '-', '*', '/', '(', ')']
+                      .map((op) => _buildSmartChip(op, theme, isOperator: true))
                       .toList(),
-                  onChanged: (v) => setState(() => _mathField2 = v),
                 ),
               ] else ...[
                 // --- EXPLICIT LOGIC UI ---

@@ -15,12 +15,15 @@ enum TrackerFieldType {
 class FormulaConfig {
   final String type; // 'math' or 'logic'
 
-  // --- Math Configuration ---
+  // --- ADVANCED MATH ---
+  final String? mathExpression; // e.g., "([Field A] + [Field B]) * 100"
+
+  // --- LEGACY MATH ---
   final String? field1Id;
   final String? mathOperator; // '+', '-', '*', '/'
   final String? field2Id;
 
-  // --- Logic Configuration ---
+  // --- LOGIC ---
   final String? logicFieldId;
   final String? logicOperator; // '==', '!=', '>', '<'
   final String? logicTargetValue;
@@ -29,6 +32,7 @@ class FormulaConfig {
 
   FormulaConfig({
     required this.type,
+    this.mathExpression,
     this.field1Id,
     this.mathOperator,
     this.field2Id,
@@ -42,6 +46,7 @@ class FormulaConfig {
   Map<String, dynamic> toJson() {
     return {
       'type': type,
+      'mathExpression': mathExpression,
       'field1Id': field1Id,
       'mathOperator': mathOperator,
       'field2Id': field2Id,
@@ -56,6 +61,7 @@ class FormulaConfig {
   factory FormulaConfig.fromJson(Map<String, dynamic> json) {
     return FormulaConfig(
       type: json['type'] as String,
+      mathExpression: json['mathExpression'] as String?,
       field1Id: json['field1Id'] as String?,
       mathOperator: json['mathOperator'] as String?,
       field2Id: json['field2Id'] as String?,
@@ -76,8 +82,8 @@ class TrackerField {
   final String? prefix;
   final String? suffix;
   final String? currencySymbol;
-  final FormulaConfig? formulaConfig; // <-- REPLACED RAW STRING
-  final String? aggregate; // "NONE", "SUM", "AVG", "MIN", "MAX"
+  final FormulaConfig? formulaConfig;
+  final String? aggregate;
 
   TrackerField({
     required this.id,

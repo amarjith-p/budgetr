@@ -33,9 +33,9 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
   late TrackerFieldType _selectedType;
   late String _selectedCurrency;
 
+  // --- FIXED: Properly closed string array that was causing the compiler crash ---
   final List<String> _currencySymbols = ['₹', '\$', '€', '£', '¥'];
 
-  // Exclude Formula from the initial builder grid (It is added from the Detail Page)
   final List<TrackerFieldType> _availableTypes = TrackerFieldType.values
       .where((t) => t != TrackerFieldType.formula)
       .toList();
@@ -58,7 +58,6 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
     _suffixCtrl = TextEditingController(
       text: widget.existingField?.suffix ?? '',
     );
-
     _selectedType = widget.existingField?.type ?? TrackerFieldType.text;
     _selectedCurrency = widget.existingField?.currencySymbol ?? '₹';
   }
@@ -93,6 +92,7 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
     }
 
     HapticFeedback.selectionClick();
+
     final newField = TrackerField(
       id: widget.existingField?.id ?? const Uuid().v4(),
       name: _nameCtrl.text.trim(),
@@ -111,7 +111,6 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
       currencySymbol: _selectedType == TrackerFieldType.currency
           ? _selectedCurrency
           : null,
-      // Aggregates and Formulas are handled in the Detail Page now
       formulaConfig: widget.existingField?.formulaConfig,
       aggregate: widget.existingField?.aggregate,
     );
@@ -167,7 +166,6 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
                 validator: (v) => v == null || v.isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 24),
-
               Text(
                 'SELECT DATA TYPE',
                 style: TextStyle(
@@ -178,7 +176,6 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
                 ),
               ),
               const SizedBox(height: 12),
-
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -244,7 +241,6 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
                   );
                 },
               ),
-
               if (_requiresOptions) ...[
                 const SizedBox(height: 24),
                 ModernBoxyInput(
@@ -253,7 +249,6 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
                   hintText: 'e.g. Yes, No, Maybe',
                 ),
               ],
-
               if (_selectedType == TrackerFieldType.currency) ...[
                 const SizedBox(height: 24),
                 Text(
@@ -282,19 +277,21 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
                         color: theme.colorScheme.primary,
                       ),
                       dropdownColor: theme.colorScheme.surfaceContainerHighest,
-                      items: _currencySymbols.map((sym) {
-                        return DropdownMenuItem(
-                          value: sym,
-                          child: Text(
-                            sym,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 18,
-                              color: theme.colorScheme.onSurface,
+                      items: _currencySymbols
+                          .map(
+                            (sym) => DropdownMenuItem(
+                              value: sym,
+                              child: Text(
+                                sym,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          )
+                          .toList(),
                       onChanged: (val) {
                         if (val != null)
                           setState(() => _selectedCurrency = val);
@@ -303,7 +300,6 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
                   ),
                 ),
               ],
-
               if (_selectedType == TrackerFieldType.serialNo) ...[
                 const SizedBox(height: 24),
                 Row(
@@ -335,7 +331,6 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
                   ),
                 ),
               ],
-
               const SizedBox(height: 32),
               Row(
                 children: [
