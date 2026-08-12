@@ -9,6 +9,7 @@ import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_boxy_button.dart';
 import '../../../core/components/modern_boxy_input.dart';
 import '../../../core/components/global_selection_sheet.dart';
+import '../../../core/components/inline_calculator_pad.dart'; // <-- IMPORTED CUSTOM KEYBOARD
 import '../../../core/theme/design_tokens.dart';
 import '../models/tracker_field_model.dart';
 import '../providers/smart_tracker_provider.dart';
@@ -38,10 +39,13 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   final Map<String, dynamic> _formData = {};
   final Map<String, TextEditingController> _controllers = {};
 
-  // --- FOCUS MANAGEMENT STATE ---
+  // --- FOCUS & KEYBOARD MANAGEMENT STATE ---
   final Map<String, FocusNode> _focusNodes = {};
-  final List<String> _focusableFieldIds =
-      []; // Keeps track of the exact order of text inputs
+  final List<String> _focusableFieldIds = [];
+
+  // Custom Keyboard State
+  String? _activeCalculatorFieldId;
+  bool _showCustomKeyboard = false;
 
   @override
   void initState() {
@@ -87,17 +91,40 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
         _controllers[field.id] = TextEditingController(text: val);
         _controllers[field.id]!.addListener(_recalculateFormulas);
 
-        // --- REGISTER FOCUS NODES ONLY FOR TYPABLE INPUTS ---
+        // --- REGISTER FOCUS NODES ---
         if (field.type == TrackerFieldType.text ||
             field.type == TrackerFieldType.number ||
             field.type == TrackerFieldType.currency) {
-          _focusNodes[field.id] = FocusNode();
+          final node = FocusNode();
+
+          // Intercept focus to trigger custom keyboard if it's a number/currency field
+          node.addListener(() {
+            if (node.hasFocus) {
+              if (field.type == TrackerFieldType.number ||
+                  field.type == TrackerFieldType.currency) {
+                // Hide native keyboard, show custom
+                SystemChannels.textInput.invokeMethod('TextInput.hide');
+                setState(() {
+                  _activeCalculatorFieldId = field.id;
+                  _showCustomKeyboard = true;
+                });
+              } else {
+                // Regular text field: Hide custom, allow native
+                setState(() {
+                  _activeCalculatorFieldId = null;
+                  _showCustomKeyboard = false;
+                });
+              }
+            }
+          });
+
+          _focusNodes[field.id] = node;
           _focusableFieldIds.add(field.id);
         }
       }
     }
 
-    // --- AUTO-FOCUS THE FIRST TEXT FIELD ON LOAD ---
+    // Auto-focus first field
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_focusableFieldIds.isNotEmpty && mounted) {
         _focusNodes[_focusableFieldIds.first]?.requestFocus();
@@ -124,14 +151,29 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   void _focusNextField(String currentId) {
     final currentIndex = _focusableFieldIds.indexOf(currentId);
     if (currentIndex >= 0 && currentIndex < _focusableFieldIds.length - 1) {
-      // Jump to next text input, bypassing dropdowns/dates
       FocusScope.of(
         context,
       ).requestFocus(_focusNodes[_focusableFieldIds[currentIndex + 1]]);
     } else {
-      // Last field reached, close keyboard
-      FocusScope.of(context).unfocus();
+      _closeAllKeyboards();
     }
+  }
+
+  void _focusPreviousField(String currentId) {
+    final currentIndex = _focusableFieldIds.indexOf(currentId);
+    if (currentIndex > 0) {
+      FocusScope.of(
+        context,
+      ).requestFocus(_focusNodes[_focusableFieldIds[currentIndex - 1]]);
+    }
+  }
+
+  void _closeAllKeyboards() {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _showCustomKeyboard = false;
+      _activeCalculatorFieldId = null;
+    });
   }
 
   void _recalculateFormulas() {
@@ -163,8 +205,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   }
 
   Future<void> _pickDate(String fieldId) async {
-    // Close keyboard if open
-    FocusScope.of(context).unfocus();
+    _closeAllKeyboards();
     HapticFeedback.lightImpact();
 
     final picked = await showDatePicker(
@@ -184,8 +225,8 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   }
 
   Future<void> _submit() async {
+    _closeAllKeyboards();
     if (!_formKey.currentState!.validate()) return;
-    FocusScope.of(context).unfocus(); // Ensure keyboard closes
 
     for (var field in _fields) {
       if (field.type == TrackerFieldType.text ||
@@ -232,11 +273,11 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
       case TrackerFieldType.text:
         return ModernBoxyInput(
           controller: _controllers[field.id]!,
-          focusNode: _focusNodes[field.id], // Bound Focus Node
+          focusNode: _focusNodes[field.id],
           textInputAction: _isLastFocusable(field.id)
               ? TextInputAction.done
-              : TextInputAction.next, // Smart Enter Key
-          onFieldSubmitted: (_) => _focusNextField(field.id), // Jump Logic
+              : TextInputAction.next,
+          onFieldSubmitted: (_) => _focusNextField(field.id),
           labelText: field.name,
           validator: (v) => v == null || v.isEmpty ? 'Required' : null,
         );
@@ -245,12 +286,13 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
         return ModernBoxyInput(
           controller: _controllers[field.id]!,
           focusNode: _focusNodes[field.id],
-          textInputAction: _isLastFocusable(field.id)
-              ? TextInputAction.done
-              : TextInputAction.next,
-          onFieldSubmitted: (_) => _focusNextField(field.id),
+          readOnly: true, // Prevents native keyboard
+          onTap: () {
+            if (!_focusNodes[field.id]!.hasFocus)
+              _focusNodes[field.id]!.requestFocus();
+            SystemChannels.textInput.invokeMethod('TextInput.hide');
+          },
           labelText: field.name,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
           validator: (v) => v == null || v.isEmpty ? 'Required' : null,
         );
 
@@ -258,12 +300,13 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
         return ModernBoxyInput(
           controller: _controllers[field.id]!,
           focusNode: _focusNodes[field.id],
-          textInputAction: _isLastFocusable(field.id)
-              ? TextInputAction.done
-              : TextInputAction.next,
-          onFieldSubmitted: (_) => _focusNextField(field.id),
+          readOnly: true, // Prevents native keyboard
+          onTap: () {
+            if (!_focusNodes[field.id]!.hasFocus)
+              _focusNodes[field.id]!.requestFocus();
+            SystemChannels.textInput.invokeMethod('TextInput.hide');
+          },
           labelText: field.name,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
           prefixIcon: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
@@ -298,7 +341,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
       case TrackerFieldType.dropdown:
         return GestureDetector(
           onTap: () async {
-            FocusScope.of(context).unfocus(); // Close keyboard before sheet
+            _closeAllKeyboards();
             HapticFeedback.lightImpact();
             final selected = await GlobalSelectionSheet.showSimple(
               context: context,
@@ -356,7 +399,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                   value: _formData[field.id] ?? false,
                   activeColor: theme.colorScheme.primary,
                   onChanged: (val) {
-                    FocusScope.of(context).unfocus();
+                    _closeAllKeyboards();
                     HapticFeedback.lightImpact();
                     setState(() => _formData[field.id] = val);
                   },
@@ -387,7 +430,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                 final isSelected = _formData[field.id] == opt;
                 return GestureDetector(
                   onTap: () {
-                    FocusScope.of(context).unfocus();
+                    _closeAllKeyboards();
                     HapticFeedback.selectionClick();
                     setState(() => _formData[field.id] = opt);
                   },
@@ -479,7 +522,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                 final isChecked = currentList.contains(opt);
                 return GestureDetector(
                   onTap: () {
-                    FocusScope.of(context).unfocus();
+                    _closeAllKeyboards();
                     HapticFeedback.selectionClick();
                     setState(() {
                       if (isChecked)
@@ -557,11 +600,12 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
         leadingIcon: Icons.arrow_back_rounded,
       ),
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              Expanded(
+        child: Column(
+          children: [
+            // --- MAIN FORM ---
+            Expanded(
+              child: Form(
+                key: _formKey,
                 child: ListView.separated(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.all(DesignTokens.spacingLg),
@@ -590,6 +634,10 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                   },
                 ),
               ),
+            ),
+
+            // --- FIXED SUBMIT BUTTON (Only shows if custom keyboard is hidden) ---
+            if (!_showCustomKeyboard)
               Container(
                 padding: const EdgeInsets.all(DesignTokens.spacingLg),
                 decoration: BoxDecoration(
@@ -625,8 +673,37 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                   ],
                 ),
               ),
-            ],
-          ),
+
+            // --- CUSTOM INLINE CALCULATOR PAD ---
+            if (_showCustomKeyboard && _activeCalculatorFieldId != null)
+              InlineCalculatorPad(
+                // Dynamically binds to the active Number/Currency controller
+                controller: _controllers[_activeCalculatorFieldId]!,
+
+                // Jump to Previous
+                onPrevious:
+                    _focusableFieldIds.indexOf(_activeCalculatorFieldId!) > 0
+                    ? () => _focusPreviousField(_activeCalculatorFieldId!)
+                    : null,
+
+                // Jump to Next (if not last)
+                onNext: !_isLastFocusable(_activeCalculatorFieldId!)
+                    ? () => _focusNextField(_activeCalculatorFieldId!)
+                    : null,
+
+                // Submit/Done Button
+                onSubmit: () {
+                  if (_isLastFocusable(_activeCalculatorFieldId!)) {
+                    _submit();
+                  } else {
+                    _focusNextField(_activeCalculatorFieldId!);
+                  }
+                },
+
+                // Dismiss Keyboard
+                onClose: _closeAllKeyboards,
+              ),
+          ],
         ),
       ),
     );
