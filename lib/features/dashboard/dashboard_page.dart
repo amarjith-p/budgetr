@@ -1,4 +1,5 @@
 // lib/features/dashboard/views/dashboard_page.dart
+import 'package:budgetr/features/backup/views/backup_page.dart';
 import 'package:budgetr/features/developer/views/developer_support_page.dart';
 import 'package:budgetr/features/investments/views/investment_dashboard_page.dart';
 import 'package:budgetr/features/money_tracker/views/money_tracker_base_page.dart';
@@ -454,8 +455,12 @@ class DashboardPage extends ConsumerWidget {
                             color: darkTileColor,
                             verticalText: true,
                             onTap: () {
-                              HapticFeedback.lightImpact();
-                              // Add navigation or action here later
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const BackupPage(),
+                                ),
+                              );
                             },
                           ),
                         ),
