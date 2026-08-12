@@ -917,28 +917,35 @@ class _StickySectionHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
         ),
         const SizedBox(height: 2),
-        if (isPct)
-          Text(
-            '$sign${value.toStringAsFixed(1)}%',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: color,
-              letterSpacing: -0.5,
-            ),
-          )
-        else
-          CurrencyText(
-            amount: value.abs(),
-            sign: sign,
-            amountStyle: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: color,
-              letterSpacing: -0.5,
-            ),
-            symbolStyle: TextStyle(fontSize: 9, color: color.withOpacity(0.8)),
-          ),
+        // --- ADDED FITTEDBOX TO DYNAMICALLY SHRINK HUGE NUMBERS ---
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: isPct
+              ? Text(
+                  '$sign${value.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                    letterSpacing: -0.5,
+                  ),
+                )
+              : CurrencyText(
+                  amount: value.abs(),
+                  sign: sign,
+                  amountStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                    letterSpacing: -0.5,
+                  ),
+                  symbolStyle: TextStyle(
+                    fontSize: 9,
+                    color: color.withOpacity(0.8),
+                  ),
+                ),
+        ),
       ],
     );
   }
@@ -973,36 +980,41 @@ class _StickySectionHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
         ),
         const SizedBox(height: 2),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            CurrencyText(
-              amount: returnAmt.abs(),
-              sign: amtSign,
-              amountStyle: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                color: color,
-                letterSpacing: -0.5,
+        // --- ADDED FITTEDBOX TO DYNAMICALLY SHRINK HUGE NUMBERS ---
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              CurrencyText(
+                amount: returnAmt.abs(),
+                sign: amtSign,
+                amountStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                  letterSpacing: -0.5,
+                ),
+                symbolStyle: TextStyle(
+                  fontSize: 9,
+                  color: color.withOpacity(0.8),
+                ),
               ),
-              symbolStyle: TextStyle(
-                fontSize: 9,
-                color: color.withOpacity(0.8),
+              const SizedBox(width: 4),
+              Text(
+                '($pctSign${returnPct.toStringAsFixed(1)}%)',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  color: color.withOpacity(0.8),
+                  letterSpacing: -0.2,
+                ),
               ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '($pctSign${returnPct.toStringAsFixed(1)}%)',
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-                color: color.withOpacity(0.8),
-                letterSpacing: -0.2,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -1099,23 +1111,36 @@ class _StickySectionHeaderDelegate extends SliverPersistentHeaderDelegate {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildMiniMetric(
-                          'INVESTED',
-                          totalInvested!,
-                          false,
-                          theme,
+                        // --- ADDED EXPANDED WRAPPERS TO PREVENT HORIZONTAL OVERFLOW ---
+                        Expanded(
+                          flex: 4,
+                          child: _buildMiniMetric(
+                            'INVESTED',
+                            totalInvested!,
+                            false,
+                            theme,
+                          ),
                         ),
-                        _buildMiniMetric(
-                          'CURRENT',
-                          totalCurrent!,
-                          false,
-                          theme,
-                          compareValue: totalInvested!,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 4,
+                          child: _buildMiniMetric(
+                            'CURRENT',
+                            totalCurrent!,
+                            false,
+                            theme,
+                            compareValue: totalInvested!,
+                          ),
                         ),
-                        _buildCombinedReturnMetric(
-                          totalInvested!,
-                          totalCurrent!,
-                          theme,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex:
+                              5, // Given slightly more flex as it holds Amount + %
+                          child: _buildCombinedReturnMetric(
+                            totalInvested!,
+                            totalCurrent!,
+                            theme,
+                          ),
                         ),
                       ],
                     ),
