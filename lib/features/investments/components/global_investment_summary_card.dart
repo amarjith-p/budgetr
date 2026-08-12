@@ -74,6 +74,11 @@ class _GlobalInvestmentSummaryCardState
 
     double totalCurrent = 0.0;
     double totalInvested = 0.0;
+
+    // --- NEW: Profit/Loss Counters ---
+    int profitableCount = 0;
+    int lossCount = 0;
+
     DateTime earliestDate = DateTime.now();
 
     if (widget.investments.isNotEmpty) {
@@ -88,6 +93,13 @@ class _GlobalInvestmentSummaryCardState
     for (var inv in widget.investments) {
       totalCurrent += inv.currentValue;
       totalInvested += max(0.0, inv.initialAmount);
+
+      // Tally Profitable vs Loss-making investments
+      if (inv.currentValue >= inv.initialAmount) {
+        profitableCount++;
+      } else {
+        lossCount++;
+      }
 
       final invLogs = allLogs.where((l) => l.investmentId == inv.id).toList();
       double netLogs = 0.0;
@@ -113,7 +125,6 @@ class _GlobalInvestmentSummaryCardState
       globalLogs.addAll(invLogs);
     }
 
-    // --- ADDED MISSING isClosed PARAMETER ---
     final dummyGlobalInvestment = Investment(
       id: 'GLOBAL',
       name: 'Global Portfolio',
@@ -153,6 +164,7 @@ class _GlobalInvestmentSummaryCardState
                       ),
                     ],
                   ),
+                  // Pass the new counts into the front builder
                   child: _buildFront(
                     context,
                     globalDay0Bal,
@@ -162,6 +174,8 @@ class _GlobalInvestmentSummaryCardState
                     earliestDate,
                     theme,
                     isDark,
+                    profitableCount,
+                    lossCount,
                   ),
                 )
               : Transform(
@@ -214,6 +228,8 @@ class _GlobalInvestmentSummaryCardState
     DateTime earliestDate,
     ThemeData theme,
     bool isDark,
+    int profitableCount, // Received count
+    int lossCount, // Received count
   ) {
     List<CashFlow> cfs = [CashFlow(-globalDay0Bal, earliestDate)];
     for (final log in globalLogs) {
@@ -247,35 +263,90 @@ class _GlobalInvestmentSummaryCardState
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withOpacity(0.2),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.language_rounded,
-                    size: 12,
-                    color: theme.colorScheme.primary,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'GLOBAL PORTFOLIO',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.0,
-                      color: theme.colorScheme.primary,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withOpacity(0.2),
                     ),
                   ),
-                ],
-              ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.language_rounded,
+                        size: 12,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'GLOBAL PORTFOLIO',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.0,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // --- NEW: Minimal Profitable / Non-Profitable Pill ---
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest
+                        .withOpacity(isDark ? 0.3 : 0.5),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.trending_up_rounded,
+                        size: 11,
+                        color: Colors.green,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        '$profitableCount',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.trending_down_rounded,
+                        size: 11,
+                        color: theme.colorScheme.error,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        '$lossCount',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             Row(
               mainAxisSize: MainAxisSize.min,

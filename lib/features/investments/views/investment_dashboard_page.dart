@@ -943,6 +943,71 @@ class _StickySectionHeaderDelegate extends SliverPersistentHeaderDelegate {
     );
   }
 
+  // --- INTELLIGENT COMBINED GAIN/LOSS & RETURN % METRIC ---
+  Widget _buildCombinedReturnMetric(
+    double invested,
+    double current,
+    ThemeData theme,
+  ) {
+    final double returnAmt = current - invested;
+    final double returnPct = invested > 0 ? (returnAmt / invested) * 100 : 0.0;
+    final bool isPositive = returnAmt >= 0;
+    final Color color = isPositive ? Colors.green : theme.colorScheme.error;
+
+    final String amtSign = returnAmt < 0 ? '- ₹ ' : '+ ₹ ';
+    final String pctSign = isPositive ? '+' : '';
+
+    // Intelligent Label logic
+    final String label = isPositive ? 'GAIN' : 'LOSS';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 8,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            CurrencyText(
+              amount: returnAmt.abs(),
+              sign: amtSign,
+              amountStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: color,
+                letterSpacing: -0.5,
+              ),
+              symbolStyle: TextStyle(
+                fontSize: 9,
+                color: color.withOpacity(0.8),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '($pctSign${returnPct.toStringAsFixed(1)}%)',
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                color: color.withOpacity(0.8),
+                letterSpacing: -0.2,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(
     BuildContext context,
@@ -1047,7 +1112,11 @@ class _StickySectionHeaderDelegate extends SliverPersistentHeaderDelegate {
                           theme,
                           compareValue: totalInvested!,
                         ),
-                        _buildMiniMetric('RETURN', returnPct!, true, theme),
+                        _buildCombinedReturnMetric(
+                          totalInvested!,
+                          totalCurrent!,
+                          theme,
+                        ),
                       ],
                     ),
                   ),
