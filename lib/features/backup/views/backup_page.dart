@@ -48,15 +48,26 @@ class _BackupPageState extends ConsumerState<BackupPage> {
   Future<void> _loadMetrics() async {
     final service = ref.read(backupServiceProvider);
     final dbInfo = await service.getDatabaseInfo();
-    final latestBackup = await service.getLatestBackupInfo();
-    final dir = await service.getBackupDirectory();
 
-    if (mounted) {
-      setState(() {
-        _dbInfo = dbInfo;
-        _latestBackup = latestBackup;
-        _backupPath = dir.path.split('0/').last;
-      });
+    // Wrap in try-catch so permission delays don't crash the UI initialization
+    try {
+      final latestBackup = await service.getLatestBackupInfo();
+      if (mounted) {
+        setState(() {
+          _dbInfo = dbInfo;
+          _latestBackup = latestBackup;
+          _backupPath = Platform.isAndroid
+              ? 'Downloads/FinStack 360'
+              : 'App Documents/Backups';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _dbInfo = dbInfo;
+          _backupPath = 'Requires Permissions';
+        });
+      }
     }
   }
 

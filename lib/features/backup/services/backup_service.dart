@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:intl/intl.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:http/http.dart' as http;
+import 'package:permission_handler/permission_handler.dart'; // <-- ADDED
 
 final backupServiceProvider = Provider<BackupService>((ref) {
   return BackupService();
@@ -15,22 +16,40 @@ class BackupService {
   static const String _dbFileName = 'budgetr_db.sqlite';
   HttpServer? _wifiServer;
 
+  // --- PERMISSION HANDLER ---
+  Future<bool> _requestStoragePermission() async {
+    if (!Platform.isAndroid) return true;
+
+    // Android 11+ (API 30+) requires Manage External Storage
+    if (await Permission.manageExternalStorage.isDenied) {
+      await Permission.manageExternalStorage.request();
+    }
+    if (await Permission.manageExternalStorage.isGranted) {
+      return true;
+    }
+
+    // Android 10 and below fallback
+    if (await Permission.storage.isDenied) {
+      await Permission.storage.request();
+    }
+    return await Permission.storage.isGranted;
+  }
+
   Future<Directory> getBackupDirectory() async {
     Directory? directory;
     if (Platform.isAndroid) {
-      directory = Directory(
-        '/storage/emulated/0/Download/FinStack 360/Backups',
-      );
-      try {
-        if (!await directory.exists()) {
-          await directory.create(recursive: true);
-        }
-      } catch (e) {
-        final extDir = await getExternalStorageDirectory();
-        directory = Directory('${extDir!.path}/FinStack 360/Backups');
-        if (!await directory.exists()) {
-          await directory.create(recursive: true);
-        }
+      final hasPermission = await _requestStoragePermission();
+      if (!hasPermission) {
+        throw Exception(
+          'Storage permission denied. Cannot access the Downloads folder.',
+        );
+      }
+
+      // Target the public Android Downloads folder directly
+      directory = Directory('/storage/emulated/0/Download/FinStack 360');
+
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
       }
     } else {
       final docs = await getApplicationDocumentsDirectory();
@@ -101,13 +120,13 @@ class BackupService {
       }
 
       final dir = await getBackupDirectory();
-      final dateStr = DateFormat('yyyy_MM_dd').format(DateTime.now());
+      final dateStr = DateFormat('yyyy_MM_dd_HH_mm_ss').format(DateTime.now());
       final backupFileName = 'FinStack360_Backup_$dateStr.sqlite';
 
       await dbFile.copy(p.join(dir.path, backupFileName));
       return null;
     } catch (e) {
-      return e.toString();
+      return e.toString().replaceAll('Exception: ', '');
     }
   }
 
@@ -121,7 +140,7 @@ class BackupService {
       }
 
       final tempDir = await getTemporaryDirectory();
-      final dateStr = DateFormat('yyyy_MMM_dd_HH_mm').format(DateTime.now());
+      final dateStr = DateFormat('yyyy_MMM_dd').format(DateTime.now());
       final backupFileName = 'FinStack360_Backup_$dateStr.sqlite';
 
       final tempFile = await dbFile.copy(p.join(tempDir.path, backupFileName));
