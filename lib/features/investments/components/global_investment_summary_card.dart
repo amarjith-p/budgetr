@@ -3,10 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/components/currency_text.dart';
 import '../../../core/utils/xirr_calculator.dart';
-import '../../../core/utils/drawdown_calculator.dart';
 import '../providers/investment_provider.dart';
 import 'investment_performance_chart.dart';
 import 'investment_projection_card.dart';
@@ -28,7 +28,6 @@ class _GlobalInvestmentSummaryCardState
     with SingleTickerProviderStateMixin {
   late AnimationController _flipController;
   late Animation<double> _animation;
-
   CardFace _currentFace = CardFace.front;
   CardFace _backFaceTarget = CardFace.chart;
 
@@ -75,12 +74,10 @@ class _GlobalInvestmentSummaryCardState
     double totalCurrent = 0.0;
     double totalInvested = 0.0;
 
-    // --- NEW: Profit/Loss Counters ---
     int profitableCount = 0;
     int lossCount = 0;
 
     DateTime earliestDate = DateTime.now();
-
     if (widget.investments.isNotEmpty) {
       earliestDate = widget.investments
           .map((e) => e.startDate)
@@ -88,42 +85,77 @@ class _GlobalInvestmentSummaryCardState
     }
 
     double globalDay0Bal = 0.0;
-    List<InvestmentLog> globalLogs = [];
+
+    // --- MATHEMATICAL FIX: SEPARATE CASH FLOWS FROM CHART LOGS ---
+    List<InvestmentLog> xirrLogs = [];
+    List<InvestmentLog> chartLogs = [];
 
     for (var inv in widget.investments) {
       totalCurrent += inv.currentValue;
       totalInvested += max(0.0, inv.initialAmount);
 
-      // Tally Profitable vs Loss-making investments
       if (inv.currentValue >= inv.initialAmount) {
         profitableCount++;
       } else {
         lossCount++;
       }
 
-      final invLogs = allLogs.where((l) => l.investmentId == inv.id).toList();
+      final invLogs = allLogs.where((l) => l.investmentId == inv.id).toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
+
       double netLogs = 0.0;
       for (var l in invLogs) {
         if (l.type == 'Deposit') netLogs += l.amount;
         if (l.type == 'Withdrawal') netLogs -= l.amount;
       }
+
       double startBal = max(0.0, inv.initialAmount - netLogs);
 
       if (inv.startDate.difference(earliestDate).inDays == 0) {
         globalDay0Bal += startBal;
       } else {
-        globalLogs.add(
-          InvestmentLog(
-            id: 'sync_${inv.id}',
-            investmentId: 'GLOBAL',
-            type: 'Deposit',
-            amount: startBal,
-            date: inv.startDate,
-          ),
+        final syncLog = InvestmentLog(
+          id: 'sync_${inv.id}',
+          investmentId: 'GLOBAL',
+          type: 'Deposit',
+          amount: startBal,
+          date: inv.startDate,
         );
+        chartLogs.add(syncLog);
+        xirrLogs.add(syncLog);
       }
-      globalLogs.addAll(invLogs);
+
+      double currentInvBal = startBal;
+      for (var l in invLogs) {
+        if (l.type == 'Deposit') {
+          currentInvBal += l.amount;
+          chartLogs.add(l);
+          xirrLogs.add(l);
+        } else if (l.type == 'Withdrawal') {
+          currentInvBal -= l.amount;
+          chartLogs.add(l);
+          xirrLogs.add(l);
+        } else if (l.type == 'Update') {
+          // --- FIX: Convert Market 'Updates' into Deltas so Global Chart Stacks Correctly ---
+          double delta = l.amount - currentInvBal;
+          currentInvBal = l.amount;
+
+          chartLogs.add(
+            InvestmentLog(
+              id: l.id,
+              investmentId: 'GLOBAL',
+              type: delta >= 0 ? 'Deposit' : 'Withdrawal',
+              amount: delta.abs(),
+              date: l.date,
+            ),
+          );
+          // Note: Market Updates do NOT get added to XIRR logs
+        }
+      }
     }
+
+    chartLogs.sort((a, b) => a.date.compareTo(b.date));
+    xirrLogs.sort((a, b) => a.date.compareTo(b.date));
 
     final dummyGlobalInvestment = Investment(
       id: 'GLOBAL',
@@ -143,7 +175,6 @@ class _GlobalInvestmentSummaryCardState
       builder: (context, child) {
         final angle = _animation.value * pi;
         final isFront = angle <= pi / 2;
-
         return Transform(
           transform: Matrix4.identity()
             ..setEntry(3, 2, 0.001)
@@ -164,11 +195,11 @@ class _GlobalInvestmentSummaryCardState
                       ),
                     ],
                   ),
-                  // Pass the new counts into the front builder
                   child: _buildFront(
                     context,
                     globalDay0Bal,
-                    globalLogs,
+                    xirrLogs,
+                    chartLogs,
                     totalInvested,
                     totalCurrent,
                     earliestDate,
@@ -203,14 +234,14 @@ class _GlobalInvestmentSummaryCardState
                           ),
                           child: InvestmentPerformanceChart(
                             investment: dummyGlobalInvestment,
-                            logs: globalLogs,
+                            logs: chartLogs, // Uses stackable delta logs
                             startBal: globalDay0Bal,
                             onFlip: () => _toggleFlip(CardFace.front),
                           ),
                         )
                       : InvestmentProjectionCard(
                           investment: dummyGlobalInvestment,
-                          logs: globalLogs,
+                          logs: xirrLogs, // Uses pure cash flow logs
                           onFlip: () => _toggleFlip(CardFace.front),
                         ),
                 ),
@@ -222,17 +253,19 @@ class _GlobalInvestmentSummaryCardState
   Widget _buildFront(
     BuildContext context,
     double globalDay0Bal,
-    List<InvestmentLog> globalLogs,
+    List<InvestmentLog> xirrLogs,
+    List<InvestmentLog> chartLogs,
     double totalInvested,
     double totalCurrent,
     DateTime earliestDate,
     ThemeData theme,
     bool isDark,
-    int profitableCount, // Received count
-    int lossCount, // Received count
+    int profitableCount,
+    int lossCount,
   ) {
+    // XIRR Calculation
     List<CashFlow> cfs = [CashFlow(-globalDay0Bal, earliestDate)];
-    for (final log in globalLogs) {
+    for (final log in xirrLogs) {
       if (log.type == 'Deposit') cfs.add(CashFlow(-log.amount, log.date));
       if (log.type == 'Withdrawal') cfs.add(CashFlow(log.amount, log.date));
     }
@@ -243,15 +276,36 @@ class _GlobalInvestmentSummaryCardState
     if (xirr > 999) xirr = 999.0;
     if (xirr < -999) xirr = -999.0;
 
-    double maxDrawdown = DrawdownCalculator.calculate(
-      globalDay0Bal,
-      globalLogs,
-    );
+    // --- FIX: EXACT SEQUENTIAL DRAWDOWN CALCULATION ---
+    double calculateMaxDrawdown(double start, List<InvestmentLog> sortedLogs) {
+      double peak = start;
+      double maxDD = 0.0;
+      double current = start;
+
+      for (var log in sortedLogs) {
+        if (log.type == 'Deposit')
+          current += log.amount;
+        else if (log.type == 'Withdrawal')
+          current -= log.amount;
+        else if (log.type == 'Update')
+          current = log.amount;
+
+        if (current > peak) peak = current;
+        if (peak > 0) {
+          double dd = ((peak - current) / peak) * 100;
+          if (dd > maxDD) maxDD = dd;
+        }
+      }
+      return maxDD;
+    }
+
+    double maxDrawdown = calculateMaxDrawdown(globalDay0Bal, chartLogs);
 
     final double gainLoss = totalCurrent - totalInvested;
     final double absReturnPct = totalInvested > 0
         ? (gainLoss / totalInvested) * 100
         : 0.0;
+
     final bool isPositive = gainLoss >= 0;
     final Color returnColor = isPositive
         ? Colors.green
@@ -300,7 +354,6 @@ class _GlobalInvestmentSummaryCardState
                   ),
                 ),
                 const SizedBox(width: 8),
-                // --- NEW: Minimal Profitable / Non-Profitable Pill ---
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 6,
@@ -450,7 +503,6 @@ class _GlobalInvestmentSummaryCardState
           padding: EdgeInsets.symmetric(vertical: 16),
           child: Divider(height: 1),
         ),
-
         IntrinsicHeight(
           child: Row(
             children: [
@@ -495,7 +547,6 @@ class _GlobalInvestmentSummaryCardState
                 thickness: 1,
                 color: theme.dividerColor,
               ),
-
               Expanded(
                 flex: 28,
                 child: Column(
@@ -537,7 +588,6 @@ class _GlobalInvestmentSummaryCardState
                 thickness: 1,
                 color: theme.dividerColor,
               ),
-
               Expanded(
                 flex: 20,
                 child: Column(
@@ -589,7 +639,6 @@ class _GlobalInvestmentSummaryCardState
                 thickness: 1,
                 color: theme.dividerColor,
               ),
-
               Expanded(
                 flex: 24,
                 child: Column(

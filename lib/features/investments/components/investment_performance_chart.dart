@@ -2,6 +2,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/components/currency_text.dart';
 import '../../../core/constants/date_time_constants.dart';
@@ -53,21 +54,25 @@ class _InvestmentPerformanceChartState
     );
     DateTime now = DateTime.now();
     DateTime end = DateTime(now.year, now.month, now.day);
-
     if (start.isAfter(end)) start = end;
 
-    // 3. Interpolate Daily Balances
-    Map<DateTime, double> plotData = {};
-    DateTime pointer = start;
-    double runningBal = widget.startBal;
+    // --- FIX: EXTRACT LIVE DAYS ONLY ---
+    // Only map dates where an actual transaction occurred
+    Set<DateTime> liveDatesSet = txByDate.keys.toSet();
+    liveDatesSet.add(start);
+    liveDatesSet.add(end);
 
+    List<DateTime> liveDates = liveDatesSet.toList()..sort();
+
+    // 3. Interpolate Balances strictly on Live Days
+    Map<DateTime, double> plotData = {};
+    double runningBal = widget.startBal;
     double highestBal = runningBal;
     double lowestBal = runningBal;
 
-    while (!pointer.isAfter(end)) {
-      if (txByDate.containsKey(pointer)) {
-        // Sort daily logs chronologically
-        final dayLogs = txByDate[pointer]!
+    for (var date in liveDates) {
+      if (txByDate.containsKey(date)) {
+        final dayLogs = txByDate[date]!
           ..sort((a, b) => a.date.compareTo(b.date));
         for (var log in dayLogs) {
           if (log.type == 'Deposit') runningBal += log.amount;
@@ -75,12 +80,9 @@ class _InvestmentPerformanceChartState
           if (log.type == 'Update') runningBal = log.amount;
         }
       }
-
-      plotData[pointer] = runningBal;
+      plotData[date] = runningBal;
       if (runningBal > highestBal) highestBal = runningBal;
       if (runningBal < lowestBal) lowestBal = runningBal;
-
-      pointer = pointer.add(const Duration(days: 1));
     }
 
     final points = plotData.values.toList();
@@ -123,7 +125,6 @@ class _InvestmentPerformanceChartState
           ],
         ),
         const SizedBox(height: 16),
-
         // --- CUSTOM PAINTER IMPLEMENTATION ---
         GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -283,6 +284,7 @@ class _BoxyGridChartPainter extends CustomPainter {
       text: TextSpan(text: startDateText, style: textStyle),
       textDirection: TextDirection.ltr,
     )..layout();
+
     final endLabel = TextPainter(
       text: TextSpan(text: endDateText, style: textStyle),
       textDirection: TextDirection.ltr,
@@ -345,6 +347,7 @@ class _BoxyGridChartPainter extends CustomPainter {
         end: Alignment.bottomCenter,
         colors: gradientColors,
       ).createShader(Rect.fromLTWH(leftPadding, 0, chartWidth, chartHeight));
+
     canvas.drawPath(fillPath, fillPaint);
 
     if (touchX != null) {
@@ -375,6 +378,7 @@ class _BoxyGridChartPainter extends CustomPainter {
 
       final rawVal = data[closestIndex];
       final signStr = rawVal < 0 ? '-₹ ' : '₹ ';
+
       final dateStr =
           '${dates[closestIndex].day} ${DateTimeConstants.shortMonths[dates[closestIndex].month - 1]}';
 
