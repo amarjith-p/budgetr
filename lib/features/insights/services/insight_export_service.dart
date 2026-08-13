@@ -1,10 +1,13 @@
 // features/insights/services/insight_export_service.dart
 import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:budgetr/core/database/app_database.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart'; // Required for Unicode Fonts (₹)
 import 'package:path/path.dart' as p;
 
 import '../../transactions/services/transaction_service.dart';
@@ -144,7 +147,7 @@ class InsightExportService {
     }
   }
 
-  // --- CSV EXPORT (Rigid Grid Formatting) ---
+  // --- CSV EXPORT (Rigid Grid Formatting - No Currency Symbols) ---
   Future<InsightExportResult> exportToCsv({
     required InsightFilterState filter,
     required InsightSummaryModel summary,
@@ -160,7 +163,7 @@ class InsightExportService {
     List<List<dynamic>> rows = [];
 
     // Header
-    rows.add(['INSIGHTS REPORT']);
+    rows.add(['FINSTACK 360 INSIGHTS REPORT']);
     rows.add(['Account:', accountName]);
     rows.add(['Period:', dateString]);
     rows.add([]);
@@ -324,7 +327,7 @@ class InsightExportService {
     return await _saveFile(defaultName, csvString, 'CSV');
   }
 
-  // --- PDF EXPORT (Pro Structured Tables & Charts) ---
+  // --- PDF EXPORT (Pro Structured Tables, Charts, Watermark & Rupee Symbol) ---
   Future<InsightExportResult> exportToPdf({
     required InsightFilterState filter,
     required InsightSummaryModel summary,
@@ -337,6 +340,24 @@ class InsightExportService {
     final dateString =
         "${DateFormat('dd MMM yyyy').format(range.start)} - ${DateFormat('dd MMM yyyy').format(range.end)}";
     final pdf = pw.Document();
+
+    // --- LOAD UNICODE FONTS & WATERMARK IMAGE ---
+    pw.Font? regularFont;
+    pw.Font? boldFont;
+    try {
+      regularFont = await PdfGoogleFonts.robotoRegular();
+      boldFont = await PdfGoogleFonts.robotoMedium();
+    } catch (e) {
+      debugPrint("Unicode font load error: $e");
+    }
+
+    pw.MemoryImage? watermarkImage;
+    try {
+      final ByteData image = await rootBundle.load('assets/icon/fs360.png');
+      watermarkImage = pw.MemoryImage(image.buffer.asUint8List());
+    } catch (e) {
+      debugPrint("Watermark image not found: $e");
+    }
 
     // Separate Data Streams
     final incomes = transactions
@@ -393,8 +414,23 @@ class InsightExportService {
     };
 
     final pageTheme = pw.PageTheme(
+      theme: regularFont != null && boldFont != null
+          ? pw.ThemeData.withFont(base: regularFont, bold: boldFont)
+          : null,
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(36),
+      buildBackground: (pw.Context context) {
+        if (watermarkImage == null) return pw.SizedBox();
+        return pw.FullPage(
+          ignoreMargins: true,
+          child: pw.Center(
+            child: pw.Opacity(
+              opacity: 0.07, // Subtle faded watermark
+              child: pw.Image(watermarkImage, width: 400),
+            ),
+          ),
+        );
+      },
     );
 
     pdf.addPage(
@@ -416,7 +452,7 @@ class InsightExportService {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      "INSIGHTS REPORT",
+                      "FINSTACK 360 INSIGHTS REPORT",
                       style: pw.TextStyle(
                         fontSize: 18,
                         fontWeight: pw.FontWeight.bold,
@@ -469,7 +505,7 @@ class InsightExportService {
         },
         build: (pw.Context context) {
           return [
-            // --- SUMMARY CARDS ---
+            // --- SUMMARY CARDS WITH RUPEE SYMBOL ---
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
@@ -509,7 +545,7 @@ class InsightExportService {
             ),
             pw.SizedBox(height: 36),
 
-            // --- BUDGET BUCKETS SUMMARY TABLE ---
+            // --- BUDGET BUCKETS SUMMARY TABLE WITH RUPEE SYMBOL ---
             pw.Text(
               "BUDGET BUCKETS SUMMARY",
               style: pw.TextStyle(
@@ -527,9 +563,9 @@ class InsightExportService {
                 double r = a - s;
                 return [
                   bName,
-                  a.toStringAsFixed(2),
-                  s.toStringAsFixed(2),
-                  r.toStringAsFixed(2),
+                  '₹ ${a.toStringAsFixed(2)}',
+                  '₹ ${s.toStringAsFixed(2)}',
+                  '₹ ${r.toStringAsFixed(2)}',
                 ];
               }).toList(),
               border: null,
@@ -555,7 +591,7 @@ class InsightExportService {
             ),
             pw.SizedBox(height: 30),
 
-            // --- INCOME TRANSACTIONS ---
+            // --- INCOME TRANSACTIONS WITH RUPEE SYMBOL ---
             if (incomes.isNotEmpty) ...[
               pw.Text(
                 "INCOME TRANSACTIONS",
@@ -578,7 +614,7 @@ class InsightExportService {
                             t.category?.name ??
                             'Uncategorized',
                         t.transaction.subCategory ?? '-',
-                        t.transaction.amount.toStringAsFixed(2),
+                        '₹ ${t.transaction.amount.toStringAsFixed(2)}',
                       ],
                     )
                     .toList(),
@@ -601,7 +637,7 @@ class InsightExportService {
               pw.SizedBox(height: 30),
             ],
 
-            // --- EXPENSE TRANSACTIONS ---
+            // --- EXPENSE TRANSACTIONS WITH RUPEE SYMBOL ---
             if (expenses.isNotEmpty) ...[
               pw.Text(
                 "EXPENSE TRANSACTIONS",
@@ -626,7 +662,7 @@ class InsightExportService {
                             t.category?.name ??
                             'Uncategorized',
                         t.transaction.subCategory ?? '-',
-                        t.transaction.amount.toStringAsFixed(2),
+                        '₹ ${t.transaction.amount.toStringAsFixed(2)}',
                       ],
                     )
                     .toList(),
@@ -681,7 +717,7 @@ class InsightExportService {
           ),
           pw.SizedBox(height: 6),
           pw.Text(
-            amount.toStringAsFixed(2),
+            '₹ ${amount.toStringAsFixed(2)}',
             style: pw.TextStyle(
               fontSize: 16,
               color: color,
@@ -738,7 +774,6 @@ class InsightExportService {
           value: topItems[i].value,
           color: color,
           drawBorder: false,
-          // Notice: No legend parameter here, so the chart stays clean!
         ),
       );
 
@@ -750,7 +785,7 @@ class InsightExportService {
             pw.Container(width: 8, height: 8, color: color),
             pw.SizedBox(width: 6),
             pw.Text(
-              '${topItems[i].key} (${topItems[i].value.toStringAsFixed(0)})',
+              '${topItems[i].key} (₹ ${topItems[i].value.toStringAsFixed(0)})',
               style: const pw.TextStyle(fontSize: 8),
             ),
           ],

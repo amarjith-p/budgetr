@@ -10,9 +10,10 @@ import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../models/tracker_field_model.dart';
 import '../providers/smart_tracker_provider.dart';
 import '../views/smart_tracker_entry_page.dart';
+import '../services/smart_tracker_export_service.dart'; // <-- IMPORTED EXPORT SERVICE
 import 'add_formula_bottom_sheet.dart';
 import 'smart_tracker_filter_sheet.dart';
-import 'smart_tracker_chart_sheet.dart'; // <-- IMPORT THE NEW SHEET
+import 'smart_tracker_chart_sheet.dart';
 
 class SmartTrackerTable extends ConsumerStatefulWidget {
   final SmartTrackerTemplate template;
@@ -47,23 +48,9 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
     return columnName;
   }
 
+  // Uses the exact same formatValue logic as the export service to maintain 1:1 parity
   String _formatValue(TrackerField field, dynamic value) {
-    if (value == null || value.toString().isEmpty) return '-';
-    try {
-      if (field.type == TrackerFieldType.checkbox && value is List)
-        return value.join(', ');
-      if (field.type == TrackerFieldType.currency)
-        return '${field.currencySymbol ?? ''} $value'.trim();
-      if (field.type == TrackerFieldType.date)
-        return DateFormat(
-          'dd MMM yyyy',
-        ).format(DateTime.parse(value.toString()));
-      if (field.type == TrackerFieldType.toggle)
-        return value == true ? 'Yes' : 'No';
-      return value.toString();
-    } catch (e) {
-      return value.toString();
-    }
+    return SmartTrackerExportService.formatValue(field, value);
   }
 
   void _showCellReference(BuildContext context, String cellRef) {
@@ -586,82 +573,78 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-          child: Row(
-            children: [
-              Text(
-                '${processedRecords.length} ROWS',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const Spacer(),
-
-              // --- FIXED: TRIGGERS THE BOTTOM SHEET INSTEAD OF PAGE ---
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  SmartTrackerChartSheet.show(
-                    context,
-                    template: widget.template,
-                    records: processedRecords,
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.insights_rounded,
-                        size: 14,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'CHART',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          color: theme.colorScheme.primary,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                    ],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                Text(
+                  '${processedRecords.length} ROWS',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 16),
 
-              if (_filterField != null) ...[
+                // --- NEW: EXPORT BUTTON ---
                 GestureDetector(
                   onTap: () {
-                    SmartTrackerFilterSheet.show(
+                    HapticFeedback.selectionClick();
+                    SmartTrackerExportUI.show(
                       context,
+                      template: widget.template,
                       fields: fields,
-                      records: widget.records,
-                      initialField: _filterField,
-                      initialOperator: _filterOperator,
-                      initialValues: _filterValues,
-                      initialSingleValue: _filterSingleValue,
-                      onApplyFilter: (f, op, values, singleVal) => setState(() {
-                        _filterField = f;
-                        _filterOperator = op;
-                        _filterValues = values;
-                        _filterSingleValue = singleVal;
-                      }),
+                      records:
+                          processedRecords, // Passes exactly what's filtered on screen
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.amberAccent.shade400.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.amberAccent.shade400.withOpacity(0.4),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.file_download_rounded,
+                          size: 14,
+                          color: Colors.amberAccent.shade700,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'EXPORT',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.amberAccent.shade700,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // --- EXISTING: CHART BUTTON ---
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    SmartTrackerChartSheet.show(
+                      context,
+                      template: widget.template,
+                      records: processedRecords,
                     );
                   },
                   child: Container(
@@ -680,83 +663,17 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.filter_alt_rounded,
-                          size: 12,
+                          Icons.insights_rounded,
+                          size: 14,
                           color: theme.colorScheme.primary,
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          '${_filterField!.name} $_filterOperator ${['==', '!='].contains(_filterOperator) ? '${_filterValues.length} Vals' : _filterSingleValue}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() {
-                              _filterField = null;
-                              _filterValues = [];
-                              _filterSingleValue = '';
-                            });
-                          },
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 14,
-                            color: theme.colorScheme.error,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ] else ...[
-                GestureDetector(
-                  onTap: () {
-                    SmartTrackerFilterSheet.show(
-                      context,
-                      fields: fields,
-                      records: widget.records,
-                      initialField: null,
-                      initialOperator: '==',
-                      initialValues: [],
-                      initialSingleValue: '',
-                      onApplyFilter: (f, op, values, singleVal) => setState(() {
-                        _filterField = f;
-                        _filterOperator = op;
-                        _filterValues = values;
-                        _filterSingleValue = singleVal;
-                      }),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: theme.dividerColor),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.filter_list_rounded,
-                          size: 14,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'FILTER',
+                          'CHART',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
-                            color: theme.colorScheme.onSurface,
+                            color: theme.colorScheme.primary,
                             letterSpacing: 1.0,
                           ),
                         ),
@@ -764,8 +681,133 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
+
+                // --- EXISTING: FILTER BUTTON ---
+                if (_filterField != null) ...[
+                  GestureDetector(
+                    onTap: () {
+                      SmartTrackerFilterSheet.show(
+                        context,
+                        fields: fields,
+                        records: widget.records,
+                        initialField: _filterField,
+                        initialOperator: _filterOperator,
+                        initialValues: _filterValues,
+                        initialSingleValue: _filterSingleValue,
+                        onApplyFilter: (f, op, values, singleVal) =>
+                            setState(() {
+                              _filterField = f;
+                              _filterOperator = op;
+                              _filterValues = values;
+                              _filterSingleValue = singleVal;
+                            }),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.filter_alt_rounded,
+                            size: 12,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${_filterField!.name} $_filterOperator ${['==', '!='].contains(_filterOperator) ? '${_filterValues.length} Vals' : _filterSingleValue}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() {
+                                _filterField = null;
+                                _filterValues = [];
+                                _filterSingleValue = '';
+                              });
+                            },
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 14,
+                              color: theme.colorScheme.error,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  GestureDetector(
+                    onTap: () {
+                      SmartTrackerFilterSheet.show(
+                        context,
+                        fields: fields,
+                        records: widget.records,
+                        initialField: null,
+                        initialOperator: '==',
+                        initialValues: [],
+                        initialSingleValue: '',
+                        onApplyFilter: (f, op, values, singleVal) =>
+                            setState(() {
+                              _filterField = f;
+                              _filterOperator = op;
+                              _filterValues = values;
+                              _filterSingleValue = singleVal;
+                            }),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: theme.dividerColor),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.filter_list_rounded,
+                            size: 14,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'FILTER',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: theme.colorScheme.onSurface,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
 
