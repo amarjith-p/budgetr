@@ -1,4 +1,5 @@
 // features/insights/views/insights_tab.dart
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:budgetr/core/database/app_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -462,7 +463,7 @@ class InsightExportUI {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(color: Colors.cyanAccent),
+              FuturisticLoader(color: Colors.cyanAccent),
               SizedBox(height: 32),
               Text(
                 "GENERATING REPORT...",

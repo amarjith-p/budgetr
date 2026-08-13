@@ -1,6 +1,7 @@
 // lib/features/smart_trackers/services/smart_tracker_export_service.dart
 import 'dart:convert';
 import 'dart:io';
+import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -33,8 +34,9 @@ class SmartTrackerExportService {
   }) {
     if (value == null || value.toString().isEmpty) return '-';
     try {
-      if (field.type == TrackerFieldType.checkbox && value is List)
+      if (field.type == TrackerFieldType.checkbox && value is List) {
         return value.join(', ');
+      }
       if (field.type == TrackerFieldType.currency) {
         if (forCsv) {
           // Strictly return just the number for CSV to avoid Excel corruption
@@ -43,16 +45,87 @@ class SmartTrackerExportService {
         // Return with symbol for PDF and UI
         return '${field.currencySymbol ?? ''} $value'.trim();
       }
-      if (field.type == TrackerFieldType.date)
+      if (field.type == TrackerFieldType.date) {
         return DateFormat(
           'dd MMM yyyy',
         ).format(DateTime.parse(value.toString()));
-      if (field.type == TrackerFieldType.toggle)
+      }
+      if (field.type == TrackerFieldType.toggle) {
         return value == true ? 'Yes' : 'No';
+      }
       return value.toString();
     } catch (e) {
       return value.toString();
     }
+  }
+
+  // --- NEW: CALCULATE FOOTER AGGREGATES ---
+  List<String> _generateFooterRow(
+    List<TrackerField> fields,
+    List<SmartTrackerRecord> records, {
+    required bool forCsv,
+  }) {
+    List<String> footerRow = [];
+    bool hasAnyAggregate = false;
+
+    for (int i = 0; i < fields.length; i++) {
+      final field = fields[i];
+      final canAggregate =
+          field.type == TrackerFieldType.number ||
+          field.type == TrackerFieldType.currency ||
+          field.type == TrackerFieldType.formula;
+
+      if (!canAggregate ||
+          field.aggregate == null ||
+          field.aggregate == 'NONE' ||
+          field.aggregate!.isEmpty) {
+        footerRow.add(''); // Placeholder for columns without aggregates
+        continue;
+      }
+
+      hasAnyAggregate = true;
+      double sum = 0;
+      double minVal = double.infinity;
+      double maxVal = double.negativeInfinity;
+      int count = 0;
+
+      for (var record in records) {
+        final dataMap = jsonDecode(record.dataJson);
+        final val = double.tryParse(dataMap[field.id]?.toString() ?? '');
+        if (val != null) {
+          sum += val;
+          count++;
+          if (val < minVal) minVal = val;
+          if (val > maxVal) maxVal = val;
+        }
+      }
+
+      String result = '';
+      if (count > 0) {
+        if (field.aggregate == 'SUM') result = sum.toStringAsFixed(2);
+        if (field.aggregate == 'AVG') result = (sum / count).toStringAsFixed(2);
+        if (field.aggregate == 'MAX') result = maxVal.toStringAsFixed(2);
+        if (field.aggregate == 'MIN') result = minVal.toStringAsFixed(2);
+
+        if (field.type == TrackerFieldType.currency && !forCsv) {
+          result = '${field.currencySymbol ?? ''} $result'.trim();
+        }
+
+        // Append prefix so it reads cleanly (e.g., "SUM: 500")
+        result = '${field.aggregate}: $result';
+      }
+      footerRow.add(result);
+    }
+
+    // If aggregates exist, label the first empty column
+    if (hasAnyAggregate) {
+      if (footerRow.isNotEmpty && footerRow[0] == '') {
+        footerRow[0] = 'AGGREGATES';
+      }
+      return footerRow;
+    }
+
+    return [];
   }
 
   Future<SmartTrackerExportResult> _saveFile(
@@ -122,10 +195,15 @@ class SmartTrackerExportService {
       final Map<String, dynamic> dataMap = jsonDecode(record.dataJson);
       List<String> rowData = [];
       for (var field in fields) {
-        // Flag set to true to drop the currency symbol
         rowData.add(formatValue(field, dataMap[field.id], forCsv: true));
       }
       rows.add(rowData);
+    }
+
+    // --- APPEND FOOTER AGGREGATES ---
+    final footerRow = _generateFooterRow(fields, records, forCsv: true);
+    if (footerRow.isNotEmpty) {
+      rows.add(footerRow);
     }
 
     String csvString = rows
@@ -148,7 +226,6 @@ class SmartTrackerExportService {
     String defaultName =
         "${template.name.replaceAll(' ', '_')}_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.csv";
 
-    // Saving as standard string. No BOM bytes injected to prevent the `i>>` issue.
     return await _saveFile(defaultName, csvString, 'CSV');
   }
 
@@ -198,11 +275,16 @@ class SmartTrackerExportService {
     final tableHeaders = fields.map((f) => f.name.toUpperCase()).toList();
     final tableData = records.map((record) {
       final Map<String, dynamic> dataMap = jsonDecode(record.dataJson);
-      // FIXED: using `f.id` instead of `field.id`
       return fields
           .map((f) => formatValue(f, dataMap[f.id], forCsv: false))
           .toList();
     }).toList();
+
+    // --- APPEND FOOTER AGGREGATES ---
+    final footerRow = _generateFooterRow(fields, records, forCsv: false);
+    if (footerRow.isNotEmpty) {
+      tableData.add(footerRow);
+    }
 
     pdf.addPage(
       pw.MultiPage(
@@ -401,7 +483,7 @@ class SmartTrackerExportUI {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(color: Colors.cyanAccent),
+              FuturisticLoader(color: Colors.cyanAccent),
               SizedBox(height: 32),
               Text(
                 "GENERATING REPORT...",
