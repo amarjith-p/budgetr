@@ -10,7 +10,7 @@ import '../../../core/utils/drawdown_calculator.dart';
 import '../providers/investment_provider.dart';
 import 'investment_details_bottom_sheet.dart';
 import 'investment_performance_chart.dart';
-import 'investment_projection_card.dart'; // <-- IMPORTED NEW COMPONENT
+import 'investment_projection_card.dart';
 
 enum CardFace { front, chart, projection }
 
@@ -186,47 +186,63 @@ class _InvestmentSummaryCardState extends ConsumerState<InvestmentSummaryCard>
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: theme.colorScheme.primary.withOpacity(0.2),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (faviconUrl.isNotEmpty) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: Image.network(
-                          faviconUrl,
-                          width: 12,
-                          height: 12,
-                          errorBuilder: (_, __, ___) => Icon(
-                            Icons.business_rounded,
-                            size: 12,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    Text(
-                      widget.investment.provider.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.0,
-                        color: theme.colorScheme.primary,
+              // --- FIX 1: Wrap pill in Expanded + Align to strictly prevent long text overflows[cite: 14] ---
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withOpacity(0.2),
                       ),
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (faviconUrl.isNotEmpty) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: Image.network(
+                              faviconUrl,
+                              width: 12,
+                              height: 12,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.business_rounded,
+                                size: 12,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        // Added Flexible + Ellipsis so super long provider names just truncate cleanly
+                        Flexible(
+                          child: Text(
+                            widget.investment.provider.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.0,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
+              const SizedBox(width: 12),
               // --- SMART ICONS: AI, CHART, DETAILS ---
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -354,13 +370,18 @@ class _InvestmentSummaryCardState extends ConsumerState<InvestmentSummaryCard>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'INVESTED',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                          color: theme.colorScheme.onSurfaceVariant,
+                      // --- FIX 2: Added FittedBox to all sub-headers to prevent flex overflow[cite: 14] ---
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'INVESTED',
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -396,13 +417,17 @@ class _InvestmentSummaryCardState extends ConsumerState<InvestmentSummaryCard>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        isPositive ? 'TOTAL GAIN' : 'TOTAL LOSS',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                          color: theme.colorScheme.onSurfaceVariant,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          isPositive ? 'TOTAL GAIN' : 'TOTAL LOSS',
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -438,26 +463,30 @@ class _InvestmentSummaryCardState extends ConsumerState<InvestmentSummaryCard>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'XIRR',
-                            style: TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                              color: theme.colorScheme.onSurfaceVariant,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'XIRR',
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 2),
-                          Icon(
-                            Icons.insights_rounded,
-                            size: 8,
-                            color: theme.colorScheme.onSurfaceVariant
-                                .withOpacity(0.5),
-                          ),
-                        ],
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.insights_rounded,
+                              size: 8,
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.5),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 4),
                       FittedBox(
@@ -489,26 +518,30 @@ class _InvestmentSummaryCardState extends ConsumerState<InvestmentSummaryCard>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'MAX DD',
-                            style: TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                              color: theme.colorScheme.onSurfaceVariant,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'MAX DD',
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 2),
-                          Icon(
-                            Icons.show_chart_rounded,
-                            size: 8,
-                            color: theme.colorScheme.onSurfaceVariant
-                                .withOpacity(0.5),
-                          ),
-                        ],
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.show_chart_rounded,
+                              size: 8,
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.5),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 4),
                       FittedBox(
