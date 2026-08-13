@@ -7,7 +7,7 @@ import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_squircle_fab.dart';
 import '../../../core/components/premium_empty_state.dart';
 import '../providers/smart_tracker_provider.dart';
-import '../components/smart_tracker_table.dart'; // <-- STRICT IMPORT
+import '../components/smart_tracker_table.dart';
 import 'smart_tracker_entry_page.dart';
 
 class SmartTrackerDetailPage extends ConsumerWidget {
@@ -20,7 +20,6 @@ class SmartTrackerDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    // Watchers
     final recordsAsync = ref.watch(smartTrackerRecordsProvider(template.id));
     final templateAsync = ref.watch(
       singleSmartTrackerTemplateProvider(template.id),
@@ -29,6 +28,7 @@ class SmartTrackerDetailPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      // --- FIXED: App Bar is perfectly clean, no chart icon ---
       appBar: ModernAppBar(
         title: liveTemplate.name,
         subtitle: 'SMART TRACKER LEDGER',
@@ -68,7 +68,6 @@ class SmartTrackerDetailPage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                // --- STRICT POM USAGE ---
                 child: SmartTrackerTable(
                   template: liveTemplate,
                   records: records,

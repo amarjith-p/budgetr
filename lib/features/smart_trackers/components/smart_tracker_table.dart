@@ -12,6 +12,7 @@ import '../providers/smart_tracker_provider.dart';
 import '../views/smart_tracker_entry_page.dart';
 import 'add_formula_bottom_sheet.dart';
 import 'smart_tracker_filter_sheet.dart';
+import 'smart_tracker_chart_sheet.dart'; // <-- IMPORT THE NEW SHEET
 
 class SmartTrackerTable extends ConsumerStatefulWidget {
   final SmartTrackerTemplate template;
@@ -28,11 +29,9 @@ class SmartTrackerTable extends ConsumerStatefulWidget {
 }
 
 class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
-  // --- SORTING STATE ---
   String? _sortColumnId;
   bool _isAscending = true;
 
-  // --- PROFESSIONAL FILTER STATE ---
   TrackerField? _filterField;
   String _filterOperator = '==';
   List<String> _filterValues = [];
@@ -210,17 +209,13 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
     });
   }
 
-  // --- CORE FILTER & SORT ENGINE ---
   List<SmartTrackerRecord> _getProcessedRecords(List<TrackerField> fields) {
-    // 1. FILTERING
     var filteredList = widget.records.where((record) {
       if (_filterField == null) return true;
-
       final dataMap = jsonDecode(record.dataJson);
       final rawVal = dataMap[_filterField!.id];
       final formattedVal = _formatValue(_filterField!, rawVal);
 
-      // MATHEMATICAL FILTER
       if (['>', '<', '>=', '<='].contains(_filterOperator)) {
         if (_filterSingleValue.isEmpty) return true;
         double actual =
@@ -243,9 +238,7 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
           case '<=':
             return actual <= target;
         }
-      }
-      // STRING MATCH FILTER
-      else if ([
+      } else if ([
         'Contains',
         'Starts With',
         'Ends With',
@@ -261,9 +254,7 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
           case 'Ends With':
             return actualStr.endsWith(targetStr);
         }
-      }
-      // EXACT MULTI-MATCH FILTER
-      else {
+      } else {
         if (_filterValues.isEmpty) return true;
         bool isMatch = _filterValues.contains(formattedVal);
         return _filterOperator == '==' ? isMatch : !isMatch;
@@ -271,10 +262,7 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
       return true;
     }).toList();
 
-    // 2. SORTING
-    if (_sortColumnId == null) {
-      return filteredList.reversed.toList();
-    }
+    if (_sortColumnId == null) return filteredList.reversed.toList();
 
     final field = fields.firstWhere((f) => f.id == _sortColumnId);
     filteredList.sort((a, b) {
@@ -307,14 +295,12 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
     return filteredList;
   }
 
-  // --- UI BUILDERS ---
   Widget _buildFieldHeaderCell(
     ThemeData theme,
     TrackerField field,
     String cellRef,
   ) {
     final isSorted = _sortColumnId == field.id;
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -598,14 +584,12 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // --- SLEEK HEADER ROW FOR FILTERS ---
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${processedRecords.length} RECORDS MATCHED',
+                '${processedRecords.length} ROWS',
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
@@ -613,9 +597,55 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
+              const Spacer(),
+
+              // --- FIXED: TRIGGERS THE BOTTOM SHEET INSTEAD OF PAGE ---
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  SmartTrackerChartSheet.show(
+                    context,
+                    template: widget.template,
+                    records: processedRecords,
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.insights_rounded,
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'CHART',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.primary,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
 
               if (_filterField != null) ...[
-                // ACTIVE FILTER CHIP
                 GestureDetector(
                   onTap: () {
                     SmartTrackerFilterSheet.show(
@@ -684,7 +714,6 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                   ),
                 ),
               ] else ...[
-                // INACTIVE FILTER BUTTON
                 GestureDetector(
                   onTap: () {
                     SmartTrackerFilterSheet.show(
@@ -777,7 +806,6 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                     defaultColumnWidth: const IntrinsicColumnWidth(),
                     defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                     children: [
-                      // --- ROW 0: PURE EXCEL COLUMN LETTERS ---
                       TableRow(
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainerHighest
@@ -798,8 +826,6 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                           _buildAxisLetterCell(theme, '+'),
                         ],
                       ),
-
-                      // --- ROW 1: TABLE HEADERS ---
                       TableRow(
                         decoration: BoxDecoration(
                           color: theme.colorScheme.primaryContainer.withOpacity(
@@ -819,8 +845,6 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                                 ),
                               )
                               .toList(),
-
-                          // --- + ADD COLUMN BUTTON ---
                           GestureDetector(
                             onTap: () {
                               HapticFeedback.lightImpact();
@@ -868,8 +892,6 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                           ),
                         ],
                       ),
-
-                      // --- ROWS 2..N: DATA RECORDS ---
                       if (processedRecords.isEmpty)
                         TableRow(
                           children: [
@@ -925,8 +947,6 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                             ],
                           );
                         }).toList(),
-
-                      // --- FOOTER ROW: TABLE AGGREGATES ---
                       TableRow(
                         decoration: BoxDecoration(
                           color: theme.colorScheme.primaryContainer.withOpacity(
