@@ -27,9 +27,12 @@ class InAppNotificationService {
     required DateTime scheduledDate,
     String? payload,
   }) async {
+    // --- FIX 1: Use insertOrReplace to aggressively wipe old "Read" states ---
+    // If the Automation Engine recreates a missed rule, this guarantees it
+    // forces the notification back to Unread (isRead = false).
     await _db
         .into(_db.appNotifications)
-        .insertOnConflictUpdate(
+        .insert(
           AppNotificationsCompanion.insert(
             id: id,
             title: title,
@@ -38,16 +41,21 @@ class InAppNotificationService {
             createdAt: scheduledDate,
             isRead: const Value(false),
           ),
+          mode: InsertMode.insertOrReplace,
         );
   }
 
   Future<void> markAsRead(String id) async {
+    // --- FIX 2: Use getSingleOrNull to prevent StateErrors ---
     final notif = await (_db.select(
       _db.appNotifications,
-    )..where((t) => t.id.equals(id))).getSingle();
-    await _db
-        .update(_db.appNotifications)
-        .replace(notif.copyWith(isRead: true));
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+
+    if (notif != null) {
+      await _db
+          .update(_db.appNotifications)
+          .replace(notif.copyWith(isRead: true));
+    }
   }
 
   Future<void> markAllAsRead() async {
@@ -72,11 +80,18 @@ class InAppNotificationService {
   }
 
   // Clear future scheduled notifications (Triggered by the scheduler to prevent duplicates)
-  Future<void> clearFutureNotifications() async {
+  Future<void> clearFutureNotifications({String? prefix}) async {
     final now = DateTime.now();
-    await (_db.delete(
-      _db.appNotifications,
-    )..where((t) => t.createdAt.isBiggerThanValue(now))).go();
+    if (prefix != null) {
+      await (_db.delete(_db.appNotifications)
+            ..where((t) => t.createdAt.isBiggerThanValue(now))
+            ..where((t) => t.id.like('$prefix%')))
+          .go();
+    } else {
+      await (_db.delete(
+        _db.appNotifications,
+      )..where((t) => t.createdAt.isBiggerThanValue(now))).go();
+    }
   }
 }
 

@@ -8055,6 +8055,17 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _serviceWebsiteMeta = const VerificationMeta(
+    'serviceWebsite',
+  );
+  @override
+  late final GeneratedColumn<String> serviceWebsite = GeneratedColumn<String>(
+    'service_website',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _amountMeta = const VerificationMeta('amount');
   @override
   late final GeneratedColumn<double> amount = GeneratedColumn<double>(
@@ -8184,6 +8195,17 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _advancedScheduleMeta = const VerificationMeta(
+    'advancedSchedule',
+  );
+  @override
+  late final GeneratedColumn<String> advancedSchedule = GeneratedColumn<String>(
+    'advanced_schedule',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _startDateMeta = const VerificationMeta(
     'startDate',
   );
@@ -8263,6 +8285,7 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    serviceWebsite,
     amount,
     transactionType,
     accountId,
@@ -8275,6 +8298,7 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
     bucketName,
     repetitionSchedule,
     repetitionInterval,
+    advancedSchedule,
     startDate,
     occurrenceTime,
     isAutomatic,
@@ -8306,6 +8330,15 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('service_website')) {
+      context.handle(
+        _serviceWebsiteMeta,
+        serviceWebsite.isAcceptableOrUnknown(
+          data['service_website']!,
+          _serviceWebsiteMeta,
+        ),
+      );
     }
     if (data.containsKey('amount')) {
       context.handle(
@@ -8408,6 +8441,15 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
     } else if (isInserting) {
       context.missing(_repetitionIntervalMeta);
     }
+    if (data.containsKey('advanced_schedule')) {
+      context.handle(
+        _advancedScheduleMeta,
+        advancedSchedule.isAcceptableOrUnknown(
+          data['advanced_schedule']!,
+          _advancedScheduleMeta,
+        ),
+      );
+    }
     if (data.containsKey('start_date')) {
       context.handle(
         _startDateMeta,
@@ -8484,6 +8526,10 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      serviceWebsite: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}service_website'],
+      ),
       amount: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}amount'],
@@ -8532,6 +8578,10 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
         DriftSqlType.int,
         data['${effectivePrefix}repetition_interval'],
       )!,
+      advancedSchedule: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}advanced_schedule'],
+      ),
       startDate: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}start_date'],
@@ -8569,6 +8619,7 @@ class RecurringTransactionRule extends DataClass
     implements Insertable<RecurringTransactionRule> {
   final String id;
   final String name;
+  final String? serviceWebsite;
   final double? amount;
   final String transactionType;
   final String accountId;
@@ -8581,6 +8632,7 @@ class RecurringTransactionRule extends DataClass
   final String? bucketName;
   final String repetitionSchedule;
   final int repetitionInterval;
+  final String? advancedSchedule;
   final DateTime startDate;
   final String occurrenceTime;
   final bool isAutomatic;
@@ -8590,6 +8642,7 @@ class RecurringTransactionRule extends DataClass
   const RecurringTransactionRule({
     required this.id,
     required this.name,
+    this.serviceWebsite,
     this.amount,
     required this.transactionType,
     required this.accountId,
@@ -8602,6 +8655,7 @@ class RecurringTransactionRule extends DataClass
     this.bucketName,
     required this.repetitionSchedule,
     required this.repetitionInterval,
+    this.advancedSchedule,
     required this.startDate,
     required this.occurrenceTime,
     required this.isAutomatic,
@@ -8614,6 +8668,9 @@ class RecurringTransactionRule extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || serviceWebsite != null) {
+      map['service_website'] = Variable<String>(serviceWebsite);
+    }
     if (!nullToAbsent || amount != null) {
       map['amount'] = Variable<double>(amount);
     }
@@ -8642,6 +8699,9 @@ class RecurringTransactionRule extends DataClass
     }
     map['repetition_schedule'] = Variable<String>(repetitionSchedule);
     map['repetition_interval'] = Variable<int>(repetitionInterval);
+    if (!nullToAbsent || advancedSchedule != null) {
+      map['advanced_schedule'] = Variable<String>(advancedSchedule);
+    }
     map['start_date'] = Variable<DateTime>(startDate);
     map['occurrence_time'] = Variable<String>(occurrenceTime);
     map['is_automatic'] = Variable<bool>(isAutomatic);
@@ -8657,6 +8717,9 @@ class RecurringTransactionRule extends DataClass
     return RecurringTransactionRulesCompanion(
       id: Value(id),
       name: Value(name),
+      serviceWebsite: serviceWebsite == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serviceWebsite),
       amount: amount == null && nullToAbsent
           ? const Value.absent()
           : Value(amount),
@@ -8685,6 +8748,9 @@ class RecurringTransactionRule extends DataClass
           : Value(bucketName),
       repetitionSchedule: Value(repetitionSchedule),
       repetitionInterval: Value(repetitionInterval),
+      advancedSchedule: advancedSchedule == null && nullToAbsent
+          ? const Value.absent()
+          : Value(advancedSchedule),
       startDate: Value(startDate),
       occurrenceTime: Value(occurrenceTime),
       isAutomatic: Value(isAutomatic),
@@ -8704,6 +8770,7 @@ class RecurringTransactionRule extends DataClass
     return RecurringTransactionRule(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      serviceWebsite: serializer.fromJson<String?>(json['serviceWebsite']),
       amount: serializer.fromJson<double?>(json['amount']),
       transactionType: serializer.fromJson<String>(json['transactionType']),
       accountId: serializer.fromJson<String>(json['accountId']),
@@ -8718,6 +8785,7 @@ class RecurringTransactionRule extends DataClass
         json['repetitionSchedule'],
       ),
       repetitionInterval: serializer.fromJson<int>(json['repetitionInterval']),
+      advancedSchedule: serializer.fromJson<String?>(json['advancedSchedule']),
       startDate: serializer.fromJson<DateTime>(json['startDate']),
       occurrenceTime: serializer.fromJson<String>(json['occurrenceTime']),
       isAutomatic: serializer.fromJson<bool>(json['isAutomatic']),
@@ -8736,6 +8804,7 @@ class RecurringTransactionRule extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
+      'serviceWebsite': serializer.toJson<String?>(serviceWebsite),
       'amount': serializer.toJson<double?>(amount),
       'transactionType': serializer.toJson<String>(transactionType),
       'accountId': serializer.toJson<String>(accountId),
@@ -8748,6 +8817,7 @@ class RecurringTransactionRule extends DataClass
       'bucketName': serializer.toJson<String?>(bucketName),
       'repetitionSchedule': serializer.toJson<String>(repetitionSchedule),
       'repetitionInterval': serializer.toJson<int>(repetitionInterval),
+      'advancedSchedule': serializer.toJson<String?>(advancedSchedule),
       'startDate': serializer.toJson<DateTime>(startDate),
       'occurrenceTime': serializer.toJson<String>(occurrenceTime),
       'isAutomatic': serializer.toJson<bool>(isAutomatic),
@@ -8760,6 +8830,7 @@ class RecurringTransactionRule extends DataClass
   RecurringTransactionRule copyWith({
     String? id,
     String? name,
+    Value<String?> serviceWebsite = const Value.absent(),
     Value<double?> amount = const Value.absent(),
     String? transactionType,
     String? accountId,
@@ -8772,6 +8843,7 @@ class RecurringTransactionRule extends DataClass
     Value<String?> bucketName = const Value.absent(),
     String? repetitionSchedule,
     int? repetitionInterval,
+    Value<String?> advancedSchedule = const Value.absent(),
     DateTime? startDate,
     String? occurrenceTime,
     bool? isAutomatic,
@@ -8781,6 +8853,9 @@ class RecurringTransactionRule extends DataClass
   }) => RecurringTransactionRule(
     id: id ?? this.id,
     name: name ?? this.name,
+    serviceWebsite: serviceWebsite.present
+        ? serviceWebsite.value
+        : this.serviceWebsite,
     amount: amount.present ? amount.value : this.amount,
     transactionType: transactionType ?? this.transactionType,
     accountId: accountId ?? this.accountId,
@@ -8793,6 +8868,9 @@ class RecurringTransactionRule extends DataClass
     bucketName: bucketName.present ? bucketName.value : this.bucketName,
     repetitionSchedule: repetitionSchedule ?? this.repetitionSchedule,
     repetitionInterval: repetitionInterval ?? this.repetitionInterval,
+    advancedSchedule: advancedSchedule.present
+        ? advancedSchedule.value
+        : this.advancedSchedule,
     startDate: startDate ?? this.startDate,
     occurrenceTime: occurrenceTime ?? this.occurrenceTime,
     isAutomatic: isAutomatic ?? this.isAutomatic,
@@ -8808,6 +8886,9 @@ class RecurringTransactionRule extends DataClass
     return RecurringTransactionRule(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      serviceWebsite: data.serviceWebsite.present
+          ? data.serviceWebsite.value
+          : this.serviceWebsite,
       amount: data.amount.present ? data.amount.value : this.amount,
       transactionType: data.transactionType.present
           ? data.transactionType.value
@@ -8838,6 +8919,9 @@ class RecurringTransactionRule extends DataClass
       repetitionInterval: data.repetitionInterval.present
           ? data.repetitionInterval.value
           : this.repetitionInterval,
+      advancedSchedule: data.advancedSchedule.present
+          ? data.advancedSchedule.value
+          : this.advancedSchedule,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       occurrenceTime: data.occurrenceTime.present
           ? data.occurrenceTime.value
@@ -8860,6 +8944,7 @@ class RecurringTransactionRule extends DataClass
     return (StringBuffer('RecurringTransactionRule(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('serviceWebsite: $serviceWebsite, ')
           ..write('amount: $amount, ')
           ..write('transactionType: $transactionType, ')
           ..write('accountId: $accountId, ')
@@ -8872,6 +8957,7 @@ class RecurringTransactionRule extends DataClass
           ..write('bucketName: $bucketName, ')
           ..write('repetitionSchedule: $repetitionSchedule, ')
           ..write('repetitionInterval: $repetitionInterval, ')
+          ..write('advancedSchedule: $advancedSchedule, ')
           ..write('startDate: $startDate, ')
           ..write('occurrenceTime: $occurrenceTime, ')
           ..write('isAutomatic: $isAutomatic, ')
@@ -8883,9 +8969,10 @@ class RecurringTransactionRule extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     name,
+    serviceWebsite,
     amount,
     transactionType,
     accountId,
@@ -8898,19 +8985,21 @@ class RecurringTransactionRule extends DataClass
     bucketName,
     repetitionSchedule,
     repetitionInterval,
+    advancedSchedule,
     startDate,
     occurrenceTime,
     isAutomatic,
     lastExecutedDate,
     nextExecutionDate,
     isActive,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is RecurringTransactionRule &&
           other.id == this.id &&
           other.name == this.name &&
+          other.serviceWebsite == this.serviceWebsite &&
           other.amount == this.amount &&
           other.transactionType == this.transactionType &&
           other.accountId == this.accountId &&
@@ -8923,6 +9012,7 @@ class RecurringTransactionRule extends DataClass
           other.bucketName == this.bucketName &&
           other.repetitionSchedule == this.repetitionSchedule &&
           other.repetitionInterval == this.repetitionInterval &&
+          other.advancedSchedule == this.advancedSchedule &&
           other.startDate == this.startDate &&
           other.occurrenceTime == this.occurrenceTime &&
           other.isAutomatic == this.isAutomatic &&
@@ -8935,6 +9025,7 @@ class RecurringTransactionRulesCompanion
     extends UpdateCompanion<RecurringTransactionRule> {
   final Value<String> id;
   final Value<String> name;
+  final Value<String?> serviceWebsite;
   final Value<double?> amount;
   final Value<String> transactionType;
   final Value<String> accountId;
@@ -8947,6 +9038,7 @@ class RecurringTransactionRulesCompanion
   final Value<String?> bucketName;
   final Value<String> repetitionSchedule;
   final Value<int> repetitionInterval;
+  final Value<String?> advancedSchedule;
   final Value<DateTime> startDate;
   final Value<String> occurrenceTime;
   final Value<bool> isAutomatic;
@@ -8957,6 +9049,7 @@ class RecurringTransactionRulesCompanion
   const RecurringTransactionRulesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.serviceWebsite = const Value.absent(),
     this.amount = const Value.absent(),
     this.transactionType = const Value.absent(),
     this.accountId = const Value.absent(),
@@ -8969,6 +9062,7 @@ class RecurringTransactionRulesCompanion
     this.bucketName = const Value.absent(),
     this.repetitionSchedule = const Value.absent(),
     this.repetitionInterval = const Value.absent(),
+    this.advancedSchedule = const Value.absent(),
     this.startDate = const Value.absent(),
     this.occurrenceTime = const Value.absent(),
     this.isAutomatic = const Value.absent(),
@@ -8980,6 +9074,7 @@ class RecurringTransactionRulesCompanion
   RecurringTransactionRulesCompanion.insert({
     required String id,
     required String name,
+    this.serviceWebsite = const Value.absent(),
     this.amount = const Value.absent(),
     required String transactionType,
     required String accountId,
@@ -8992,6 +9087,7 @@ class RecurringTransactionRulesCompanion
     this.bucketName = const Value.absent(),
     required String repetitionSchedule,
     required int repetitionInterval,
+    this.advancedSchedule = const Value.absent(),
     required DateTime startDate,
     required String occurrenceTime,
     required bool isAutomatic,
@@ -9012,6 +9108,7 @@ class RecurringTransactionRulesCompanion
   static Insertable<RecurringTransactionRule> custom({
     Expression<String>? id,
     Expression<String>? name,
+    Expression<String>? serviceWebsite,
     Expression<double>? amount,
     Expression<String>? transactionType,
     Expression<String>? accountId,
@@ -9024,6 +9121,7 @@ class RecurringTransactionRulesCompanion
     Expression<String>? bucketName,
     Expression<String>? repetitionSchedule,
     Expression<int>? repetitionInterval,
+    Expression<String>? advancedSchedule,
     Expression<DateTime>? startDate,
     Expression<String>? occurrenceTime,
     Expression<bool>? isAutomatic,
@@ -9035,6 +9133,7 @@ class RecurringTransactionRulesCompanion
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (serviceWebsite != null) 'service_website': serviceWebsite,
       if (amount != null) 'amount': amount,
       if (transactionType != null) 'transaction_type': transactionType,
       if (accountId != null) 'account_id': accountId,
@@ -9047,6 +9146,7 @@ class RecurringTransactionRulesCompanion
       if (bucketName != null) 'bucket_name': bucketName,
       if (repetitionSchedule != null) 'repetition_schedule': repetitionSchedule,
       if (repetitionInterval != null) 'repetition_interval': repetitionInterval,
+      if (advancedSchedule != null) 'advanced_schedule': advancedSchedule,
       if (startDate != null) 'start_date': startDate,
       if (occurrenceTime != null) 'occurrence_time': occurrenceTime,
       if (isAutomatic != null) 'is_automatic': isAutomatic,
@@ -9060,6 +9160,7 @@ class RecurringTransactionRulesCompanion
   RecurringTransactionRulesCompanion copyWith({
     Value<String>? id,
     Value<String>? name,
+    Value<String?>? serviceWebsite,
     Value<double?>? amount,
     Value<String>? transactionType,
     Value<String>? accountId,
@@ -9072,6 +9173,7 @@ class RecurringTransactionRulesCompanion
     Value<String?>? bucketName,
     Value<String>? repetitionSchedule,
     Value<int>? repetitionInterval,
+    Value<String?>? advancedSchedule,
     Value<DateTime>? startDate,
     Value<String>? occurrenceTime,
     Value<bool>? isAutomatic,
@@ -9083,6 +9185,7 @@ class RecurringTransactionRulesCompanion
     return RecurringTransactionRulesCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      serviceWebsite: serviceWebsite ?? this.serviceWebsite,
       amount: amount ?? this.amount,
       transactionType: transactionType ?? this.transactionType,
       accountId: accountId ?? this.accountId,
@@ -9095,6 +9198,7 @@ class RecurringTransactionRulesCompanion
       bucketName: bucketName ?? this.bucketName,
       repetitionSchedule: repetitionSchedule ?? this.repetitionSchedule,
       repetitionInterval: repetitionInterval ?? this.repetitionInterval,
+      advancedSchedule: advancedSchedule ?? this.advancedSchedule,
       startDate: startDate ?? this.startDate,
       occurrenceTime: occurrenceTime ?? this.occurrenceTime,
       isAutomatic: isAutomatic ?? this.isAutomatic,
@@ -9113,6 +9217,9 @@ class RecurringTransactionRulesCompanion
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (serviceWebsite.present) {
+      map['service_website'] = Variable<String>(serviceWebsite.value);
     }
     if (amount.present) {
       map['amount'] = Variable<double>(amount.value);
@@ -9150,6 +9257,9 @@ class RecurringTransactionRulesCompanion
     if (repetitionInterval.present) {
       map['repetition_interval'] = Variable<int>(repetitionInterval.value);
     }
+    if (advancedSchedule.present) {
+      map['advanced_schedule'] = Variable<String>(advancedSchedule.value);
+    }
     if (startDate.present) {
       map['start_date'] = Variable<DateTime>(startDate.value);
     }
@@ -9179,6 +9289,7 @@ class RecurringTransactionRulesCompanion
     return (StringBuffer('RecurringTransactionRulesCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('serviceWebsite: $serviceWebsite, ')
           ..write('amount: $amount, ')
           ..write('transactionType: $transactionType, ')
           ..write('accountId: $accountId, ')
@@ -9191,6 +9302,7 @@ class RecurringTransactionRulesCompanion
           ..write('bucketName: $bucketName, ')
           ..write('repetitionSchedule: $repetitionSchedule, ')
           ..write('repetitionInterval: $repetitionInterval, ')
+          ..write('advancedSchedule: $advancedSchedule, ')
           ..write('startDate: $startDate, ')
           ..write('occurrenceTime: $occurrenceTime, ')
           ..write('isAutomatic: $isAutomatic, ')
@@ -13174,6 +13286,7 @@ typedef $$RecurringTransactionRulesTableCreateCompanionBuilder =
     RecurringTransactionRulesCompanion Function({
       required String id,
       required String name,
+      Value<String?> serviceWebsite,
       Value<double?> amount,
       required String transactionType,
       required String accountId,
@@ -13186,6 +13299,7 @@ typedef $$RecurringTransactionRulesTableCreateCompanionBuilder =
       Value<String?> bucketName,
       required String repetitionSchedule,
       required int repetitionInterval,
+      Value<String?> advancedSchedule,
       required DateTime startDate,
       required String occurrenceTime,
       required bool isAutomatic,
@@ -13198,6 +13312,7 @@ typedef $$RecurringTransactionRulesTableUpdateCompanionBuilder =
     RecurringTransactionRulesCompanion Function({
       Value<String> id,
       Value<String> name,
+      Value<String?> serviceWebsite,
       Value<double?> amount,
       Value<String> transactionType,
       Value<String> accountId,
@@ -13210,6 +13325,7 @@ typedef $$RecurringTransactionRulesTableUpdateCompanionBuilder =
       Value<String?> bucketName,
       Value<String> repetitionSchedule,
       Value<int> repetitionInterval,
+      Value<String?> advancedSchedule,
       Value<DateTime> startDate,
       Value<String> occurrenceTime,
       Value<bool> isAutomatic,
@@ -13235,6 +13351,11 @@ class $$RecurringTransactionRulesTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serviceWebsite => $composableBuilder(
+    column: $table.serviceWebsite,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13298,6 +13419,11 @@ class $$RecurringTransactionRulesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get advancedSchedule => $composableBuilder(
+    column: $table.advancedSchedule,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get startDate => $composableBuilder(
     column: $table.startDate,
     builder: (column) => ColumnFilters(column),
@@ -13345,6 +13471,11 @@ class $$RecurringTransactionRulesTableOrderingComposer
 
   ColumnOrderings<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serviceWebsite => $composableBuilder(
+    column: $table.serviceWebsite,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -13408,6 +13539,11 @@ class $$RecurringTransactionRulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get advancedSchedule => $composableBuilder(
+    column: $table.advancedSchedule,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get startDate => $composableBuilder(
     column: $table.startDate,
     builder: (column) => ColumnOrderings(column),
@@ -13453,6 +13589,11 @@ class $$RecurringTransactionRulesTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get serviceWebsite => $composableBuilder(
+    column: $table.serviceWebsite,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<double> get amount =>
       $composableBuilder(column: $table.amount, builder: (column) => column);
@@ -13505,6 +13646,11 @@ class $$RecurringTransactionRulesTableAnnotationComposer
 
   GeneratedColumn<int> get repetitionInterval => $composableBuilder(
     column: $table.repetitionInterval,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get advancedSchedule => $composableBuilder(
+    column: $table.advancedSchedule,
     builder: (column) => column,
   );
 
@@ -13583,6 +13729,7 @@ class $$RecurringTransactionRulesTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String?> serviceWebsite = const Value.absent(),
                 Value<double?> amount = const Value.absent(),
                 Value<String> transactionType = const Value.absent(),
                 Value<String> accountId = const Value.absent(),
@@ -13595,6 +13742,7 @@ class $$RecurringTransactionRulesTableTableManager
                 Value<String?> bucketName = const Value.absent(),
                 Value<String> repetitionSchedule = const Value.absent(),
                 Value<int> repetitionInterval = const Value.absent(),
+                Value<String?> advancedSchedule = const Value.absent(),
                 Value<DateTime> startDate = const Value.absent(),
                 Value<String> occurrenceTime = const Value.absent(),
                 Value<bool> isAutomatic = const Value.absent(),
@@ -13605,6 +13753,7 @@ class $$RecurringTransactionRulesTableTableManager
               }) => RecurringTransactionRulesCompanion(
                 id: id,
                 name: name,
+                serviceWebsite: serviceWebsite,
                 amount: amount,
                 transactionType: transactionType,
                 accountId: accountId,
@@ -13617,6 +13766,7 @@ class $$RecurringTransactionRulesTableTableManager
                 bucketName: bucketName,
                 repetitionSchedule: repetitionSchedule,
                 repetitionInterval: repetitionInterval,
+                advancedSchedule: advancedSchedule,
                 startDate: startDate,
                 occurrenceTime: occurrenceTime,
                 isAutomatic: isAutomatic,
@@ -13629,6 +13779,7 @@ class $$RecurringTransactionRulesTableTableManager
               ({
                 required String id,
                 required String name,
+                Value<String?> serviceWebsite = const Value.absent(),
                 Value<double?> amount = const Value.absent(),
                 required String transactionType,
                 required String accountId,
@@ -13641,6 +13792,7 @@ class $$RecurringTransactionRulesTableTableManager
                 Value<String?> bucketName = const Value.absent(),
                 required String repetitionSchedule,
                 required int repetitionInterval,
+                Value<String?> advancedSchedule = const Value.absent(),
                 required DateTime startDate,
                 required String occurrenceTime,
                 required bool isAutomatic,
@@ -13651,6 +13803,7 @@ class $$RecurringTransactionRulesTableTableManager
               }) => RecurringTransactionRulesCompanion.insert(
                 id: id,
                 name: name,
+                serviceWebsite: serviceWebsite,
                 amount: amount,
                 transactionType: transactionType,
                 accountId: accountId,
@@ -13663,6 +13816,7 @@ class $$RecurringTransactionRulesTableTableManager
                 bucketName: bucketName,
                 repetitionSchedule: repetitionSchedule,
                 repetitionInterval: repetitionInterval,
+                advancedSchedule: advancedSchedule,
                 startDate: startDate,
                 occurrenceTime: occurrenceTime,
                 isAutomatic: isAutomatic,

@@ -227,15 +227,13 @@ class RecurringTransactionRules extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
 
-  // Amount is nullable for Type 2 (Variable Amount)
+  TextColumn get serviceWebsite => text().nullable()(); // NEW
   RealColumn get amount => real().nullable()();
 
-  // Transaction Details
-  TextColumn get transactionType => text()(); // 'Expense', 'Income', 'Transfer'
+  TextColumn get transactionType => text()();
   TextColumn get accountId => text()();
   TextColumn get toAccountId => text().nullable()();
 
-  // Snapshot Data (reusing the logic from your Transaction Form)
   TextColumn get categoryId => text().nullable()();
   TextColumn get categoryName => text().nullable()();
   IntColumn get categoryIcon => integer().nullable()();
@@ -243,20 +241,16 @@ class RecurringTransactionRules extends Table {
   IntColumn get bucketId => integer().nullable()();
   TextColumn get bucketName => text().nullable()();
 
-  // Scheduling Details
-  TextColumn get repetitionSchedule =>
-      text()(); // 'Daily', 'Weekly', 'Monthly', 'Yearly'
-  IntColumn get repetitionInterval => integer()(); // e.g., 2 (for every 2 days)
+  TextColumn get repetitionSchedule => text()();
+  IntColumn get repetitionInterval => integer()();
+  TextColumn get advancedSchedule =>
+      text().nullable()(); // NEW (e.g., "1st Monday")
   DateTimeColumn get startDate => dateTime()();
-  TextColumn get occurrenceTime => text()(); // Store as "HH:mm"
+  TextColumn get occurrenceTime => text()();
 
-  // Execution Logic
-  BoolColumn get isAutomatic => boolean()(); // true = Auto, false = Manual
-
-  // Tracking
+  BoolColumn get isAutomatic => boolean()();
   DateTimeColumn get lastExecutedDate => dateTime().nullable()();
-  DateTimeColumn get nextExecutionDate =>
-      dateTime()(); // To easily query what is due
+  DateTimeColumn get nextExecutionDate => dateTime()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 
   @override

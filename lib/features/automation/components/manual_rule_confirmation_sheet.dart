@@ -1,3 +1,4 @@
+// lib/features/automation/components/manual_rule_confirmation_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,8 +6,6 @@ import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/modern_boxy_button.dart';
 import '../../../core/components/modern_boxy_input.dart';
 import '../../../core/components/currency_text.dart';
-import '../../transactions/providers/transaction_provider.dart';
-import '../../notifications/providers/in_app_notification_provider.dart';
 import '../providers/automation_provider.dart';
 
 class ManualRuleConfirmationSheet extends ConsumerStatefulWidget {
@@ -32,6 +31,7 @@ class ManualRuleConfirmationSheet extends ConsumerStatefulWidget {
       isScrollControlled: true,
       useSafeArea: true,
       shape: DesignTokens.bottomSheetShape,
+      isDismissible: false,
       builder: (ctx) => ManualRuleConfirmationSheet(
         ruleId: ruleId,
         expectedDateStr: expectedDateStr,
@@ -50,34 +50,62 @@ class _ManualRuleConfirmationSheetState
   final _formKey = GlobalKey<FormState>();
   final _amountCtrl = TextEditingController();
 
+  bool _isLoading = false;
+
   Future<void> _executeRule(double finalAmount, dynamic rule) async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
     HapticFeedback.selectionClick();
 
-    // 1. Log the Transaction
     final success = await ref
-        .read(transactionActionProvider.notifier)
-        .saveTransaction(
-          type: rule.transactionType,
-          amount: finalAmount,
-          date: DateTime.parse(widget.expectedDateStr),
-          accountId: rule.accountId,
-          toAccountId: rule.toAccountId,
-          categoryId: rule.categoryId,
-          categoryName: rule.categoryName,
-          categoryIcon: rule.categoryIcon,
-          subCategory: rule.subCategory,
-          bucketId: rule.bucketId,
-          bucketName: rule.bucketName,
-          notes: 'Manually confirmed from ${rule.name}',
+        .read(automationActionProvider.notifier)
+        .executeManualRule(
+          rule: rule,
+          finalAmount: finalAmount,
+          executionDate: DateTime.parse(widget.expectedDateStr),
+          notificationId: widget.notificationId,
         );
 
-    if (success && mounted) {
-      // 2. Mark Notification as Read
-      await ref
-          .read(inAppNotificationActionProvider.notifier)
-          .markAsRead(widget.notificationId);
-      Navigator.pop(context);
+    if (mounted) {
+      if (success) {
+        Navigator.pop(context);
+      } else {
+        setState(() => _isLoading = false);
+        final errorState = ref.read(automationActionProvider);
+
+        // --- NEW: Display the error message in a SnackBar ---
+        if (errorState.hasError) {
+          final errMsg = errorState.error.toString().replaceAll(
+            'Exception: ',
+            '',
+          );
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                errMsg,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              backgroundColor: Theme.of(context).colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
+
+          // Pop the sheet so the user isn't stuck on a stale transaction
+          if (errMsg.contains('already been executed')) {
+            Navigator.pop(context);
+          }
+        }
+      }
     }
   }
 
@@ -105,10 +133,10 @@ class _ManualRuleConfirmationSheetState
           height: 100,
           child: Center(child: CircularProgressIndicator()),
         ),
-        error: (e, st) => Center(child: Text('Rule not found or deleted.')),
+        error: (e, st) =>
+            const Center(child: Text('Rule not found or deleted.')),
         data: (rule) {
           final isVariable = rule.amount == null;
-
           return Form(
             key: _formKey,
             child: Column(
@@ -145,7 +173,6 @@ class _ManualRuleConfirmationSheetState
                   ),
                 ),
                 const SizedBox(height: 24),
-
                 if (isVariable) ...[
                   ModernBoxyInput(
                     controller: _amountCtrl,
@@ -153,6 +180,7 @@ class _ManualRuleConfirmationSheetState
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
+                    enabled: !_isLoading,
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Required';
                       if (double.tryParse(v) == null || double.parse(v) <= 0)
@@ -198,7 +226,9 @@ class _ManualRuleConfirmationSheetState
                   children: [
                     Expanded(
                       child: ModernBoxyButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: _isLoading
+                            ? () {}
+                            : () => Navigator.pop(context),
                         label: 'Cancel',
                         isOutlined: true,
                       ),
@@ -207,13 +237,15 @@ class _ManualRuleConfirmationSheetState
                     Expanded(
                       flex: 2,
                       child: ModernBoxyButton(
-                        onPressed: () {
-                          double finalAmount = isVariable
-                              ? double.parse(_amountCtrl.text)
-                              : rule.amount!;
-                          _executeRule(finalAmount, rule);
-                        },
-                        label: 'CONFIRM & LOG',
+                        onPressed: _isLoading
+                            ? () {}
+                            : () {
+                                double finalAmount = isVariable
+                                    ? double.parse(_amountCtrl.text)
+                                    : rule.amount!;
+                                _executeRule(finalAmount, rule);
+                              },
+                        label: _isLoading ? 'PROCESSING...' : 'CONFIRM & LOG',
                       ),
                     ),
                   ],

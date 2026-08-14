@@ -1,3 +1,4 @@
+// lib/core/components/modern_boxy_input.dart
 import 'package:flutter/material.dart';
 
 class ModernBoxyInput extends StatefulWidget {
@@ -8,6 +9,7 @@ class ModernBoxyInput extends StatefulWidget {
   final Widget? suffixIcon;
   final Widget? prefixIcon;
   final bool readOnly;
+  final bool enabled; // --- NEW PARAMETER ---
   final VoidCallback? onTap;
   final String? Function(String?)? validator;
   final FocusNode? focusNode;
@@ -23,6 +25,7 @@ class ModernBoxyInput extends StatefulWidget {
     this.suffixIcon,
     this.prefixIcon,
     this.readOnly = false,
+    this.enabled = true, // --- DEFAULT TO TRUE ---
     this.onTap,
     this.validator,
     this.focusNode,
@@ -73,6 +76,7 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
       focusNode: _internalFocusNode,
       keyboardType: widget.keyboardType,
       readOnly: widget.readOnly,
+      enabled: widget.enabled, // --- NEW: PASS TO TEXTFORMFIELD ---
       onTap: widget.onTap,
       validator: widget.validator,
       textInputAction: widget.textInputAction,
@@ -81,7 +85,11 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
       style: TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w700,
-        color: theme.colorScheme.onSurface,
+        color: !widget.enabled
+            ? theme.colorScheme.onSurface.withOpacity(
+                0.5,
+              ) // Dim text if disabled
+            : theme.colorScheme.onSurface,
         letterSpacing: 0.3,
       ),
       decoration: InputDecoration(
@@ -108,7 +116,11 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
 
         // 4. ANIMATED BACKGROUND: Subtly tints to the primary color when focused
         filled: true,
-        fillColor: _isFocused
+        fillColor: !widget.enabled
+            ? theme.colorScheme.surfaceContainerHighest.withOpacity(
+                0.2,
+              ) // Dim background if disabled
+            : _isFocused
             ? theme.colorScheme.primary.withOpacity(isDark ? 0.1 : 0.05)
             : theme.colorScheme.surfaceContainerHighest.withOpacity(
                 isDark ? 0.3 : 0.5,
@@ -127,6 +139,15 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(
             color: theme.dividerColor.withOpacity(0.5),
+            width: 1.0,
+          ),
+        ),
+
+        // --- NEW: DISABLED BORDER ---
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(
+            color: theme.dividerColor.withOpacity(0.2),
             width: 1.0,
           ),
         ),

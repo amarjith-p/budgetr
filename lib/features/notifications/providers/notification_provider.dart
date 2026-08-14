@@ -1,4 +1,5 @@
 // features/notifications/providers/notification_provider.dart
+import 'package:budgetr/features/automation/providers/automation_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -170,7 +171,9 @@ Future<void> _scheduleNotificationsForAccounts(
   await service.cancelAllNotifications();
 
   // --- NEW: Clear future in-app notifications to prevent duplicates ---
-  await ref.read(inAppNotificationServiceProvider).clearFutureNotifications();
+  await ref
+      .read(inAppNotificationServiceProvider)
+      .clearFutureNotifications(prefix: 'alert_');
 
   if (!settings.enableNotifications) return;
 
@@ -357,7 +360,7 @@ Future<void> _scheduleNotificationsForAccounts(
 
     // Schedule Native Notification
     await service.scheduleNotification(
-      id: notificationId++,
+      id: notificationId,
       title: title,
       body: body,
       scheduledDate: scheduledDate,
@@ -367,10 +370,17 @@ Future<void> _scheduleNotificationsForAccounts(
     await ref
         .read(inAppNotificationServiceProvider)
         .saveNotification(
-          id: uuid.v4(),
+          id: 'alert_$notificationId',
           title: title,
           body: body,
           scheduledDate: scheduledDate,
         );
+
+    notificationId++;
   }
+
+  // --- FIX 2: Re-establish Automation Native Pushes ---
+  // Because cancelAllNotifications() wiped the OS layer, we force the
+  // Automation Engine to instantly re-register its native push notifications.
+  ref.read(automationEngineProvider).runCatchUp();
 }

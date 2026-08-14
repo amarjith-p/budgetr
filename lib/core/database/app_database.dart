@@ -30,7 +30,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMPED TO VERSION 25 ---
   @override
-  int get schemaVersion => 29;
+  int get schemaVersion => 30;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -102,6 +102,16 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 29) {
         await m.createTable(recurringTransactionRules);
+      }
+      if (from < 30) {
+        await m.addColumn(
+          recurringTransactionRules,
+          recurringTransactionRules.serviceWebsite,
+        );
+        await m.addColumn(
+          recurringTransactionRules,
+          recurringTransactionRules.advancedSchedule,
+        );
       }
     },
   );

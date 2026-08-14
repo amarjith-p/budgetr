@@ -1,4 +1,5 @@
 import 'package:budgetr/core/models/transaction_category_model.dart';
+import 'package:budgetr/features/transactions/providers/transaction_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,12 +16,16 @@ import '../../../core/utils/bodmas_calculator.dart';
 import '../../../core/components/global_selection_sheet.dart';
 import '../../accounts/providers/account_provider.dart';
 import '../../category_manager/providers/category_provider.dart';
-import '../../transactions/providers/transaction_provider.dart';
 import '../providers/automation_provider.dart';
+
+class _BucketItem {
+  final int id;
+  final String name;
+  _BucketItem(this.id, this.name);
+}
 
 class AutomationRuleFormPage extends ConsumerStatefulWidget {
   final RecurringTransactionRule? existingRule;
-
   const AutomationRuleFormPage({super.key, this.existingRule});
 
   @override
@@ -31,7 +36,6 @@ class AutomationRuleFormPage extends ConsumerStatefulWidget {
 class _AutomationRuleFormPageState
     extends ConsumerState<AutomationRuleFormPage> {
   final _formKey = GlobalKey<FormState>();
-
   final List<String> _types = ['Expense', 'Income', 'Transfer'];
   final List<String> _schedules = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
 
@@ -42,6 +46,7 @@ class _AutomationRuleFormPageState
   late TextEditingController _nameCtrl;
   late TextEditingController _amountCtrl;
   late TextEditingController _intervalCtrl;
+  late TextEditingController _websiteCtrl;
 
   String? _selectedAccountId;
   String? _selectedToAccountId;
@@ -53,11 +58,54 @@ class _AutomationRuleFormPageState
   String? _selectedBucketName;
 
   String _schedule = 'Monthly';
+  String _advancedSchedule = 'Same Date';
   DateTime _startDate = DateTime.now();
   TimeOfDay _time = const TimeOfDay(hour: 9, minute: 0);
 
   bool _showCustomKeyboard = false;
   bool _showValidationErrors = false;
+
+  String _expression = '';
+  String _liveResult = '0.00';
+
+  final List<String> _advancedOptions = [
+    'Same Date',
+    '1st Monday',
+    '1st Tuesday',
+    '1st Wednesday',
+    '1st Thursday',
+    '1st Friday',
+    '1st Saturday',
+    '1st Sunday',
+    '2nd Monday',
+    '2nd Tuesday',
+    '2nd Wednesday',
+    '2nd Thursday',
+    '2nd Friday',
+    '2nd Saturday',
+    '2nd Sunday',
+    '3rd Monday',
+    '3rd Tuesday',
+    '3rd Wednesday',
+    '3rd Thursday',
+    '3rd Friday',
+    '3rd Saturday',
+    '3rd Sunday',
+    '4th Monday',
+    '4th Tuesday',
+    '4th Wednesday',
+    '4th Thursday',
+    '4th Friday',
+    '4th Saturday',
+    '4th Sunday',
+    'Last Monday',
+    'Last Tuesday',
+    'Last Wednesday',
+    'Last Thursday',
+    'Last Friday',
+    'Last Saturday',
+    'Last Sunday',
+  ];
 
   @override
   void initState() {
@@ -65,10 +113,12 @@ class _AutomationRuleFormPageState
     _nameCtrl = TextEditingController();
     _amountCtrl = TextEditingController();
     _intervalCtrl = TextEditingController(text: '1');
+    _websiteCtrl = TextEditingController();
 
     if (widget.existingRule != null) {
       final rule = widget.existingRule!;
       _nameCtrl.text = rule.name;
+      _websiteCtrl.text = rule.serviceWebsite ?? '';
       _typeIndex = _types.indexOf(rule.transactionType);
 
       if (rule.amount == null) {
@@ -76,6 +126,8 @@ class _AutomationRuleFormPageState
         _isAutomatic = false;
       } else {
         _amountCtrl.text = rule.amount!.toStringAsFixed(2);
+        _expression = _amountCtrl.text;
+        _liveResult = _amountCtrl.text;
       }
 
       _selectedAccountId = rule.accountId;
@@ -89,6 +141,7 @@ class _AutomationRuleFormPageState
 
       _schedule = rule.repetitionSchedule;
       _intervalCtrl.text = rule.repetitionInterval.toString();
+      _advancedSchedule = rule.advancedSchedule ?? 'Same Date';
       _startDate = rule.startDate;
 
       final tParts = rule.occurrenceTime.split(':');
@@ -98,7 +151,6 @@ class _AutomationRuleFormPageState
           minute: int.parse(tParts[1]),
         );
       }
-
       _isAutomatic = rule.isAutomatic;
     }
   }
@@ -108,11 +160,187 @@ class _AutomationRuleFormPageState
     _nameCtrl.dispose();
     _amountCtrl.dispose();
     _intervalCtrl.dispose();
+    _websiteCtrl.dispose();
     super.dispose();
+  }
+
+  void _onCalcKeyPress(String key) {
+    setState(() {
+      int cursorPosition = _amountCtrl.selection.baseOffset;
+      if (cursorPosition < 0) cursorPosition = _amountCtrl.text.length;
+      String currentText = _amountCtrl.text;
+
+      if (key == 'C') {
+        _amountCtrl.clear();
+        _expression = '';
+        _liveResult = '0.00';
+      } else if (key == '⌫') {
+        if (cursorPosition > 0) {
+          final newText =
+              currentText.substring(0, cursorPosition - 1) +
+              currentText.substring(cursorPosition);
+          _amountCtrl.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: cursorPosition - 1),
+          );
+        }
+      } else if (key == '=') {
+        String rawResult = BodmasCalculator.evaluate(_amountCtrl.text);
+        double? parsed = double.tryParse(rawResult);
+        if (parsed != null && !parsed.isNaN && !parsed.isInfinite) {
+          _amountCtrl.text = parsed.toStringAsFixed(2);
+          _amountCtrl.selection = TextSelection.collapsed(
+            offset: _amountCtrl.text.length,
+          );
+        }
+      } else {
+        final isOperator = ['+', '-', '×', '÷'].contains(key);
+        if (isOperator && cursorPosition > 0) {
+          final prevChar = currentText[cursorPosition - 1];
+          if (['+', '-', '×', '÷'].contains(prevChar)) {
+            final newText =
+                currentText.substring(0, cursorPosition - 1) +
+                key +
+                currentText.substring(cursorPosition);
+            _amountCtrl.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: cursorPosition),
+            );
+          } else if (currentText.length < 25) {
+            final newText =
+                currentText.substring(0, cursorPosition) +
+                key +
+                currentText.substring(cursorPosition);
+            _amountCtrl.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: cursorPosition + 1),
+            );
+          }
+        } else if (currentText.length < 25) {
+          final newText =
+              currentText.substring(0, cursorPosition) +
+              key +
+              currentText.substring(cursorPosition);
+          _amountCtrl.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: cursorPosition + 1),
+          );
+        }
+      }
+
+      _expression = _amountCtrl.text;
+      String rawResult = BodmasCalculator.evaluate(_expression);
+      double? parsed = double.tryParse(rawResult);
+      if (parsed != null) {
+        if (parsed.isNaN || parsed.isInfinite) {
+          _liveResult = '0.00';
+        } else if (parsed >= 1000000000000) {
+          _liveResult = '999999999999.99';
+          if (key != '⌫') {
+            _amountCtrl.text = '999999999999.99';
+            _amountCtrl.selection = TextSelection.collapsed(
+              offset: _amountCtrl.text.length,
+            );
+            _expression = _amountCtrl.text;
+          }
+        } else {
+          _liveResult = parsed.toStringAsFixed(2);
+        }
+      } else {
+        _liveResult = rawResult.isEmpty ? '0.00' : rawResult;
+      }
+    });
+  }
+
+  List<Widget> _buildAccountGroup(
+    BuildContext ctx,
+    List<Account> accounts,
+    String title,
+    IconData iconData,
+    String? selectedId,
+    ThemeData theme,
+  ) {
+    if (accounts.isEmpty) return [];
+    List<Widget> children = [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+      ),
+    ];
+    for (int i = 0; i < accounts.length; i++) {
+      final acc = accounts[i];
+      final isLast = i == accounts.length - 1;
+      final isSelected = acc.id == selectedId;
+      children.add(
+        Column(
+          children: [
+            ListTile(
+              dense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 0,
+              ),
+              leading: Icon(
+                iconData,
+                size: 20,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              title: Text(
+                acc.name,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface,
+                ),
+              ),
+              subtitle: Text(
+                acc.providerName,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              trailing: isSelected
+                  ? Icon(
+                      Icons.check_circle_rounded,
+                      size: 18,
+                      color: theme.colorScheme.primary,
+                    )
+                  : null,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                Navigator.pop(ctx, acc.id);
+              },
+            ),
+            if (!isLast)
+              Divider(
+                height: 1,
+                color: theme.dividerColor.withOpacity(0.2),
+                indent: 20,
+                endIndent: 20,
+              ),
+          ],
+        ),
+      );
+    }
+    return children;
   }
 
   Future<void> _pickAccount(bool isToAccount, List<Account> rawAccounts) async {
     _closeKeyboard();
+    final theme = Theme.of(context);
     List<Account> availableAccounts = List.from(rawAccounts);
 
     if (isToAccount) {
@@ -131,30 +359,140 @@ class _AutomationRuleFormPageState
       }
     }
 
-    final selected = await GlobalSelectionSheet.showSimple(
+    final assets = availableAccounts
+        .where((a) => a.type != 'Credit Cards' && a.type != 'Loan')
+        .toList();
+    final creditCards = availableAccounts
+        .where((a) => a.type == 'Credit Cards')
+        .toList();
+    final loans = availableAccounts.where((a) => a.type == 'Loan').toList();
+    final selectedId = isToAccount ? _selectedToAccountId : _selectedAccountId;
+
+    bool showExternal = _typeIndex == 2;
+    if (isToAccount && _selectedAccountId == 'EXTERNAL') showExternal = false;
+    if (!isToAccount && _selectedToAccountId == 'EXTERNAL')
+      showExternal = false;
+
+    final selected = await GlobalSelectionSheet.show<String>(
       context: context,
       title: isToAccount ? 'Select Destination' : 'Select Account',
-      items: availableAccounts.map((a) => a.name).toList(),
-      selectedValue: isToAccount
-          ? availableAccounts
-                    .where((a) => a.id == _selectedToAccountId)
-                    .firstOrNull
-                    ?.name ??
-                ''
-          : availableAccounts
-                    .where((a) => a.id == _selectedAccountId)
-                    .firstOrNull
-                    ?.name ??
-                '',
+      builder: (ctx, scrollController) {
+        return ListView(
+          controller: scrollController,
+          physics: const BouncingScrollPhysics(),
+          children: [
+            ..._buildAccountGroup(
+              ctx,
+              assets,
+              'ASSETS',
+              Icons.account_balance_wallet_rounded,
+              selectedId,
+              theme,
+            ),
+            if (assets.isNotEmpty &&
+                (creditCards.isNotEmpty || loans.isNotEmpty || showExternal))
+              Divider(
+                height: 12,
+                thickness: 4,
+                color: theme.dividerColor.withOpacity(0.05),
+              ),
+            ..._buildAccountGroup(
+              ctx,
+              creditCards,
+              'CREDIT CARDS',
+              Icons.credit_card_rounded,
+              selectedId,
+              theme,
+            ),
+            if (creditCards.isNotEmpty && (loans.isNotEmpty || showExternal))
+              Divider(
+                height: 12,
+                thickness: 4,
+                color: theme.dividerColor.withOpacity(0.05),
+              ),
+            ..._buildAccountGroup(
+              ctx,
+              loans,
+              'LOANS',
+              Icons.account_balance_rounded,
+              selectedId,
+              theme,
+            ),
+            if (loans.isNotEmpty && showExternal)
+              Divider(
+                height: 12,
+                thickness: 4,
+                color: theme.dividerColor.withOpacity(0.05),
+              ),
+            if (showExternal) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                child: Text(
+                  'EXTERNAL',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+              ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 0,
+                ),
+                leading: Icon(
+                  Icons.sync_alt_rounded,
+                  size: 20,
+                  color: selectedId == 'EXTERNAL'
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                title: Text(
+                  'External Account',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: selectedId == 'EXTERNAL'
+                        ? FontWeight.w900
+                        : FontWeight.w600,
+                    color: selectedId == 'EXTERNAL'
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface,
+                  ),
+                ),
+                subtitle: Text(
+                  'Outside of FinStack 360',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                trailing: selectedId == 'EXTERNAL'
+                    ? Icon(
+                        Icons.check_circle_rounded,
+                        size: 18,
+                        color: theme.colorScheme.primary,
+                      )
+                    : null,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.pop(ctx, 'EXTERNAL');
+                },
+              ),
+            ],
+          ],
+        );
+      },
     );
 
     if (selected != null && mounted) {
       setState(() {
-        final id = availableAccounts.firstWhere((a) => a.name == selected).id;
         if (isToAccount) {
-          _selectedToAccountId = id;
+          _selectedToAccountId = selected;
         } else {
-          _selectedAccountId = id;
+          _selectedAccountId = selected;
         }
       });
     }
@@ -171,7 +509,6 @@ class _AutomationRuleFormPageState
       items: items,
       selectedValue: _selectedCategoryName ?? '',
     );
-
     if (selected != null && mounted) {
       final cat = activeCategories.firstWhere((c) => c.name == selected);
       setState(() {
@@ -192,7 +529,6 @@ class _AutomationRuleFormPageState
       items: activeSubCategories,
       selectedValue: _selectedSubCategory ?? '',
     );
-
     if (selected != null && mounted)
       setState(() => _selectedSubCategory = selected);
   }
@@ -207,7 +543,6 @@ class _AutomationRuleFormPageState
       items: items,
       selectedValue: _selectedBucketName ?? '',
     );
-
     if (selected != null && mounted) {
       setState(() {
         if (selected == 'Out of Bucket') {
@@ -231,6 +566,33 @@ class _AutomationRuleFormPageState
       selectedValue: _schedule,
     );
     if (selected != null && mounted) setState(() => _schedule = selected);
+  }
+
+  // --- FIXED: ADDED INTERVAL PICKER LOGIC ---
+  Future<void> _pickInterval() async {
+    _closeKeyboard();
+    final items = List.generate(30, (index) => (index + 1).toString());
+    final selected = await GlobalSelectionSheet.showSimple(
+      context: context,
+      title: 'Repetition Interval',
+      items: items,
+      selectedValue: _intervalCtrl.text,
+    );
+    if (selected != null && mounted) {
+      setState(() => _intervalCtrl.text = selected);
+    }
+  }
+
+  Future<void> _pickAdvancedSchedule() async {
+    _closeKeyboard();
+    final selected = await GlobalSelectionSheet.showSimple(
+      context: context,
+      title: 'Specific Occurrence',
+      items: _advancedOptions,
+      selectedValue: _advancedSchedule,
+    );
+    if (selected != null && mounted)
+      setState(() => _advancedSchedule = selected);
   }
 
   Future<void> _pickDate() async {
@@ -267,7 +629,6 @@ class _AutomationRuleFormPageState
     final isTransfer = _typeIndex == 2;
     final isExpense = _typeIndex == 0;
 
-    // Strict Rule Validation
     if (intervalVal <= 0 ||
         (!_isVariableAmount && (amountVal == null || amountVal <= 0)) ||
         _selectedAccountId == null ||
@@ -286,6 +647,9 @@ class _AutomationRuleFormPageState
         .saveRule(
           existingId: widget.existingRule?.id,
           name: _nameCtrl.text.trim(),
+          serviceWebsite: _websiteCtrl.text.trim().isEmpty
+              ? null
+              : _websiteCtrl.text.trim(),
           amount: _isVariableAmount ? null : amountVal,
           transactionType: _types[_typeIndex],
           accountId: _selectedAccountId!,
@@ -298,6 +662,7 @@ class _AutomationRuleFormPageState
           bucketName: _selectedBucketName,
           repetitionSchedule: _schedule,
           repetitionInterval: intervalVal,
+          advancedSchedule: _advancedSchedule,
           startDate: _startDate,
           occurrenceTime:
               '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}',
@@ -305,6 +670,98 @@ class _AutomationRuleFormPageState
         );
 
     if (success && mounted) Navigator.pop(context);
+  }
+
+  Widget _buildProjectedSchedule(ThemeData theme) {
+    List<DateTime> projections = [];
+    DateTime base = DateTime(
+      _startDate.year,
+      _startDate.month,
+      _startDate.day,
+      _time.hour,
+      _time.minute,
+    );
+
+    for (int i = 0; i < 3; i++) {
+      base = ScheduleHelper.calculateNextDate(
+        base,
+        _schedule,
+        int.tryParse(_intervalCtrl.text) ?? 1,
+        _advancedSchedule,
+      );
+      projections.add(base);
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.auto_awesome_rounded,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'PROJECTED SCHEDULE',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.0,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...projections.asMap().entries.map((e) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: theme.colorScheme.primary,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${e.key + 1}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    DateFormat('EEEE, dd MMM yyyy, HH:mm').format(e.value),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
   }
 
   Widget _buildTableCell(
@@ -403,8 +860,26 @@ class _AutomationRuleFormPageState
         .where((a) => a.id == _selectedToAccountId)
         .firstOrNull;
 
+    final displayAccName = _selectedAccountId == 'EXTERNAL'
+        ? 'External Account'
+        : selectedAccMatch?.name;
+    final displayToAccName = _selectedToAccountId == 'EXTERNAL'
+        ? 'External Account'
+        : selectedToAccMatch?.name;
+
     final isTransfer = _typeIndex == 2;
     final isExpense = _typeIndex == 0;
+
+    final amountVal = double.tryParse(_liveResult) ?? 0.0;
+    final hasDanglingOperator =
+        _expression.isNotEmpty &&
+        ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
+    final hasAmountError =
+        _showValidationErrors &&
+        (!_isVariableAmount && (amountVal <= 0 || hasDanglingOperator));
+    final displayAmountColor = hasAmountError
+        ? theme.colorScheme.error
+        : txColor;
 
     List<Widget> cells = [
       _buildTableCell(
@@ -414,13 +889,22 @@ class _AutomationRuleFormPageState
         _pickSchedule,
         false,
       ),
+      // --- FIXED: ADDED _pickInterval to onTap ---
       _buildTableCell(
         'INTERVAL (COUNT)',
         _intervalCtrl.text,
         Icons.repeat_rounded,
-        null,
+        _pickInterval,
         false,
       ),
+      if (_schedule == 'Monthly' || _schedule == 'Yearly')
+        _buildTableCell(
+          'OCCURRENCE RULE',
+          _advancedSchedule,
+          Icons.event_repeat_rounded,
+          _pickAdvancedSchedule,
+          false,
+        ),
       _buildTableCell(
         'START DATE',
         DateFormat('dd MMM yyyy').format(_startDate),
@@ -429,7 +913,7 @@ class _AutomationRuleFormPageState
         false,
       ),
       _buildTableCell(
-        'OCCURRENCE TIME',
+        'TRIGGER TIME',
         _time.format(context),
         Icons.access_time_rounded,
         _pickTime,
@@ -437,7 +921,7 @@ class _AutomationRuleFormPageState
       ),
       _buildTableCell(
         isTransfer ? 'FROM ACCOUNT' : 'ACCOUNT',
-        selectedAccMatch?.name,
+        displayAccName,
         Icons.account_balance_wallet_rounded,
         () => _pickAccount(false, rawAccounts),
         _showValidationErrors && _selectedAccountId == null,
@@ -448,7 +932,7 @@ class _AutomationRuleFormPageState
       cells.add(
         _buildTableCell(
           'TO ACCOUNT',
-          selectedToAccMatch?.name,
+          displayToAccName,
           Icons.sync_alt_rounded,
           () => _pickAccount(true, rawAccounts),
           _showValidationErrors && _selectedToAccountId == null,
@@ -496,6 +980,7 @@ class _AutomationRuleFormPageState
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      resizeToAvoidBottomInset: false,
       appBar: ModernAppBar(
         title: widget.existingRule != null ? 'Edit Rule' : 'New Automation',
         subtitle: 'RECURRING TRANSACTION',
@@ -506,7 +991,6 @@ class _AutomationRuleFormPageState
         child: Column(
           children: [
             Expanded(
-              flex: 60,
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Column(
@@ -528,11 +1012,22 @@ class _AutomationRuleFormPageState
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Form(
                         key: _formKey,
-                        child: ModernBoxyInput(
-                          controller: _nameCtrl,
-                          labelText: 'Rule Name (e.g., Netflix Sub)',
-                          validator: (v) =>
-                              v == null || v.trim().isEmpty ? 'Required' : null,
+                        child: Column(
+                          children: [
+                            ModernBoxyInput(
+                              controller: _nameCtrl,
+                              labelText: 'Rule Name (e.g., Netflix Sub)',
+                              validator: (v) => v == null || v.trim().isEmpty
+                                  ? 'Required'
+                                  : null,
+                            ),
+                            const SizedBox(height: 12),
+                            ModernBoxyInput(
+                              controller: _websiteCtrl,
+                              labelText: 'Service Website (Optional for Logo)',
+                              hintText: 'netflix.com',
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -557,9 +1052,7 @@ class _AutomationRuleFormPageState
                                 HapticFeedback.lightImpact();
                                 setState(() {
                                   _isVariableAmount = val;
-                                  if (val)
-                                    _isAutomatic =
-                                        false; // Variables must be manual
+                                  if (val) _isAutomatic = false;
                                 });
                               },
                             ),
@@ -632,8 +1125,9 @@ class _AutomationRuleFormPageState
                           ),
                         ),
                       ),
+
                     Container(
-                      margin: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(16),
@@ -662,10 +1156,14 @@ class _AutomationRuleFormPageState
                         children: tableRows,
                       ),
                     ),
+
+                    _buildProjectedSchedule(theme),
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),
             ),
+
             if (!_showCustomKeyboard)
               Container(
                 padding: const EdgeInsets.all(DesignTokens.spacingLg),
@@ -696,13 +1194,10 @@ class _AutomationRuleFormPageState
                 ),
               ),
             if (_showCustomKeyboard)
-              Expanded(
-                flex: 40,
-                child: InlineCalculatorPad(
-                  controller: _amountCtrl,
-                  onSubmit: _closeKeyboard,
-                  onClose: _closeKeyboard,
-                ),
+              InlineCalculatorPad(
+                controller: _amountCtrl,
+                onSubmit: _closeKeyboard,
+                onClose: _closeKeyboard,
               ),
           ],
         ),

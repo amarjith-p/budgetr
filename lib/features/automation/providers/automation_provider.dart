@@ -11,19 +11,18 @@ import '../../transactions/services/transaction_service.dart';
 import '../../transactions/providers/transaction_provider.dart';
 import '../../notifications/providers/in_app_notification_provider.dart';
 
-class AutomationEngine {
-  final AppDatabase _db;
-  final TransactionService _txService;
-  final InAppNotificationService _notifService;
-  final _uuid = const Uuid();
-
-  AutomationEngine(this._db, this._txService, this._notifService);
-
-  DateTime _calculateNextDate(DateTime current, String schedule, int interval) {
+class ScheduleHelper {
+  static DateTime calculateNextDate(
+    DateTime current,
+    String schedule,
+    int interval,
+    String? advancedSchedule,
+  ) {
+    DateTime baseNext;
     if (schedule == 'Daily') {
-      return current.add(Duration(days: interval));
+      baseNext = current.add(Duration(days: interval));
     } else if (schedule == 'Weekly') {
-      return current.add(Duration(days: 7 * interval));
+      baseNext = current.add(Duration(days: 7 * interval));
     } else if (schedule == 'Monthly') {
       int nextMonth = current.month + interval;
       int nextYear = current.year;
@@ -31,26 +30,88 @@ class AutomationEngine {
         nextMonth -= 12;
         nextYear++;
       }
-      int maxDays = DateTime(nextYear, nextMonth + 1, 0).day;
+      baseNext = DateTime(nextYear, nextMonth, 1, current.hour, current.minute);
+    } else if (schedule == 'Yearly') {
+      baseNext = DateTime(
+        current.year + interval,
+        current.month,
+        1,
+        current.hour,
+        current.minute,
+      );
+    } else {
+      baseNext = current.add(Duration(days: interval));
+    }
+
+    if ((schedule == 'Monthly' || schedule == 'Yearly') &&
+        advancedSchedule != null &&
+        advancedSchedule != 'Same Date') {
+      final parts = advancedSchedule.split(' ');
+      if (parts.length == 2) {
+        final weekStr = parts[0];
+        final dayStr = parts[1];
+        final dayMap = {
+          'Monday': 1,
+          'Tuesday': 2,
+          'Wednesday': 3,
+          'Thursday': 4,
+          'Friday': 5,
+          'Saturday': 6,
+          'Sunday': 7,
+        };
+        final targetDay = dayMap[dayStr] ?? 1;
+
+        if (weekStr == 'Last') {
+          int nextM = baseNext.month + 1;
+          int nextY = baseNext.year;
+          if (nextM > 12) {
+            nextM = 1;
+            nextY++;
+          }
+          DateTime firstOfNext = DateTime(nextY, nextM, 1);
+          int diff = firstOfNext.weekday - targetDay;
+          if (diff <= 0) diff += 7;
+          return DateTime(nextY, nextM, 1 - diff, current.hour, current.minute);
+        } else {
+          int weekNum = int.parse(weekStr[0]);
+          DateTime firstOfMonth = DateTime(baseNext.year, baseNext.month, 1);
+          int diff = targetDay - firstOfMonth.weekday;
+          if (diff < 0) diff += 7;
+          int targetDate = 1 + diff + ((weekNum - 1) * 7);
+          return DateTime(
+            baseNext.year,
+            baseNext.month,
+            targetDate,
+            current.hour,
+            current.minute,
+          );
+        }
+      }
+    }
+
+    if (schedule == 'Monthly' || schedule == 'Yearly') {
+      int maxDays = DateTime(baseNext.year, baseNext.month + 1, 0).day;
       int safeDay = current.day > maxDays ? maxDays : current.day;
       return DateTime(
-        nextYear,
-        nextMonth,
+        baseNext.year,
+        baseNext.month,
         safeDay,
         current.hour,
         current.minute,
       );
-    } else if (schedule == 'Yearly') {
-      return DateTime(
-        current.year + interval,
-        current.month,
-        current.day,
-        current.hour,
-        current.minute,
-      );
     }
-    return current.add(Duration(days: interval));
+
+    return baseNext;
   }
+}
+
+class AutomationEngine {
+  final AppDatabase _db;
+  final TransactionService _txService;
+  final InAppNotificationService _notifService;
+  final _uuid = const Uuid();
+
+  AutomationEngine(this._db, this._txService, this._notifService);
 
   Future<void> runCatchUp() async {
     final rules = await _db.select(_db.recurringTransactionRules).get();
@@ -63,9 +124,8 @@ class AutomationEngine {
       DateTime? lastExecuted = rule.lastExecutedDate;
       bool ruleUpdated = false;
 
-      while (next.isBefore(now) || next.isAtSameMomentAs(now)) {
-        if (rule.isAutomatic && rule.amount != null) {
-          // 1. SILENT AUTO-LOG
+      if (rule.isAutomatic && rule.amount != null) {
+        while (next.isBefore(now) || next.isAtSameMomentAs(now)) {
           await _txService.logTransaction(
             type: rule.transactionType,
             amount: rule.amount!,
@@ -82,37 +142,39 @@ class AutomationEngine {
           );
 
           await _notifService.saveNotification(
-            id: _uuid.v4(),
+            id: 'auto_${rule.id}_${next.millisecondsSinceEpoch}',
             title: 'Automation Executed',
             body: '${rule.name} auto-logged successfully.',
-            scheduledDate: now,
+            scheduledDate: next, // Use exact trigger time
           );
-        } else {
-          // 2. MANUAL CONFIRMATION / VARIABLE AMOUNT
+          lastExecuted = next;
+          next = ScheduleHelper.calculateNextDate(
+            next,
+            rule.repetitionSchedule,
+            rule.repetitionInterval,
+            rule.advancedSchedule,
+          );
+          ruleUpdated = true;
+        }
+      } else {
+        if (next.isBefore(now) || next.isAtSameMomentAs(now)) {
           final payload = jsonEncode({
             "type": "manual_rule",
             "ruleId": rule.id,
             "expectedDate": next.toIso8601String(),
           });
+          final notifId = 'manual_${rule.id}_${next.millisecondsSinceEpoch}';
 
           await _notifService.saveNotification(
-            id: 'manual_${rule.id}_${next.millisecondsSinceEpoch}',
+            id: notifId,
             title: 'Action Required: ${rule.name}',
             body: rule.amount == null
                 ? 'Variable transaction due. Tap to confirm amount.'
                 : 'Scheduled transaction due for confirmation.',
-            scheduledDate: now,
+            scheduledDate: next,
             payload: payload,
           );
         }
-
-        lastExecuted = next;
-        next = _calculateNextDate(
-          next,
-          rule.repetitionSchedule,
-          rule.repetitionInterval,
-        );
-        ruleUpdated = true;
       }
 
       if (ruleUpdated) {
@@ -125,17 +187,45 @@ class AutomationEngine {
               ),
             );
       }
+      await _notifService.clearFutureNotifications(prefix: 'auto_${rule.id}');
+      await _notifService.clearFutureNotifications(prefix: 'manual_${rule.id}');
 
+      // --- NEW FIX: PRE-SAVE THE NOTIFICATION FOR THE FUTURE ---
+      // This guarantees the notification pops into the UI exactly when 'now' crosses 'next'
       if (next.isAfter(now)) {
+        final isAuto = rule.isAutomatic && rule.amount != null;
+        final title = isAuto
+            ? 'Automation Executed'
+            : 'Action Required: ${rule.name}';
+        final body = isAuto
+            ? '${rule.name} was auto-logged.'
+            : 'Tap to confirm your recurring transaction.';
+
         NotificationService.instance.scheduleNotification(
           id: rule.id.hashCode,
-          title: rule.isAutomatic && rule.amount != null
-              ? 'Automation Executed'
-              : 'Action Required: ${rule.name}',
-          body: rule.isAutomatic && rule.amount != null
-              ? '${rule.name} was auto-logged.'
-              : 'Tap to confirm your recurring transaction.',
+          title: title,
+          body: body,
           scheduledDate: next,
+        );
+
+        final payload = isAuto
+            ? null
+            : jsonEncode({
+                "type": "manual_rule",
+                "ruleId": rule.id,
+                "expectedDate": next.toIso8601String(),
+              });
+
+        final notifId = isAuto
+            ? 'auto_${rule.id}_${next.millisecondsSinceEpoch}'
+            : 'manual_${rule.id}_${next.millisecondsSinceEpoch}';
+
+        await _notifService.saveNotification(
+          id: notifId,
+          title: title,
+          body: body,
+          scheduledDate: next,
+          payload: payload,
         );
       }
     }
@@ -148,10 +238,7 @@ class AutomationEngine {
   }
 }
 
-// ============================================================================
-// --- PROVIDERS (Properly placed outside classes) ---
-// ============================================================================
-
+// --- PROVIDERS ---
 final automationEngineProvider = Provider<AutomationEngine>((ref) {
   final db = ref.watch(databaseProvider);
   final txService = ref.watch(transactionServiceProvider);
@@ -164,7 +251,6 @@ final singleRecurringRuleProvider =
       return ref.watch(automationEngineProvider).watchRule(id);
     });
 
-// --- FIXED: Moved OUTSIDE the ActionNotifier class so the UI can access it ---
 final allRecurringRulesProvider =
     StreamProvider.autoDispose<List<RecurringTransactionRule>>((ref) {
       final db = ref.watch(databaseProvider);
@@ -172,10 +258,6 @@ final allRecurringRulesProvider =
         db.recurringTransactionRules,
       )..orderBy([(t) => OrderingTerm.desc(t.nextExecutionDate)])).watch();
     });
-
-// ============================================================================
-// --- ACTION NOTIFIER ---
-// ============================================================================
 
 class AutomationActionNotifier extends AsyncNotifier<void> {
   late AppDatabase _db;
@@ -186,9 +268,74 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
     _db = ref.watch(databaseProvider);
   }
 
+  Future<bool> executeManualRule({
+    required RecurringTransactionRule rule,
+    required double finalAmount,
+    required DateTime executionDate,
+    required String? notificationId,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final currentRule = await (_db.select(
+        _db.recurringTransactionRules,
+      )..where((t) => t.id.equals(rule.id))).getSingle();
+
+      if (currentRule.nextExecutionDate.isAfter(executionDate)) {
+        if (notificationId != null) {
+          await ref
+              .read(inAppNotificationActionProvider.notifier)
+              .markAsRead(notificationId);
+        }
+        throw Exception('This transaction has already been executed.');
+      }
+
+      final txService = ref.read(transactionServiceProvider);
+      await txService.logTransaction(
+        type: currentRule.transactionType,
+        amount: finalAmount,
+        date: executionDate,
+        accountId: currentRule.accountId,
+        toAccountId: currentRule.toAccountId,
+        categoryId: currentRule.categoryId,
+        categoryName: currentRule.categoryName,
+        categoryIcon: currentRule.categoryIcon,
+        subCategory: currentRule.subCategory,
+        bucketId: currentRule.bucketId,
+        bucketName: currentRule.bucketName,
+        notes: 'Manually confirmed from ${currentRule.name}',
+      );
+
+      final nextDate = ScheduleHelper.calculateNextDate(
+        currentRule.nextExecutionDate,
+        currentRule.repetitionSchedule,
+        currentRule.repetitionInterval,
+        currentRule.advancedSchedule,
+      );
+
+      await _db
+          .update(_db.recurringTransactionRules)
+          .replace(
+            currentRule.copyWith(
+              lastExecutedDate: Value(executionDate),
+              nextExecutionDate: nextDate,
+            ),
+          );
+
+      if (notificationId != null) {
+        await ref
+            .read(inAppNotificationActionProvider.notifier)
+            .markAsRead(notificationId);
+      }
+
+      ref.read(automationEngineProvider).runCatchUp();
+    });
+    return !state.hasError;
+  }
+
   Future<bool> saveRule({
     String? existingId,
     required String name,
+    String? serviceWebsite,
     double? amount,
     required String transactionType,
     required String accountId,
@@ -201,6 +348,7 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
     String? bucketName,
     required String repetitionSchedule,
     required int repetitionInterval,
+    String? advancedSchedule,
     required DateTime startDate,
     required String occurrenceTime,
     required bool isAutomatic,
@@ -223,6 +371,7 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
               RecurringTransactionRulesCompanion.insert(
                 id: _uuid.v4(),
                 name: name,
+                serviceWebsite: Value(serviceWebsite),
                 amount: Value(amount),
                 transactionType: transactionType,
                 accountId: accountId,
@@ -235,6 +384,7 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
                 bucketName: Value(bucketName),
                 repetitionSchedule: repetitionSchedule,
                 repetitionInterval: repetitionInterval,
+                advancedSchedule: Value(advancedSchedule),
                 startDate: startDate,
                 occurrenceTime: occurrenceTime,
                 isAutomatic: isAutomatic,
@@ -245,12 +395,12 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
         final existing = await (_db.select(
           _db.recurringTransactionRules,
         )..where((t) => t.id.equals(existingId))).getSingle();
-
         await _db
             .update(_db.recurringTransactionRules)
             .replace(
               existing.copyWith(
                 name: name,
+                serviceWebsite: Value(serviceWebsite),
                 amount: Value(amount),
                 transactionType: transactionType,
                 accountId: accountId,
@@ -263,6 +413,7 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
                 bucketName: Value(bucketName),
                 repetitionSchedule: repetitionSchedule,
                 repetitionInterval: repetitionInterval,
+                advancedSchedule: Value(advancedSchedule),
                 startDate: startDate,
                 occurrenceTime: occurrenceTime,
                 isAutomatic: isAutomatic,
@@ -270,8 +421,6 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
               ),
             );
       }
-
-      // Trigger the engine to catch up if the date is already in the past
       ref.read(automationEngineProvider).runCatchUp();
     });
     return !state.hasError;
@@ -283,6 +432,11 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
       await (_db.delete(
         _db.recurringTransactionRules,
       )..where((t) => t.id.equals(id))).go();
+
+      // --- FIX 4: Ensure deleted rules don't leave orphaned future notifications ---
+      final notifService = ref.read(inAppNotificationServiceProvider);
+      await notifService.clearFutureNotifications(prefix: 'auto_$id');
+      await notifService.clearFutureNotifications(prefix: 'manual_$id');
     });
     return !state.hasError;
   }
