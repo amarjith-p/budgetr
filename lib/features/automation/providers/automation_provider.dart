@@ -120,12 +120,83 @@ class AutomationEngine {
     for (var rule in rules) {
       if (!rule.isActive) continue;
 
+      // --- 1. STRICT DEPENDENCY VALIDATION (Accounts & Categories) ---
+      bool depsValid = true;
+      String errorReason = 'a linked account was deleted.';
+
+      final acc = await (_db.select(
+        _db.accounts,
+      )..where((a) => a.id.equals(rule.accountId))).getSingleOrNull();
+      if (acc == null && rule.accountId != 'EXTERNAL') depsValid = false;
+
+      if (rule.toAccountId != null && rule.toAccountId != 'EXTERNAL') {
+        final toAcc = await (_db.select(
+          _db.accounts,
+        )..where((a) => a.id.equals(rule.toAccountId!))).getSingleOrNull();
+        if (toAcc == null) depsValid = false;
+      }
+
+      // Check Category
+      if (rule.categoryId != null) {
+        final cat = await (_db.select(
+          _db.transactionCategories,
+        )..where((c) => c.id.equals(rule.categoryId!))).getSingleOrNull();
+        if (cat == null) {
+          depsValid = false;
+          errorReason = 'the linked Category was deleted.';
+        }
+      }
+
+      if (!depsValid) {
+        await _db
+            .update(_db.recurringTransactionRules)
+            .replace(rule.copyWith(isActive: false));
+        await _notifService.saveNotification(
+          id: 'err_${rule.id}_${now.millisecondsSinceEpoch}',
+          title: 'Automation Disabled',
+          body:
+              '${rule.name} failed because $errorReason Please edit the rule to fix it.',
+          scheduledDate: now,
+        );
+        await _notifService.clearFutureNotifications(prefix: 'auto_${rule.id}');
+        await _notifService.clearFutureNotifications(
+          prefix: 'manual_${rule.id}',
+        );
+        continue;
+      }
+
       DateTime next = rule.nextExecutionDate;
       DateTime? lastExecuted = rule.lastExecutedDate;
       bool ruleUpdated = false;
 
       if (rule.isAutomatic && rule.amount != null) {
         while (next.isBefore(now) || next.isAtSameMomentAs(now)) {
+          // --- 2. DYNAMIC BUCKET RESOLUTION ---
+          int? resolvedBucketId = rule.bucketId;
+          if (rule.bucketName != null && rule.bucketName != 'Out of Bucket') {
+            final budget =
+                await (_db.select(_db.monthlyBudgets)..where(
+                      (b) =>
+                          b.month.equals(next.month) & b.year.equals(next.year),
+                    ))
+                    .getSingleOrNull();
+
+            resolvedBucketId = null; // Default to 'Out of Bucket'
+            if (budget != null && budget.bucketsSnapshot != null) {
+              try {
+                final List<dynamic> decoded = jsonDecode(
+                  budget.bucketsSnapshot!,
+                );
+                for (var b in decoded) {
+                  if (b['name'] == rule.bucketName) {
+                    resolvedBucketId = b['id'] as int;
+                    break;
+                  }
+                }
+              } catch (_) {}
+            }
+          }
+
           await _txService.logTransaction(
             type: rule.transactionType,
             amount: rule.amount!,
@@ -136,8 +207,8 @@ class AutomationEngine {
             categoryName: rule.categoryName,
             categoryIcon: rule.categoryIcon,
             subCategory: rule.subCategory,
-            bucketId: rule.bucketId,
-            bucketName: rule.bucketName,
+            bucketId: resolvedBucketId, // Use dynamically resolved ID
+            bucketName: resolvedBucketId == null ? null : rule.bucketName,
             notes: 'Auto-logged by ${rule.name}',
           );
 
@@ -145,7 +216,7 @@ class AutomationEngine {
             id: 'auto_${rule.id}_${next.millisecondsSinceEpoch}',
             title: 'Automation Executed',
             body: '${rule.name} auto-logged successfully.',
-            scheduledDate: next, // Use exact trigger time
+            scheduledDate: next,
           );
           lastExecuted = next;
           next = ScheduleHelper.calculateNextDate(
@@ -187,11 +258,10 @@ class AutomationEngine {
               ),
             );
       }
+
       await _notifService.clearFutureNotifications(prefix: 'auto_${rule.id}');
       await _notifService.clearFutureNotifications(prefix: 'manual_${rule.id}');
 
-      // --- NEW FIX: PRE-SAVE THE NOTIFICATION FOR THE FUTURE ---
-      // This guarantees the notification pops into the UI exactly when 'now' crosses 'next'
       if (next.isAfter(now)) {
         final isAuto = rule.isAutomatic && rule.amount != null;
         final title = isAuto
@@ -289,6 +359,68 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
         throw Exception('This transaction has already been executed.');
       }
 
+      // --- STRICT ACCOUNT PRE-VALIDATION ---
+      final acc = await (_db.select(
+        _db.accounts,
+      )..where((a) => a.id.equals(currentRule.accountId))).getSingleOrNull();
+      if (acc == null && currentRule.accountId != 'EXTERNAL') {
+        throw Exception(
+          'The linked Account was deleted. Please edit this rule to fix it.',
+        );
+      }
+
+      if (currentRule.toAccountId != null &&
+          currentRule.toAccountId != 'EXTERNAL') {
+        final toAcc =
+            await (_db.select(_db.accounts)
+                  ..where((a) => a.id.equals(currentRule.toAccountId!)))
+                .getSingleOrNull();
+        if (toAcc == null) {
+          throw Exception(
+            'The Destination Account was deleted. Please edit this rule to fix it.',
+          );
+        }
+      }
+
+      // --- STRICT CATEGORY PRE-VALIDATION ---
+      if (currentRule.categoryId != null) {
+        final cat =
+            await (_db.select(_db.transactionCategories)
+                  ..where((c) => c.id.equals(currentRule.categoryId!)))
+                .getSingleOrNull();
+        if (cat == null) {
+          throw Exception(
+            'The linked Category was deleted. Please edit this rule to fix it.',
+          );
+        }
+      }
+
+      // --- DYNAMIC BUCKET RESOLUTION ---
+      int? resolvedBucketId = currentRule.bucketId;
+      if (currentRule.bucketName != null &&
+          currentRule.bucketName != 'Out of Bucket') {
+        final budget =
+            await (_db.select(_db.monthlyBudgets)..where(
+                  (b) =>
+                      b.month.equals(executionDate.month) &
+                      b.year.equals(executionDate.year),
+                ))
+                .getSingleOrNull();
+
+        resolvedBucketId = null; // Default to 'Out of Bucket'
+        if (budget != null && budget.bucketsSnapshot != null) {
+          try {
+            final List<dynamic> decoded = jsonDecode(budget.bucketsSnapshot!);
+            for (var b in decoded) {
+              if (b['name'] == currentRule.bucketName) {
+                resolvedBucketId = b['id'] as int;
+                break;
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
       final txService = ref.read(transactionServiceProvider);
       await txService.logTransaction(
         type: currentRule.transactionType,
@@ -300,8 +432,8 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
         categoryName: currentRule.categoryName,
         categoryIcon: currentRule.categoryIcon,
         subCategory: currentRule.subCategory,
-        bucketId: currentRule.bucketId,
-        bucketName: currentRule.bucketName,
+        bucketId: resolvedBucketId, // Inject dynamic Bucket ID
+        bucketName: resolvedBucketId == null ? null : currentRule.bucketName,
         notes: 'Manually confirmed from ${currentRule.name}',
       );
 
@@ -432,8 +564,6 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
       await (_db.delete(
         _db.recurringTransactionRules,
       )..where((t) => t.id.equals(id))).go();
-
-      // --- FIX 4: Ensure deleted rules don't leave orphaned future notifications ---
       final notifService = ref.read(inAppNotificationServiceProvider);
       await notifService.clearFutureNotifications(prefix: 'auto_$id');
       await notifService.clearFutureNotifications(prefix: 'manual_$id');

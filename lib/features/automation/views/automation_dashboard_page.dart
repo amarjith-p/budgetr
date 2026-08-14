@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,80 @@ import '../../../core/components/currency_text.dart';
 import '../providers/automation_provider.dart';
 import 'automation_rule_form_page.dart';
 import '../components/manual_rule_confirmation_sheet.dart';
+
+// --- NEW: Live Countdown Badge Widget ---
+class _CountdownBadge extends StatefulWidget {
+  final DateTime targetDate;
+  final ThemeData theme;
+
+  const _CountdownBadge({required this.targetDate, required this.theme});
+
+  @override
+  State<_CountdownBadge> createState() => _CountdownBadgeState();
+}
+
+class _CountdownBadgeState extends State<_CountdownBadge> {
+  late Timer _timer;
+  late Duration _diff;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateDiff();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateDiff());
+  }
+
+  void _updateDiff() {
+    final now = DateTime.now();
+    setState(() {
+      _diff = widget.targetDate.difference(now);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_diff.isNegative) return const SizedBox.shrink();
+
+    String text;
+    bool isCritical = false;
+
+    if (_diff.inHours >= 24) {
+      text = 'Due in ${_diff.inDays}d';
+    } else {
+      isCritical = true;
+      final h = _diff.inHours.toString().padLeft(2, '0');
+      final m = _diff.inMinutes.remainder(60).toString().padLeft(2, '0');
+      final s = _diff.inSeconds.remainder(60).toString().padLeft(2, '0');
+      text = 'Due in $h:$m:$s';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isCritical
+            ? widget.theme.colorScheme.error.withOpacity(0.1)
+            : widget.theme.colorScheme.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          color: isCritical
+              ? widget.theme.colorScheme.error
+              : widget.theme.colorScheme.primary,
+        ),
+      ),
+    );
+  }
+}
 
 class AutomationDashboardPage extends ConsumerWidget {
   const AutomationDashboardPage({super.key});
@@ -163,18 +238,29 @@ class AutomationDashboardPage extends ConsumerWidget {
                                   : theme.colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              isPending
-                                  ? 'DUE: ${DateFormat('dd MMM yyyy').format(rule.nextExecutionDate)}'
-                                  : 'Next: ${DateFormat('dd MMM yyyy, HH:mm').format(rule.nextExecutionDate)}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: isPending
-                                    ? theme.colorScheme.error
-                                    : theme.colorScheme.onSurfaceVariant,
+                            // --- UPDATED: 12-Hour Clock Format & Layout ---
+                            Expanded(
+                              child: Text(
+                                isPending
+                                    ? 'DUE: ${DateFormat('dd MMM yyyy, hh:mm a').format(rule.nextExecutionDate)}'
+                                    : 'Next: ${DateFormat('dd MMM yyyy, hh:mm a').format(rule.nextExecutionDate)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isPending
+                                      ? theme.colorScheme.error
+                                      : theme.colorScheme.onSurfaceVariant,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            // --- NEW: Live Countdown inserted dynamically ---
+                            if (!isPending)
+                              _CountdownBadge(
+                                targetDate: rule.nextExecutionDate,
+                                theme: theme,
+                              ),
                           ],
                         ),
                         const SizedBox(height: 6),
@@ -247,7 +333,6 @@ class AutomationDashboardPage extends ConsumerWidget {
                     ),
                     onPressed: () {
                       HapticFeedback.lightImpact();
-                      // Deterministic ID used by the engine
                       final notifId =
                           'manual_${rule.id}_${rule.nextExecutionDate.millisecondsSinceEpoch}';
                       ManualRuleConfirmationSheet.show(

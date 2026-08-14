@@ -68,43 +68,54 @@ class _ManualRuleConfirmationSheetState
           notificationId: widget.notificationId,
         );
 
-    if (mounted) {
-      if (success) {
-        Navigator.pop(context);
-      } else {
-        setState(() => _isLoading = false);
-        final errorState = ref.read(automationActionProvider);
+    if (!mounted) return;
 
-        // --- NEW: Display the error message in a SnackBar ---
-        if (errorState.hasError) {
-          final errMsg = errorState.error.toString().replaceAll(
-            'Exception: ',
-            '',
-          );
+    // --- NEW: POP THE SHEET IMMEDIATELY REGARDLESS OF SUCCESS/FAILURE ---
+    // This guarantees the SnackBar is never hidden behind the modal.
+    Navigator.pop(context);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                errMsg,
-                style: const TextStyle(
+    if (!success) {
+      final errorState = ref.read(automationActionProvider);
+
+      if (errorState.hasError) {
+        // Strip the developer "Exception:" prefix for a clean UI message
+        final errMsg = errorState.error.toString().replaceAll(
+          'Exception: ',
+          '',
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
                   color: Colors.white,
-                  fontWeight: FontWeight.w700,
+                  size: 20,
                 ),
-              ),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    errMsg,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          );
-
-          // Pop the sheet so the user isn't stuck on a stale transaction
-          if (errMsg.contains('already been executed')) {
-            Navigator.pop(context);
-          }
-        }
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     }
   }
