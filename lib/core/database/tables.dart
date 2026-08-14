@@ -210,3 +210,15 @@ class SmartTrackerRecords extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+class AppNotifications extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text()();
+  TextColumn get body => text()();
+  TextColumn get payload => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  BoolColumn get isRead => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

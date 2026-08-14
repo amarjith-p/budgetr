@@ -24,6 +24,9 @@ import '../transactions/providers/transaction_provider.dart';
 // --- ADDED: Investment Provider Import ---
 import '../investments/providers/investment_provider.dart';
 
+// --- NEW: Notification Bell Widget Import ---
+import '../notifications/components/notification_bell_widget.dart';
+
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
@@ -127,6 +130,13 @@ class DashboardPage extends ConsumerWidget {
             ),
           ),
         ),
+        // --- NEW: Notification Bell added to App Bar ---
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8.0),
+            child: NotificationBellWidget(),
+          ),
+        ],
       ),
       body: SafeArea(
         child: CustomScrollView(

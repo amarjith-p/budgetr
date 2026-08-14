@@ -2,9 +2,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/services/notification_service.dart';
 import '../../accounts/providers/account_provider.dart';
+import 'in_app_notification_provider.dart';
 
 class NotificationSettings {
   final bool enableNotifications;
@@ -147,7 +149,7 @@ void initializeNotificationScheduler(WidgetRef ref) {
   ) {
     final accounts = next.asData?.value ?? [];
     final settings = ref.read(notificationSettingsProvider);
-    _scheduleNotificationsForAccounts(accounts, settings);
+    _scheduleNotificationsForAccounts(accounts, settings, ref);
   });
 
   ref.listen<NotificationSettings>(notificationSettingsProvider, (
@@ -155,16 +157,20 @@ void initializeNotificationScheduler(WidgetRef ref) {
     next,
   ) {
     final accounts = ref.read(accountsStreamProvider).asData?.value ?? [];
-    _scheduleNotificationsForAccounts(accounts, next);
+    _scheduleNotificationsForAccounts(accounts, next, ref);
   });
 }
 
 Future<void> _scheduleNotificationsForAccounts(
   List<Account> accounts,
   NotificationSettings settings,
+  WidgetRef ref,
 ) async {
   final service = NotificationService.instance;
   await service.cancelAllNotifications();
+
+  // --- NEW: Clear future in-app notifications to prevent duplicates ---
+  await ref.read(inAppNotificationServiceProvider).clearFutureNotifications();
 
   if (!settings.enableNotifications) return;
 
@@ -203,7 +209,6 @@ Future<void> _scheduleNotificationsForAccounts(
   void addEvent(DateTime triggerDate, String eventType, Account account) {
     if (triggerDate.isBefore(DateTime.now())) return;
 
-    // --- FORMAT NAME: "Custom account name - Provider Name" ---
     final formattedName = "${account.name} - ${account.providerName}";
 
     String dateKey =
@@ -258,6 +263,7 @@ Future<void> _scheduleNotificationsForAccounts(
 
   int notificationId = 0;
   int delaySeconds = 0;
+  final uuid = const Uuid();
 
   for (var entry in groupedEvents.entries) {
     final parts = entry.key.split('|');
@@ -283,12 +289,10 @@ Future<void> _scheduleNotificationsForAccounts(
     String title = '';
     String body = '';
 
-    // --- CREATE A BULLETED LIST FOR THE NOTIFICATION BODY ---
     bool isPlural = accountNames.length > 1;
     String bulletedList = accountNames.map((name) => '• $name').join('\n');
 
     switch (eventType) {
-      // Credit Card strings
       case 'bill':
         title = isPlural
             ? '${accountNames.length} Statements Generated'
@@ -323,8 +327,6 @@ Future<void> _scheduleNotificationsForAccounts(
             : 'Upcoming Payment';
         body = 'Due in 5 days for:\n$bulletedList';
         break;
-
-      // Loan strings
       case 'emi0':
         title = isPlural
             ? '${accountNames.length} EMIs Due Today!'
@@ -353,11 +355,22 @@ Future<void> _scheduleNotificationsForAccounts(
         break;
     }
 
+    // Schedule Native Notification
     await service.scheduleNotification(
       id: notificationId++,
       title: title,
       body: body,
       scheduledDate: scheduledDate,
     );
+
+    // --- NEW: Save to In-App DB using a strict UUID so history is never overwritten ---
+    await ref
+        .read(inAppNotificationServiceProvider)
+        .saveNotification(
+          id: uuid.v4(),
+          title: title,
+          body: body,
+          scheduledDate: scheduledDate,
+        );
   }
 }

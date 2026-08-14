@@ -21,6 +21,7 @@ part 'app_database.g.dart';
     InvestmentLogs,
     SmartTrackerTemplates,
     SmartTrackerRecords,
+    AppNotifications,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -28,7 +29,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMPED TO VERSION 25 ---
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 28;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -94,6 +95,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 27) {
         await m.createTable(smartTrackerRecords);
+      }
+      if (from < 28) {
+        await m.createTable(appNotifications);
       }
     },
   );
