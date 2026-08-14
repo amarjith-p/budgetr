@@ -24,8 +24,11 @@ import '../transactions/providers/transaction_provider.dart';
 // --- ADDED: Investment Provider Import ---
 import '../investments/providers/investment_provider.dart';
 
-// --- NEW: Notification Bell Widget Import ---
+// --- ADDED: Notification Bell Widget Import ---
 import '../notifications/components/notification_bell_widget.dart';
+
+// --- NEW: Automation Dashboard Import ---
+import '../automation/views/automation_dashboard_page.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -130,7 +133,6 @@ class DashboardPage extends ConsumerWidget {
             ),
           ),
         ),
-        // --- NEW: Notification Bell added to App Bar ---
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 8.0),
@@ -398,16 +400,25 @@ class DashboardPage extends ConsumerWidget {
 
                     const SizedBox(height: tileGap),
 
-                    // --- ROW 3: History & Settings ---
+                    // --- ROW 3: Automation & Settings ---
                     Row(
                       children: [
                         Expanded(
                           child: _buildMetroTile(
-                            title: 'HISTORY',
-                            icon: Icons.receipt_long_rounded,
+                            title:
+                                'AUTOMATION', // --- NEW: Replaced History ---
+                            icon: Icons.autorenew_rounded,
                             height: 120,
                             color: darkTileColor,
-                            onTap: () {},
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const AutomationDashboardPage(),
+                                ),
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(width: tileGap),

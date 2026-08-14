@@ -1,3 +1,5 @@
+// lib/features/notifications/views/notification_center_page.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,9 @@ import '../../../core/components/premium_empty_state.dart';
 import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../providers/in_app_notification_provider.dart';
+
+// --- NEW IMPORT FOR AUTOMATION SHEET ---
+import '../../automation/components/manual_rule_confirmation_sheet.dart';
 
 class NotificationCenterPage extends ConsumerWidget {
   const NotificationCenterPage({Key? key}) : super(key: key);
@@ -86,6 +91,15 @@ class NotificationCenterPage extends ConsumerWidget {
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final notif = notifications[index];
                     final isUnread = !notif.isRead;
+
+                    // --- NEW: PARSE PAYLOAD FOR AUTOMATION ---
+                    Map<String, dynamic>? payloadMap;
+                    if (notif.payload != null) {
+                      try {
+                        payloadMap = jsonDecode(notif.payload!);
+                      } catch (_) {}
+                    }
+                    final isManualRule = payloadMap?['type'] == 'manual_rule';
 
                     return Padding(
                       padding: const EdgeInsets.only(
@@ -210,6 +224,45 @@ class NotificationCenterPage extends ConsumerWidget {
                                                     .onSurfaceVariant,
                                         ),
                                       ),
+                                      // --- NEW: RENDER EXECUTE BUTTON FOR RULES ---
+                                      if (isManualRule &&
+                                          payloadMap != null) ...[
+                                        const SizedBox(height: 12),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  theme.colorScheme.primary,
+                                              foregroundColor:
+                                                  theme.colorScheme.onPrimary,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              elevation: 0,
+                                            ),
+                                            onPressed: () {
+                                              HapticFeedback.lightImpact();
+                                              ManualRuleConfirmationSheet.show(
+                                                context,
+                                                ruleId: payloadMap!['ruleId'],
+                                                expectedDateStr:
+                                                    payloadMap['expectedDate'],
+                                                notificationId: notif.id,
+                                              );
+                                            },
+                                            child: const Text(
+                                              'EXECUTE NOW',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 11,
+                                                letterSpacing: 1.0,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),

@@ -8031,6 +8031,1178 @@ class AppNotificationsCompanion extends UpdateCompanion<AppNotification> {
   }
 }
 
+class $RecurringTransactionRulesTable extends RecurringTransactionRules
+    with TableInfo<$RecurringTransactionRulesTable, RecurringTransactionRule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RecurringTransactionRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _transactionTypeMeta = const VerificationMeta(
+    'transactionType',
+  );
+  @override
+  late final GeneratedColumn<String> transactionType = GeneratedColumn<String>(
+    'transaction_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
+  @override
+  late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
+    'account_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _toAccountIdMeta = const VerificationMeta(
+    'toAccountId',
+  );
+  @override
+  late final GeneratedColumn<String> toAccountId = GeneratedColumn<String>(
+    'to_account_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _categoryNameMeta = const VerificationMeta(
+    'categoryName',
+  );
+  @override
+  late final GeneratedColumn<String> categoryName = GeneratedColumn<String>(
+    'category_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _categoryIconMeta = const VerificationMeta(
+    'categoryIcon',
+  );
+  @override
+  late final GeneratedColumn<int> categoryIcon = GeneratedColumn<int>(
+    'category_icon',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subCategoryMeta = const VerificationMeta(
+    'subCategory',
+  );
+  @override
+  late final GeneratedColumn<String> subCategory = GeneratedColumn<String>(
+    'sub_category',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bucketIdMeta = const VerificationMeta(
+    'bucketId',
+  );
+  @override
+  late final GeneratedColumn<int> bucketId = GeneratedColumn<int>(
+    'bucket_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bucketNameMeta = const VerificationMeta(
+    'bucketName',
+  );
+  @override
+  late final GeneratedColumn<String> bucketName = GeneratedColumn<String>(
+    'bucket_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _repetitionScheduleMeta =
+      const VerificationMeta('repetitionSchedule');
+  @override
+  late final GeneratedColumn<String> repetitionSchedule =
+      GeneratedColumn<String>(
+        'repetition_schedule',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _repetitionIntervalMeta =
+      const VerificationMeta('repetitionInterval');
+  @override
+  late final GeneratedColumn<int> repetitionInterval = GeneratedColumn<int>(
+    'repetition_interval',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startDateMeta = const VerificationMeta(
+    'startDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startDate = GeneratedColumn<DateTime>(
+    'start_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _occurrenceTimeMeta = const VerificationMeta(
+    'occurrenceTime',
+  );
+  @override
+  late final GeneratedColumn<String> occurrenceTime = GeneratedColumn<String>(
+    'occurrence_time',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isAutomaticMeta = const VerificationMeta(
+    'isAutomatic',
+  );
+  @override
+  late final GeneratedColumn<bool> isAutomatic = GeneratedColumn<bool>(
+    'is_automatic',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_automatic" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _lastExecutedDateMeta = const VerificationMeta(
+    'lastExecutedDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastExecutedDate =
+      GeneratedColumn<DateTime>(
+        'last_executed_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _nextExecutionDateMeta = const VerificationMeta(
+    'nextExecutionDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> nextExecutionDate =
+      GeneratedColumn<DateTime>(
+        'next_execution_date',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    amount,
+    transactionType,
+    accountId,
+    toAccountId,
+    categoryId,
+    categoryName,
+    categoryIcon,
+    subCategory,
+    bucketId,
+    bucketName,
+    repetitionSchedule,
+    repetitionInterval,
+    startDate,
+    occurrenceTime,
+    isAutomatic,
+    lastExecutedDate,
+    nextExecutionDate,
+    isActive,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'recurring_transaction_rules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RecurringTransactionRule> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    }
+    if (data.containsKey('transaction_type')) {
+      context.handle(
+        _transactionTypeMeta,
+        transactionType.isAcceptableOrUnknown(
+          data['transaction_type']!,
+          _transactionTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_transactionTypeMeta);
+    }
+    if (data.containsKey('account_id')) {
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_accountIdMeta);
+    }
+    if (data.containsKey('to_account_id')) {
+      context.handle(
+        _toAccountIdMeta,
+        toAccountId.isAcceptableOrUnknown(
+          data['to_account_id']!,
+          _toAccountIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    }
+    if (data.containsKey('category_name')) {
+      context.handle(
+        _categoryNameMeta,
+        categoryName.isAcceptableOrUnknown(
+          data['category_name']!,
+          _categoryNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('category_icon')) {
+      context.handle(
+        _categoryIconMeta,
+        categoryIcon.isAcceptableOrUnknown(
+          data['category_icon']!,
+          _categoryIconMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sub_category')) {
+      context.handle(
+        _subCategoryMeta,
+        subCategory.isAcceptableOrUnknown(
+          data['sub_category']!,
+          _subCategoryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('bucket_id')) {
+      context.handle(
+        _bucketIdMeta,
+        bucketId.isAcceptableOrUnknown(data['bucket_id']!, _bucketIdMeta),
+      );
+    }
+    if (data.containsKey('bucket_name')) {
+      context.handle(
+        _bucketNameMeta,
+        bucketName.isAcceptableOrUnknown(data['bucket_name']!, _bucketNameMeta),
+      );
+    }
+    if (data.containsKey('repetition_schedule')) {
+      context.handle(
+        _repetitionScheduleMeta,
+        repetitionSchedule.isAcceptableOrUnknown(
+          data['repetition_schedule']!,
+          _repetitionScheduleMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_repetitionScheduleMeta);
+    }
+    if (data.containsKey('repetition_interval')) {
+      context.handle(
+        _repetitionIntervalMeta,
+        repetitionInterval.isAcceptableOrUnknown(
+          data['repetition_interval']!,
+          _repetitionIntervalMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_repetitionIntervalMeta);
+    }
+    if (data.containsKey('start_date')) {
+      context.handle(
+        _startDateMeta,
+        startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startDateMeta);
+    }
+    if (data.containsKey('occurrence_time')) {
+      context.handle(
+        _occurrenceTimeMeta,
+        occurrenceTime.isAcceptableOrUnknown(
+          data['occurrence_time']!,
+          _occurrenceTimeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_occurrenceTimeMeta);
+    }
+    if (data.containsKey('is_automatic')) {
+      context.handle(
+        _isAutomaticMeta,
+        isAutomatic.isAcceptableOrUnknown(
+          data['is_automatic']!,
+          _isAutomaticMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_isAutomaticMeta);
+    }
+    if (data.containsKey('last_executed_date')) {
+      context.handle(
+        _lastExecutedDateMeta,
+        lastExecutedDate.isAcceptableOrUnknown(
+          data['last_executed_date']!,
+          _lastExecutedDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('next_execution_date')) {
+      context.handle(
+        _nextExecutionDateMeta,
+        nextExecutionDate.isAcceptableOrUnknown(
+          data['next_execution_date']!,
+          _nextExecutionDateMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_nextExecutionDateMeta);
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RecurringTransactionRule map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RecurringTransactionRule(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      ),
+      transactionType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}transaction_type'],
+      )!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_id'],
+      )!,
+      toAccountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}to_account_id'],
+      ),
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      ),
+      categoryName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_name'],
+      ),
+      categoryIcon: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}category_icon'],
+      ),
+      subCategory: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sub_category'],
+      ),
+      bucketId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}bucket_id'],
+      ),
+      bucketName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bucket_name'],
+      ),
+      repetitionSchedule: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}repetition_schedule'],
+      )!,
+      repetitionInterval: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}repetition_interval'],
+      )!,
+      startDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_date'],
+      )!,
+      occurrenceTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}occurrence_time'],
+      )!,
+      isAutomatic: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_automatic'],
+      )!,
+      lastExecutedDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_executed_date'],
+      ),
+      nextExecutionDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}next_execution_date'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+    );
+  }
+
+  @override
+  $RecurringTransactionRulesTable createAlias(String alias) {
+    return $RecurringTransactionRulesTable(attachedDatabase, alias);
+  }
+}
+
+class RecurringTransactionRule extends DataClass
+    implements Insertable<RecurringTransactionRule> {
+  final String id;
+  final String name;
+  final double? amount;
+  final String transactionType;
+  final String accountId;
+  final String? toAccountId;
+  final String? categoryId;
+  final String? categoryName;
+  final int? categoryIcon;
+  final String? subCategory;
+  final int? bucketId;
+  final String? bucketName;
+  final String repetitionSchedule;
+  final int repetitionInterval;
+  final DateTime startDate;
+  final String occurrenceTime;
+  final bool isAutomatic;
+  final DateTime? lastExecutedDate;
+  final DateTime nextExecutionDate;
+  final bool isActive;
+  const RecurringTransactionRule({
+    required this.id,
+    required this.name,
+    this.amount,
+    required this.transactionType,
+    required this.accountId,
+    this.toAccountId,
+    this.categoryId,
+    this.categoryName,
+    this.categoryIcon,
+    this.subCategory,
+    this.bucketId,
+    this.bucketName,
+    required this.repetitionSchedule,
+    required this.repetitionInterval,
+    required this.startDate,
+    required this.occurrenceTime,
+    required this.isAutomatic,
+    this.lastExecutedDate,
+    required this.nextExecutionDate,
+    required this.isActive,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || amount != null) {
+      map['amount'] = Variable<double>(amount);
+    }
+    map['transaction_type'] = Variable<String>(transactionType);
+    map['account_id'] = Variable<String>(accountId);
+    if (!nullToAbsent || toAccountId != null) {
+      map['to_account_id'] = Variable<String>(toAccountId);
+    }
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
+    }
+    if (!nullToAbsent || categoryName != null) {
+      map['category_name'] = Variable<String>(categoryName);
+    }
+    if (!nullToAbsent || categoryIcon != null) {
+      map['category_icon'] = Variable<int>(categoryIcon);
+    }
+    if (!nullToAbsent || subCategory != null) {
+      map['sub_category'] = Variable<String>(subCategory);
+    }
+    if (!nullToAbsent || bucketId != null) {
+      map['bucket_id'] = Variable<int>(bucketId);
+    }
+    if (!nullToAbsent || bucketName != null) {
+      map['bucket_name'] = Variable<String>(bucketName);
+    }
+    map['repetition_schedule'] = Variable<String>(repetitionSchedule);
+    map['repetition_interval'] = Variable<int>(repetitionInterval);
+    map['start_date'] = Variable<DateTime>(startDate);
+    map['occurrence_time'] = Variable<String>(occurrenceTime);
+    map['is_automatic'] = Variable<bool>(isAutomatic);
+    if (!nullToAbsent || lastExecutedDate != null) {
+      map['last_executed_date'] = Variable<DateTime>(lastExecutedDate);
+    }
+    map['next_execution_date'] = Variable<DateTime>(nextExecutionDate);
+    map['is_active'] = Variable<bool>(isActive);
+    return map;
+  }
+
+  RecurringTransactionRulesCompanion toCompanion(bool nullToAbsent) {
+    return RecurringTransactionRulesCompanion(
+      id: Value(id),
+      name: Value(name),
+      amount: amount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(amount),
+      transactionType: Value(transactionType),
+      accountId: Value(accountId),
+      toAccountId: toAccountId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(toAccountId),
+      categoryId: categoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryId),
+      categoryName: categoryName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryName),
+      categoryIcon: categoryIcon == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryIcon),
+      subCategory: subCategory == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subCategory),
+      bucketId: bucketId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bucketId),
+      bucketName: bucketName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bucketName),
+      repetitionSchedule: Value(repetitionSchedule),
+      repetitionInterval: Value(repetitionInterval),
+      startDate: Value(startDate),
+      occurrenceTime: Value(occurrenceTime),
+      isAutomatic: Value(isAutomatic),
+      lastExecutedDate: lastExecutedDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastExecutedDate),
+      nextExecutionDate: Value(nextExecutionDate),
+      isActive: Value(isActive),
+    );
+  }
+
+  factory RecurringTransactionRule.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RecurringTransactionRule(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      amount: serializer.fromJson<double?>(json['amount']),
+      transactionType: serializer.fromJson<String>(json['transactionType']),
+      accountId: serializer.fromJson<String>(json['accountId']),
+      toAccountId: serializer.fromJson<String?>(json['toAccountId']),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
+      categoryName: serializer.fromJson<String?>(json['categoryName']),
+      categoryIcon: serializer.fromJson<int?>(json['categoryIcon']),
+      subCategory: serializer.fromJson<String?>(json['subCategory']),
+      bucketId: serializer.fromJson<int?>(json['bucketId']),
+      bucketName: serializer.fromJson<String?>(json['bucketName']),
+      repetitionSchedule: serializer.fromJson<String>(
+        json['repetitionSchedule'],
+      ),
+      repetitionInterval: serializer.fromJson<int>(json['repetitionInterval']),
+      startDate: serializer.fromJson<DateTime>(json['startDate']),
+      occurrenceTime: serializer.fromJson<String>(json['occurrenceTime']),
+      isAutomatic: serializer.fromJson<bool>(json['isAutomatic']),
+      lastExecutedDate: serializer.fromJson<DateTime?>(
+        json['lastExecutedDate'],
+      ),
+      nextExecutionDate: serializer.fromJson<DateTime>(
+        json['nextExecutionDate'],
+      ),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'amount': serializer.toJson<double?>(amount),
+      'transactionType': serializer.toJson<String>(transactionType),
+      'accountId': serializer.toJson<String>(accountId),
+      'toAccountId': serializer.toJson<String?>(toAccountId),
+      'categoryId': serializer.toJson<String?>(categoryId),
+      'categoryName': serializer.toJson<String?>(categoryName),
+      'categoryIcon': serializer.toJson<int?>(categoryIcon),
+      'subCategory': serializer.toJson<String?>(subCategory),
+      'bucketId': serializer.toJson<int?>(bucketId),
+      'bucketName': serializer.toJson<String?>(bucketName),
+      'repetitionSchedule': serializer.toJson<String>(repetitionSchedule),
+      'repetitionInterval': serializer.toJson<int>(repetitionInterval),
+      'startDate': serializer.toJson<DateTime>(startDate),
+      'occurrenceTime': serializer.toJson<String>(occurrenceTime),
+      'isAutomatic': serializer.toJson<bool>(isAutomatic),
+      'lastExecutedDate': serializer.toJson<DateTime?>(lastExecutedDate),
+      'nextExecutionDate': serializer.toJson<DateTime>(nextExecutionDate),
+      'isActive': serializer.toJson<bool>(isActive),
+    };
+  }
+
+  RecurringTransactionRule copyWith({
+    String? id,
+    String? name,
+    Value<double?> amount = const Value.absent(),
+    String? transactionType,
+    String? accountId,
+    Value<String?> toAccountId = const Value.absent(),
+    Value<String?> categoryId = const Value.absent(),
+    Value<String?> categoryName = const Value.absent(),
+    Value<int?> categoryIcon = const Value.absent(),
+    Value<String?> subCategory = const Value.absent(),
+    Value<int?> bucketId = const Value.absent(),
+    Value<String?> bucketName = const Value.absent(),
+    String? repetitionSchedule,
+    int? repetitionInterval,
+    DateTime? startDate,
+    String? occurrenceTime,
+    bool? isAutomatic,
+    Value<DateTime?> lastExecutedDate = const Value.absent(),
+    DateTime? nextExecutionDate,
+    bool? isActive,
+  }) => RecurringTransactionRule(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    amount: amount.present ? amount.value : this.amount,
+    transactionType: transactionType ?? this.transactionType,
+    accountId: accountId ?? this.accountId,
+    toAccountId: toAccountId.present ? toAccountId.value : this.toAccountId,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    categoryName: categoryName.present ? categoryName.value : this.categoryName,
+    categoryIcon: categoryIcon.present ? categoryIcon.value : this.categoryIcon,
+    subCategory: subCategory.present ? subCategory.value : this.subCategory,
+    bucketId: bucketId.present ? bucketId.value : this.bucketId,
+    bucketName: bucketName.present ? bucketName.value : this.bucketName,
+    repetitionSchedule: repetitionSchedule ?? this.repetitionSchedule,
+    repetitionInterval: repetitionInterval ?? this.repetitionInterval,
+    startDate: startDate ?? this.startDate,
+    occurrenceTime: occurrenceTime ?? this.occurrenceTime,
+    isAutomatic: isAutomatic ?? this.isAutomatic,
+    lastExecutedDate: lastExecutedDate.present
+        ? lastExecutedDate.value
+        : this.lastExecutedDate,
+    nextExecutionDate: nextExecutionDate ?? this.nextExecutionDate,
+    isActive: isActive ?? this.isActive,
+  );
+  RecurringTransactionRule copyWithCompanion(
+    RecurringTransactionRulesCompanion data,
+  ) {
+    return RecurringTransactionRule(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      transactionType: data.transactionType.present
+          ? data.transactionType.value
+          : this.transactionType,
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
+      toAccountId: data.toAccountId.present
+          ? data.toAccountId.value
+          : this.toAccountId,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      categoryName: data.categoryName.present
+          ? data.categoryName.value
+          : this.categoryName,
+      categoryIcon: data.categoryIcon.present
+          ? data.categoryIcon.value
+          : this.categoryIcon,
+      subCategory: data.subCategory.present
+          ? data.subCategory.value
+          : this.subCategory,
+      bucketId: data.bucketId.present ? data.bucketId.value : this.bucketId,
+      bucketName: data.bucketName.present
+          ? data.bucketName.value
+          : this.bucketName,
+      repetitionSchedule: data.repetitionSchedule.present
+          ? data.repetitionSchedule.value
+          : this.repetitionSchedule,
+      repetitionInterval: data.repetitionInterval.present
+          ? data.repetitionInterval.value
+          : this.repetitionInterval,
+      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      occurrenceTime: data.occurrenceTime.present
+          ? data.occurrenceTime.value
+          : this.occurrenceTime,
+      isAutomatic: data.isAutomatic.present
+          ? data.isAutomatic.value
+          : this.isAutomatic,
+      lastExecutedDate: data.lastExecutedDate.present
+          ? data.lastExecutedDate.value
+          : this.lastExecutedDate,
+      nextExecutionDate: data.nextExecutionDate.present
+          ? data.nextExecutionDate.value
+          : this.nextExecutionDate,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecurringTransactionRule(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('amount: $amount, ')
+          ..write('transactionType: $transactionType, ')
+          ..write('accountId: $accountId, ')
+          ..write('toAccountId: $toAccountId, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('categoryName: $categoryName, ')
+          ..write('categoryIcon: $categoryIcon, ')
+          ..write('subCategory: $subCategory, ')
+          ..write('bucketId: $bucketId, ')
+          ..write('bucketName: $bucketName, ')
+          ..write('repetitionSchedule: $repetitionSchedule, ')
+          ..write('repetitionInterval: $repetitionInterval, ')
+          ..write('startDate: $startDate, ')
+          ..write('occurrenceTime: $occurrenceTime, ')
+          ..write('isAutomatic: $isAutomatic, ')
+          ..write('lastExecutedDate: $lastExecutedDate, ')
+          ..write('nextExecutionDate: $nextExecutionDate, ')
+          ..write('isActive: $isActive')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    amount,
+    transactionType,
+    accountId,
+    toAccountId,
+    categoryId,
+    categoryName,
+    categoryIcon,
+    subCategory,
+    bucketId,
+    bucketName,
+    repetitionSchedule,
+    repetitionInterval,
+    startDate,
+    occurrenceTime,
+    isAutomatic,
+    lastExecutedDate,
+    nextExecutionDate,
+    isActive,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RecurringTransactionRule &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.amount == this.amount &&
+          other.transactionType == this.transactionType &&
+          other.accountId == this.accountId &&
+          other.toAccountId == this.toAccountId &&
+          other.categoryId == this.categoryId &&
+          other.categoryName == this.categoryName &&
+          other.categoryIcon == this.categoryIcon &&
+          other.subCategory == this.subCategory &&
+          other.bucketId == this.bucketId &&
+          other.bucketName == this.bucketName &&
+          other.repetitionSchedule == this.repetitionSchedule &&
+          other.repetitionInterval == this.repetitionInterval &&
+          other.startDate == this.startDate &&
+          other.occurrenceTime == this.occurrenceTime &&
+          other.isAutomatic == this.isAutomatic &&
+          other.lastExecutedDate == this.lastExecutedDate &&
+          other.nextExecutionDate == this.nextExecutionDate &&
+          other.isActive == this.isActive);
+}
+
+class RecurringTransactionRulesCompanion
+    extends UpdateCompanion<RecurringTransactionRule> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<double?> amount;
+  final Value<String> transactionType;
+  final Value<String> accountId;
+  final Value<String?> toAccountId;
+  final Value<String?> categoryId;
+  final Value<String?> categoryName;
+  final Value<int?> categoryIcon;
+  final Value<String?> subCategory;
+  final Value<int?> bucketId;
+  final Value<String?> bucketName;
+  final Value<String> repetitionSchedule;
+  final Value<int> repetitionInterval;
+  final Value<DateTime> startDate;
+  final Value<String> occurrenceTime;
+  final Value<bool> isAutomatic;
+  final Value<DateTime?> lastExecutedDate;
+  final Value<DateTime> nextExecutionDate;
+  final Value<bool> isActive;
+  final Value<int> rowid;
+  const RecurringTransactionRulesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.transactionType = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.toAccountId = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.categoryName = const Value.absent(),
+    this.categoryIcon = const Value.absent(),
+    this.subCategory = const Value.absent(),
+    this.bucketId = const Value.absent(),
+    this.bucketName = const Value.absent(),
+    this.repetitionSchedule = const Value.absent(),
+    this.repetitionInterval = const Value.absent(),
+    this.startDate = const Value.absent(),
+    this.occurrenceTime = const Value.absent(),
+    this.isAutomatic = const Value.absent(),
+    this.lastExecutedDate = const Value.absent(),
+    this.nextExecutionDate = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RecurringTransactionRulesCompanion.insert({
+    required String id,
+    required String name,
+    this.amount = const Value.absent(),
+    required String transactionType,
+    required String accountId,
+    this.toAccountId = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.categoryName = const Value.absent(),
+    this.categoryIcon = const Value.absent(),
+    this.subCategory = const Value.absent(),
+    this.bucketId = const Value.absent(),
+    this.bucketName = const Value.absent(),
+    required String repetitionSchedule,
+    required int repetitionInterval,
+    required DateTime startDate,
+    required String occurrenceTime,
+    required bool isAutomatic,
+    this.lastExecutedDate = const Value.absent(),
+    required DateTime nextExecutionDate,
+    this.isActive = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       transactionType = Value(transactionType),
+       accountId = Value(accountId),
+       repetitionSchedule = Value(repetitionSchedule),
+       repetitionInterval = Value(repetitionInterval),
+       startDate = Value(startDate),
+       occurrenceTime = Value(occurrenceTime),
+       isAutomatic = Value(isAutomatic),
+       nextExecutionDate = Value(nextExecutionDate);
+  static Insertable<RecurringTransactionRule> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<double>? amount,
+    Expression<String>? transactionType,
+    Expression<String>? accountId,
+    Expression<String>? toAccountId,
+    Expression<String>? categoryId,
+    Expression<String>? categoryName,
+    Expression<int>? categoryIcon,
+    Expression<String>? subCategory,
+    Expression<int>? bucketId,
+    Expression<String>? bucketName,
+    Expression<String>? repetitionSchedule,
+    Expression<int>? repetitionInterval,
+    Expression<DateTime>? startDate,
+    Expression<String>? occurrenceTime,
+    Expression<bool>? isAutomatic,
+    Expression<DateTime>? lastExecutedDate,
+    Expression<DateTime>? nextExecutionDate,
+    Expression<bool>? isActive,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (amount != null) 'amount': amount,
+      if (transactionType != null) 'transaction_type': transactionType,
+      if (accountId != null) 'account_id': accountId,
+      if (toAccountId != null) 'to_account_id': toAccountId,
+      if (categoryId != null) 'category_id': categoryId,
+      if (categoryName != null) 'category_name': categoryName,
+      if (categoryIcon != null) 'category_icon': categoryIcon,
+      if (subCategory != null) 'sub_category': subCategory,
+      if (bucketId != null) 'bucket_id': bucketId,
+      if (bucketName != null) 'bucket_name': bucketName,
+      if (repetitionSchedule != null) 'repetition_schedule': repetitionSchedule,
+      if (repetitionInterval != null) 'repetition_interval': repetitionInterval,
+      if (startDate != null) 'start_date': startDate,
+      if (occurrenceTime != null) 'occurrence_time': occurrenceTime,
+      if (isAutomatic != null) 'is_automatic': isAutomatic,
+      if (lastExecutedDate != null) 'last_executed_date': lastExecutedDate,
+      if (nextExecutionDate != null) 'next_execution_date': nextExecutionDate,
+      if (isActive != null) 'is_active': isActive,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RecurringTransactionRulesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<double?>? amount,
+    Value<String>? transactionType,
+    Value<String>? accountId,
+    Value<String?>? toAccountId,
+    Value<String?>? categoryId,
+    Value<String?>? categoryName,
+    Value<int?>? categoryIcon,
+    Value<String?>? subCategory,
+    Value<int?>? bucketId,
+    Value<String?>? bucketName,
+    Value<String>? repetitionSchedule,
+    Value<int>? repetitionInterval,
+    Value<DateTime>? startDate,
+    Value<String>? occurrenceTime,
+    Value<bool>? isAutomatic,
+    Value<DateTime?>? lastExecutedDate,
+    Value<DateTime>? nextExecutionDate,
+    Value<bool>? isActive,
+    Value<int>? rowid,
+  }) {
+    return RecurringTransactionRulesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      amount: amount ?? this.amount,
+      transactionType: transactionType ?? this.transactionType,
+      accountId: accountId ?? this.accountId,
+      toAccountId: toAccountId ?? this.toAccountId,
+      categoryId: categoryId ?? this.categoryId,
+      categoryName: categoryName ?? this.categoryName,
+      categoryIcon: categoryIcon ?? this.categoryIcon,
+      subCategory: subCategory ?? this.subCategory,
+      bucketId: bucketId ?? this.bucketId,
+      bucketName: bucketName ?? this.bucketName,
+      repetitionSchedule: repetitionSchedule ?? this.repetitionSchedule,
+      repetitionInterval: repetitionInterval ?? this.repetitionInterval,
+      startDate: startDate ?? this.startDate,
+      occurrenceTime: occurrenceTime ?? this.occurrenceTime,
+      isAutomatic: isAutomatic ?? this.isAutomatic,
+      lastExecutedDate: lastExecutedDate ?? this.lastExecutedDate,
+      nextExecutionDate: nextExecutionDate ?? this.nextExecutionDate,
+      isActive: isActive ?? this.isActive,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (transactionType.present) {
+      map['transaction_type'] = Variable<String>(transactionType.value);
+    }
+    if (accountId.present) {
+      map['account_id'] = Variable<String>(accountId.value);
+    }
+    if (toAccountId.present) {
+      map['to_account_id'] = Variable<String>(toAccountId.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (categoryName.present) {
+      map['category_name'] = Variable<String>(categoryName.value);
+    }
+    if (categoryIcon.present) {
+      map['category_icon'] = Variable<int>(categoryIcon.value);
+    }
+    if (subCategory.present) {
+      map['sub_category'] = Variable<String>(subCategory.value);
+    }
+    if (bucketId.present) {
+      map['bucket_id'] = Variable<int>(bucketId.value);
+    }
+    if (bucketName.present) {
+      map['bucket_name'] = Variable<String>(bucketName.value);
+    }
+    if (repetitionSchedule.present) {
+      map['repetition_schedule'] = Variable<String>(repetitionSchedule.value);
+    }
+    if (repetitionInterval.present) {
+      map['repetition_interval'] = Variable<int>(repetitionInterval.value);
+    }
+    if (startDate.present) {
+      map['start_date'] = Variable<DateTime>(startDate.value);
+    }
+    if (occurrenceTime.present) {
+      map['occurrence_time'] = Variable<String>(occurrenceTime.value);
+    }
+    if (isAutomatic.present) {
+      map['is_automatic'] = Variable<bool>(isAutomatic.value);
+    }
+    if (lastExecutedDate.present) {
+      map['last_executed_date'] = Variable<DateTime>(lastExecutedDate.value);
+    }
+    if (nextExecutionDate.present) {
+      map['next_execution_date'] = Variable<DateTime>(nextExecutionDate.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecurringTransactionRulesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('amount: $amount, ')
+          ..write('transactionType: $transactionType, ')
+          ..write('accountId: $accountId, ')
+          ..write('toAccountId: $toAccountId, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('categoryName: $categoryName, ')
+          ..write('categoryIcon: $categoryIcon, ')
+          ..write('subCategory: $subCategory, ')
+          ..write('bucketId: $bucketId, ')
+          ..write('bucketName: $bucketName, ')
+          ..write('repetitionSchedule: $repetitionSchedule, ')
+          ..write('repetitionInterval: $repetitionInterval, ')
+          ..write('startDate: $startDate, ')
+          ..write('occurrenceTime: $occurrenceTime, ')
+          ..write('isAutomatic: $isAutomatic, ')
+          ..write('lastExecutedDate: $lastExecutedDate, ')
+          ..write('nextExecutionDate: $nextExecutionDate, ')
+          ..write('isActive: $isActive, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8052,6 +9224,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AppNotificationsTable appNotifications = $AppNotificationsTable(
     this,
   );
+  late final $RecurringTransactionRulesTable recurringTransactionRules =
+      $RecurringTransactionRulesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8069,6 +9243,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     smartTrackerTemplates,
     smartTrackerRecords,
     appNotifications,
+    recurringTransactionRules,
   ];
 }
 
@@ -11995,6 +13170,536 @@ typedef $$AppNotificationsTableProcessedTableManager =
       AppNotification,
       PrefetchHooks Function()
     >;
+typedef $$RecurringTransactionRulesTableCreateCompanionBuilder =
+    RecurringTransactionRulesCompanion Function({
+      required String id,
+      required String name,
+      Value<double?> amount,
+      required String transactionType,
+      required String accountId,
+      Value<String?> toAccountId,
+      Value<String?> categoryId,
+      Value<String?> categoryName,
+      Value<int?> categoryIcon,
+      Value<String?> subCategory,
+      Value<int?> bucketId,
+      Value<String?> bucketName,
+      required String repetitionSchedule,
+      required int repetitionInterval,
+      required DateTime startDate,
+      required String occurrenceTime,
+      required bool isAutomatic,
+      Value<DateTime?> lastExecutedDate,
+      required DateTime nextExecutionDate,
+      Value<bool> isActive,
+      Value<int> rowid,
+    });
+typedef $$RecurringTransactionRulesTableUpdateCompanionBuilder =
+    RecurringTransactionRulesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<double?> amount,
+      Value<String> transactionType,
+      Value<String> accountId,
+      Value<String?> toAccountId,
+      Value<String?> categoryId,
+      Value<String?> categoryName,
+      Value<int?> categoryIcon,
+      Value<String?> subCategory,
+      Value<int?> bucketId,
+      Value<String?> bucketName,
+      Value<String> repetitionSchedule,
+      Value<int> repetitionInterval,
+      Value<DateTime> startDate,
+      Value<String> occurrenceTime,
+      Value<bool> isAutomatic,
+      Value<DateTime?> lastExecutedDate,
+      Value<DateTime> nextExecutionDate,
+      Value<bool> isActive,
+      Value<int> rowid,
+    });
+
+class $$RecurringTransactionRulesTableFilterComposer
+    extends Composer<_$AppDatabase, $RecurringTransactionRulesTable> {
+  $$RecurringTransactionRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get transactionType => $composableBuilder(
+    column: $table.transactionType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get toAccountId => $composableBuilder(
+    column: $table.toAccountId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryName => $composableBuilder(
+    column: $table.categoryName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get categoryIcon => $composableBuilder(
+    column: $table.categoryIcon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subCategory => $composableBuilder(
+    column: $table.subCategory,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get bucketId => $composableBuilder(
+    column: $table.bucketId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bucketName => $composableBuilder(
+    column: $table.bucketName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get repetitionSchedule => $composableBuilder(
+    column: $table.repetitionSchedule,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get repetitionInterval => $composableBuilder(
+    column: $table.repetitionInterval,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get occurrenceTime => $composableBuilder(
+    column: $table.occurrenceTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isAutomatic => $composableBuilder(
+    column: $table.isAutomatic,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastExecutedDate => $composableBuilder(
+    column: $table.lastExecutedDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get nextExecutionDate => $composableBuilder(
+    column: $table.nextExecutionDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RecurringTransactionRulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $RecurringTransactionRulesTable> {
+  $$RecurringTransactionRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get transactionType => $composableBuilder(
+    column: $table.transactionType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get toAccountId => $composableBuilder(
+    column: $table.toAccountId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoryName => $composableBuilder(
+    column: $table.categoryName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get categoryIcon => $composableBuilder(
+    column: $table.categoryIcon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subCategory => $composableBuilder(
+    column: $table.subCategory,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get bucketId => $composableBuilder(
+    column: $table.bucketId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bucketName => $composableBuilder(
+    column: $table.bucketName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get repetitionSchedule => $composableBuilder(
+    column: $table.repetitionSchedule,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get repetitionInterval => $composableBuilder(
+    column: $table.repetitionInterval,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get occurrenceTime => $composableBuilder(
+    column: $table.occurrenceTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isAutomatic => $composableBuilder(
+    column: $table.isAutomatic,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastExecutedDate => $composableBuilder(
+    column: $table.lastExecutedDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get nextExecutionDate => $composableBuilder(
+    column: $table.nextExecutionDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RecurringTransactionRulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RecurringTransactionRulesTable> {
+  $$RecurringTransactionRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get transactionType => $composableBuilder(
+    column: $table.transactionType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get accountId =>
+      $composableBuilder(column: $table.accountId, builder: (column) => column);
+
+  GeneratedColumn<String> get toAccountId => $composableBuilder(
+    column: $table.toAccountId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get categoryName => $composableBuilder(
+    column: $table.categoryName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get categoryIcon => $composableBuilder(
+    column: $table.categoryIcon,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get subCategory => $composableBuilder(
+    column: $table.subCategory,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get bucketId =>
+      $composableBuilder(column: $table.bucketId, builder: (column) => column);
+
+  GeneratedColumn<String> get bucketName => $composableBuilder(
+    column: $table.bucketName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get repetitionSchedule => $composableBuilder(
+    column: $table.repetitionSchedule,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get repetitionInterval => $composableBuilder(
+    column: $table.repetitionInterval,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<String> get occurrenceTime => $composableBuilder(
+    column: $table.occurrenceTime,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isAutomatic => $composableBuilder(
+    column: $table.isAutomatic,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastExecutedDate => $composableBuilder(
+    column: $table.lastExecutedDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get nextExecutionDate => $composableBuilder(
+    column: $table.nextExecutionDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+}
+
+class $$RecurringTransactionRulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RecurringTransactionRulesTable,
+          RecurringTransactionRule,
+          $$RecurringTransactionRulesTableFilterComposer,
+          $$RecurringTransactionRulesTableOrderingComposer,
+          $$RecurringTransactionRulesTableAnnotationComposer,
+          $$RecurringTransactionRulesTableCreateCompanionBuilder,
+          $$RecurringTransactionRulesTableUpdateCompanionBuilder,
+          (
+            RecurringTransactionRule,
+            BaseReferences<
+              _$AppDatabase,
+              $RecurringTransactionRulesTable,
+              RecurringTransactionRule
+            >,
+          ),
+          RecurringTransactionRule,
+          PrefetchHooks Function()
+        > {
+  $$RecurringTransactionRulesTableTableManager(
+    _$AppDatabase db,
+    $RecurringTransactionRulesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RecurringTransactionRulesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$RecurringTransactionRulesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$RecurringTransactionRulesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<double?> amount = const Value.absent(),
+                Value<String> transactionType = const Value.absent(),
+                Value<String> accountId = const Value.absent(),
+                Value<String?> toAccountId = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> categoryName = const Value.absent(),
+                Value<int?> categoryIcon = const Value.absent(),
+                Value<String?> subCategory = const Value.absent(),
+                Value<int?> bucketId = const Value.absent(),
+                Value<String?> bucketName = const Value.absent(),
+                Value<String> repetitionSchedule = const Value.absent(),
+                Value<int> repetitionInterval = const Value.absent(),
+                Value<DateTime> startDate = const Value.absent(),
+                Value<String> occurrenceTime = const Value.absent(),
+                Value<bool> isAutomatic = const Value.absent(),
+                Value<DateTime?> lastExecutedDate = const Value.absent(),
+                Value<DateTime> nextExecutionDate = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RecurringTransactionRulesCompanion(
+                id: id,
+                name: name,
+                amount: amount,
+                transactionType: transactionType,
+                accountId: accountId,
+                toAccountId: toAccountId,
+                categoryId: categoryId,
+                categoryName: categoryName,
+                categoryIcon: categoryIcon,
+                subCategory: subCategory,
+                bucketId: bucketId,
+                bucketName: bucketName,
+                repetitionSchedule: repetitionSchedule,
+                repetitionInterval: repetitionInterval,
+                startDate: startDate,
+                occurrenceTime: occurrenceTime,
+                isAutomatic: isAutomatic,
+                lastExecutedDate: lastExecutedDate,
+                nextExecutionDate: nextExecutionDate,
+                isActive: isActive,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<double?> amount = const Value.absent(),
+                required String transactionType,
+                required String accountId,
+                Value<String?> toAccountId = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> categoryName = const Value.absent(),
+                Value<int?> categoryIcon = const Value.absent(),
+                Value<String?> subCategory = const Value.absent(),
+                Value<int?> bucketId = const Value.absent(),
+                Value<String?> bucketName = const Value.absent(),
+                required String repetitionSchedule,
+                required int repetitionInterval,
+                required DateTime startDate,
+                required String occurrenceTime,
+                required bool isAutomatic,
+                Value<DateTime?> lastExecutedDate = const Value.absent(),
+                required DateTime nextExecutionDate,
+                Value<bool> isActive = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RecurringTransactionRulesCompanion.insert(
+                id: id,
+                name: name,
+                amount: amount,
+                transactionType: transactionType,
+                accountId: accountId,
+                toAccountId: toAccountId,
+                categoryId: categoryId,
+                categoryName: categoryName,
+                categoryIcon: categoryIcon,
+                subCategory: subCategory,
+                bucketId: bucketId,
+                bucketName: bucketName,
+                repetitionSchedule: repetitionSchedule,
+                repetitionInterval: repetitionInterval,
+                startDate: startDate,
+                occurrenceTime: occurrenceTime,
+                isAutomatic: isAutomatic,
+                lastExecutedDate: lastExecutedDate,
+                nextExecutionDate: nextExecutionDate,
+                isActive: isActive,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RecurringTransactionRulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RecurringTransactionRulesTable,
+      RecurringTransactionRule,
+      $$RecurringTransactionRulesTableFilterComposer,
+      $$RecurringTransactionRulesTableOrderingComposer,
+      $$RecurringTransactionRulesTableAnnotationComposer,
+      $$RecurringTransactionRulesTableCreateCompanionBuilder,
+      $$RecurringTransactionRulesTableUpdateCompanionBuilder,
+      (
+        RecurringTransactionRule,
+        BaseReferences<
+          _$AppDatabase,
+          $RecurringTransactionRulesTable,
+          RecurringTransactionRule
+        >,
+      ),
+      RecurringTransactionRule,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12023,4 +13728,9 @@ class $AppDatabaseManager {
       $$SmartTrackerRecordsTableTableManager(_db, _db.smartTrackerRecords);
   $$AppNotificationsTableTableManager get appNotifications =>
       $$AppNotificationsTableTableManager(_db, _db.appNotifications);
+  $$RecurringTransactionRulesTableTableManager get recurringTransactionRules =>
+      $$RecurringTransactionRulesTableTableManager(
+        _db,
+        _db.recurringTransactionRules,
+      );
 }
