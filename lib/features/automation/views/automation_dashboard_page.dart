@@ -16,7 +16,7 @@ import '../providers/automation_provider.dart';
 import 'automation_rule_form_page.dart';
 import '../components/manual_rule_confirmation_sheet.dart';
 
-// --- NEW: Live Countdown Badge Widget ---
+// --- Live Countdown Badge Widget ---
 class _CountdownBadge extends StatefulWidget {
   final DateTime targetDate;
   final ThemeData theme;
@@ -109,7 +109,8 @@ class AutomationDashboardPage extends ConsumerWidget {
         : '';
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: DesignTokens.spacingMd),
+      // --- UPDATED: Reduced spacing between cards by 50% ---
+      padding: const EdgeInsets.only(bottom: DesignTokens.spacingXs),
       child: BoxySlidableCard(
         key: ValueKey(rule.id),
         onEdit: () {
@@ -238,7 +239,6 @@ class AutomationDashboardPage extends ConsumerWidget {
                                   : theme.colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 4),
-                            // --- UPDATED: 12-Hour Clock Format & Layout ---
                             Expanded(
                               child: Text(
                                 isPending
@@ -255,7 +255,6 @@ class AutomationDashboardPage extends ConsumerWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            // --- NEW: Live Countdown inserted dynamically ---
                             if (!isPending)
                               _CountdownBadge(
                                 targetDate: rule.nextExecutionDate,

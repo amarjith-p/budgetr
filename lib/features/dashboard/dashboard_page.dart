@@ -406,7 +406,7 @@ class DashboardPage extends ConsumerWidget {
                         Expanded(
                           child: _buildMetroTile(
                             title:
-                                'AUTOMATION', // --- NEW: Replaced History ---
+                                'RECURRING RULES', // --- NEW: Replaced History ---
                             icon: Icons.autorenew_rounded,
                             height: 120,
                             color: darkTileColor,

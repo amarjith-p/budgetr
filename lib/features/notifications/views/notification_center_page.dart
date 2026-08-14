@@ -12,7 +12,7 @@ import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../providers/in_app_notification_provider.dart';
 
-// --- NEW IMPORT FOR AUTOMATION SHEET ---
+// --- IMPORT FOR AUTOMATION SHEET ---
 import '../../automation/components/manual_rule_confirmation_sheet.dart';
 
 class NotificationCenterPage extends ConsumerWidget {
@@ -92,7 +92,6 @@ class NotificationCenterPage extends ConsumerWidget {
                     final notif = notifications[index];
                     final isUnread = !notif.isRead;
 
-                    // --- NEW: PARSE PAYLOAD FOR AUTOMATION ---
                     Map<String, dynamic>? payloadMap;
                     if (notif.payload != null) {
                       try {
@@ -102,8 +101,9 @@ class NotificationCenterPage extends ConsumerWidget {
                     final isManualRule = payloadMap?['type'] == 'manual_rule';
 
                     return Padding(
+                      // --- UPDATED: Reduced spacing between cards by 50% ---
                       padding: const EdgeInsets.only(
-                        bottom: DesignTokens.spacingMd,
+                        bottom: DesignTokens.spacingXs,
                       ),
                       child: BoxySlidableCard(
                         key: ValueKey(notif.id),
@@ -195,7 +195,7 @@ class NotificationCenterPage extends ConsumerWidget {
                                           ),
                                           Text(
                                             DateFormat(
-                                              'MMM dd, HH:mm',
+                                              'MMM dd, hh:mm a', // Updated to 12-hour format to match Dashboard
                                             ).format(notif.createdAt),
                                             style: TextStyle(
                                               fontSize: 10,
@@ -224,7 +224,6 @@ class NotificationCenterPage extends ConsumerWidget {
                                                     .onSurfaceVariant,
                                         ),
                                       ),
-                                      // --- NEW: RENDER EXECUTE BUTTON FOR RULES ---
                                       if (isManualRule &&
                                           payloadMap != null) ...[
                                         const SizedBox(height: 12),
