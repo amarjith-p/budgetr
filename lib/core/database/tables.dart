@@ -269,3 +269,18 @@ class Trips extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+class Reminders extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text()();
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get targetDate => dateTime()();
+  BoolColumn get isPushEnabled =>
+      boolean().withDefault(const Constant(false))();
+  IntColumn get priorDays => integer().nullable()();
+  IntColumn get notificationId =>
+      integer()(); // Used to cancel OS/In-App notifications
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

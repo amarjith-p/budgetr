@@ -24,6 +24,7 @@ part 'app_database.g.dart';
     AppNotifications,
     RecurringTransactionRules,
     Trips,
+    Reminders,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -31,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMPED TO VERSION 25 ---
   @override
-  int get schemaVersion => 31;
+  int get schemaVersion => 32;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -116,6 +117,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 31) {
         await m.createTable(trips);
+      }
+      if (from < 32) {
+        await m.createTable(reminders);
       }
     },
   );

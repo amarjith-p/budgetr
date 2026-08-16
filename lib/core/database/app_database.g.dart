@@ -9783,6 +9783,481 @@ class TripsCompanion extends UpdateCompanion<Trip> {
   }
 }
 
+class $RemindersTable extends Reminders
+    with TableInfo<$RemindersTable, Reminder> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RemindersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _targetDateMeta = const VerificationMeta(
+    'targetDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> targetDate = GeneratedColumn<DateTime>(
+    'target_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isPushEnabledMeta = const VerificationMeta(
+    'isPushEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> isPushEnabled = GeneratedColumn<bool>(
+    'is_push_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_push_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _priorDaysMeta = const VerificationMeta(
+    'priorDays',
+  );
+  @override
+  late final GeneratedColumn<int> priorDays = GeneratedColumn<int>(
+    'prior_days',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notificationIdMeta = const VerificationMeta(
+    'notificationId',
+  );
+  @override
+  late final GeneratedColumn<int> notificationId = GeneratedColumn<int>(
+    'notification_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    title,
+    notes,
+    targetDate,
+    isPushEnabled,
+    priorDays,
+    notificationId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reminders';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Reminder> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('target_date')) {
+      context.handle(
+        _targetDateMeta,
+        targetDate.isAcceptableOrUnknown(data['target_date']!, _targetDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_targetDateMeta);
+    }
+    if (data.containsKey('is_push_enabled')) {
+      context.handle(
+        _isPushEnabledMeta,
+        isPushEnabled.isAcceptableOrUnknown(
+          data['is_push_enabled']!,
+          _isPushEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('prior_days')) {
+      context.handle(
+        _priorDaysMeta,
+        priorDays.isAcceptableOrUnknown(data['prior_days']!, _priorDaysMeta),
+      );
+    }
+    if (data.containsKey('notification_id')) {
+      context.handle(
+        _notificationIdMeta,
+        notificationId.isAcceptableOrUnknown(
+          data['notification_id']!,
+          _notificationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_notificationIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Reminder map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Reminder(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      targetDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}target_date'],
+      )!,
+      isPushEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_push_enabled'],
+      )!,
+      priorDays: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}prior_days'],
+      ),
+      notificationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}notification_id'],
+      )!,
+    );
+  }
+
+  @override
+  $RemindersTable createAlias(String alias) {
+    return $RemindersTable(attachedDatabase, alias);
+  }
+}
+
+class Reminder extends DataClass implements Insertable<Reminder> {
+  final String id;
+  final String title;
+  final String? notes;
+  final DateTime targetDate;
+  final bool isPushEnabled;
+  final int? priorDays;
+  final int notificationId;
+  const Reminder({
+    required this.id,
+    required this.title,
+    this.notes,
+    required this.targetDate,
+    required this.isPushEnabled,
+    this.priorDays,
+    required this.notificationId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['target_date'] = Variable<DateTime>(targetDate);
+    map['is_push_enabled'] = Variable<bool>(isPushEnabled);
+    if (!nullToAbsent || priorDays != null) {
+      map['prior_days'] = Variable<int>(priorDays);
+    }
+    map['notification_id'] = Variable<int>(notificationId);
+    return map;
+  }
+
+  RemindersCompanion toCompanion(bool nullToAbsent) {
+    return RemindersCompanion(
+      id: Value(id),
+      title: Value(title),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      targetDate: Value(targetDate),
+      isPushEnabled: Value(isPushEnabled),
+      priorDays: priorDays == null && nullToAbsent
+          ? const Value.absent()
+          : Value(priorDays),
+      notificationId: Value(notificationId),
+    );
+  }
+
+  factory Reminder.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Reminder(
+      id: serializer.fromJson<String>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      targetDate: serializer.fromJson<DateTime>(json['targetDate']),
+      isPushEnabled: serializer.fromJson<bool>(json['isPushEnabled']),
+      priorDays: serializer.fromJson<int?>(json['priorDays']),
+      notificationId: serializer.fromJson<int>(json['notificationId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'title': serializer.toJson<String>(title),
+      'notes': serializer.toJson<String?>(notes),
+      'targetDate': serializer.toJson<DateTime>(targetDate),
+      'isPushEnabled': serializer.toJson<bool>(isPushEnabled),
+      'priorDays': serializer.toJson<int?>(priorDays),
+      'notificationId': serializer.toJson<int>(notificationId),
+    };
+  }
+
+  Reminder copyWith({
+    String? id,
+    String? title,
+    Value<String?> notes = const Value.absent(),
+    DateTime? targetDate,
+    bool? isPushEnabled,
+    Value<int?> priorDays = const Value.absent(),
+    int? notificationId,
+  }) => Reminder(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    notes: notes.present ? notes.value : this.notes,
+    targetDate: targetDate ?? this.targetDate,
+    isPushEnabled: isPushEnabled ?? this.isPushEnabled,
+    priorDays: priorDays.present ? priorDays.value : this.priorDays,
+    notificationId: notificationId ?? this.notificationId,
+  );
+  Reminder copyWithCompanion(RemindersCompanion data) {
+    return Reminder(
+      id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      targetDate: data.targetDate.present
+          ? data.targetDate.value
+          : this.targetDate,
+      isPushEnabled: data.isPushEnabled.present
+          ? data.isPushEnabled.value
+          : this.isPushEnabled,
+      priorDays: data.priorDays.present ? data.priorDays.value : this.priorDays,
+      notificationId: data.notificationId.present
+          ? data.notificationId.value
+          : this.notificationId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Reminder(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('notes: $notes, ')
+          ..write('targetDate: $targetDate, ')
+          ..write('isPushEnabled: $isPushEnabled, ')
+          ..write('priorDays: $priorDays, ')
+          ..write('notificationId: $notificationId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    title,
+    notes,
+    targetDate,
+    isPushEnabled,
+    priorDays,
+    notificationId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Reminder &&
+          other.id == this.id &&
+          other.title == this.title &&
+          other.notes == this.notes &&
+          other.targetDate == this.targetDate &&
+          other.isPushEnabled == this.isPushEnabled &&
+          other.priorDays == this.priorDays &&
+          other.notificationId == this.notificationId);
+}
+
+class RemindersCompanion extends UpdateCompanion<Reminder> {
+  final Value<String> id;
+  final Value<String> title;
+  final Value<String?> notes;
+  final Value<DateTime> targetDate;
+  final Value<bool> isPushEnabled;
+  final Value<int?> priorDays;
+  final Value<int> notificationId;
+  final Value<int> rowid;
+  const RemindersCompanion({
+    this.id = const Value.absent(),
+    this.title = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.targetDate = const Value.absent(),
+    this.isPushEnabled = const Value.absent(),
+    this.priorDays = const Value.absent(),
+    this.notificationId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RemindersCompanion.insert({
+    required String id,
+    required String title,
+    this.notes = const Value.absent(),
+    required DateTime targetDate,
+    this.isPushEnabled = const Value.absent(),
+    this.priorDays = const Value.absent(),
+    required int notificationId,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       title = Value(title),
+       targetDate = Value(targetDate),
+       notificationId = Value(notificationId);
+  static Insertable<Reminder> custom({
+    Expression<String>? id,
+    Expression<String>? title,
+    Expression<String>? notes,
+    Expression<DateTime>? targetDate,
+    Expression<bool>? isPushEnabled,
+    Expression<int>? priorDays,
+    Expression<int>? notificationId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (title != null) 'title': title,
+      if (notes != null) 'notes': notes,
+      if (targetDate != null) 'target_date': targetDate,
+      if (isPushEnabled != null) 'is_push_enabled': isPushEnabled,
+      if (priorDays != null) 'prior_days': priorDays,
+      if (notificationId != null) 'notification_id': notificationId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RemindersCompanion copyWith({
+    Value<String>? id,
+    Value<String>? title,
+    Value<String?>? notes,
+    Value<DateTime>? targetDate,
+    Value<bool>? isPushEnabled,
+    Value<int?>? priorDays,
+    Value<int>? notificationId,
+    Value<int>? rowid,
+  }) {
+    return RemindersCompanion(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      notes: notes ?? this.notes,
+      targetDate: targetDate ?? this.targetDate,
+      isPushEnabled: isPushEnabled ?? this.isPushEnabled,
+      priorDays: priorDays ?? this.priorDays,
+      notificationId: notificationId ?? this.notificationId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (targetDate.present) {
+      map['target_date'] = Variable<DateTime>(targetDate.value);
+    }
+    if (isPushEnabled.present) {
+      map['is_push_enabled'] = Variable<bool>(isPushEnabled.value);
+    }
+    if (priorDays.present) {
+      map['prior_days'] = Variable<int>(priorDays.value);
+    }
+    if (notificationId.present) {
+      map['notification_id'] = Variable<int>(notificationId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RemindersCompanion(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('notes: $notes, ')
+          ..write('targetDate: $targetDate, ')
+          ..write('isPushEnabled: $isPushEnabled, ')
+          ..write('priorDays: $priorDays, ')
+          ..write('notificationId: $notificationId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -9807,6 +10282,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RecurringTransactionRulesTable recurringTransactionRules =
       $RecurringTransactionRulesTable(this);
   late final $TripsTable trips = $TripsTable(this);
+  late final $RemindersTable reminders = $RemindersTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -9826,6 +10302,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     appNotifications,
     recurringTransactionRules,
     trips,
+    reminders,
   ];
 }
 
@@ -14559,6 +15036,244 @@ typedef $$TripsTableProcessedTableManager =
       Trip,
       PrefetchHooks Function()
     >;
+typedef $$RemindersTableCreateCompanionBuilder =
+    RemindersCompanion Function({
+      required String id,
+      required String title,
+      Value<String?> notes,
+      required DateTime targetDate,
+      Value<bool> isPushEnabled,
+      Value<int?> priorDays,
+      required int notificationId,
+      Value<int> rowid,
+    });
+typedef $$RemindersTableUpdateCompanionBuilder =
+    RemindersCompanion Function({
+      Value<String> id,
+      Value<String> title,
+      Value<String?> notes,
+      Value<DateTime> targetDate,
+      Value<bool> isPushEnabled,
+      Value<int?> priorDays,
+      Value<int> notificationId,
+      Value<int> rowid,
+    });
+
+class $$RemindersTableFilterComposer
+    extends Composer<_$AppDatabase, $RemindersTable> {
+  $$RemindersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPushEnabled => $composableBuilder(
+    column: $table.isPushEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get priorDays => $composableBuilder(
+    column: $table.priorDays,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RemindersTableOrderingComposer
+    extends Composer<_$AppDatabase, $RemindersTable> {
+  $$RemindersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPushEnabled => $composableBuilder(
+    column: $table.isPushEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get priorDays => $composableBuilder(
+    column: $table.priorDays,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RemindersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RemindersTable> {
+  $$RemindersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isPushEnabled => $composableBuilder(
+    column: $table.isPushEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get priorDays =>
+      $composableBuilder(column: $table.priorDays, builder: (column) => column);
+
+  GeneratedColumn<int> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => column,
+  );
+}
+
+class $$RemindersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RemindersTable,
+          Reminder,
+          $$RemindersTableFilterComposer,
+          $$RemindersTableOrderingComposer,
+          $$RemindersTableAnnotationComposer,
+          $$RemindersTableCreateCompanionBuilder,
+          $$RemindersTableUpdateCompanionBuilder,
+          (Reminder, BaseReferences<_$AppDatabase, $RemindersTable, Reminder>),
+          Reminder,
+          PrefetchHooks Function()
+        > {
+  $$RemindersTableTableManager(_$AppDatabase db, $RemindersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RemindersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RemindersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RemindersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> targetDate = const Value.absent(),
+                Value<bool> isPushEnabled = const Value.absent(),
+                Value<int?> priorDays = const Value.absent(),
+                Value<int> notificationId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RemindersCompanion(
+                id: id,
+                title: title,
+                notes: notes,
+                targetDate: targetDate,
+                isPushEnabled: isPushEnabled,
+                priorDays: priorDays,
+                notificationId: notificationId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String title,
+                Value<String?> notes = const Value.absent(),
+                required DateTime targetDate,
+                Value<bool> isPushEnabled = const Value.absent(),
+                Value<int?> priorDays = const Value.absent(),
+                required int notificationId,
+                Value<int> rowid = const Value.absent(),
+              }) => RemindersCompanion.insert(
+                id: id,
+                title: title,
+                notes: notes,
+                targetDate: targetDate,
+                isPushEnabled: isPushEnabled,
+                priorDays: priorDays,
+                notificationId: notificationId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RemindersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RemindersTable,
+      Reminder,
+      $$RemindersTableFilterComposer,
+      $$RemindersTableOrderingComposer,
+      $$RemindersTableAnnotationComposer,
+      $$RemindersTableCreateCompanionBuilder,
+      $$RemindersTableUpdateCompanionBuilder,
+      (Reminder, BaseReferences<_$AppDatabase, $RemindersTable, Reminder>),
+      Reminder,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -14594,4 +15309,6 @@ class $AppDatabaseManager {
       );
   $$TripsTableTableManager get trips =>
       $$TripsTableTableManager(_db, _db.trips);
+  $$RemindersTableTableManager get reminders =>
+      $$RemindersTableTableManager(_db, _db.reminders);
 }

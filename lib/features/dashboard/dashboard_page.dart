@@ -34,6 +34,9 @@ import '../automation/views/automation_dashboard_page.dart';
 // --- NEW: Trip Provider Import ---
 import '../trips/providers/trip_provider.dart';
 
+// --- NEW: Reminder Dashboard Import ---
+import '../reminders/views/reminder_dashboard_page.dart';
+
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
@@ -290,7 +293,7 @@ class DashboardPage extends ConsumerWidget {
                                             const SizedBox(width: 8),
                                           if (hasActiveTrip || hasPausedTrip)
                                             Icon(
-                                              Icons.flight_takeoff_rounded,
+                                              Icons.flight_sharp,
                                               color: hasActiveTrip
                                                   ? Colors.green
                                                   : Colors.orangeAccent,
@@ -513,11 +516,12 @@ class DashboardPage extends ConsumerWidget {
 
                     const SizedBox(height: tileGap),
 
-                    // --- ROW 4: Custom Entry & Backup ---
+                    // --- ROW 4: Custom Entry, Reminders & Backup ---
                     Row(
                       children: [
+                        // Expanded Flex 5 visually aligns perfectly with the Money Tracker tile in Row 1
                         Expanded(
-                          flex: 7,
+                          flex: 5,
                           child: _buildMetroTile(
                             title: 'SMART TRACKERS',
                             icon: Icons.post_add_rounded,
@@ -529,6 +533,25 @@ class DashboardPage extends ConsumerWidget {
                                 MaterialPageRoute(
                                   builder: (context) =>
                                       const SmartTrackersDashboardPage(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: tileGap),
+                        Expanded(
+                          flex: 2,
+                          child: _buildMetroTile(
+                            title: 'REMINDERS',
+                            icon: Icons.notifications_active_rounded,
+                            height: 120,
+                            color: darkTileColor,
+                            verticalText: true,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ReminderDashboardPage(),
                                 ),
                               );
                             },
