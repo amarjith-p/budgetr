@@ -2,6 +2,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/database/app_database.dart';
@@ -38,12 +40,10 @@ class ReminderActionNotifier extends AsyncNotifier<void> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final id = existingId ?? _uuid.v4();
-      // Generate a unique safe integer ID for the OS alarm or reuse existing
       final notificationId =
           existingNotificationId ??
           DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
-      // If updating, we must cancel the old notifications first to prevent ghost alarms
       if (existingId != null && existingNotificationId != null) {
         await NotificationService.instance.cancelSpecific(
           existingNotificationId,
@@ -51,6 +51,9 @@ class ReminderActionNotifier extends AsyncNotifier<void> {
         await ref
             .read(inAppNotificationServiceProvider)
             .deleteNotification('rem_$existingNotificationId');
+
+        // --- FIX: CLEAR FROM DISMISSED CACHE SO IT CAN RETRIGGER ON THE NEW DATE ---
+        ref.read(dismissedRemindersProvider.notifier).undismiss(existingId);
       }
 
       if (isPushEnabled) {
@@ -61,7 +64,6 @@ class ReminderActionNotifier extends AsyncNotifier<void> {
               ? notes!
               : 'You have a scheduled reminder pending!';
 
-          // 1. Schedule Native OS Notification
           await NotificationService.instance.scheduleNotification(
             id: notificationId,
             title: title,
@@ -69,7 +71,6 @@ class ReminderActionNotifier extends AsyncNotifier<void> {
             scheduledDate: triggerDate,
           );
 
-          // 2. Schedule In-App Notification Ledger entry
           await ref
               .read(inAppNotificationServiceProvider)
               .saveNotification(
@@ -99,11 +100,9 @@ class ReminderActionNotifier extends AsyncNotifier<void> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       if (reminder.isPushEnabled) {
-        // Cancel OS Notification
         await NotificationService.instance.cancelSpecific(
           reminder.notificationId,
         );
-        // Cancel In-App Notification
         await ref
             .read(inAppNotificationServiceProvider)
             .deleteNotification('rem_${reminder.notificationId}');
@@ -116,4 +115,40 @@ class ReminderActionNotifier extends AsyncNotifier<void> {
 final reminderActionProvider =
     AsyncNotifierProvider<ReminderActionNotifier, void>(
       () => ReminderActionNotifier(),
+    );
+
+class DismissedRemindersNotifier extends StateNotifier<Set<String>> {
+  DismissedRemindersNotifier() : super(const {}) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList('dismissed_dashboard_reminders') ?? [];
+    state = list.toSet();
+  }
+
+  Future<void> dismiss(String id) async {
+    state = {...state, id};
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('dismissed_dashboard_reminders', state.toList());
+  }
+
+  // --- NEW: UNDISMISS LOGIC FOR RESCHEDULED ALERTS ---
+  Future<void> undismiss(String id) async {
+    if (state.contains(id)) {
+      final newState = Set<String>.from(state)..remove(id);
+      state = newState;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        'dismissed_dashboard_reminders',
+        state.toList(),
+      );
+    }
+  }
+}
+
+final dismissedRemindersProvider =
+    StateNotifierProvider<DismissedRemindersNotifier, Set<String>>(
+      (ref) => DismissedRemindersNotifier(),
     );
