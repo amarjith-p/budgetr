@@ -28,7 +28,8 @@
         android:usesCleartextTraffic="true"
         android:label="FinStack 360"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/launcher_icon"
+        android:roundIcon="@mipmap/launcher_icon">
         
         <activity
             android:name=".MainActivity"

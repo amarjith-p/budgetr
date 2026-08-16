@@ -353,7 +353,9 @@ class InsightExportService {
 
     pw.MemoryImage? watermarkImage;
     try {
-      final ByteData image = await rootBundle.load('assets/icon/fs360.png');
+      final ByteData image = await rootBundle.load(
+        'assets/icon/fs360_transparent.png',
+      );
       watermarkImage = pw.MemoryImage(image.buffer.asUint8List());
     } catch (e) {
       debugPrint("Watermark image not found: $e");

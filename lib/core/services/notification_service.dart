@@ -1,12 +1,14 @@
-// core/services/notification_service.dart
+// lib/core/services/notification_service.dart
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'dart:io';
 
 class NotificationService {
   static final NotificationService instance = NotificationService._();
@@ -23,8 +25,9 @@ class NotificationService {
     final timeZoneInfo = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(timeZoneInfo.identifier));
 
+    // The working small icon configuration
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
 
     await _flutterLocalNotificationsPlugin.initialize(
       settings: const InitializationSettings(
@@ -50,6 +53,28 @@ class NotificationService {
     }
   }
 
+  // --- NEW: Helper method to extract the asset and save it locally ---
+  // This bypasses Android's drawable/mipmap system entirely.
+  Future<String> _getAssetFilePath() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final filePath = '${directory.path}/notification_avatar.png';
+    final file = File(filePath);
+
+    // Only write the file if it doesn't already exist to save processing time
+    if (!await file.exists()) {
+      final byteData = await rootBundle.load(
+        'assets/icon/fs360_transparent.png',
+      );
+      await file.writeAsBytes(
+        byteData.buffer.asUint8List(
+          byteData.offsetInBytes,
+          byteData.lengthInBytes,
+        ),
+      );
+    }
+    return filePath;
+  }
+
   Future<void> scheduleNotification({
     required int id,
     required String title,
@@ -69,20 +94,29 @@ class NotificationService {
           await androidImplementation?.canScheduleExactNotifications() ?? false;
     }
 
+    // Load the file path directly from storage
+    final String largeIconPath = await _getAssetFilePath();
+
     await _flutterLocalNotificationsPlugin.zonedSchedule(
       id: id,
       title: title,
-      body: body, // Collapsed view (automatically truncated by Android)
+      body: body,
       scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
-          'budgetr_cc_reminders',
+          'budgetr_cc_reminders_final', // Fresh channel ID
           'Credit Card Reminders',
           channelDescription:
               'Notifications for Credit Card Bills and Due Dates',
           importance: Importance.max,
           priority: Priority.high,
-          // --- NEW: Allows the notification to be expanded for multi-line lists ---
+
+          // The working small right-side badge icon
+          // icon: '@mipmap/launcher_icon',
+
+          // The large left-side avatar loaded directly from device storage
+          largeIcon: FilePathAndroidBitmap(largeIconPath),
+
           styleInformation: BigTextStyleInformation(
             body,
             contentTitle: title,
@@ -143,13 +177,22 @@ class NotificationService {
   }
 
   Future<void> showInstantTestNotification() async {
-    // Also updating the test notification to support Big Text just in case
+    // Load the file path directly from storage
+    final String largeIconPath = await _getAssetFilePath();
+
     final androidDetails = AndroidNotificationDetails(
-      'budgetr_cc_reminders',
+      'budgetr_cc_reminders_final',
       'Credit Card Reminders',
       channelDescription: 'Notifications for Credit Card Bills and Due Dates',
       importance: Importance.max,
       priority: Priority.high,
+
+      // The working small right-side badge icon
+      // icon: '@mipmap/launcher_icon',
+
+      // The large left-side avatar loaded directly from device storage
+      largeIcon: FilePathAndroidBitmap(largeIconPath),
+
       styleInformation: const BigTextStyleInformation(
         'Line 1: Your app permissions are working.\nLine 2: Expandable text works perfectly!\nLine 3: You are ready to go.',
       ),
