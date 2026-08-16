@@ -31,6 +31,9 @@ import '../notifications/components/notification_bell_widget.dart';
 // --- NEW: Automation Dashboard Import ---
 import '../automation/views/automation_dashboard_page.dart';
 
+// --- NEW: Trip Provider Import ---
+import '../trips/providers/trip_provider.dart';
+
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
@@ -101,6 +104,12 @@ class DashboardPage extends ConsumerWidget {
         ? (invGainLoss / totalInvestedAmount) * 100
         : 0.0;
     final String invReturnSign = invReturnPct >= 0 ? '+' : '';
+
+    // --- LIVE TRIP TRACKING ---
+    final tripsAsync = ref.watch(allTripsProvider);
+    final rawTrips = tripsAsync.asData?.value ?? [];
+    final bool hasActiveTrip = rawTrips.any((t) => t.status == 'ACTIVE');
+    final bool hasPausedTrip = rawTrips.any((t) => t.status == 'PAUSED');
 
     return Scaffold(
       appBar: AppBar(
@@ -186,76 +195,95 @@ class DashboardPage extends ConsumerWidget {
                                           width: 1.0,
                                         ),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                child: Stack(
                                   children: [
-                                    const Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Icon(
-                                          Icons.account_balance_wallet_rounded,
-                                          color: Colors
-                                              .black, // Always black for light tile
-                                        ),
-                                        Icon(
-                                          Icons.arrow_forward_rounded,
-                                          color: Colors.black,
-                                          size: 18,
-                                        ),
-                                      ],
-                                    ),
                                     Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(
-                                          'MONEY TRACKER',
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w600,
-                                                letterSpacing: 0.5,
-                                                color: Colors
-                                                    .black54, // Always dark text
-                                              ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          alignment: Alignment.centerLeft,
-                                          child: CurrencyText(
-                                            amount: netBalance.abs(),
-                                            sign: netSign,
-                                            amountStyle:
-                                                valueStyle?.copyWith(
-                                                  fontSize: 28,
-                                                  color: Colors
-                                                      .black, // Always black
-                                                ) ??
-                                                const TextStyle(),
-                                            symbolStyle: const TextStyle(
-                                              fontSize: 18,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
+                                        const Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
-                                            // Pass true so bars are always dark against the light tile
-                                            _buildFlatBar(40, true),
-                                            _buildFlatBar(60, true),
-                                            _buildFlatBar(30, true),
-                                            _buildFlatBar(80, true),
-                                            _buildFlatBar(50, true),
+                                            Icon(
+                                              Icons
+                                                  .account_balance_wallet_rounded,
+                                              color: Colors
+                                                  .black, // Always black for light tile
+                                            ),
+                                            Icon(
+                                              Icons.arrow_forward_rounded,
+                                              color: Colors.black,
+                                              size: 18,
+                                            ),
+                                          ],
+                                        ),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'MONEY TRACKER',
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                    letterSpacing: 0.5,
+                                                    color: Colors
+                                                        .black54, // Always dark text
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              alignment: Alignment.centerLeft,
+                                              child: CurrencyText(
+                                                amount: netBalance.abs(),
+                                                sign: netSign,
+                                                amountStyle:
+                                                    valueStyle?.copyWith(
+                                                      fontSize: 28,
+                                                      color: Colors
+                                                          .black, // Always black
+                                                    ) ??
+                                                    const TextStyle(),
+                                                symbolStyle: const TextStyle(
+                                                  fontSize: 18,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              children: [
+                                                // Pass true so bars are always dark against the light tile
+                                                _buildFlatBar(40, true),
+                                                _buildFlatBar(60, true),
+                                                _buildFlatBar(30, true),
+                                                _buildFlatBar(80, true),
+                                                _buildFlatBar(50, true),
+                                              ],
+                                            ),
                                           ],
                                         ),
                                       ],
                                     ),
+                                    // --- NEW: TRIP MODE INDICATOR IN MONEY TRACKER ---
+                                    if (hasActiveTrip || hasPausedTrip)
+                                      Positioned(
+                                        bottom: 0,
+                                        right: 0,
+                                        child: Icon(
+                                          Icons.flight_takeoff_rounded,
+                                          color: hasActiveTrip
+                                              ? Colors.green
+                                              : Colors.orangeAccent,
+                                          size: 24,
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),
@@ -428,7 +456,15 @@ class DashboardPage extends ConsumerWidget {
                             children: [
                               _buildMetroTile(
                                 title: 'TRIP MODE',
-                                icon: Icons.flight_takeoff_rounded,
+                                // --- DYNAMIC TRIP ICON AND COLOR ---
+                                icon: hasActiveTrip || hasPausedTrip
+                                    ? Icons.flight_takeoff_rounded
+                                    : Icons.flight_land_rounded,
+                                iconColor: hasActiveTrip
+                                    ? Colors.green
+                                    : (hasPausedTrip
+                                          ? Colors.orangeAccent
+                                          : Colors.white),
                                 height: (120 - tileGap) / 2,
                                 color: darkTileColor,
                                 onTap: () {
@@ -530,6 +566,7 @@ class DashboardPage extends ConsumerWidget {
     required VoidCallback onTap,
     String? badge,
     bool verticalText = false,
+    Color? iconColor, // --- NEW PROPERTY ---
   }) {
     return Material(
       color: color,
@@ -540,7 +577,6 @@ class DashboardPage extends ConsumerWidget {
           height: height,
           child: Stack(
             children: [
-              // --- FIXED: Moved to Top Right and reduced sizes to prevent overlap ---
               Align(
                 alignment: Alignment.topRight,
                 child: Padding(
@@ -557,8 +593,13 @@ class DashboardPage extends ConsumerWidget {
                         )
                       : Icon(
                           icon,
-                          size: verticalText ? 26 : 28,
-                          color: Colors.white,
+                          size: verticalText
+                              ? 26
+                              : 28, // Reduced size to fit perfectly
+                          color:
+                              iconColor ??
+                              Colors
+                                  .white, // --- UPDATED TO USE CUSTOM COLOR ---
                         ),
                 ),
               ),
@@ -636,7 +677,6 @@ class DashboardPage extends ConsumerWidget {
                   ),
                 ),
               ] else ...[
-                // --- FIXED: Moved to Top Right and reduced size to match standard tiles ---
                 Align(
                   alignment: Alignment.topRight,
                   child: Padding(
