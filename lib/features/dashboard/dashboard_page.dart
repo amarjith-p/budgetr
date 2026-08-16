@@ -4,6 +4,7 @@ import 'package:budgetr/features/developer/views/developer_support_page.dart';
 import 'package:budgetr/features/investments/views/investment_dashboard_page.dart';
 import 'package:budgetr/features/money_tracker/views/money_tracker_base_page.dart';
 import 'package:budgetr/features/smart_trackers/views/smart_trackers_dashboard_page.dart';
+import 'package:budgetr/features/trips/views/trip_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -423,19 +424,40 @@ class DashboardPage extends ConsumerWidget {
                         ),
                         const SizedBox(width: tileGap),
                         Expanded(
-                          child: _buildMetroTile(
-                            title: 'SETTINGS',
-                            icon: Icons.settings_rounded,
-                            height: 120,
-                            color: darkTileColor,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const SettingsPage(),
-                                ),
-                              );
-                            },
+                          child: Column(
+                            children: [
+                              _buildMetroTile(
+                                title: 'TRIP MODE',
+                                icon: Icons.flight_takeoff_rounded,
+                                height: (120 - tileGap) / 2,
+                                color: darkTileColor,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const TripDashboardPage(),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: tileGap),
+                              _buildMetroTile(
+                                title: 'SETTINGS',
+                                icon: Icons.settings_rounded,
+                                height: (120 - tileGap) / 2,
+                                color: darkTileColor,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const SettingsPage(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -518,23 +540,27 @@ class DashboardPage extends ConsumerWidget {
           height: height,
           child: Stack(
             children: [
+              // --- FIXED: Moved to Top Right and reduced sizes to prevent overlap ---
               Align(
-                alignment: Alignment.center,
-                child: badge != null
-                    ? Text(
-                        badge,
-                        style: TextStyle(
-                          fontSize: verticalText ? 32 : 48,
-                          fontWeight: FontWeight.w300,
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: badge != null
+                      ? Text(
+                          badge,
+                          style: TextStyle(
+                            fontSize: verticalText ? 20 : 24, // Reduced size
+                            fontWeight: FontWeight.w300,
+                            color: Colors.white,
+                            height: 1.0,
+                          ),
+                        )
+                      : Icon(
+                          icon,
+                          size: verticalText ? 26 : 28,
                           color: Colors.white,
-                          height: 1.0,
                         ),
-                      )
-                    : Icon(
-                        icon,
-                        size: verticalText ? 28 : 36,
-                        color: Colors.white,
-                      ),
+                ),
               ),
               Align(
                 alignment: Alignment.bottomLeft,
@@ -610,9 +636,17 @@ class DashboardPage extends ConsumerWidget {
                   ),
                 ),
               ] else ...[
+                // --- FIXED: Moved to Top Right and reduced size to match standard tiles ---
                 Align(
-                  alignment: Alignment.center,
-                  child: Icon(icon, size: 36, color: Colors.white),
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Icon(
+                      icon,
+                      size: 22, // Reduced from 36 to fit perfectly
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ],
               Align(

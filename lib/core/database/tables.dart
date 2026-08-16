@@ -256,3 +256,16 @@ class RecurringTransactionRules extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+class Trips extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  RealColumn get budget => real().nullable()();
+  TextColumn get notes => text().nullable()();
+  TextColumn get status => text()(); // 'ACTIVE', 'PAUSED', 'COMPLETED'
+  TextColumn get periodsJson => text()(); // List of start/end timestamps
+  TextColumn get excludedTxIdsJson => text()(); // List of transaction IDs
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

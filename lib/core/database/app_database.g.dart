@@ -9315,6 +9315,474 @@ class RecurringTransactionRulesCompanion
   }
 }
 
+class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TripsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _budgetMeta = const VerificationMeta('budget');
+  @override
+  late final GeneratedColumn<double> budget = GeneratedColumn<double>(
+    'budget',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _periodsJsonMeta = const VerificationMeta(
+    'periodsJson',
+  );
+  @override
+  late final GeneratedColumn<String> periodsJson = GeneratedColumn<String>(
+    'periods_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _excludedTxIdsJsonMeta = const VerificationMeta(
+    'excludedTxIdsJson',
+  );
+  @override
+  late final GeneratedColumn<String> excludedTxIdsJson =
+      GeneratedColumn<String>(
+        'excluded_tx_ids_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    budget,
+    notes,
+    status,
+    periodsJson,
+    excludedTxIdsJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'trips';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Trip> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('budget')) {
+      context.handle(
+        _budgetMeta,
+        budget.isAcceptableOrUnknown(data['budget']!, _budgetMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('periods_json')) {
+      context.handle(
+        _periodsJsonMeta,
+        periodsJson.isAcceptableOrUnknown(
+          data['periods_json']!,
+          _periodsJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_periodsJsonMeta);
+    }
+    if (data.containsKey('excluded_tx_ids_json')) {
+      context.handle(
+        _excludedTxIdsJsonMeta,
+        excludedTxIdsJson.isAcceptableOrUnknown(
+          data['excluded_tx_ids_json']!,
+          _excludedTxIdsJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_excludedTxIdsJsonMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Trip map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Trip(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      budget: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}budget'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      periodsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}periods_json'],
+      )!,
+      excludedTxIdsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}excluded_tx_ids_json'],
+      )!,
+    );
+  }
+
+  @override
+  $TripsTable createAlias(String alias) {
+    return $TripsTable(attachedDatabase, alias);
+  }
+}
+
+class Trip extends DataClass implements Insertable<Trip> {
+  final String id;
+  final String name;
+  final double? budget;
+  final String? notes;
+  final String status;
+  final String periodsJson;
+  final String excludedTxIdsJson;
+  const Trip({
+    required this.id,
+    required this.name,
+    this.budget,
+    this.notes,
+    required this.status,
+    required this.periodsJson,
+    required this.excludedTxIdsJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || budget != null) {
+      map['budget'] = Variable<double>(budget);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['status'] = Variable<String>(status);
+    map['periods_json'] = Variable<String>(periodsJson);
+    map['excluded_tx_ids_json'] = Variable<String>(excludedTxIdsJson);
+    return map;
+  }
+
+  TripsCompanion toCompanion(bool nullToAbsent) {
+    return TripsCompanion(
+      id: Value(id),
+      name: Value(name),
+      budget: budget == null && nullToAbsent
+          ? const Value.absent()
+          : Value(budget),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      status: Value(status),
+      periodsJson: Value(periodsJson),
+      excludedTxIdsJson: Value(excludedTxIdsJson),
+    );
+  }
+
+  factory Trip.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Trip(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      budget: serializer.fromJson<double?>(json['budget']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      status: serializer.fromJson<String>(json['status']),
+      periodsJson: serializer.fromJson<String>(json['periodsJson']),
+      excludedTxIdsJson: serializer.fromJson<String>(json['excludedTxIdsJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'budget': serializer.toJson<double?>(budget),
+      'notes': serializer.toJson<String?>(notes),
+      'status': serializer.toJson<String>(status),
+      'periodsJson': serializer.toJson<String>(periodsJson),
+      'excludedTxIdsJson': serializer.toJson<String>(excludedTxIdsJson),
+    };
+  }
+
+  Trip copyWith({
+    String? id,
+    String? name,
+    Value<double?> budget = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+    String? status,
+    String? periodsJson,
+    String? excludedTxIdsJson,
+  }) => Trip(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    budget: budget.present ? budget.value : this.budget,
+    notes: notes.present ? notes.value : this.notes,
+    status: status ?? this.status,
+    periodsJson: periodsJson ?? this.periodsJson,
+    excludedTxIdsJson: excludedTxIdsJson ?? this.excludedTxIdsJson,
+  );
+  Trip copyWithCompanion(TripsCompanion data) {
+    return Trip(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      budget: data.budget.present ? data.budget.value : this.budget,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      status: data.status.present ? data.status.value : this.status,
+      periodsJson: data.periodsJson.present
+          ? data.periodsJson.value
+          : this.periodsJson,
+      excludedTxIdsJson: data.excludedTxIdsJson.present
+          ? data.excludedTxIdsJson.value
+          : this.excludedTxIdsJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Trip(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('budget: $budget, ')
+          ..write('notes: $notes, ')
+          ..write('status: $status, ')
+          ..write('periodsJson: $periodsJson, ')
+          ..write('excludedTxIdsJson: $excludedTxIdsJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    budget,
+    notes,
+    status,
+    periodsJson,
+    excludedTxIdsJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Trip &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.budget == this.budget &&
+          other.notes == this.notes &&
+          other.status == this.status &&
+          other.periodsJson == this.periodsJson &&
+          other.excludedTxIdsJson == this.excludedTxIdsJson);
+}
+
+class TripsCompanion extends UpdateCompanion<Trip> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<double?> budget;
+  final Value<String?> notes;
+  final Value<String> status;
+  final Value<String> periodsJson;
+  final Value<String> excludedTxIdsJson;
+  final Value<int> rowid;
+  const TripsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.budget = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.status = const Value.absent(),
+    this.periodsJson = const Value.absent(),
+    this.excludedTxIdsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TripsCompanion.insert({
+    required String id,
+    required String name,
+    this.budget = const Value.absent(),
+    this.notes = const Value.absent(),
+    required String status,
+    required String periodsJson,
+    required String excludedTxIdsJson,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       status = Value(status),
+       periodsJson = Value(periodsJson),
+       excludedTxIdsJson = Value(excludedTxIdsJson);
+  static Insertable<Trip> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<double>? budget,
+    Expression<String>? notes,
+    Expression<String>? status,
+    Expression<String>? periodsJson,
+    Expression<String>? excludedTxIdsJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (budget != null) 'budget': budget,
+      if (notes != null) 'notes': notes,
+      if (status != null) 'status': status,
+      if (periodsJson != null) 'periods_json': periodsJson,
+      if (excludedTxIdsJson != null) 'excluded_tx_ids_json': excludedTxIdsJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TripsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<double?>? budget,
+    Value<String?>? notes,
+    Value<String>? status,
+    Value<String>? periodsJson,
+    Value<String>? excludedTxIdsJson,
+    Value<int>? rowid,
+  }) {
+    return TripsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      budget: budget ?? this.budget,
+      notes: notes ?? this.notes,
+      status: status ?? this.status,
+      periodsJson: periodsJson ?? this.periodsJson,
+      excludedTxIdsJson: excludedTxIdsJson ?? this.excludedTxIdsJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (budget.present) {
+      map['budget'] = Variable<double>(budget.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (periodsJson.present) {
+      map['periods_json'] = Variable<String>(periodsJson.value);
+    }
+    if (excludedTxIdsJson.present) {
+      map['excluded_tx_ids_json'] = Variable<String>(excludedTxIdsJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TripsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('budget: $budget, ')
+          ..write('notes: $notes, ')
+          ..write('status: $status, ')
+          ..write('periodsJson: $periodsJson, ')
+          ..write('excludedTxIdsJson: $excludedTxIdsJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -9338,6 +9806,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $RecurringTransactionRulesTable recurringTransactionRules =
       $RecurringTransactionRulesTable(this);
+  late final $TripsTable trips = $TripsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -9356,6 +9825,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     smartTrackerRecords,
     appNotifications,
     recurringTransactionRules,
+    trips,
   ];
 }
 
@@ -13854,6 +14324,241 @@ typedef $$RecurringTransactionRulesTableProcessedTableManager =
       RecurringTransactionRule,
       PrefetchHooks Function()
     >;
+typedef $$TripsTableCreateCompanionBuilder =
+    TripsCompanion Function({
+      required String id,
+      required String name,
+      Value<double?> budget,
+      Value<String?> notes,
+      required String status,
+      required String periodsJson,
+      required String excludedTxIdsJson,
+      Value<int> rowid,
+    });
+typedef $$TripsTableUpdateCompanionBuilder =
+    TripsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<double?> budget,
+      Value<String?> notes,
+      Value<String> status,
+      Value<String> periodsJson,
+      Value<String> excludedTxIdsJson,
+      Value<int> rowid,
+    });
+
+class $$TripsTableFilterComposer extends Composer<_$AppDatabase, $TripsTable> {
+  $$TripsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get budget => $composableBuilder(
+    column: $table.budget,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get periodsJson => $composableBuilder(
+    column: $table.periodsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get excludedTxIdsJson => $composableBuilder(
+    column: $table.excludedTxIdsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TripsTableOrderingComposer
+    extends Composer<_$AppDatabase, $TripsTable> {
+  $$TripsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get budget => $composableBuilder(
+    column: $table.budget,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get periodsJson => $composableBuilder(
+    column: $table.periodsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get excludedTxIdsJson => $composableBuilder(
+    column: $table.excludedTxIdsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TripsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TripsTable> {
+  $$TripsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get budget =>
+      $composableBuilder(column: $table.budget, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get periodsJson => $composableBuilder(
+    column: $table.periodsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get excludedTxIdsJson => $composableBuilder(
+    column: $table.excludedTxIdsJson,
+    builder: (column) => column,
+  );
+}
+
+class $$TripsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TripsTable,
+          Trip,
+          $$TripsTableFilterComposer,
+          $$TripsTableOrderingComposer,
+          $$TripsTableAnnotationComposer,
+          $$TripsTableCreateCompanionBuilder,
+          $$TripsTableUpdateCompanionBuilder,
+          (Trip, BaseReferences<_$AppDatabase, $TripsTable, Trip>),
+          Trip,
+          PrefetchHooks Function()
+        > {
+  $$TripsTableTableManager(_$AppDatabase db, $TripsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TripsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TripsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TripsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<double?> budget = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String> periodsJson = const Value.absent(),
+                Value<String> excludedTxIdsJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TripsCompanion(
+                id: id,
+                name: name,
+                budget: budget,
+                notes: notes,
+                status: status,
+                periodsJson: periodsJson,
+                excludedTxIdsJson: excludedTxIdsJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<double?> budget = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                required String status,
+                required String periodsJson,
+                required String excludedTxIdsJson,
+                Value<int> rowid = const Value.absent(),
+              }) => TripsCompanion.insert(
+                id: id,
+                name: name,
+                budget: budget,
+                notes: notes,
+                status: status,
+                periodsJson: periodsJson,
+                excludedTxIdsJson: excludedTxIdsJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TripsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TripsTable,
+      Trip,
+      $$TripsTableFilterComposer,
+      $$TripsTableOrderingComposer,
+      $$TripsTableAnnotationComposer,
+      $$TripsTableCreateCompanionBuilder,
+      $$TripsTableUpdateCompanionBuilder,
+      (Trip, BaseReferences<_$AppDatabase, $TripsTable, Trip>),
+      Trip,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -13887,4 +14592,6 @@ class $AppDatabaseManager {
         _db,
         _db.recurringTransactionRules,
       );
+  $$TripsTableTableManager get trips =>
+      $$TripsTableTableManager(_db, _db.trips);
 }
