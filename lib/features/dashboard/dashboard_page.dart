@@ -56,12 +56,13 @@ class DashboardPage extends ConsumerWidget {
         ? theme.colorScheme.surfaceContainerHighest
         : const Color(0xFF1E1E1E);
 
-    // --- LIVE NET WORTH CALCULATION ---
+    // --- LIVE NET WORTH & PILL SHORTAGE CALCULATION ---
     final accountsAsync = ref.watch(accountsStreamProvider);
     final rawAccounts = accountsAsync.asData?.value ?? [];
 
     double totalAssets = 0.0;
     double totalLiabilities = 0.0;
+    double allocatedFunds = 0.0;
 
     for (var acc in rawAccounts) {
       if (acc.type == 'Credit Cards') {
@@ -74,11 +75,20 @@ class DashboardPage extends ConsumerWidget {
         if (out > 0) totalLiabilities += out;
       } else if (acc.type != 'Credit Cards' && acc.type != 'Loan') {
         totalAssets += acc.balance;
+
+        // Purely matching the Pill Calculation Logic:
+        if (acc.isCreditPayable) {
+          allocatedFunds += (acc.balance > 0 ? acc.balance : 0.0);
+        }
       }
     }
 
     final double netBalance = totalAssets - totalLiabilities;
     final String netSign = netBalance < 0 ? '-₹ ' : '₹ ';
+
+    // --- PAYABLE ALLOCATION SHORTAGE CHECK ---
+    final double difference = allocatedFunds - totalLiabilities;
+    final bool hasPayableShortage = difference < 0;
 
     // --- LIVE BUCKET COUNT ---
     final bucketsAsync = ref.watch(bucketsStreamProvider);
@@ -91,7 +101,6 @@ class DashboardPage extends ConsumerWidget {
     double totalInvestmentValue = 0.0;
     double totalInvestedAmount = 0.0;
 
-    // Only calculate active (open) investments for the dashboard summary
     for (var inv in rawInvestments) {
       if (!inv.isClosed) {
         totalInvestmentValue += inv.currentValue;
@@ -115,14 +124,13 @@ class DashboardPage extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-        scrolledUnderElevation: 0, // Prevents native shadow on scroll
+        scrolledUnderElevation: 0,
         centerTitle: false,
         titleSpacing: 0,
         leading: const Padding(
           padding: EdgeInsets.all(10.0),
           child: CircleAvatar(
-            backgroundColor: Colors
-                .transparent, // Ensures no boxy background shows behind transparent PNGs
+            backgroundColor: Colors.transparent,
             backgroundImage: AssetImage('assets/icon/fs360.png'),
           ),
         ),
@@ -155,7 +163,6 @@ class DashboardPage extends ConsumerWidget {
           physics: const BouncingScrollPhysics(),
           slivers: [
             SliverPadding(
-              // Outer padding frames the entire metro grid
               padding: const EdgeInsets.symmetric(
                 horizontal: 16.0,
                 vertical: 8.0,
@@ -169,7 +176,6 @@ class DashboardPage extends ConsumerWidget {
                       children: [
                         Expanded(
                           flex: 5,
-                          // --- FIXED: Money Tracker stays surfaceLight across BOTH themes ---
                           child: Material(
                             color: AppTokens.surfaceLight,
                             borderRadius: BorderRadius.zero,
@@ -187,7 +193,6 @@ class DashboardPage extends ConsumerWidget {
                                 height: 240,
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  // Add a border in Light Mode so it doesn't blend into the white scaffold
                                   border: isDark
                                       ? null
                                       : Border.all(
@@ -210,8 +215,7 @@ class DashboardPage extends ConsumerWidget {
                                             Icon(
                                               Icons
                                                   .account_balance_wallet_rounded,
-                                              color: Colors
-                                                  .black, // Always black for light tile
+                                              color: Colors.black,
                                             ),
                                             Icon(
                                               Icons.arrow_forward_rounded,
@@ -230,8 +234,7 @@ class DashboardPage extends ConsumerWidget {
                                                   ?.copyWith(
                                                     fontWeight: FontWeight.w600,
                                                     letterSpacing: 0.5,
-                                                    color: Colors
-                                                        .black54, // Always dark text
+                                                    color: Colors.black54,
                                                   ),
                                             ),
                                             const SizedBox(height: 8),
@@ -244,8 +247,7 @@ class DashboardPage extends ConsumerWidget {
                                                 amountStyle:
                                                     valueStyle?.copyWith(
                                                       fontSize: 28,
-                                                      color: Colors
-                                                          .black, // Always black
+                                                      color: Colors.black,
                                                     ) ??
                                                     const TextStyle(),
                                                 symbolStyle: const TextStyle(
@@ -259,7 +261,6 @@ class DashboardPage extends ConsumerWidget {
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.end,
                                               children: [
-                                                // Pass true so bars are always dark against the light tile
                                                 _buildFlatBar(40, true),
                                                 _buildFlatBar(60, true),
                                                 _buildFlatBar(30, true),
@@ -271,19 +272,33 @@ class DashboardPage extends ConsumerWidget {
                                         ),
                                       ],
                                     ),
-                                    // --- NEW: TRIP MODE INDICATOR IN MONEY TRACKER ---
-                                    if (hasActiveTrip || hasPausedTrip)
-                                      Positioned(
-                                        bottom: 0,
-                                        right: 0,
-                                        child: Icon(
-                                          Icons.flight_takeoff_rounded,
-                                          color: hasActiveTrip
-                                              ? Colors.green
-                                              : Colors.orangeAccent,
-                                          size: 24,
-                                        ),
+                                    // --- NEW: TRIP MODE & SHORTAGE INDICATORS ---
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (hasPayableShortage)
+                                            const Icon(
+                                              Icons.warning_amber_rounded,
+                                              color: Colors.redAccent,
+                                              size: 24,
+                                            ),
+                                          if (hasPayableShortage &&
+                                              (hasActiveTrip || hasPausedTrip))
+                                            const SizedBox(width: 8),
+                                          if (hasActiveTrip || hasPausedTrip)
+                                            Icon(
+                                              Icons.flight_takeoff_rounded,
+                                              color: hasActiveTrip
+                                                  ? Colors.green
+                                                  : Colors.orangeAccent,
+                                              size: 24,
+                                            ),
+                                        ],
                                       ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -385,8 +400,7 @@ class DashboardPage extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           CurrencyText(
-                            amount: totalInvestmentValue
-                                .abs(), // --- UPDATED TO LIVE DATA ---
+                            amount: totalInvestmentValue.abs(),
                             sign: totalInvestmentValue < 0 ? '-₹ ' : '₹ ',
                             amountStyle: const TextStyle(
                               fontSize: 28,
@@ -413,7 +427,7 @@ class DashboardPage extends ConsumerWidget {
                                 borderRadius: BorderRadius.zero,
                               ),
                               child: Text(
-                                '$invReturnSign${invReturnPct.toStringAsFixed(1)}% Return', // --- DYNAMIC RETURN PERCENTAGE ---
+                                '$invReturnSign${invReturnPct.toStringAsFixed(1)}% Return',
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
@@ -434,8 +448,7 @@ class DashboardPage extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: _buildMetroTile(
-                            title:
-                                'RECURRING RULES', // --- NEW: Replaced History ---
+                            title: 'RECURRING RULES',
                             icon: Icons.autorenew_rounded,
                             height: 120,
                             color: darkTileColor,
@@ -456,7 +469,6 @@ class DashboardPage extends ConsumerWidget {
                             children: [
                               _buildMetroTile(
                                 title: 'TRIP MODE',
-                                // --- DYNAMIC TRIP ICON AND COLOR ---
                                 icon: hasActiveTrip || hasPausedTrip
                                     ? Icons.flight_takeoff_rounded
                                     : Icons.flight_land_rounded,
@@ -504,7 +516,6 @@ class DashboardPage extends ConsumerWidget {
                     // --- ROW 4: Custom Entry & Backup ---
                     Row(
                       children: [
-                        // Expanded Flex 7 mathematically spans from the left all the way to the right column gap
                         Expanded(
                           flex: 7,
                           child: _buildMetroTile(
@@ -524,7 +535,6 @@ class DashboardPage extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: tileGap),
-                        // Expanded Flex 2 is mathematically identical to the width of the CATEGORIES tile
                         Expanded(
                           flex: 2,
                           child: _buildMetroTile(
@@ -566,7 +576,7 @@ class DashboardPage extends ConsumerWidget {
     required VoidCallback onTap,
     String? badge,
     bool verticalText = false,
-    Color? iconColor, // --- NEW PROPERTY ---
+    Color? iconColor,
   }) {
     return Material(
       color: color,
@@ -585,7 +595,7 @@ class DashboardPage extends ConsumerWidget {
                       ? Text(
                           badge,
                           style: TextStyle(
-                            fontSize: verticalText ? 20 : 24, // Reduced size
+                            fontSize: verticalText ? 20 : 24,
                             fontWeight: FontWeight.w300,
                             color: Colors.white,
                             height: 1.0,
@@ -593,13 +603,8 @@ class DashboardPage extends ConsumerWidget {
                         )
                       : Icon(
                           icon,
-                          size: verticalText
-                              ? 26
-                              : 28, // Reduced size to fit perfectly
-                          color:
-                              iconColor ??
-                              Colors
-                                  .white, // --- UPDATED TO USE CUSTOM COLOR ---
+                          size: verticalText ? 26 : 28,
+                          color: iconColor ?? Colors.white,
                         ),
                 ),
               ),
@@ -681,11 +686,7 @@ class DashboardPage extends ConsumerWidget {
                   alignment: Alignment.topRight,
                   child: Padding(
                     padding: const EdgeInsets.all(10.0),
-                    child: Icon(
-                      icon,
-                      size: 22, // Reduced from 36 to fit perfectly
-                      color: Colors.white,
-                    ),
+                    child: Icon(icon, size: 22, color: Colors.white),
                   ),
                 ),
               ],
