@@ -59,10 +59,13 @@ dependencies:
   fl_chart: ^1.2.0
   restart_app: ^1.2.1
   qr_flutter: ^4.1.0    
-  mobile_scanner: ^5.0.1 
+  mobile_scanner: ^5.2.3
   network_info_plus: 8.2.1 
   http: ^1.2.1
   printing: ^5.11.1
+  encrypt: ^5.0.3
+  crypto: ^3.0.3
+  screen_protector: ^1.5.1
 
 dev_dependencies:
   flutter_test:

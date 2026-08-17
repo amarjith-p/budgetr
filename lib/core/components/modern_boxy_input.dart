@@ -1,4 +1,3 @@
-// lib/core/components/modern_boxy_input.dart
 import 'package:flutter/material.dart';
 
 class ModernBoxyInput extends StatefulWidget {
@@ -9,7 +8,9 @@ class ModernBoxyInput extends StatefulWidget {
   final Widget? suffixIcon;
   final Widget? prefixIcon;
   final bool readOnly;
-  final bool enabled; // --- NEW PARAMETER ---
+  final bool enabled;
+  final bool obscureText;
+  final int maxLines; // --- NEW PARAMETER ---
   final VoidCallback? onTap;
   final String? Function(String?)? validator;
   final FocusNode? focusNode;
@@ -25,7 +26,9 @@ class ModernBoxyInput extends StatefulWidget {
     this.suffixIcon,
     this.prefixIcon,
     this.readOnly = false,
-    this.enabled = true, // --- DEFAULT TO TRUE ---
+    this.enabled = true,
+    this.obscureText = false,
+    this.maxLines = 1, // --- DEFAULT TO 1 ---
     this.onTap,
     this.validator,
     this.focusNode,
@@ -44,14 +47,12 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
   @override
   void initState() {
     super.initState();
-    // Use the provided FocusNode, or create one if none was passed
     _internalFocusNode = widget.focusNode ?? FocusNode();
     _internalFocusNode.addListener(_onFocusChange);
   }
 
   @override
   void dispose() {
-    // Only dispose the FocusNode if we created it internally
     if (widget.focusNode == null) {
       _internalFocusNode.dispose();
     } else {
@@ -76,27 +77,24 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
       focusNode: _internalFocusNode,
       keyboardType: widget.keyboardType,
       readOnly: widget.readOnly,
-      enabled: widget.enabled, // --- NEW: PASS TO TEXTFORMFIELD ---
+      enabled: widget.enabled,
+      obscureText: widget.obscureText,
+      maxLines: widget.maxLines, // --- PASS MAXLINES ---
       onTap: widget.onTap,
       validator: widget.validator,
       textInputAction: widget.textInputAction,
       onFieldSubmitted: widget.onFieldSubmitted,
-      // 1. MODERN INPUT TEXT: Bold and crisp for premium readability
       style: TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w700,
         color: !widget.enabled
-            ? theme.colorScheme.onSurface.withOpacity(
-                0.5,
-              ) // Dim text if disabled
+            ? theme.colorScheme.onSurface.withOpacity(0.5)
             : theme.colorScheme.onSurface,
         letterSpacing: 0.3,
       ),
       decoration: InputDecoration(
         labelText: widget.labelText,
         hintText: widget.hintText,
-
-        // 2. IDLE LABEL: Clean and semi-transparent
         labelStyle: TextStyle(
           fontSize: 14,
           fontWeight: _isFocused ? FontWeight.w800 : FontWeight.w600,
@@ -105,36 +103,26 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
               : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
           letterSpacing: 0.5,
         ),
-
-        // 3. ACTIVE FLOATING LABEL: Snaps to an ultra-bold, tracked-out metadata style
         floatingLabelStyle: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w900,
           color: theme.colorScheme.primary,
           letterSpacing: 1.0,
         ),
-
-        // 4. ANIMATED BACKGROUND: Subtly tints to the primary color when focused
         filled: true,
         fillColor: !widget.enabled
-            ? theme.colorScheme.surfaceContainerHighest.withOpacity(
-                0.2,
-              ) // Dim background if disabled
+            ? theme.colorScheme.surfaceContainerHighest.withOpacity(0.2)
             : _isFocused
             ? theme.colorScheme.primary.withOpacity(isDark ? 0.1 : 0.05)
             : theme.colorScheme.surfaceContainerHighest.withOpacity(
                 isDark ? 0.3 : 0.5,
               ),
-
-        // 5. SPACING: Generous internal padding prevents the cramped "traditional" feel
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 18,
         ),
         prefixIcon: widget.prefixIcon,
         suffixIcon: widget.suffixIcon,
-
-        // 6. IDLE BORDER: Extremely subtle, matching the filled background
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(
@@ -142,8 +130,6 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
             width: 1.0,
           ),
         ),
-
-        // --- NEW: DISABLED BORDER ---
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(
@@ -151,14 +137,10 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
             width: 1.0,
           ),
         ),
-
-        // 7. ACTIVE BORDER: Crisp, distinct 2px primary line
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: theme.colorScheme.primary, width: 2.0),
         ),
-
-        // 8. ERROR STATES: Maintains the modern radius but applies semantic colors
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(

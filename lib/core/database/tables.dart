@@ -284,3 +284,15 @@ class Reminders extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+class VaultRecords extends Table {
+  TextColumn get id => text()();
+  TextColumn get recordType => text()(); // 'Credential' or 'Card'
+  TextColumn get recordName => text()(); // Plaintext for list display
+  TextColumn get encryptedPayload =>
+      text()(); // Encrypted JSON containing all secrets
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

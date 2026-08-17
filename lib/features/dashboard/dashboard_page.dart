@@ -1,4 +1,3 @@
-// lib/features/dashboard/views/dashboard_page.dart
 import 'package:budgetr/features/backup/views/backup_page.dart';
 import 'package:budgetr/features/developer/views/developer_support_page.dart';
 import 'package:budgetr/features/investments/views/investment_dashboard_page.dart';
@@ -27,6 +26,9 @@ import '../automation/views/automation_dashboard_page.dart';
 import '../trips/providers/trip_provider.dart';
 import '../reminders/views/reminder_dashboard_page.dart';
 import '../reminders/providers/reminder_provider.dart';
+
+// --- SECURE VAULT IMPORT ---
+import '../secure_vault/views/vault_auth_page.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -566,25 +568,6 @@ class DashboardPage extends ConsumerWidget {
                     Row(
                       children: [
                         Expanded(
-                          flex: 5,
-                          child: _buildMetroTile(
-                            title: 'SMART TRACKERS',
-                            icon: Icons.post_add_rounded,
-                            height: baseTileHeight,
-                            color: darkTileColor,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const SmartTrackersDashboardPage(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: tileGap),
-                        Expanded(
                           flex: 2,
                           child: _buildMetroTile(
                             title: 'REMINDERS',
@@ -621,7 +604,74 @@ class DashboardPage extends ConsumerWidget {
                             },
                           ),
                         ),
+                        const SizedBox(width: tileGap),
+                        Expanded(
+                          flex: 5,
+                          child: _buildMetroTile(
+                            title: 'SMART TRACKERS',
+                            icon: Icons.post_add_rounded,
+                            height: baseTileHeight,
+                            color: darkTileColor,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const SmartTrackersDashboardPage(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ],
+                    ),
+
+                    const SizedBox(height: tileGap),
+
+                    // --- ROW 5: SECURE VAULT ---
+                    _buildWideMetroTile(
+                      title: 'VAULT',
+                      icon: Icons.security_rounded,
+                      height: baseTileHeight,
+                      color: darkTileColor,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const VaultAuthPage(),
+                          ),
+                        );
+                      },
+                      customContent: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.lock_outline_rounded,
+                            color: Colors.white70,
+                            size: 28,
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blueAccent.withOpacity(0.2),
+                            ),
+                            child: const Text(
+                              'AES-256 ENCRYPTED',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.blueAccent,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
 
                     const SizedBox(height: 32),
