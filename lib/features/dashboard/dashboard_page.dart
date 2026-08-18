@@ -36,6 +36,9 @@ import '../reminders/providers/reminder_provider.dart';
 // --- SECURE VAULT IMPORT ---
 import '../secure_vault/views/vault_auth_page.dart';
 
+// --- DEBT IMPORT ---
+import '../debts/providers/debt_provider.dart';
+
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
@@ -130,6 +133,27 @@ class DashboardPage extends ConsumerWidget {
     // --- SMART INBOX LIVE COUNT ---
     final stagedTxsAsync = ref.watch(stagedTransactionsProvider);
     final int stagedCount = stagedTxsAsync.asData?.value.length ?? 0;
+
+    // --- DEBT MODULE (PERSON-TO-PERSON) ---
+    final debtsAsync = ref.watch(allDebtsProvider);
+    final rawDebts = debtsAsync.asData?.value ?? [];
+
+    double totalBorrowed = 0.0;
+    double totalLent = 0.0;
+
+    for (var d in rawDebts) {
+      if (!d.isSettled) {
+        final remainingPrincipal = d.amount - d.settledAmount;
+        if (d.type == 'Borrowed') {
+          totalBorrowed += remainingPrincipal;
+        } else if (d.type == 'Lent') {
+          totalLent += remainingPrincipal;
+        }
+      }
+    }
+
+    // Lent is an asset (+), Borrowed is a liability (-)
+    final double netDebtBalance = totalLent - totalBorrowed;
 
     final bool hasBanner = triggeredReminders.isNotEmpty;
     // Scale down internal elements if the tiles shrink to prevent overflow
@@ -771,10 +795,13 @@ class DashboardPage extends ConsumerWidget {
                                     fit: BoxFit.scaleDown,
                                     alignment: Alignment.centerRight,
                                     child: CurrencyText(
-                                      amount: totalLiabilities.abs(),
-                                      sign: '₹ ',
+                                      amount: netDebtBalance
+                                          .abs(), // Uses Debt Module Balance
+                                      sign: netDebtBalance < 0
+                                          ? '-₹ '
+                                          : (netDebtBalance > 0 ? '+₹ ' : '₹ '),
                                       amountStyle: const TextStyle(
-                                        fontSize: 24,
+                                        fontSize: 16,
                                         fontWeight: FontWeight.w800,
                                         color: Colors.white,
                                         letterSpacing: -1.0,
@@ -792,15 +819,25 @@ class DashboardPage extends ConsumerWidget {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.redAccent.withOpacity(0.2),
+                                      color: netDebtBalance < 0
+                                          ? Colors.redAccent.withOpacity(0.2)
+                                          : (netDebtBalance > 0
+                                                ? Colors.green.withOpacity(0.2)
+                                                : Colors.white.withOpacity(
+                                                    0.1,
+                                                  )),
                                       borderRadius: BorderRadius.zero,
                                     ),
-                                    child: const Text(
+                                    child: Text(
                                       'NET BALANCE',
                                       style: TextStyle(
-                                        fontSize: 9,
+                                        fontSize: 6,
                                         fontWeight: FontWeight.w700,
-                                        color: Colors.redAccent,
+                                        color: netDebtBalance < 0
+                                            ? Colors.redAccent
+                                            : (netDebtBalance > 0
+                                                  ? Colors.greenAccent
+                                                  : Colors.white70),
                                         letterSpacing: 1.0,
                                       ),
                                     ),
