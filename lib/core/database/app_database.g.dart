@@ -12016,6 +12016,30 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, Debt> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _settledAmountMeta = const VerificationMeta(
+    'settledAmount',
+  );
+  @override
+  late final GeneratedColumn<double> settledAmount = GeneratedColumn<double>(
+    'settled_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _interestAccumulatedMeta =
+      const VerificationMeta('interestAccumulated');
+  @override
+  late final GeneratedColumn<double> interestAccumulated =
+      GeneratedColumn<double>(
+        'interest_accumulated',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -12041,6 +12065,8 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, Debt> {
     priorDays,
     notificationId,
     isSettled,
+    settledAmount,
+    interestAccumulated,
     createdAt,
   ];
   @override
@@ -12140,6 +12166,24 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, Debt> {
         isSettled.isAcceptableOrUnknown(data['is_settled']!, _isSettledMeta),
       );
     }
+    if (data.containsKey('settled_amount')) {
+      context.handle(
+        _settledAmountMeta,
+        settledAmount.isAcceptableOrUnknown(
+          data['settled_amount']!,
+          _settledAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('interest_accumulated')) {
+      context.handle(
+        _interestAccumulatedMeta,
+        interestAccumulated.isAcceptableOrUnknown(
+          data['interest_accumulated']!,
+          _interestAccumulatedMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -12199,6 +12243,14 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, Debt> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_settled'],
       )!,
+      settledAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}settled_amount'],
+      )!,
+      interestAccumulated: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}interest_accumulated'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -12224,6 +12276,8 @@ class Debt extends DataClass implements Insertable<Debt> {
   final int? priorDays;
   final int notificationId;
   final bool isSettled;
+  final double settledAmount;
+  final double interestAccumulated;
   final DateTime createdAt;
   const Debt({
     required this.id,
@@ -12237,6 +12291,8 @@ class Debt extends DataClass implements Insertable<Debt> {
     this.priorDays,
     required this.notificationId,
     required this.isSettled,
+    required this.settledAmount,
+    required this.interestAccumulated,
     required this.createdAt,
   });
   @override
@@ -12255,6 +12311,8 @@ class Debt extends DataClass implements Insertable<Debt> {
     }
     map['notification_id'] = Variable<int>(notificationId);
     map['is_settled'] = Variable<bool>(isSettled);
+    map['settled_amount'] = Variable<double>(settledAmount);
+    map['interest_accumulated'] = Variable<double>(interestAccumulated);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -12274,6 +12332,8 @@ class Debt extends DataClass implements Insertable<Debt> {
           : Value(priorDays),
       notificationId: Value(notificationId),
       isSettled: Value(isSettled),
+      settledAmount: Value(settledAmount),
+      interestAccumulated: Value(interestAccumulated),
       createdAt: Value(createdAt),
     );
   }
@@ -12295,6 +12355,10 @@ class Debt extends DataClass implements Insertable<Debt> {
       priorDays: serializer.fromJson<int?>(json['priorDays']),
       notificationId: serializer.fromJson<int>(json['notificationId']),
       isSettled: serializer.fromJson<bool>(json['isSettled']),
+      settledAmount: serializer.fromJson<double>(json['settledAmount']),
+      interestAccumulated: serializer.fromJson<double>(
+        json['interestAccumulated'],
+      ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -12313,6 +12377,8 @@ class Debt extends DataClass implements Insertable<Debt> {
       'priorDays': serializer.toJson<int?>(priorDays),
       'notificationId': serializer.toJson<int>(notificationId),
       'isSettled': serializer.toJson<bool>(isSettled),
+      'settledAmount': serializer.toJson<double>(settledAmount),
+      'interestAccumulated': serializer.toJson<double>(interestAccumulated),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -12329,6 +12395,8 @@ class Debt extends DataClass implements Insertable<Debt> {
     Value<int?> priorDays = const Value.absent(),
     int? notificationId,
     bool? isSettled,
+    double? settledAmount,
+    double? interestAccumulated,
     DateTime? createdAt,
   }) => Debt(
     id: id ?? this.id,
@@ -12342,6 +12410,8 @@ class Debt extends DataClass implements Insertable<Debt> {
     priorDays: priorDays.present ? priorDays.value : this.priorDays,
     notificationId: notificationId ?? this.notificationId,
     isSettled: isSettled ?? this.isSettled,
+    settledAmount: settledAmount ?? this.settledAmount,
+    interestAccumulated: interestAccumulated ?? this.interestAccumulated,
     createdAt: createdAt ?? this.createdAt,
   );
   Debt copyWithCompanion(DebtsCompanion data) {
@@ -12361,6 +12431,12 @@ class Debt extends DataClass implements Insertable<Debt> {
           ? data.notificationId.value
           : this.notificationId,
       isSettled: data.isSettled.present ? data.isSettled.value : this.isSettled,
+      settledAmount: data.settledAmount.present
+          ? data.settledAmount.value
+          : this.settledAmount,
+      interestAccumulated: data.interestAccumulated.present
+          ? data.interestAccumulated.value
+          : this.interestAccumulated,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -12379,6 +12455,8 @@ class Debt extends DataClass implements Insertable<Debt> {
           ..write('priorDays: $priorDays, ')
           ..write('notificationId: $notificationId, ')
           ..write('isSettled: $isSettled, ')
+          ..write('settledAmount: $settledAmount, ')
+          ..write('interestAccumulated: $interestAccumulated, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -12397,6 +12475,8 @@ class Debt extends DataClass implements Insertable<Debt> {
     priorDays,
     notificationId,
     isSettled,
+    settledAmount,
+    interestAccumulated,
     createdAt,
   );
   @override
@@ -12414,6 +12494,8 @@ class Debt extends DataClass implements Insertable<Debt> {
           other.priorDays == this.priorDays &&
           other.notificationId == this.notificationId &&
           other.isSettled == this.isSettled &&
+          other.settledAmount == this.settledAmount &&
+          other.interestAccumulated == this.interestAccumulated &&
           other.createdAt == this.createdAt);
 }
 
@@ -12429,6 +12511,8 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
   final Value<int?> priorDays;
   final Value<int> notificationId;
   final Value<bool> isSettled;
+  final Value<double> settledAmount;
+  final Value<double> interestAccumulated;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const DebtsCompanion({
@@ -12443,6 +12527,8 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
     this.priorDays = const Value.absent(),
     this.notificationId = const Value.absent(),
     this.isSettled = const Value.absent(),
+    this.settledAmount = const Value.absent(),
+    this.interestAccumulated = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -12458,6 +12544,8 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
     this.priorDays = const Value.absent(),
     required int notificationId,
     this.isSettled = const Value.absent(),
+    this.settledAmount = const Value.absent(),
+    this.interestAccumulated = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -12480,6 +12568,8 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
     Expression<int>? priorDays,
     Expression<int>? notificationId,
     Expression<bool>? isSettled,
+    Expression<double>? settledAmount,
+    Expression<double>? interestAccumulated,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -12495,6 +12585,9 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
       if (priorDays != null) 'prior_days': priorDays,
       if (notificationId != null) 'notification_id': notificationId,
       if (isSettled != null) 'is_settled': isSettled,
+      if (settledAmount != null) 'settled_amount': settledAmount,
+      if (interestAccumulated != null)
+        'interest_accumulated': interestAccumulated,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -12512,6 +12605,8 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
     Value<int?>? priorDays,
     Value<int>? notificationId,
     Value<bool>? isSettled,
+    Value<double>? settledAmount,
+    Value<double>? interestAccumulated,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -12527,6 +12622,8 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
       priorDays: priorDays ?? this.priorDays,
       notificationId: notificationId ?? this.notificationId,
       isSettled: isSettled ?? this.isSettled,
+      settledAmount: settledAmount ?? this.settledAmount,
+      interestAccumulated: interestAccumulated ?? this.interestAccumulated,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -12568,6 +12665,12 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
     if (isSettled.present) {
       map['is_settled'] = Variable<bool>(isSettled.value);
     }
+    if (settledAmount.present) {
+      map['settled_amount'] = Variable<double>(settledAmount.value);
+    }
+    if (interestAccumulated.present) {
+      map['interest_accumulated'] = Variable<double>(interestAccumulated.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -12591,6 +12694,8 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
           ..write('priorDays: $priorDays, ')
           ..write('notificationId: $notificationId, ')
           ..write('isSettled: $isSettled, ')
+          ..write('settledAmount: $settledAmount, ')
+          ..write('interestAccumulated: $interestAccumulated, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -18467,6 +18572,8 @@ typedef $$DebtsTableCreateCompanionBuilder =
       Value<int?> priorDays,
       required int notificationId,
       Value<bool> isSettled,
+      Value<double> settledAmount,
+      Value<double> interestAccumulated,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -18483,6 +18590,8 @@ typedef $$DebtsTableUpdateCompanionBuilder =
       Value<int?> priorDays,
       Value<int> notificationId,
       Value<bool> isSettled,
+      Value<double> settledAmount,
+      Value<double> interestAccumulated,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -18547,6 +18656,16 @@ class $$DebtsTableFilterComposer extends Composer<_$AppDatabase, $DebtsTable> {
 
   ColumnFilters<bool> get isSettled => $composableBuilder(
     column: $table.isSettled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get interestAccumulated => $composableBuilder(
+    column: $table.interestAccumulated,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18620,6 +18739,16 @@ class $$DebtsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get interestAccumulated => $composableBuilder(
+    column: $table.interestAccumulated,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -18672,6 +18801,16 @@ class $$DebtsTableAnnotationComposer
   GeneratedColumn<bool> get isSettled =>
       $composableBuilder(column: $table.isSettled, builder: (column) => column);
 
+  GeneratedColumn<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get interestAccumulated => $composableBuilder(
+    column: $table.interestAccumulated,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 }
@@ -18715,6 +18854,8 @@ class $$DebtsTableTableManager
                 Value<int?> priorDays = const Value.absent(),
                 Value<int> notificationId = const Value.absent(),
                 Value<bool> isSettled = const Value.absent(),
+                Value<double> settledAmount = const Value.absent(),
+                Value<double> interestAccumulated = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DebtsCompanion(
@@ -18729,6 +18870,8 @@ class $$DebtsTableTableManager
                 priorDays: priorDays,
                 notificationId: notificationId,
                 isSettled: isSettled,
+                settledAmount: settledAmount,
+                interestAccumulated: interestAccumulated,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -18745,6 +18888,8 @@ class $$DebtsTableTableManager
                 Value<int?> priorDays = const Value.absent(),
                 required int notificationId,
                 Value<bool> isSettled = const Value.absent(),
+                Value<double> settledAmount = const Value.absent(),
+                Value<double> interestAccumulated = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DebtsCompanion.insert(
@@ -18759,6 +18904,8 @@ class $$DebtsTableTableManager
                 priorDays: priorDays,
                 notificationId: notificationId,
                 isSettled: isSettled,
+                settledAmount: settledAmount,
+                interestAccumulated: interestAccumulated,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

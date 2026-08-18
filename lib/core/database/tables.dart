@@ -337,15 +337,20 @@ class Debts extends Table {
   TextColumn get person => text()();
   TextColumn get purpose => text()();
   RealColumn get amount => real()();
-  DateTimeColumn get date => dateTime()(); // When the money was given/received
-  DateTimeColumn get dueDate => dateTime()(); // When it needs to be settled
+  DateTimeColumn get date => dateTime()();
+  DateTimeColumn get dueDate => dateTime()();
 
   BoolColumn get isPushEnabled =>
       boolean().withDefault(const Constant(false))();
   IntColumn get priorDays => integer().nullable()();
-  IntColumn get notificationId => integer()(); // Used to cancel alerts
+  IntColumn get notificationId => integer()();
 
   BoolColumn get isSettled => boolean().withDefault(const Constant(false))();
+  // --- NEW FIELDS ---
+  RealColumn get settledAmount => real().withDefault(const Constant(0.0))();
+  RealColumn get interestAccumulated =>
+      real().withDefault(const Constant(0.0))();
+  // ------------------
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override

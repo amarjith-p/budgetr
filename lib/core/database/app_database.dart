@@ -36,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMPED TO VERSION 25 ---
   @override
-  int get schemaVersion => 36;
+  int get schemaVersion => 37;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -132,7 +132,7 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(stagedTransactions);
         await m.createTable(parserRules);
       }
-      if (from < 36) {
+      if (from < 37) {
         await m.createTable(debts); // <-- NEW
       }
     },

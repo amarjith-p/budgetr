@@ -35,7 +35,6 @@ class DebtActionNotifier extends AsyncNotifier<void> {
     final db = ref.read(databaseProvider);
 
     state = await AsyncValue.guard(() async {
-      // Clean up old notifications if editing
       if (existingId != null && existingNotificationId != null) {
         await NotificationService.instance.cancelSpecific(
           existingNotificationId,
@@ -48,7 +47,6 @@ class DebtActionNotifier extends AsyncNotifier<void> {
       final int newNotifId =
           existingNotificationId ?? DateTime.now().millisecond;
 
-      // Schedule new notifications if enabled
       if (isPushEnabled) {
         final title = type == 'Borrowed'
             ? 'Repayment Due: $person'
@@ -116,13 +114,40 @@ class DebtActionNotifier extends AsyncNotifier<void> {
     return !state.hasError;
   }
 
-  Future<void> settleDebt(Debt debt) async {
+  // --- NEW: Accumulate Interest ---
+  Future<void> addInterest(Debt debt, double interestAmount) async {
     final db = ref.read(databaseProvider);
-    await NotificationService.instance.cancelSpecific(debt.notificationId);
-    await NotificationService.instance.cancelSpecific(debt.notificationId + 1);
     await db
         .update(db.debts)
-        .replace(debt.copyWith(isSettled: true, isPushEnabled: false));
+        .replace(
+          debt.copyWith(
+            interestAccumulated: debt.interestAccumulated + interestAmount,
+          ),
+        );
+  }
+
+  // --- NEW: Partial & Full Settlement ---
+  Future<void> recordSettlement(Debt debt, double amountPaid) async {
+    final db = ref.read(databaseProvider);
+    final newSettledAmount = debt.settledAmount + amountPaid;
+    final isFullySettled = newSettledAmount >= debt.amount;
+
+    if (isFullySettled) {
+      await NotificationService.instance.cancelSpecific(debt.notificationId);
+      await NotificationService.instance.cancelSpecific(
+        debt.notificationId + 1,
+      );
+    }
+
+    await db
+        .update(db.debts)
+        .replace(
+          debt.copyWith(
+            settledAmount: newSettledAmount,
+            isSettled: isFullySettled,
+            isPushEnabled: isFullySettled ? false : debt.isPushEnabled,
+          ),
+        );
   }
 
   Future<void> deleteDebt(Debt debt) async {

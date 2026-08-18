@@ -7,6 +7,7 @@ import '../../../core/components/modern_boxy_input.dart';
 import '../../../core/components/modern_boxy_button.dart';
 import '../../../core/components/modern_boxy_toggle.dart';
 import '../../../core/theme/design_tokens.dart';
+import '../../transactions/views/transaction_form_page.dart';
 import '../providers/debt_provider.dart';
 
 class DebtFormBottomSheet extends ConsumerStatefulWidget {
@@ -44,6 +45,7 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
 
   late bool _isPushEnabled;
   late int _priorDays;
+  bool _logToLedger = true; // Modern toggle state for new debts
 
   @override
   void initState() {
@@ -138,14 +140,19 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
     }
 
     HapticFeedback.selectionClick();
+
+    final amt = double.parse(_amountCtrl.text.trim());
+    final type = _types[_typeIndex];
+    final person = _personCtrl.text.trim();
+
     final success = await ref
         .read(debtActionProvider.notifier)
         .saveDebt(
           existingId: widget.existingDebt?.id,
-          type: _types[_typeIndex],
-          person: _personCtrl.text.trim(),
+          type: type,
+          person: person,
           purpose: _purposeCtrl.text.trim(),
-          amount: double.parse(_amountCtrl.text.trim()),
+          amount: amt,
           date: _date,
           dueDate: _dueDate,
           isPushEnabled: _isPushEnabled,
@@ -153,7 +160,34 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
           existingNotificationId: widget.existingDebt?.notificationId,
         );
 
-    if (success && mounted) Navigator.pop(context);
+    if (success && mounted) {
+      // Only sync if it's a new debt and the toggle is active
+      if (_logToLedger && widget.existingDebt == null) {
+        final staged = StagedTransaction(
+          id: 'DEBT_${DateTime.now().millisecondsSinceEpoch}',
+          rawText: 'Initial Debt Sync',
+          sourceName: 'FinStack 360',
+          packageName: 'com.finstack',
+          extractedAmount: amt,
+          // Borrowing adds to your assets (Income). Lending subtracts from your assets (Expense).
+          inferredType: type == 'Borrowed' ? 'Income' : 'Expense',
+          date: _date,
+          merchantName: type == 'Borrowed'
+              ? 'Borrowed from $person'
+              : 'Lent to $person',
+          isApproved: false,
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TransactionFormPage(stagedTransaction: staged),
+          ),
+        );
+      } else {
+        Navigator.pop(context);
+      }
+    }
   }
 
   @override
@@ -284,6 +318,7 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
               ),
               const SizedBox(height: DesignTokens.spacingMd),
 
+              // --- NOTIFICATIONS & LEDGER SYNC ---
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -392,6 +427,50 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
                         ],
                       ),
                     ],
+
+                    // --- SLEEK LEDGER TOGGLE (Only for New Debts) ---
+                    if (widget.existingDebt == null) ...[
+                      const Divider(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Sync to Ledger',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Log this principal in your main accounts',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Transform.scale(
+                            scale: 0.85,
+                            child: Switch(
+                              value: _logToLedger,
+                              activeColor: theme.colorScheme.primary,
+                              onChanged: (val) {
+                                HapticFeedback.lightImpact();
+                                setState(() => _logToLedger = val);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -424,7 +503,6 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
     );
   }
 
-  // Helper widget to completely prevent icon and text overlapping
   Widget _buildDateSelector(
     String label,
     String value,
