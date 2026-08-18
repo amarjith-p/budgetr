@@ -23,6 +23,11 @@ import '../transactions/providers/transaction_provider.dart';
 import '../investments/providers/investment_provider.dart';
 import '../notifications/components/notification_bell_widget.dart';
 import '../automation/views/automation_dashboard_page.dart';
+
+// --- SMART INBOX IMPORTS ---
+import '../automation/views/smart_inbox_page.dart';
+import '../automation/providers/smart_inbox_provider.dart';
+
 import '../trips/providers/trip_provider.dart';
 import '../reminders/views/reminder_dashboard_page.dart';
 import '../reminders/providers/reminder_provider.dart';
@@ -121,6 +126,10 @@ class DashboardPage extends ConsumerWidget {
       return now.isAfter(triggerDate) || now.isAtSameMomentAs(triggerDate);
     }).toList();
 
+    // --- SMART INBOX LIVE COUNT ---
+    final stagedTxsAsync = ref.watch(stagedTransactionsProvider);
+    final int stagedCount = stagedTxsAsync.asData?.value.length ?? 0;
+
     // --- DYNAMIC METRO GRID SIZING & SCALING ---
     final bool hasBanner = triggeredReminders.isNotEmpty;
     final double baseTileHeight = hasBanner ? 100.0 : 120.0;
@@ -165,8 +174,26 @@ class DashboardPage extends ConsumerWidget {
             ),
           ),
         ),
-        actions: const [
-          Padding(
+        actions: [
+          // --- SMART INBOX ENTRY POINT WITH BADGE ---
+          IconButton(
+            icon: Badge(
+              isLabelVisible: stagedCount > 0,
+              label: Text(stagedCount.toString()),
+              backgroundColor: theme.colorScheme.error,
+              child: const Icon(Icons.all_inbox_rounded),
+            ),
+            color: theme.colorScheme.onSurface,
+            tooltip: 'Smart Inbox',
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SmartInboxPage()),
+              );
+            },
+          ),
+          const Padding(
             padding: EdgeInsets.only(right: 8.0),
             child: NotificationBellWidget(),
           ),

@@ -1,4 +1,4 @@
-// features/transactions/views/transaction_form_page.dart
+// lib/features/transactions/views/transaction_form_page.dart
 import 'dart:convert';
 import 'package:budgetr/core/models/transaction_category_model.dart';
 import 'package:budgetr/features/transactions/services/transaction_service.dart';
@@ -22,6 +22,9 @@ import '../../accounts/providers/account_provider.dart';
 import '../../category_manager/providers/category_provider.dart';
 import '../providers/transaction_provider.dart';
 
+// --- NEW IMPORT FOR SMART INBOX ---
+import '../../automation/providers/smart_inbox_provider.dart';
+
 class _BucketItem {
   final int id;
   final String name;
@@ -39,6 +42,7 @@ final _formBudgetProvider = StreamProvider.family
 
 class TransactionFormPage extends ConsumerStatefulWidget {
   final TransactionWithDetails? existingTransaction;
+  final StagedTransaction? stagedTransaction; // <-- NEW
   final String? preSelectedAccountId;
   final bool isClone;
   final bool isSplit;
@@ -46,6 +50,7 @@ class TransactionFormPage extends ConsumerStatefulWidget {
   const TransactionFormPage({
     Key? key,
     this.existingTransaction,
+    this.stagedTransaction, // <-- NEW
     this.preSelectedAccountId,
     this.isClone = false,
     this.isSplit = false,
@@ -74,7 +79,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   int? _selectedBucketId;
   String? _historicalBucketName;
 
-  // --- NEW: STATE VARIABLES FOR CATEGORY SNAPSHOTS ---
   String? _historicalCategoryName;
   int? _historicalCategoryIcon;
 
@@ -115,10 +119,17 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   void initState() {
     super.initState();
     final txDetails = widget.existingTransaction;
+    final stagedTx = widget.stagedTransaction;
+
     String initialAmount = '';
+
+    // Check where to pull the initial amount from
     if (txDetails != null && !widget.isSplit) {
       initialAmount = txDetails.transaction.amount.toStringAsFixed(2);
+    } else if (stagedTx != null) {
+      initialAmount = stagedTx.extractedAmount.toStringAsFixed(2);
     }
+
     _amountController = TextEditingController(text: initialAmount);
     _expression = initialAmount;
     _liveResult = initialAmount.isEmpty ? '0.00' : initialAmount;
@@ -139,7 +150,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       _notesCtrl = TextEditingController(text: tx.notes ?? '');
 
       _selectedCategoryId = widget.isSplit ? null : tx.categoryId;
-      // --- NEW: GRAB HISTORICAL SNAPSHOTS FROM DB ---
       _historicalCategoryName = widget.isSplit
           ? null
           : (tx.categoryName ?? txDetails.category?.name);
@@ -172,6 +182,36 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
       _selectedBucketId = tx.bucketId ?? -1;
       _historicalBucketName = tx.bucketName ?? txDetails.bucket?.name;
+    } else if (stagedTx != null) {
+      // --- PREFILL DATA FROM SMART INBOX ---
+      int tIdx = _types.indexOf(stagedTx.inferredType);
+      _typeIndex = tIdx != -1 ? tIdx : 0;
+      _selectedDateTime = stagedTx.date;
+      _notesCtrl = TextEditingController(
+        text: stagedTx.merchantName ?? stagedTx.sourceName,
+      );
+
+      // Auto-match account after frame renders
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final rawAccounts =
+            ref.read(accountsStreamProvider).asData?.value ?? [];
+        if (stagedTx.accountLast4 != null &&
+            stagedTx.accountLast4!.isNotEmpty) {
+          final match = rawAccounts
+              .where((a) => (a.last4 ?? '').endsWith(stagedTx.accountLast4!))
+              .firstOrNull;
+          if (match != null) {
+            setState(() => _selectedAccountId = match.id);
+            return;
+          }
+        }
+        final defaultAcc = rawAccounts
+            .where((a) => a.type != 'Loan')
+            .firstOrNull;
+        if (defaultAcc != null && _selectedAccountId == null) {
+          setState(() => _selectedAccountId = defaultAcc.id);
+        }
+      });
     } else {
       _notesCtrl = TextEditingController();
       _selectedAccountId = widget.preSelectedAccountId;
@@ -659,7 +699,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       context: context,
       title: 'Select Category',
       items: items,
-      // --- FIX: Ensure the picker defaults to the legacy name if available ---
       selectedValue: selectedCatMatch?.name ?? _historicalCategoryName ?? '',
     );
     if (selected != null && mounted) {
@@ -667,8 +706,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         _selectedCategoryId = activeCategories
             .firstWhere((c) => c.name == selected)
             .id;
-        _historicalCategoryName =
-            null; // --- FIX: Clear historical name as they picked a new one
+        _historicalCategoryName = null;
         _selectedSubCategory = null;
       });
     }
@@ -721,7 +759,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         .toList();
 
     List<String> getSmartSuggestions() {
-      // --- FIX: Fallback to historical name for suggestions if category deleted ---
       final cat = (selectedCatMatch?.name ?? _historicalCategoryName ?? '')
           .toLowerCase();
 
@@ -1189,7 +1226,15 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             longitude: _longitude,
           );
 
-      if (success && mounted) Navigator.pop(context);
+      if (success && mounted) {
+        // --- NEW: DELETE FROM INBOX ON SUCCESS ---
+        if (widget.stagedTransaction != null) {
+          await ref
+              .read(smartInboxActionProvider.notifier)
+              .deleteStaged(widget.stagedTransaction!.id);
+        }
+        Navigator.pop(context);
+      }
       return;
     }
 
@@ -1205,7 +1250,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final origAmount = widget.existingTransaction?.transaction.amount ?? 0.0;
     final isOverSplit = widget.isSplit && amount >= origAmount;
 
-    // --- FIX: Validation safely ignores null category if we have an orphaned snapshot ---
     if (amount <= 0 ||
         hasDanglingOperator ||
         isOverSplit ||
@@ -1245,7 +1289,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
     String? finalCategoryId = _selectedCategoryId;
 
-    // --- NEW: EXTRACT SNAPSHOT DATA FOR PERMANENT LEDGER RECORD ---
     final selectedCatMatch = rawCategories
         .where((c) => c.id == _selectedCategoryId)
         .firstOrNull;
@@ -1307,8 +1350,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               .firstOrNull;
           if (repaymentCat != null) {
             finalCategoryId = repaymentCat.id;
-            finalCategoryName = repaymentCat.name; // <-- SNAPSHOT OVERRIDE
-            finalCategoryIcon = repaymentCat.iconCode; // <-- SNAPSHOT OVERRIDE
+            finalCategoryName = repaymentCat.name;
+            finalCategoryIcon = repaymentCat.iconCode;
             finalSubCategory = isTransfer
                 ? 'Credit Card Bill'
                 : 'Account Adjustments';
@@ -1331,8 +1374,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             accountId: _selectedAccountId!,
             toAccountId: _selectedToAccountId,
             categoryId: finalCategoryId,
-            categoryName: finalCategoryName, // <-- SAVED
-            categoryIcon: finalCategoryIcon, // <-- SAVED
+            categoryName: finalCategoryName,
+            categoryIcon: finalCategoryIcon,
             subCategory: finalSubCategory,
             bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
             bucketName: finalBucketName,
@@ -1362,8 +1405,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           accountId: _selectedAccountId!,
           toAccountId: _selectedToAccountId,
           categoryId: finalCategoryId,
-          categoryName: finalCategoryName, // <-- SAVED
-          categoryIcon: finalCategoryIcon, // <-- SAVED
+          categoryName: finalCategoryName,
+          categoryIcon: finalCategoryIcon,
           subCategory: finalSubCategory,
           bucketId: _selectedBucketId == -1 ? null : _selectedBucketId,
           bucketName: finalBucketName,
@@ -1375,10 +1418,17 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           longitude: _longitude,
         );
 
-    if (success && mounted) Navigator.pop(context);
+    if (success && mounted) {
+      // --- NEW: DELETE FROM INBOX ON SUCCESS ---
+      if (widget.stagedTransaction != null) {
+        await ref
+            .read(smartInboxActionProvider.notifier)
+            .deleteStaged(widget.stagedTransaction!.id);
+      }
+      Navigator.pop(context);
+    }
   }
 
-  // --- SMART CELL FORMATTER UTILITY ---
   String _formatCell(String text) {
     if (text.isEmpty) return '0.00';
     final parsed = double.tryParse(text);
@@ -1575,7 +1625,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         ),
       );
     } else {
-      // --- FIX: Safely display orphaned category name if editing a legacy record ---
       String? displayCategoryName = selectedCatMatch?.name;
       if (displayCategoryName == null && _historicalCategoryName != null) {
         displayCategoryName = '$_historicalCategoryName (Legacy)';
@@ -1801,7 +1850,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     String errorMsg = 'Amount must be greater than 0';
     if (hasDanglingOperator) errorMsg = 'Incomplete mathematical expression';
     if (isOverSplit)
-      // --- FORMATTED SPLITTING STRING ---
       errorMsg =
           'Split amount must be less than original (₹${CurrencyFormatter.format(origAmount)})';
 
@@ -1935,6 +1983,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         appBarTitle = 'Split Log';
       else
         appBarTitle = 'Edit Log';
+    } else if (widget.stagedTransaction != null) {
+      appBarTitle = 'Import Log'; // <-- NEW
     }
 
     return Scaffold(
@@ -1968,7 +2018,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                             final oldIndex = _typeIndex;
                             _typeIndex = index;
 
-                            // --- FIX: CLEAR LEGACY CACHE WHEN SWITCHING TABS ---
                             _selectedCategoryId = null;
                             _historicalCategoryName = null;
                             _selectedSubCategory = null;
@@ -2004,7 +2053,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                             if (widget.isSplit)
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 8.0),
-                                // --- FORMATTED SPLITTING STRING ---
                                 child: Text(
                                   'SPLITTING FROM ₹${CurrencyFormatter.format(origAmount)}',
                                   style: TextStyle(
@@ -2093,7 +2141,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                       ),
                                     ),
                                     const SizedBox(height: 2),
-                                    // --- FORMATTED TOTAL REPAYMENT ---
                                     RichText(
                                       text: TextSpan(
                                         children: [
@@ -2130,7 +2177,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                 _expression != _liveResult &&
                                 !hasAmountError &&
                                 !isToLoan)
-                              // --- FORMATTED LIVE RESULT EQUATION ---
                               Text(
                                 '= ₹${CurrencyFormatter.format(double.tryParse(_liveResult) ?? 0.0)}',
                                 style: TextStyle(

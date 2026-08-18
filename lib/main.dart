@@ -1,3 +1,4 @@
+import 'package:budgetr/features/automation/providers/smart_inbox_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
@@ -36,6 +37,7 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp>
     // --- TRIGGER ENGINE ON FRESH APP LAUNCH ---
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(automationEngineProvider).runCatchUp();
+      ref.read(smartInboxActionProvider.notifier).requestPermissionsAndListen();
     });
   }
 
@@ -53,6 +55,7 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp>
       ref.read(authProvider.notifier).attemptBiometricUnlock();
       // --- TRIGGER ENGINE ON APP RESUME ---
       ref.read(automationEngineProvider).runCatchUp();
+      ref.read(smartInboxActionProvider.notifier).requestPermissionsAndListen();
     }
   }
 

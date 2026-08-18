@@ -10630,6 +10630,1116 @@ class VaultRecordsCompanion extends UpdateCompanion<VaultRecord> {
   }
 }
 
+class $StagedTransactionsTable extends StagedTransactions
+    with TableInfo<$StagedTransactionsTable, StagedTransaction> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StagedTransactionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _rawTextMeta = const VerificationMeta(
+    'rawText',
+  );
+  @override
+  late final GeneratedColumn<String> rawText = GeneratedColumn<String>(
+    'raw_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceNameMeta = const VerificationMeta(
+    'sourceName',
+  );
+  @override
+  late final GeneratedColumn<String> sourceName = GeneratedColumn<String>(
+    'source_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _packageNameMeta = const VerificationMeta(
+    'packageName',
+  );
+  @override
+  late final GeneratedColumn<String> packageName = GeneratedColumn<String>(
+    'package_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _extractedAmountMeta = const VerificationMeta(
+    'extractedAmount',
+  );
+  @override
+  late final GeneratedColumn<double> extractedAmount = GeneratedColumn<double>(
+    'extracted_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _inferredTypeMeta = const VerificationMeta(
+    'inferredType',
+  );
+  @override
+  late final GeneratedColumn<String> inferredType = GeneratedColumn<String>(
+    'inferred_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _accountLast4Meta = const VerificationMeta(
+    'accountLast4',
+  );
+  @override
+  late final GeneratedColumn<String> accountLast4 = GeneratedColumn<String>(
+    'account_last4',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _referenceNoMeta = const VerificationMeta(
+    'referenceNo',
+  );
+  @override
+  late final GeneratedColumn<String> referenceNo = GeneratedColumn<String>(
+    'reference_no',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _merchantNameMeta = const VerificationMeta(
+    'merchantName',
+  );
+  @override
+  late final GeneratedColumn<String> merchantName = GeneratedColumn<String>(
+    'merchant_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isApprovedMeta = const VerificationMeta(
+    'isApproved',
+  );
+  @override
+  late final GeneratedColumn<bool> isApproved = GeneratedColumn<bool>(
+    'is_approved',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_approved" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    rawText,
+    sourceName,
+    packageName,
+    extractedAmount,
+    inferredType,
+    accountLast4,
+    referenceNo,
+    merchantName,
+    date,
+    isApproved,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'staged_transactions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StagedTransaction> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('raw_text')) {
+      context.handle(
+        _rawTextMeta,
+        rawText.isAcceptableOrUnknown(data['raw_text']!, _rawTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rawTextMeta);
+    }
+    if (data.containsKey('source_name')) {
+      context.handle(
+        _sourceNameMeta,
+        sourceName.isAcceptableOrUnknown(data['source_name']!, _sourceNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceNameMeta);
+    }
+    if (data.containsKey('package_name')) {
+      context.handle(
+        _packageNameMeta,
+        packageName.isAcceptableOrUnknown(
+          data['package_name']!,
+          _packageNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_packageNameMeta);
+    }
+    if (data.containsKey('extracted_amount')) {
+      context.handle(
+        _extractedAmountMeta,
+        extractedAmount.isAcceptableOrUnknown(
+          data['extracted_amount']!,
+          _extractedAmountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_extractedAmountMeta);
+    }
+    if (data.containsKey('inferred_type')) {
+      context.handle(
+        _inferredTypeMeta,
+        inferredType.isAcceptableOrUnknown(
+          data['inferred_type']!,
+          _inferredTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_inferredTypeMeta);
+    }
+    if (data.containsKey('account_last4')) {
+      context.handle(
+        _accountLast4Meta,
+        accountLast4.isAcceptableOrUnknown(
+          data['account_last4']!,
+          _accountLast4Meta,
+        ),
+      );
+    }
+    if (data.containsKey('reference_no')) {
+      context.handle(
+        _referenceNoMeta,
+        referenceNo.isAcceptableOrUnknown(
+          data['reference_no']!,
+          _referenceNoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('merchant_name')) {
+      context.handle(
+        _merchantNameMeta,
+        merchantName.isAcceptableOrUnknown(
+          data['merchant_name']!,
+          _merchantNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('is_approved')) {
+      context.handle(
+        _isApprovedMeta,
+        isApproved.isAcceptableOrUnknown(data['is_approved']!, _isApprovedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StagedTransaction map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StagedTransaction(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      rawText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}raw_text'],
+      )!,
+      sourceName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_name'],
+      )!,
+      packageName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}package_name'],
+      )!,
+      extractedAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}extracted_amount'],
+      )!,
+      inferredType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}inferred_type'],
+      )!,
+      accountLast4: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_last4'],
+      ),
+      referenceNo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reference_no'],
+      ),
+      merchantName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}merchant_name'],
+      ),
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date'],
+      )!,
+      isApproved: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_approved'],
+      )!,
+    );
+  }
+
+  @override
+  $StagedTransactionsTable createAlias(String alias) {
+    return $StagedTransactionsTable(attachedDatabase, alias);
+  }
+}
+
+class StagedTransaction extends DataClass
+    implements Insertable<StagedTransaction> {
+  final String id;
+  final String rawText;
+  final String sourceName;
+  final String packageName;
+  final double extractedAmount;
+  final String inferredType;
+  final String? accountLast4;
+  final String? referenceNo;
+  final String? merchantName;
+  final DateTime date;
+  final bool isApproved;
+  const StagedTransaction({
+    required this.id,
+    required this.rawText,
+    required this.sourceName,
+    required this.packageName,
+    required this.extractedAmount,
+    required this.inferredType,
+    this.accountLast4,
+    this.referenceNo,
+    this.merchantName,
+    required this.date,
+    required this.isApproved,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['raw_text'] = Variable<String>(rawText);
+    map['source_name'] = Variable<String>(sourceName);
+    map['package_name'] = Variable<String>(packageName);
+    map['extracted_amount'] = Variable<double>(extractedAmount);
+    map['inferred_type'] = Variable<String>(inferredType);
+    if (!nullToAbsent || accountLast4 != null) {
+      map['account_last4'] = Variable<String>(accountLast4);
+    }
+    if (!nullToAbsent || referenceNo != null) {
+      map['reference_no'] = Variable<String>(referenceNo);
+    }
+    if (!nullToAbsent || merchantName != null) {
+      map['merchant_name'] = Variable<String>(merchantName);
+    }
+    map['date'] = Variable<DateTime>(date);
+    map['is_approved'] = Variable<bool>(isApproved);
+    return map;
+  }
+
+  StagedTransactionsCompanion toCompanion(bool nullToAbsent) {
+    return StagedTransactionsCompanion(
+      id: Value(id),
+      rawText: Value(rawText),
+      sourceName: Value(sourceName),
+      packageName: Value(packageName),
+      extractedAmount: Value(extractedAmount),
+      inferredType: Value(inferredType),
+      accountLast4: accountLast4 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accountLast4),
+      referenceNo: referenceNo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(referenceNo),
+      merchantName: merchantName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(merchantName),
+      date: Value(date),
+      isApproved: Value(isApproved),
+    );
+  }
+
+  factory StagedTransaction.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StagedTransaction(
+      id: serializer.fromJson<String>(json['id']),
+      rawText: serializer.fromJson<String>(json['rawText']),
+      sourceName: serializer.fromJson<String>(json['sourceName']),
+      packageName: serializer.fromJson<String>(json['packageName']),
+      extractedAmount: serializer.fromJson<double>(json['extractedAmount']),
+      inferredType: serializer.fromJson<String>(json['inferredType']),
+      accountLast4: serializer.fromJson<String?>(json['accountLast4']),
+      referenceNo: serializer.fromJson<String?>(json['referenceNo']),
+      merchantName: serializer.fromJson<String?>(json['merchantName']),
+      date: serializer.fromJson<DateTime>(json['date']),
+      isApproved: serializer.fromJson<bool>(json['isApproved']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'rawText': serializer.toJson<String>(rawText),
+      'sourceName': serializer.toJson<String>(sourceName),
+      'packageName': serializer.toJson<String>(packageName),
+      'extractedAmount': serializer.toJson<double>(extractedAmount),
+      'inferredType': serializer.toJson<String>(inferredType),
+      'accountLast4': serializer.toJson<String?>(accountLast4),
+      'referenceNo': serializer.toJson<String?>(referenceNo),
+      'merchantName': serializer.toJson<String?>(merchantName),
+      'date': serializer.toJson<DateTime>(date),
+      'isApproved': serializer.toJson<bool>(isApproved),
+    };
+  }
+
+  StagedTransaction copyWith({
+    String? id,
+    String? rawText,
+    String? sourceName,
+    String? packageName,
+    double? extractedAmount,
+    String? inferredType,
+    Value<String?> accountLast4 = const Value.absent(),
+    Value<String?> referenceNo = const Value.absent(),
+    Value<String?> merchantName = const Value.absent(),
+    DateTime? date,
+    bool? isApproved,
+  }) => StagedTransaction(
+    id: id ?? this.id,
+    rawText: rawText ?? this.rawText,
+    sourceName: sourceName ?? this.sourceName,
+    packageName: packageName ?? this.packageName,
+    extractedAmount: extractedAmount ?? this.extractedAmount,
+    inferredType: inferredType ?? this.inferredType,
+    accountLast4: accountLast4.present ? accountLast4.value : this.accountLast4,
+    referenceNo: referenceNo.present ? referenceNo.value : this.referenceNo,
+    merchantName: merchantName.present ? merchantName.value : this.merchantName,
+    date: date ?? this.date,
+    isApproved: isApproved ?? this.isApproved,
+  );
+  StagedTransaction copyWithCompanion(StagedTransactionsCompanion data) {
+    return StagedTransaction(
+      id: data.id.present ? data.id.value : this.id,
+      rawText: data.rawText.present ? data.rawText.value : this.rawText,
+      sourceName: data.sourceName.present
+          ? data.sourceName.value
+          : this.sourceName,
+      packageName: data.packageName.present
+          ? data.packageName.value
+          : this.packageName,
+      extractedAmount: data.extractedAmount.present
+          ? data.extractedAmount.value
+          : this.extractedAmount,
+      inferredType: data.inferredType.present
+          ? data.inferredType.value
+          : this.inferredType,
+      accountLast4: data.accountLast4.present
+          ? data.accountLast4.value
+          : this.accountLast4,
+      referenceNo: data.referenceNo.present
+          ? data.referenceNo.value
+          : this.referenceNo,
+      merchantName: data.merchantName.present
+          ? data.merchantName.value
+          : this.merchantName,
+      date: data.date.present ? data.date.value : this.date,
+      isApproved: data.isApproved.present
+          ? data.isApproved.value
+          : this.isApproved,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StagedTransaction(')
+          ..write('id: $id, ')
+          ..write('rawText: $rawText, ')
+          ..write('sourceName: $sourceName, ')
+          ..write('packageName: $packageName, ')
+          ..write('extractedAmount: $extractedAmount, ')
+          ..write('inferredType: $inferredType, ')
+          ..write('accountLast4: $accountLast4, ')
+          ..write('referenceNo: $referenceNo, ')
+          ..write('merchantName: $merchantName, ')
+          ..write('date: $date, ')
+          ..write('isApproved: $isApproved')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    rawText,
+    sourceName,
+    packageName,
+    extractedAmount,
+    inferredType,
+    accountLast4,
+    referenceNo,
+    merchantName,
+    date,
+    isApproved,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StagedTransaction &&
+          other.id == this.id &&
+          other.rawText == this.rawText &&
+          other.sourceName == this.sourceName &&
+          other.packageName == this.packageName &&
+          other.extractedAmount == this.extractedAmount &&
+          other.inferredType == this.inferredType &&
+          other.accountLast4 == this.accountLast4 &&
+          other.referenceNo == this.referenceNo &&
+          other.merchantName == this.merchantName &&
+          other.date == this.date &&
+          other.isApproved == this.isApproved);
+}
+
+class StagedTransactionsCompanion extends UpdateCompanion<StagedTransaction> {
+  final Value<String> id;
+  final Value<String> rawText;
+  final Value<String> sourceName;
+  final Value<String> packageName;
+  final Value<double> extractedAmount;
+  final Value<String> inferredType;
+  final Value<String?> accountLast4;
+  final Value<String?> referenceNo;
+  final Value<String?> merchantName;
+  final Value<DateTime> date;
+  final Value<bool> isApproved;
+  final Value<int> rowid;
+  const StagedTransactionsCompanion({
+    this.id = const Value.absent(),
+    this.rawText = const Value.absent(),
+    this.sourceName = const Value.absent(),
+    this.packageName = const Value.absent(),
+    this.extractedAmount = const Value.absent(),
+    this.inferredType = const Value.absent(),
+    this.accountLast4 = const Value.absent(),
+    this.referenceNo = const Value.absent(),
+    this.merchantName = const Value.absent(),
+    this.date = const Value.absent(),
+    this.isApproved = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  StagedTransactionsCompanion.insert({
+    required String id,
+    required String rawText,
+    required String sourceName,
+    required String packageName,
+    required double extractedAmount,
+    required String inferredType,
+    this.accountLast4 = const Value.absent(),
+    this.referenceNo = const Value.absent(),
+    this.merchantName = const Value.absent(),
+    required DateTime date,
+    this.isApproved = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       rawText = Value(rawText),
+       sourceName = Value(sourceName),
+       packageName = Value(packageName),
+       extractedAmount = Value(extractedAmount),
+       inferredType = Value(inferredType),
+       date = Value(date);
+  static Insertable<StagedTransaction> custom({
+    Expression<String>? id,
+    Expression<String>? rawText,
+    Expression<String>? sourceName,
+    Expression<String>? packageName,
+    Expression<double>? extractedAmount,
+    Expression<String>? inferredType,
+    Expression<String>? accountLast4,
+    Expression<String>? referenceNo,
+    Expression<String>? merchantName,
+    Expression<DateTime>? date,
+    Expression<bool>? isApproved,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (rawText != null) 'raw_text': rawText,
+      if (sourceName != null) 'source_name': sourceName,
+      if (packageName != null) 'package_name': packageName,
+      if (extractedAmount != null) 'extracted_amount': extractedAmount,
+      if (inferredType != null) 'inferred_type': inferredType,
+      if (accountLast4 != null) 'account_last4': accountLast4,
+      if (referenceNo != null) 'reference_no': referenceNo,
+      if (merchantName != null) 'merchant_name': merchantName,
+      if (date != null) 'date': date,
+      if (isApproved != null) 'is_approved': isApproved,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  StagedTransactionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? rawText,
+    Value<String>? sourceName,
+    Value<String>? packageName,
+    Value<double>? extractedAmount,
+    Value<String>? inferredType,
+    Value<String?>? accountLast4,
+    Value<String?>? referenceNo,
+    Value<String?>? merchantName,
+    Value<DateTime>? date,
+    Value<bool>? isApproved,
+    Value<int>? rowid,
+  }) {
+    return StagedTransactionsCompanion(
+      id: id ?? this.id,
+      rawText: rawText ?? this.rawText,
+      sourceName: sourceName ?? this.sourceName,
+      packageName: packageName ?? this.packageName,
+      extractedAmount: extractedAmount ?? this.extractedAmount,
+      inferredType: inferredType ?? this.inferredType,
+      accountLast4: accountLast4 ?? this.accountLast4,
+      referenceNo: referenceNo ?? this.referenceNo,
+      merchantName: merchantName ?? this.merchantName,
+      date: date ?? this.date,
+      isApproved: isApproved ?? this.isApproved,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (rawText.present) {
+      map['raw_text'] = Variable<String>(rawText.value);
+    }
+    if (sourceName.present) {
+      map['source_name'] = Variable<String>(sourceName.value);
+    }
+    if (packageName.present) {
+      map['package_name'] = Variable<String>(packageName.value);
+    }
+    if (extractedAmount.present) {
+      map['extracted_amount'] = Variable<double>(extractedAmount.value);
+    }
+    if (inferredType.present) {
+      map['inferred_type'] = Variable<String>(inferredType.value);
+    }
+    if (accountLast4.present) {
+      map['account_last4'] = Variable<String>(accountLast4.value);
+    }
+    if (referenceNo.present) {
+      map['reference_no'] = Variable<String>(referenceNo.value);
+    }
+    if (merchantName.present) {
+      map['merchant_name'] = Variable<String>(merchantName.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (isApproved.present) {
+      map['is_approved'] = Variable<bool>(isApproved.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StagedTransactionsCompanion(')
+          ..write('id: $id, ')
+          ..write('rawText: $rawText, ')
+          ..write('sourceName: $sourceName, ')
+          ..write('packageName: $packageName, ')
+          ..write('extractedAmount: $extractedAmount, ')
+          ..write('inferredType: $inferredType, ')
+          ..write('accountLast4: $accountLast4, ')
+          ..write('referenceNo: $referenceNo, ')
+          ..write('merchantName: $merchantName, ')
+          ..write('date: $date, ')
+          ..write('isApproved: $isApproved, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ParserRulesTable extends ParserRules
+    with TableInfo<$ParserRulesTable, ParserRule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ParserRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _regexPatternMeta = const VerificationMeta(
+    'regexPattern',
+  );
+  @override
+  late final GeneratedColumn<String> regexPattern = GeneratedColumn<String>(
+    'regex_pattern',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetTypeMeta = const VerificationMeta(
+    'targetType',
+  );
+  @override
+  late final GeneratedColumn<String> targetType = GeneratedColumn<String>(
+    'target_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _isCustomMeta = const VerificationMeta(
+    'isCustom',
+  );
+  @override
+  late final GeneratedColumn<bool> isCustom = GeneratedColumn<bool>(
+    'is_custom',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_custom" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    regexPattern,
+    targetType,
+    isActive,
+    isCustom,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'parser_rules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ParserRule> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('regex_pattern')) {
+      context.handle(
+        _regexPatternMeta,
+        regexPattern.isAcceptableOrUnknown(
+          data['regex_pattern']!,
+          _regexPatternMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_regexPatternMeta);
+    }
+    if (data.containsKey('target_type')) {
+      context.handle(
+        _targetTypeMeta,
+        targetType.isAcceptableOrUnknown(data['target_type']!, _targetTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_targetTypeMeta);
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    if (data.containsKey('is_custom')) {
+      context.handle(
+        _isCustomMeta,
+        isCustom.isAcceptableOrUnknown(data['is_custom']!, _isCustomMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ParserRule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ParserRule(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      regexPattern: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}regex_pattern'],
+      )!,
+      targetType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_type'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      isCustom: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_custom'],
+      )!,
+    );
+  }
+
+  @override
+  $ParserRulesTable createAlias(String alias) {
+    return $ParserRulesTable(attachedDatabase, alias);
+  }
+}
+
+class ParserRule extends DataClass implements Insertable<ParserRule> {
+  final String id;
+  final String name;
+  final String regexPattern;
+  final String targetType;
+  final bool isActive;
+  final bool isCustom;
+  const ParserRule({
+    required this.id,
+    required this.name,
+    required this.regexPattern,
+    required this.targetType,
+    required this.isActive,
+    required this.isCustom,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['regex_pattern'] = Variable<String>(regexPattern);
+    map['target_type'] = Variable<String>(targetType);
+    map['is_active'] = Variable<bool>(isActive);
+    map['is_custom'] = Variable<bool>(isCustom);
+    return map;
+  }
+
+  ParserRulesCompanion toCompanion(bool nullToAbsent) {
+    return ParserRulesCompanion(
+      id: Value(id),
+      name: Value(name),
+      regexPattern: Value(regexPattern),
+      targetType: Value(targetType),
+      isActive: Value(isActive),
+      isCustom: Value(isCustom),
+    );
+  }
+
+  factory ParserRule.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ParserRule(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      regexPattern: serializer.fromJson<String>(json['regexPattern']),
+      targetType: serializer.fromJson<String>(json['targetType']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      isCustom: serializer.fromJson<bool>(json['isCustom']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'regexPattern': serializer.toJson<String>(regexPattern),
+      'targetType': serializer.toJson<String>(targetType),
+      'isActive': serializer.toJson<bool>(isActive),
+      'isCustom': serializer.toJson<bool>(isCustom),
+    };
+  }
+
+  ParserRule copyWith({
+    String? id,
+    String? name,
+    String? regexPattern,
+    String? targetType,
+    bool? isActive,
+    bool? isCustom,
+  }) => ParserRule(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    regexPattern: regexPattern ?? this.regexPattern,
+    targetType: targetType ?? this.targetType,
+    isActive: isActive ?? this.isActive,
+    isCustom: isCustom ?? this.isCustom,
+  );
+  ParserRule copyWithCompanion(ParserRulesCompanion data) {
+    return ParserRule(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      regexPattern: data.regexPattern.present
+          ? data.regexPattern.value
+          : this.regexPattern,
+      targetType: data.targetType.present
+          ? data.targetType.value
+          : this.targetType,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      isCustom: data.isCustom.present ? data.isCustom.value : this.isCustom,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParserRule(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('regexPattern: $regexPattern, ')
+          ..write('targetType: $targetType, ')
+          ..write('isActive: $isActive, ')
+          ..write('isCustom: $isCustom')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, name, regexPattern, targetType, isActive, isCustom);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ParserRule &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.regexPattern == this.regexPattern &&
+          other.targetType == this.targetType &&
+          other.isActive == this.isActive &&
+          other.isCustom == this.isCustom);
+}
+
+class ParserRulesCompanion extends UpdateCompanion<ParserRule> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> regexPattern;
+  final Value<String> targetType;
+  final Value<bool> isActive;
+  final Value<bool> isCustom;
+  final Value<int> rowid;
+  const ParserRulesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.regexPattern = const Value.absent(),
+    this.targetType = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.isCustom = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ParserRulesCompanion.insert({
+    required String id,
+    required String name,
+    required String regexPattern,
+    required String targetType,
+    this.isActive = const Value.absent(),
+    this.isCustom = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       regexPattern = Value(regexPattern),
+       targetType = Value(targetType);
+  static Insertable<ParserRule> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? regexPattern,
+    Expression<String>? targetType,
+    Expression<bool>? isActive,
+    Expression<bool>? isCustom,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (regexPattern != null) 'regex_pattern': regexPattern,
+      if (targetType != null) 'target_type': targetType,
+      if (isActive != null) 'is_active': isActive,
+      if (isCustom != null) 'is_custom': isCustom,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ParserRulesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? regexPattern,
+    Value<String>? targetType,
+    Value<bool>? isActive,
+    Value<bool>? isCustom,
+    Value<int>? rowid,
+  }) {
+    return ParserRulesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      regexPattern: regexPattern ?? this.regexPattern,
+      targetType: targetType ?? this.targetType,
+      isActive: isActive ?? this.isActive,
+      isCustom: isCustom ?? this.isCustom,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (regexPattern.present) {
+      map['regex_pattern'] = Variable<String>(regexPattern.value);
+    }
+    if (targetType.present) {
+      map['target_type'] = Variable<String>(targetType.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (isCustom.present) {
+      map['is_custom'] = Variable<bool>(isCustom.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParserRulesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('regexPattern: $regexPattern, ')
+          ..write('targetType: $targetType, ')
+          ..write('isActive: $isActive, ')
+          ..write('isCustom: $isCustom, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -10656,6 +11766,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TripsTable trips = $TripsTable(this);
   late final $RemindersTable reminders = $RemindersTable(this);
   late final $VaultRecordsTable vaultRecords = $VaultRecordsTable(this);
+  late final $StagedTransactionsTable stagedTransactions =
+      $StagedTransactionsTable(this);
+  late final $ParserRulesTable parserRules = $ParserRulesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10677,6 +11790,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     trips,
     reminders,
     vaultRecords,
+    stagedTransactions,
+    parserRules,
   ];
 }
 
@@ -15854,6 +16969,572 @@ typedef $$VaultRecordsTableProcessedTableManager =
       VaultRecord,
       PrefetchHooks Function()
     >;
+typedef $$StagedTransactionsTableCreateCompanionBuilder =
+    StagedTransactionsCompanion Function({
+      required String id,
+      required String rawText,
+      required String sourceName,
+      required String packageName,
+      required double extractedAmount,
+      required String inferredType,
+      Value<String?> accountLast4,
+      Value<String?> referenceNo,
+      Value<String?> merchantName,
+      required DateTime date,
+      Value<bool> isApproved,
+      Value<int> rowid,
+    });
+typedef $$StagedTransactionsTableUpdateCompanionBuilder =
+    StagedTransactionsCompanion Function({
+      Value<String> id,
+      Value<String> rawText,
+      Value<String> sourceName,
+      Value<String> packageName,
+      Value<double> extractedAmount,
+      Value<String> inferredType,
+      Value<String?> accountLast4,
+      Value<String?> referenceNo,
+      Value<String?> merchantName,
+      Value<DateTime> date,
+      Value<bool> isApproved,
+      Value<int> rowid,
+    });
+
+class $$StagedTransactionsTableFilterComposer
+    extends Composer<_$AppDatabase, $StagedTransactionsTable> {
+  $$StagedTransactionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rawText => $composableBuilder(
+    column: $table.rawText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceName => $composableBuilder(
+    column: $table.sourceName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get packageName => $composableBuilder(
+    column: $table.packageName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get extractedAmount => $composableBuilder(
+    column: $table.extractedAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get inferredType => $composableBuilder(
+    column: $table.inferredType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get accountLast4 => $composableBuilder(
+    column: $table.accountLast4,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get referenceNo => $composableBuilder(
+    column: $table.referenceNo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get merchantName => $composableBuilder(
+    column: $table.merchantName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isApproved => $composableBuilder(
+    column: $table.isApproved,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$StagedTransactionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StagedTransactionsTable> {
+  $$StagedTransactionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rawText => $composableBuilder(
+    column: $table.rawText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceName => $composableBuilder(
+    column: $table.sourceName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get packageName => $composableBuilder(
+    column: $table.packageName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get extractedAmount => $composableBuilder(
+    column: $table.extractedAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get inferredType => $composableBuilder(
+    column: $table.inferredType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get accountLast4 => $composableBuilder(
+    column: $table.accountLast4,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get referenceNo => $composableBuilder(
+    column: $table.referenceNo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get merchantName => $composableBuilder(
+    column: $table.merchantName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isApproved => $composableBuilder(
+    column: $table.isApproved,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$StagedTransactionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StagedTransactionsTable> {
+  $$StagedTransactionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get rawText =>
+      $composableBuilder(column: $table.rawText, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceName => $composableBuilder(
+    column: $table.sourceName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get packageName => $composableBuilder(
+    column: $table.packageName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get extractedAmount => $composableBuilder(
+    column: $table.extractedAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get inferredType => $composableBuilder(
+    column: $table.inferredType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get accountLast4 => $composableBuilder(
+    column: $table.accountLast4,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get referenceNo => $composableBuilder(
+    column: $table.referenceNo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get merchantName => $composableBuilder(
+    column: $table.merchantName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<bool> get isApproved => $composableBuilder(
+    column: $table.isApproved,
+    builder: (column) => column,
+  );
+}
+
+class $$StagedTransactionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StagedTransactionsTable,
+          StagedTransaction,
+          $$StagedTransactionsTableFilterComposer,
+          $$StagedTransactionsTableOrderingComposer,
+          $$StagedTransactionsTableAnnotationComposer,
+          $$StagedTransactionsTableCreateCompanionBuilder,
+          $$StagedTransactionsTableUpdateCompanionBuilder,
+          (
+            StagedTransaction,
+            BaseReferences<
+              _$AppDatabase,
+              $StagedTransactionsTable,
+              StagedTransaction
+            >,
+          ),
+          StagedTransaction,
+          PrefetchHooks Function()
+        > {
+  $$StagedTransactionsTableTableManager(
+    _$AppDatabase db,
+    $StagedTransactionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StagedTransactionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StagedTransactionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StagedTransactionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> rawText = const Value.absent(),
+                Value<String> sourceName = const Value.absent(),
+                Value<String> packageName = const Value.absent(),
+                Value<double> extractedAmount = const Value.absent(),
+                Value<String> inferredType = const Value.absent(),
+                Value<String?> accountLast4 = const Value.absent(),
+                Value<String?> referenceNo = const Value.absent(),
+                Value<String?> merchantName = const Value.absent(),
+                Value<DateTime> date = const Value.absent(),
+                Value<bool> isApproved = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StagedTransactionsCompanion(
+                id: id,
+                rawText: rawText,
+                sourceName: sourceName,
+                packageName: packageName,
+                extractedAmount: extractedAmount,
+                inferredType: inferredType,
+                accountLast4: accountLast4,
+                referenceNo: referenceNo,
+                merchantName: merchantName,
+                date: date,
+                isApproved: isApproved,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String rawText,
+                required String sourceName,
+                required String packageName,
+                required double extractedAmount,
+                required String inferredType,
+                Value<String?> accountLast4 = const Value.absent(),
+                Value<String?> referenceNo = const Value.absent(),
+                Value<String?> merchantName = const Value.absent(),
+                required DateTime date,
+                Value<bool> isApproved = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StagedTransactionsCompanion.insert(
+                id: id,
+                rawText: rawText,
+                sourceName: sourceName,
+                packageName: packageName,
+                extractedAmount: extractedAmount,
+                inferredType: inferredType,
+                accountLast4: accountLast4,
+                referenceNo: referenceNo,
+                merchantName: merchantName,
+                date: date,
+                isApproved: isApproved,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$StagedTransactionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StagedTransactionsTable,
+      StagedTransaction,
+      $$StagedTransactionsTableFilterComposer,
+      $$StagedTransactionsTableOrderingComposer,
+      $$StagedTransactionsTableAnnotationComposer,
+      $$StagedTransactionsTableCreateCompanionBuilder,
+      $$StagedTransactionsTableUpdateCompanionBuilder,
+      (
+        StagedTransaction,
+        BaseReferences<
+          _$AppDatabase,
+          $StagedTransactionsTable,
+          StagedTransaction
+        >,
+      ),
+      StagedTransaction,
+      PrefetchHooks Function()
+    >;
+typedef $$ParserRulesTableCreateCompanionBuilder =
+    ParserRulesCompanion Function({
+      required String id,
+      required String name,
+      required String regexPattern,
+      required String targetType,
+      Value<bool> isActive,
+      Value<bool> isCustom,
+      Value<int> rowid,
+    });
+typedef $$ParserRulesTableUpdateCompanionBuilder =
+    ParserRulesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> regexPattern,
+      Value<String> targetType,
+      Value<bool> isActive,
+      Value<bool> isCustom,
+      Value<int> rowid,
+    });
+
+class $$ParserRulesTableFilterComposer
+    extends Composer<_$AppDatabase, $ParserRulesTable> {
+  $$ParserRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get regexPattern => $composableBuilder(
+    column: $table.regexPattern,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get targetType => $composableBuilder(
+    column: $table.targetType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCustom => $composableBuilder(
+    column: $table.isCustom,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ParserRulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ParserRulesTable> {
+  $$ParserRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get regexPattern => $composableBuilder(
+    column: $table.regexPattern,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get targetType => $composableBuilder(
+    column: $table.targetType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCustom => $composableBuilder(
+    column: $table.isCustom,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ParserRulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ParserRulesTable> {
+  $$ParserRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get regexPattern => $composableBuilder(
+    column: $table.regexPattern,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get targetType => $composableBuilder(
+    column: $table.targetType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCustom =>
+      $composableBuilder(column: $table.isCustom, builder: (column) => column);
+}
+
+class $$ParserRulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ParserRulesTable,
+          ParserRule,
+          $$ParserRulesTableFilterComposer,
+          $$ParserRulesTableOrderingComposer,
+          $$ParserRulesTableAnnotationComposer,
+          $$ParserRulesTableCreateCompanionBuilder,
+          $$ParserRulesTableUpdateCompanionBuilder,
+          (
+            ParserRule,
+            BaseReferences<_$AppDatabase, $ParserRulesTable, ParserRule>,
+          ),
+          ParserRule,
+          PrefetchHooks Function()
+        > {
+  $$ParserRulesTableTableManager(_$AppDatabase db, $ParserRulesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ParserRulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ParserRulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ParserRulesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> regexPattern = const Value.absent(),
+                Value<String> targetType = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<bool> isCustom = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ParserRulesCompanion(
+                id: id,
+                name: name,
+                regexPattern: regexPattern,
+                targetType: targetType,
+                isActive: isActive,
+                isCustom: isCustom,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String regexPattern,
+                required String targetType,
+                Value<bool> isActive = const Value.absent(),
+                Value<bool> isCustom = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ParserRulesCompanion.insert(
+                id: id,
+                name: name,
+                regexPattern: regexPattern,
+                targetType: targetType,
+                isActive: isActive,
+                isCustom: isCustom,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ParserRulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ParserRulesTable,
+      ParserRule,
+      $$ParserRulesTableFilterComposer,
+      $$ParserRulesTableOrderingComposer,
+      $$ParserRulesTableAnnotationComposer,
+      $$ParserRulesTableCreateCompanionBuilder,
+      $$ParserRulesTableUpdateCompanionBuilder,
+      (
+        ParserRule,
+        BaseReferences<_$AppDatabase, $ParserRulesTable, ParserRule>,
+      ),
+      ParserRule,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -15893,4 +17574,8 @@ class $AppDatabaseManager {
       $$RemindersTableTableManager(_db, _db.reminders);
   $$VaultRecordsTableTableManager get vaultRecords =>
       $$VaultRecordsTableTableManager(_db, _db.vaultRecords);
+  $$StagedTransactionsTableTableManager get stagedTransactions =>
+      $$StagedTransactionsTableTableManager(_db, _db.stagedTransactions);
+  $$ParserRulesTableTableManager get parserRules =>
+      $$ParserRulesTableTableManager(_db, _db.parserRules);
 }

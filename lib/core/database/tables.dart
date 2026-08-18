@@ -296,3 +296,33 @@ class VaultRecords extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+class StagedTransactions extends Table {
+  TextColumn get id => text()();
+  TextColumn get rawText => text()();
+  TextColumn get sourceName =>
+      text()(); // App title or SMS Sender (e.g., HDFCBK, GPay)
+  TextColumn get packageName => text()();
+  RealColumn get extractedAmount => real()();
+  TextColumn get inferredType => text()(); // 'Expense' or 'Income'
+  TextColumn get accountLast4 => text().nullable()();
+  TextColumn get referenceNo => text().nullable()();
+  TextColumn get merchantName => text().nullable()();
+  DateTimeColumn get date => dateTime()();
+  BoolColumn get isApproved => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class ParserRules extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get regexPattern => text()();
+  TextColumn get targetType => text()(); // 'Expense' or 'Income'
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  BoolColumn get isCustom => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
