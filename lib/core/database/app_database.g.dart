@@ -11892,6 +11892,712 @@ class ParserRulesCompanion extends UpdateCompanion<ParserRule> {
   }
 }
 
+class $DebtsTable extends Debts with TableInfo<$DebtsTable, Debt> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DebtsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _personMeta = const VerificationMeta('person');
+  @override
+  late final GeneratedColumn<String> person = GeneratedColumn<String>(
+    'person',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _purposeMeta = const VerificationMeta(
+    'purpose',
+  );
+  @override
+  late final GeneratedColumn<String> purpose = GeneratedColumn<String>(
+    'purpose',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dueDateMeta = const VerificationMeta(
+    'dueDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> dueDate = GeneratedColumn<DateTime>(
+    'due_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isPushEnabledMeta = const VerificationMeta(
+    'isPushEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> isPushEnabled = GeneratedColumn<bool>(
+    'is_push_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_push_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _priorDaysMeta = const VerificationMeta(
+    'priorDays',
+  );
+  @override
+  late final GeneratedColumn<int> priorDays = GeneratedColumn<int>(
+    'prior_days',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notificationIdMeta = const VerificationMeta(
+    'notificationId',
+  );
+  @override
+  late final GeneratedColumn<int> notificationId = GeneratedColumn<int>(
+    'notification_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isSettledMeta = const VerificationMeta(
+    'isSettled',
+  );
+  @override
+  late final GeneratedColumn<bool> isSettled = GeneratedColumn<bool>(
+    'is_settled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_settled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    type,
+    person,
+    purpose,
+    amount,
+    date,
+    dueDate,
+    isPushEnabled,
+    priorDays,
+    notificationId,
+    isSettled,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'debts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Debt> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('person')) {
+      context.handle(
+        _personMeta,
+        person.isAcceptableOrUnknown(data['person']!, _personMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_personMeta);
+    }
+    if (data.containsKey('purpose')) {
+      context.handle(
+        _purposeMeta,
+        purpose.isAcceptableOrUnknown(data['purpose']!, _purposeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_purposeMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('due_date')) {
+      context.handle(
+        _dueDateMeta,
+        dueDate.isAcceptableOrUnknown(data['due_date']!, _dueDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dueDateMeta);
+    }
+    if (data.containsKey('is_push_enabled')) {
+      context.handle(
+        _isPushEnabledMeta,
+        isPushEnabled.isAcceptableOrUnknown(
+          data['is_push_enabled']!,
+          _isPushEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('prior_days')) {
+      context.handle(
+        _priorDaysMeta,
+        priorDays.isAcceptableOrUnknown(data['prior_days']!, _priorDaysMeta),
+      );
+    }
+    if (data.containsKey('notification_id')) {
+      context.handle(
+        _notificationIdMeta,
+        notificationId.isAcceptableOrUnknown(
+          data['notification_id']!,
+          _notificationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_notificationIdMeta);
+    }
+    if (data.containsKey('is_settled')) {
+      context.handle(
+        _isSettledMeta,
+        isSettled.isAcceptableOrUnknown(data['is_settled']!, _isSettledMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Debt map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Debt(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      person: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}person'],
+      )!,
+      purpose: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}purpose'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date'],
+      )!,
+      dueDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}due_date'],
+      )!,
+      isPushEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_push_enabled'],
+      )!,
+      priorDays: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}prior_days'],
+      ),
+      notificationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}notification_id'],
+      )!,
+      isSettled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_settled'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $DebtsTable createAlias(String alias) {
+    return $DebtsTable(attachedDatabase, alias);
+  }
+}
+
+class Debt extends DataClass implements Insertable<Debt> {
+  final String id;
+  final String type;
+  final String person;
+  final String purpose;
+  final double amount;
+  final DateTime date;
+  final DateTime dueDate;
+  final bool isPushEnabled;
+  final int? priorDays;
+  final int notificationId;
+  final bool isSettled;
+  final DateTime createdAt;
+  const Debt({
+    required this.id,
+    required this.type,
+    required this.person,
+    required this.purpose,
+    required this.amount,
+    required this.date,
+    required this.dueDate,
+    required this.isPushEnabled,
+    this.priorDays,
+    required this.notificationId,
+    required this.isSettled,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['type'] = Variable<String>(type);
+    map['person'] = Variable<String>(person);
+    map['purpose'] = Variable<String>(purpose);
+    map['amount'] = Variable<double>(amount);
+    map['date'] = Variable<DateTime>(date);
+    map['due_date'] = Variable<DateTime>(dueDate);
+    map['is_push_enabled'] = Variable<bool>(isPushEnabled);
+    if (!nullToAbsent || priorDays != null) {
+      map['prior_days'] = Variable<int>(priorDays);
+    }
+    map['notification_id'] = Variable<int>(notificationId);
+    map['is_settled'] = Variable<bool>(isSettled);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  DebtsCompanion toCompanion(bool nullToAbsent) {
+    return DebtsCompanion(
+      id: Value(id),
+      type: Value(type),
+      person: Value(person),
+      purpose: Value(purpose),
+      amount: Value(amount),
+      date: Value(date),
+      dueDate: Value(dueDate),
+      isPushEnabled: Value(isPushEnabled),
+      priorDays: priorDays == null && nullToAbsent
+          ? const Value.absent()
+          : Value(priorDays),
+      notificationId: Value(notificationId),
+      isSettled: Value(isSettled),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory Debt.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Debt(
+      id: serializer.fromJson<String>(json['id']),
+      type: serializer.fromJson<String>(json['type']),
+      person: serializer.fromJson<String>(json['person']),
+      purpose: serializer.fromJson<String>(json['purpose']),
+      amount: serializer.fromJson<double>(json['amount']),
+      date: serializer.fromJson<DateTime>(json['date']),
+      dueDate: serializer.fromJson<DateTime>(json['dueDate']),
+      isPushEnabled: serializer.fromJson<bool>(json['isPushEnabled']),
+      priorDays: serializer.fromJson<int?>(json['priorDays']),
+      notificationId: serializer.fromJson<int>(json['notificationId']),
+      isSettled: serializer.fromJson<bool>(json['isSettled']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'type': serializer.toJson<String>(type),
+      'person': serializer.toJson<String>(person),
+      'purpose': serializer.toJson<String>(purpose),
+      'amount': serializer.toJson<double>(amount),
+      'date': serializer.toJson<DateTime>(date),
+      'dueDate': serializer.toJson<DateTime>(dueDate),
+      'isPushEnabled': serializer.toJson<bool>(isPushEnabled),
+      'priorDays': serializer.toJson<int?>(priorDays),
+      'notificationId': serializer.toJson<int>(notificationId),
+      'isSettled': serializer.toJson<bool>(isSettled),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Debt copyWith({
+    String? id,
+    String? type,
+    String? person,
+    String? purpose,
+    double? amount,
+    DateTime? date,
+    DateTime? dueDate,
+    bool? isPushEnabled,
+    Value<int?> priorDays = const Value.absent(),
+    int? notificationId,
+    bool? isSettled,
+    DateTime? createdAt,
+  }) => Debt(
+    id: id ?? this.id,
+    type: type ?? this.type,
+    person: person ?? this.person,
+    purpose: purpose ?? this.purpose,
+    amount: amount ?? this.amount,
+    date: date ?? this.date,
+    dueDate: dueDate ?? this.dueDate,
+    isPushEnabled: isPushEnabled ?? this.isPushEnabled,
+    priorDays: priorDays.present ? priorDays.value : this.priorDays,
+    notificationId: notificationId ?? this.notificationId,
+    isSettled: isSettled ?? this.isSettled,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  Debt copyWithCompanion(DebtsCompanion data) {
+    return Debt(
+      id: data.id.present ? data.id.value : this.id,
+      type: data.type.present ? data.type.value : this.type,
+      person: data.person.present ? data.person.value : this.person,
+      purpose: data.purpose.present ? data.purpose.value : this.purpose,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      date: data.date.present ? data.date.value : this.date,
+      dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
+      isPushEnabled: data.isPushEnabled.present
+          ? data.isPushEnabled.value
+          : this.isPushEnabled,
+      priorDays: data.priorDays.present ? data.priorDays.value : this.priorDays,
+      notificationId: data.notificationId.present
+          ? data.notificationId.value
+          : this.notificationId,
+      isSettled: data.isSettled.present ? data.isSettled.value : this.isSettled,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Debt(')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('person: $person, ')
+          ..write('purpose: $purpose, ')
+          ..write('amount: $amount, ')
+          ..write('date: $date, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('isPushEnabled: $isPushEnabled, ')
+          ..write('priorDays: $priorDays, ')
+          ..write('notificationId: $notificationId, ')
+          ..write('isSettled: $isSettled, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    type,
+    person,
+    purpose,
+    amount,
+    date,
+    dueDate,
+    isPushEnabled,
+    priorDays,
+    notificationId,
+    isSettled,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Debt &&
+          other.id == this.id &&
+          other.type == this.type &&
+          other.person == this.person &&
+          other.purpose == this.purpose &&
+          other.amount == this.amount &&
+          other.date == this.date &&
+          other.dueDate == this.dueDate &&
+          other.isPushEnabled == this.isPushEnabled &&
+          other.priorDays == this.priorDays &&
+          other.notificationId == this.notificationId &&
+          other.isSettled == this.isSettled &&
+          other.createdAt == this.createdAt);
+}
+
+class DebtsCompanion extends UpdateCompanion<Debt> {
+  final Value<String> id;
+  final Value<String> type;
+  final Value<String> person;
+  final Value<String> purpose;
+  final Value<double> amount;
+  final Value<DateTime> date;
+  final Value<DateTime> dueDate;
+  final Value<bool> isPushEnabled;
+  final Value<int?> priorDays;
+  final Value<int> notificationId;
+  final Value<bool> isSettled;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const DebtsCompanion({
+    this.id = const Value.absent(),
+    this.type = const Value.absent(),
+    this.person = const Value.absent(),
+    this.purpose = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.date = const Value.absent(),
+    this.dueDate = const Value.absent(),
+    this.isPushEnabled = const Value.absent(),
+    this.priorDays = const Value.absent(),
+    this.notificationId = const Value.absent(),
+    this.isSettled = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DebtsCompanion.insert({
+    required String id,
+    required String type,
+    required String person,
+    required String purpose,
+    required double amount,
+    required DateTime date,
+    required DateTime dueDate,
+    this.isPushEnabled = const Value.absent(),
+    this.priorDays = const Value.absent(),
+    required int notificationId,
+    this.isSettled = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       type = Value(type),
+       person = Value(person),
+       purpose = Value(purpose),
+       amount = Value(amount),
+       date = Value(date),
+       dueDate = Value(dueDate),
+       notificationId = Value(notificationId);
+  static Insertable<Debt> custom({
+    Expression<String>? id,
+    Expression<String>? type,
+    Expression<String>? person,
+    Expression<String>? purpose,
+    Expression<double>? amount,
+    Expression<DateTime>? date,
+    Expression<DateTime>? dueDate,
+    Expression<bool>? isPushEnabled,
+    Expression<int>? priorDays,
+    Expression<int>? notificationId,
+    Expression<bool>? isSettled,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (type != null) 'type': type,
+      if (person != null) 'person': person,
+      if (purpose != null) 'purpose': purpose,
+      if (amount != null) 'amount': amount,
+      if (date != null) 'date': date,
+      if (dueDate != null) 'due_date': dueDate,
+      if (isPushEnabled != null) 'is_push_enabled': isPushEnabled,
+      if (priorDays != null) 'prior_days': priorDays,
+      if (notificationId != null) 'notification_id': notificationId,
+      if (isSettled != null) 'is_settled': isSettled,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DebtsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? type,
+    Value<String>? person,
+    Value<String>? purpose,
+    Value<double>? amount,
+    Value<DateTime>? date,
+    Value<DateTime>? dueDate,
+    Value<bool>? isPushEnabled,
+    Value<int?>? priorDays,
+    Value<int>? notificationId,
+    Value<bool>? isSettled,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return DebtsCompanion(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      person: person ?? this.person,
+      purpose: purpose ?? this.purpose,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      dueDate: dueDate ?? this.dueDate,
+      isPushEnabled: isPushEnabled ?? this.isPushEnabled,
+      priorDays: priorDays ?? this.priorDays,
+      notificationId: notificationId ?? this.notificationId,
+      isSettled: isSettled ?? this.isSettled,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (person.present) {
+      map['person'] = Variable<String>(person.value);
+    }
+    if (purpose.present) {
+      map['purpose'] = Variable<String>(purpose.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (dueDate.present) {
+      map['due_date'] = Variable<DateTime>(dueDate.value);
+    }
+    if (isPushEnabled.present) {
+      map['is_push_enabled'] = Variable<bool>(isPushEnabled.value);
+    }
+    if (priorDays.present) {
+      map['prior_days'] = Variable<int>(priorDays.value);
+    }
+    if (notificationId.present) {
+      map['notification_id'] = Variable<int>(notificationId.value);
+    }
+    if (isSettled.present) {
+      map['is_settled'] = Variable<bool>(isSettled.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DebtsCompanion(')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('person: $person, ')
+          ..write('purpose: $purpose, ')
+          ..write('amount: $amount, ')
+          ..write('date: $date, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('isPushEnabled: $isPushEnabled, ')
+          ..write('priorDays: $priorDays, ')
+          ..write('notificationId: $notificationId, ')
+          ..write('isSettled: $isSettled, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -11921,6 +12627,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $StagedTransactionsTable stagedTransactions =
       $StagedTransactionsTable(this);
   late final $ParserRulesTable parserRules = $ParserRulesTable(this);
+  late final $DebtsTable debts = $DebtsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -11944,6 +12651,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     vaultRecords,
     stagedTransactions,
     parserRules,
+    debts,
   ];
 }
 
@@ -17746,6 +18454,336 @@ typedef $$ParserRulesTableProcessedTableManager =
       ParserRule,
       PrefetchHooks Function()
     >;
+typedef $$DebtsTableCreateCompanionBuilder =
+    DebtsCompanion Function({
+      required String id,
+      required String type,
+      required String person,
+      required String purpose,
+      required double amount,
+      required DateTime date,
+      required DateTime dueDate,
+      Value<bool> isPushEnabled,
+      Value<int?> priorDays,
+      required int notificationId,
+      Value<bool> isSettled,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$DebtsTableUpdateCompanionBuilder =
+    DebtsCompanion Function({
+      Value<String> id,
+      Value<String> type,
+      Value<String> person,
+      Value<String> purpose,
+      Value<double> amount,
+      Value<DateTime> date,
+      Value<DateTime> dueDate,
+      Value<bool> isPushEnabled,
+      Value<int?> priorDays,
+      Value<int> notificationId,
+      Value<bool> isSettled,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$DebtsTableFilterComposer extends Composer<_$AppDatabase, $DebtsTable> {
+  $$DebtsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get person => $composableBuilder(
+    column: $table.person,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get purpose => $composableBuilder(
+    column: $table.purpose,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get dueDate => $composableBuilder(
+    column: $table.dueDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPushEnabled => $composableBuilder(
+    column: $table.isPushEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get priorDays => $composableBuilder(
+    column: $table.priorDays,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSettled => $composableBuilder(
+    column: $table.isSettled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DebtsTableOrderingComposer
+    extends Composer<_$AppDatabase, $DebtsTable> {
+  $$DebtsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get person => $composableBuilder(
+    column: $table.person,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get purpose => $composableBuilder(
+    column: $table.purpose,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get dueDate => $composableBuilder(
+    column: $table.dueDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPushEnabled => $composableBuilder(
+    column: $table.isPushEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get priorDays => $composableBuilder(
+    column: $table.priorDays,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSettled => $composableBuilder(
+    column: $table.isSettled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DebtsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DebtsTable> {
+  $$DebtsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get person =>
+      $composableBuilder(column: $table.person, builder: (column) => column);
+
+  GeneratedColumn<String> get purpose =>
+      $composableBuilder(column: $table.purpose, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get dueDate =>
+      $composableBuilder(column: $table.dueDate, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPushEnabled => $composableBuilder(
+    column: $table.isPushEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get priorDays =>
+      $composableBuilder(column: $table.priorDays, builder: (column) => column);
+
+  GeneratedColumn<int> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isSettled =>
+      $composableBuilder(column: $table.isSettled, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$DebtsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DebtsTable,
+          Debt,
+          $$DebtsTableFilterComposer,
+          $$DebtsTableOrderingComposer,
+          $$DebtsTableAnnotationComposer,
+          $$DebtsTableCreateCompanionBuilder,
+          $$DebtsTableUpdateCompanionBuilder,
+          (Debt, BaseReferences<_$AppDatabase, $DebtsTable, Debt>),
+          Debt,
+          PrefetchHooks Function()
+        > {
+  $$DebtsTableTableManager(_$AppDatabase db, $DebtsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DebtsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DebtsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DebtsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String> person = const Value.absent(),
+                Value<String> purpose = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<DateTime> date = const Value.absent(),
+                Value<DateTime> dueDate = const Value.absent(),
+                Value<bool> isPushEnabled = const Value.absent(),
+                Value<int?> priorDays = const Value.absent(),
+                Value<int> notificationId = const Value.absent(),
+                Value<bool> isSettled = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DebtsCompanion(
+                id: id,
+                type: type,
+                person: person,
+                purpose: purpose,
+                amount: amount,
+                date: date,
+                dueDate: dueDate,
+                isPushEnabled: isPushEnabled,
+                priorDays: priorDays,
+                notificationId: notificationId,
+                isSettled: isSettled,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String type,
+                required String person,
+                required String purpose,
+                required double amount,
+                required DateTime date,
+                required DateTime dueDate,
+                Value<bool> isPushEnabled = const Value.absent(),
+                Value<int?> priorDays = const Value.absent(),
+                required int notificationId,
+                Value<bool> isSettled = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DebtsCompanion.insert(
+                id: id,
+                type: type,
+                person: person,
+                purpose: purpose,
+                amount: amount,
+                date: date,
+                dueDate: dueDate,
+                isPushEnabled: isPushEnabled,
+                priorDays: priorDays,
+                notificationId: notificationId,
+                isSettled: isSettled,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DebtsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DebtsTable,
+      Debt,
+      $$DebtsTableFilterComposer,
+      $$DebtsTableOrderingComposer,
+      $$DebtsTableAnnotationComposer,
+      $$DebtsTableCreateCompanionBuilder,
+      $$DebtsTableUpdateCompanionBuilder,
+      (Debt, BaseReferences<_$AppDatabase, $DebtsTable, Debt>),
+      Debt,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -17789,4 +18827,6 @@ class $AppDatabaseManager {
       $$StagedTransactionsTableTableManager(_db, _db.stagedTransactions);
   $$ParserRulesTableTableManager get parserRules =>
       $$ParserRulesTableTableManager(_db, _db.parserRules);
+  $$DebtsTableTableManager get debts =>
+      $$DebtsTableTableManager(_db, _db.debts);
 }

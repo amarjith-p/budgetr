@@ -330,3 +330,24 @@ class ParserRules extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+class Debts extends Table {
+  TextColumn get id => text()();
+  TextColumn get type => text()(); // 'Borrowed' or 'Lent'
+  TextColumn get person => text()();
+  TextColumn get purpose => text()();
+  RealColumn get amount => real()();
+  DateTimeColumn get date => dateTime()(); // When the money was given/received
+  DateTimeColumn get dueDate => dateTime()(); // When it needs to be settled
+
+  BoolColumn get isPushEnabled =>
+      boolean().withDefault(const Constant(false))();
+  IntColumn get priorDays => integer().nullable()();
+  IntColumn get notificationId => integer()(); // Used to cancel alerts
+
+  BoolColumn get isSettled => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

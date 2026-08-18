@@ -1,4 +1,5 @@
 import 'package:budgetr/features/backup/views/backup_page.dart';
+import 'package:budgetr/features/debts/views/debt_dashboard_page.dart';
 import 'package:budgetr/features/developer/views/developer_support_page.dart';
 import 'package:budgetr/features/investments/views/investment_dashboard_page.dart';
 import 'package:budgetr/features/money_tracker/views/money_tracker_base_page.dart';
@@ -701,6 +702,42 @@ class DashboardPage extends ConsumerWidget {
                                       const SmartTrackersDashboardPage(),
                                 ),
                               );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: tileGap),
+
+                    // --- ROW 5: DEBTS & BALANCE SHEET ---
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetroTile(
+                            title: 'DEBTS',
+                            icon: Icons.money_off_rounded,
+                            height: baseTileHeight,
+                            color: darkTileColor,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const DebtDashboardPage(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: tileGap),
+                        Expanded(
+                          child: _buildMetroTile(
+                            title: 'BALANCE SHEET',
+                            icon: Icons.account_balance_rounded,
+                            height: baseTileHeight,
+                            color: darkTileColor,
+                            onTap: () {
+                              // TODO: Add Navigation to Balance Sheet Page
                             },
                           ),
                         ),

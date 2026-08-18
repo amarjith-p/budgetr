@@ -28,6 +28,7 @@ part 'app_database.g.dart';
     VaultRecords,
     StagedTransactions,
     ParserRules,
+    Debts,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -35,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMPED TO VERSION 25 ---
   @override
-  int get schemaVersion => 35;
+  int get schemaVersion => 36;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -130,6 +131,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 35) {
         await m.createTable(stagedTransactions);
         await m.createTable(parserRules);
+      }
+      if (from < 36) {
+        await m.createTable(debts); // <-- NEW
       }
     },
   );
