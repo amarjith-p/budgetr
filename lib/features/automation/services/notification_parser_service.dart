@@ -1,9 +1,10 @@
 // lib/features/automation/services/notification_parser_service.dart
 import 'package:drift/drift.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:notification_listener_service/notification_event.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/utils/location_helper.dart';
 
 class ParsedNotificationResult {
   final double amount;
@@ -28,7 +29,6 @@ class NotificationParserService {
   final _uuid = const Uuid();
 
   // 1. Independent Amount Extractor (Matches Rs 500, INR 500, ₹500)
-  // FIXED: Removed (?i) and added caseSensitive: false
   static final RegExp _amountRegex = RegExp(
     r'(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)',
     caseSensitive: false,
@@ -171,6 +171,26 @@ class NotificationParserService {
           ? title
           : packageName.split('.').last.toUpperCase();
 
+      // --- NEW: FETCH LOCATION IN BACKGROUND ---
+      String? locName;
+      double? lat;
+      double? lng;
+
+      try {
+        // Wrap in a 5-second timeout so a bad GPS signal doesn't crash or stall the background service
+        final locData = await LocationHelper.fetchCurrentLocation().timeout(
+          const Duration(seconds: 5),
+        );
+        if (locData != null) {
+          locName = locData['name'];
+          lat = locData['latitude'];
+          lng = locData['longitude'];
+        }
+      } catch (e) {
+        debugPrint("Background location fetch failed or timed out: $e");
+        // We continue silently without location so the transaction still logs
+      }
+
       await _db
           .into(_db.stagedTransactions)
           .insert(
@@ -185,6 +205,9 @@ class NotificationParserService {
               merchantName: Value(parsed.merchantName),
               referenceNo: Value(parsed.referenceNo),
               date: now,
+              locationName: Value(locName), // <-- Saved to Staging
+              latitude: Value(lat), // <-- Saved to Staging
+              longitude: Value(lng), // <-- Saved to Staging
             ),
           );
     } catch (e) {

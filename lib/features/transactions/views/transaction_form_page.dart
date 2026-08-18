@@ -191,6 +191,11 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         text: stagedTx.merchantName ?? stagedTx.sourceName,
       );
 
+      // --- INHERIT BACKGROUND CAPTURED LOCATION ---
+      _locationName = stagedTx.locationName;
+      _latitude = stagedTx.latitude;
+      _longitude = stagedTx.longitude;
+
       // Auto-match account after frame renders
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final rawAccounts =
@@ -1227,7 +1232,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           );
 
       if (success && mounted) {
-        // --- NEW: DELETE FROM INBOX ON SUCCESS ---
         if (widget.stagedTransaction != null) {
           await ref
               .read(smartInboxActionProvider.notifier)
@@ -1419,7 +1423,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         );
 
     if (success && mounted) {
-      // --- NEW: DELETE FROM INBOX ON SUCCESS ---
       if (widget.stagedTransaction != null) {
         await ref
             .read(smartInboxActionProvider.notifier)
@@ -1984,7 +1987,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       else
         appBarTitle = 'Edit Log';
     } else if (widget.stagedTransaction != null) {
-      appBarTitle = 'Import Log'; // <-- NEW
+      appBarTitle = 'Import Log';
     }
 
     return Scaffold(

@@ -300,16 +300,20 @@ class VaultRecords extends Table {
 class StagedTransactions extends Table {
   TextColumn get id => text()();
   TextColumn get rawText => text()();
-  TextColumn get sourceName =>
-      text()(); // App title or SMS Sender (e.g., HDFCBK, GPay)
+  TextColumn get sourceName => text()();
   TextColumn get packageName => text()();
   RealColumn get extractedAmount => real()();
-  TextColumn get inferredType => text()(); // 'Expense' or 'Income'
+  TextColumn get inferredType => text()();
   TextColumn get accountLast4 => text().nullable()();
-  TextColumn get referenceNo => text().nullable()();
   TextColumn get merchantName => text().nullable()();
+  TextColumn get referenceNo => text().nullable()();
   DateTimeColumn get date => dateTime()();
   BoolColumn get isApproved => boolean().withDefault(const Constant(false))();
+
+  // --- ADD THESE NEW LOCATION FIELDS ---
+  TextColumn get locationName => text().nullable()();
+  RealColumn get latitude => real().nullable()();
+  RealColumn get longitude => real().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

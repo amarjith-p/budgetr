@@ -10711,23 +10711,23 @@ class $StagedTransactionsTable extends StagedTransactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _referenceNoMeta = const VerificationMeta(
-    'referenceNo',
-  );
-  @override
-  late final GeneratedColumn<String> referenceNo = GeneratedColumn<String>(
-    'reference_no',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
   static const VerificationMeta _merchantNameMeta = const VerificationMeta(
     'merchantName',
   );
   @override
   late final GeneratedColumn<String> merchantName = GeneratedColumn<String>(
     'merchant_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _referenceNoMeta = const VerificationMeta(
+    'referenceNo',
+  );
+  @override
+  late final GeneratedColumn<String> referenceNo = GeneratedColumn<String>(
+    'reference_no',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -10757,6 +10757,39 @@ class $StagedTransactionsTable extends StagedTransactions
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _locationNameMeta = const VerificationMeta(
+    'locationName',
+  );
+  @override
+  late final GeneratedColumn<String> locationName = GeneratedColumn<String>(
+    'location_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _latitudeMeta = const VerificationMeta(
+    'latitude',
+  );
+  @override
+  late final GeneratedColumn<double> latitude = GeneratedColumn<double>(
+    'latitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _longitudeMeta = const VerificationMeta(
+    'longitude',
+  );
+  @override
+  late final GeneratedColumn<double> longitude = GeneratedColumn<double>(
+    'longitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -10766,10 +10799,13 @@ class $StagedTransactionsTable extends StagedTransactions
     extractedAmount,
     inferredType,
     accountLast4,
-    referenceNo,
     merchantName,
+    referenceNo,
     date,
     isApproved,
+    locationName,
+    latitude,
+    longitude,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -10846,21 +10882,21 @@ class $StagedTransactionsTable extends StagedTransactions
         ),
       );
     }
-    if (data.containsKey('reference_no')) {
-      context.handle(
-        _referenceNoMeta,
-        referenceNo.isAcceptableOrUnknown(
-          data['reference_no']!,
-          _referenceNoMeta,
-        ),
-      );
-    }
     if (data.containsKey('merchant_name')) {
       context.handle(
         _merchantNameMeta,
         merchantName.isAcceptableOrUnknown(
           data['merchant_name']!,
           _merchantNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reference_no')) {
+      context.handle(
+        _referenceNoMeta,
+        referenceNo.isAcceptableOrUnknown(
+          data['reference_no']!,
+          _referenceNoMeta,
         ),
       );
     }
@@ -10876,6 +10912,27 @@ class $StagedTransactionsTable extends StagedTransactions
       context.handle(
         _isApprovedMeta,
         isApproved.isAcceptableOrUnknown(data['is_approved']!, _isApprovedMeta),
+      );
+    }
+    if (data.containsKey('location_name')) {
+      context.handle(
+        _locationNameMeta,
+        locationName.isAcceptableOrUnknown(
+          data['location_name']!,
+          _locationNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('latitude')) {
+      context.handle(
+        _latitudeMeta,
+        latitude.isAcceptableOrUnknown(data['latitude']!, _latitudeMeta),
+      );
+    }
+    if (data.containsKey('longitude')) {
+      context.handle(
+        _longitudeMeta,
+        longitude.isAcceptableOrUnknown(data['longitude']!, _longitudeMeta),
       );
     }
     return context;
@@ -10915,13 +10972,13 @@ class $StagedTransactionsTable extends StagedTransactions
         DriftSqlType.string,
         data['${effectivePrefix}account_last4'],
       ),
-      referenceNo: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}reference_no'],
-      ),
       merchantName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}merchant_name'],
+      ),
+      referenceNo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reference_no'],
       ),
       date: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -10931,6 +10988,18 @@ class $StagedTransactionsTable extends StagedTransactions
         DriftSqlType.bool,
         data['${effectivePrefix}is_approved'],
       )!,
+      locationName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location_name'],
+      ),
+      latitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}latitude'],
+      ),
+      longitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}longitude'],
+      ),
     );
   }
 
@@ -10949,10 +11018,13 @@ class StagedTransaction extends DataClass
   final double extractedAmount;
   final String inferredType;
   final String? accountLast4;
-  final String? referenceNo;
   final String? merchantName;
+  final String? referenceNo;
   final DateTime date;
   final bool isApproved;
+  final String? locationName;
+  final double? latitude;
+  final double? longitude;
   const StagedTransaction({
     required this.id,
     required this.rawText,
@@ -10961,10 +11033,13 @@ class StagedTransaction extends DataClass
     required this.extractedAmount,
     required this.inferredType,
     this.accountLast4,
-    this.referenceNo,
     this.merchantName,
+    this.referenceNo,
     required this.date,
     required this.isApproved,
+    this.locationName,
+    this.latitude,
+    this.longitude,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -10978,14 +11053,23 @@ class StagedTransaction extends DataClass
     if (!nullToAbsent || accountLast4 != null) {
       map['account_last4'] = Variable<String>(accountLast4);
     }
-    if (!nullToAbsent || referenceNo != null) {
-      map['reference_no'] = Variable<String>(referenceNo);
-    }
     if (!nullToAbsent || merchantName != null) {
       map['merchant_name'] = Variable<String>(merchantName);
     }
+    if (!nullToAbsent || referenceNo != null) {
+      map['reference_no'] = Variable<String>(referenceNo);
+    }
     map['date'] = Variable<DateTime>(date);
     map['is_approved'] = Variable<bool>(isApproved);
+    if (!nullToAbsent || locationName != null) {
+      map['location_name'] = Variable<String>(locationName);
+    }
+    if (!nullToAbsent || latitude != null) {
+      map['latitude'] = Variable<double>(latitude);
+    }
+    if (!nullToAbsent || longitude != null) {
+      map['longitude'] = Variable<double>(longitude);
+    }
     return map;
   }
 
@@ -11000,14 +11084,23 @@ class StagedTransaction extends DataClass
       accountLast4: accountLast4 == null && nullToAbsent
           ? const Value.absent()
           : Value(accountLast4),
-      referenceNo: referenceNo == null && nullToAbsent
-          ? const Value.absent()
-          : Value(referenceNo),
       merchantName: merchantName == null && nullToAbsent
           ? const Value.absent()
           : Value(merchantName),
+      referenceNo: referenceNo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(referenceNo),
       date: Value(date),
       isApproved: Value(isApproved),
+      locationName: locationName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locationName),
+      latitude: latitude == null && nullToAbsent
+          ? const Value.absent()
+          : Value(latitude),
+      longitude: longitude == null && nullToAbsent
+          ? const Value.absent()
+          : Value(longitude),
     );
   }
 
@@ -11024,10 +11117,13 @@ class StagedTransaction extends DataClass
       extractedAmount: serializer.fromJson<double>(json['extractedAmount']),
       inferredType: serializer.fromJson<String>(json['inferredType']),
       accountLast4: serializer.fromJson<String?>(json['accountLast4']),
-      referenceNo: serializer.fromJson<String?>(json['referenceNo']),
       merchantName: serializer.fromJson<String?>(json['merchantName']),
+      referenceNo: serializer.fromJson<String?>(json['referenceNo']),
       date: serializer.fromJson<DateTime>(json['date']),
       isApproved: serializer.fromJson<bool>(json['isApproved']),
+      locationName: serializer.fromJson<String?>(json['locationName']),
+      latitude: serializer.fromJson<double?>(json['latitude']),
+      longitude: serializer.fromJson<double?>(json['longitude']),
     );
   }
   @override
@@ -11041,10 +11137,13 @@ class StagedTransaction extends DataClass
       'extractedAmount': serializer.toJson<double>(extractedAmount),
       'inferredType': serializer.toJson<String>(inferredType),
       'accountLast4': serializer.toJson<String?>(accountLast4),
-      'referenceNo': serializer.toJson<String?>(referenceNo),
       'merchantName': serializer.toJson<String?>(merchantName),
+      'referenceNo': serializer.toJson<String?>(referenceNo),
       'date': serializer.toJson<DateTime>(date),
       'isApproved': serializer.toJson<bool>(isApproved),
+      'locationName': serializer.toJson<String?>(locationName),
+      'latitude': serializer.toJson<double?>(latitude),
+      'longitude': serializer.toJson<double?>(longitude),
     };
   }
 
@@ -11056,10 +11155,13 @@ class StagedTransaction extends DataClass
     double? extractedAmount,
     String? inferredType,
     Value<String?> accountLast4 = const Value.absent(),
-    Value<String?> referenceNo = const Value.absent(),
     Value<String?> merchantName = const Value.absent(),
+    Value<String?> referenceNo = const Value.absent(),
     DateTime? date,
     bool? isApproved,
+    Value<String?> locationName = const Value.absent(),
+    Value<double?> latitude = const Value.absent(),
+    Value<double?> longitude = const Value.absent(),
   }) => StagedTransaction(
     id: id ?? this.id,
     rawText: rawText ?? this.rawText,
@@ -11068,10 +11170,13 @@ class StagedTransaction extends DataClass
     extractedAmount: extractedAmount ?? this.extractedAmount,
     inferredType: inferredType ?? this.inferredType,
     accountLast4: accountLast4.present ? accountLast4.value : this.accountLast4,
-    referenceNo: referenceNo.present ? referenceNo.value : this.referenceNo,
     merchantName: merchantName.present ? merchantName.value : this.merchantName,
+    referenceNo: referenceNo.present ? referenceNo.value : this.referenceNo,
     date: date ?? this.date,
     isApproved: isApproved ?? this.isApproved,
+    locationName: locationName.present ? locationName.value : this.locationName,
+    latitude: latitude.present ? latitude.value : this.latitude,
+    longitude: longitude.present ? longitude.value : this.longitude,
   );
   StagedTransaction copyWithCompanion(StagedTransactionsCompanion data) {
     return StagedTransaction(
@@ -11092,16 +11197,21 @@ class StagedTransaction extends DataClass
       accountLast4: data.accountLast4.present
           ? data.accountLast4.value
           : this.accountLast4,
-      referenceNo: data.referenceNo.present
-          ? data.referenceNo.value
-          : this.referenceNo,
       merchantName: data.merchantName.present
           ? data.merchantName.value
           : this.merchantName,
+      referenceNo: data.referenceNo.present
+          ? data.referenceNo.value
+          : this.referenceNo,
       date: data.date.present ? data.date.value : this.date,
       isApproved: data.isApproved.present
           ? data.isApproved.value
           : this.isApproved,
+      locationName: data.locationName.present
+          ? data.locationName.value
+          : this.locationName,
+      latitude: data.latitude.present ? data.latitude.value : this.latitude,
+      longitude: data.longitude.present ? data.longitude.value : this.longitude,
     );
   }
 
@@ -11115,10 +11225,13 @@ class StagedTransaction extends DataClass
           ..write('extractedAmount: $extractedAmount, ')
           ..write('inferredType: $inferredType, ')
           ..write('accountLast4: $accountLast4, ')
-          ..write('referenceNo: $referenceNo, ')
           ..write('merchantName: $merchantName, ')
+          ..write('referenceNo: $referenceNo, ')
           ..write('date: $date, ')
-          ..write('isApproved: $isApproved')
+          ..write('isApproved: $isApproved, ')
+          ..write('locationName: $locationName, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude')
           ..write(')'))
         .toString();
   }
@@ -11132,10 +11245,13 @@ class StagedTransaction extends DataClass
     extractedAmount,
     inferredType,
     accountLast4,
-    referenceNo,
     merchantName,
+    referenceNo,
     date,
     isApproved,
+    locationName,
+    latitude,
+    longitude,
   );
   @override
   bool operator ==(Object other) =>
@@ -11148,10 +11264,13 @@ class StagedTransaction extends DataClass
           other.extractedAmount == this.extractedAmount &&
           other.inferredType == this.inferredType &&
           other.accountLast4 == this.accountLast4 &&
-          other.referenceNo == this.referenceNo &&
           other.merchantName == this.merchantName &&
+          other.referenceNo == this.referenceNo &&
           other.date == this.date &&
-          other.isApproved == this.isApproved);
+          other.isApproved == this.isApproved &&
+          other.locationName == this.locationName &&
+          other.latitude == this.latitude &&
+          other.longitude == this.longitude);
 }
 
 class StagedTransactionsCompanion extends UpdateCompanion<StagedTransaction> {
@@ -11162,10 +11281,13 @@ class StagedTransactionsCompanion extends UpdateCompanion<StagedTransaction> {
   final Value<double> extractedAmount;
   final Value<String> inferredType;
   final Value<String?> accountLast4;
-  final Value<String?> referenceNo;
   final Value<String?> merchantName;
+  final Value<String?> referenceNo;
   final Value<DateTime> date;
   final Value<bool> isApproved;
+  final Value<String?> locationName;
+  final Value<double?> latitude;
+  final Value<double?> longitude;
   final Value<int> rowid;
   const StagedTransactionsCompanion({
     this.id = const Value.absent(),
@@ -11175,10 +11297,13 @@ class StagedTransactionsCompanion extends UpdateCompanion<StagedTransaction> {
     this.extractedAmount = const Value.absent(),
     this.inferredType = const Value.absent(),
     this.accountLast4 = const Value.absent(),
-    this.referenceNo = const Value.absent(),
     this.merchantName = const Value.absent(),
+    this.referenceNo = const Value.absent(),
     this.date = const Value.absent(),
     this.isApproved = const Value.absent(),
+    this.locationName = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   StagedTransactionsCompanion.insert({
@@ -11189,10 +11314,13 @@ class StagedTransactionsCompanion extends UpdateCompanion<StagedTransaction> {
     required double extractedAmount,
     required String inferredType,
     this.accountLast4 = const Value.absent(),
-    this.referenceNo = const Value.absent(),
     this.merchantName = const Value.absent(),
+    this.referenceNo = const Value.absent(),
     required DateTime date,
     this.isApproved = const Value.absent(),
+    this.locationName = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        rawText = Value(rawText),
@@ -11209,10 +11337,13 @@ class StagedTransactionsCompanion extends UpdateCompanion<StagedTransaction> {
     Expression<double>? extractedAmount,
     Expression<String>? inferredType,
     Expression<String>? accountLast4,
-    Expression<String>? referenceNo,
     Expression<String>? merchantName,
+    Expression<String>? referenceNo,
     Expression<DateTime>? date,
     Expression<bool>? isApproved,
+    Expression<String>? locationName,
+    Expression<double>? latitude,
+    Expression<double>? longitude,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -11223,10 +11354,13 @@ class StagedTransactionsCompanion extends UpdateCompanion<StagedTransaction> {
       if (extractedAmount != null) 'extracted_amount': extractedAmount,
       if (inferredType != null) 'inferred_type': inferredType,
       if (accountLast4 != null) 'account_last4': accountLast4,
-      if (referenceNo != null) 'reference_no': referenceNo,
       if (merchantName != null) 'merchant_name': merchantName,
+      if (referenceNo != null) 'reference_no': referenceNo,
       if (date != null) 'date': date,
       if (isApproved != null) 'is_approved': isApproved,
+      if (locationName != null) 'location_name': locationName,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -11239,10 +11373,13 @@ class StagedTransactionsCompanion extends UpdateCompanion<StagedTransaction> {
     Value<double>? extractedAmount,
     Value<String>? inferredType,
     Value<String?>? accountLast4,
-    Value<String?>? referenceNo,
     Value<String?>? merchantName,
+    Value<String?>? referenceNo,
     Value<DateTime>? date,
     Value<bool>? isApproved,
+    Value<String?>? locationName,
+    Value<double?>? latitude,
+    Value<double?>? longitude,
     Value<int>? rowid,
   }) {
     return StagedTransactionsCompanion(
@@ -11253,10 +11390,13 @@ class StagedTransactionsCompanion extends UpdateCompanion<StagedTransaction> {
       extractedAmount: extractedAmount ?? this.extractedAmount,
       inferredType: inferredType ?? this.inferredType,
       accountLast4: accountLast4 ?? this.accountLast4,
-      referenceNo: referenceNo ?? this.referenceNo,
       merchantName: merchantName ?? this.merchantName,
+      referenceNo: referenceNo ?? this.referenceNo,
       date: date ?? this.date,
       isApproved: isApproved ?? this.isApproved,
+      locationName: locationName ?? this.locationName,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -11285,17 +11425,26 @@ class StagedTransactionsCompanion extends UpdateCompanion<StagedTransaction> {
     if (accountLast4.present) {
       map['account_last4'] = Variable<String>(accountLast4.value);
     }
-    if (referenceNo.present) {
-      map['reference_no'] = Variable<String>(referenceNo.value);
-    }
     if (merchantName.present) {
       map['merchant_name'] = Variable<String>(merchantName.value);
+    }
+    if (referenceNo.present) {
+      map['reference_no'] = Variable<String>(referenceNo.value);
     }
     if (date.present) {
       map['date'] = Variable<DateTime>(date.value);
     }
     if (isApproved.present) {
       map['is_approved'] = Variable<bool>(isApproved.value);
+    }
+    if (locationName.present) {
+      map['location_name'] = Variable<String>(locationName.value);
+    }
+    if (latitude.present) {
+      map['latitude'] = Variable<double>(latitude.value);
+    }
+    if (longitude.present) {
+      map['longitude'] = Variable<double>(longitude.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -11313,10 +11462,13 @@ class StagedTransactionsCompanion extends UpdateCompanion<StagedTransaction> {
           ..write('extractedAmount: $extractedAmount, ')
           ..write('inferredType: $inferredType, ')
           ..write('accountLast4: $accountLast4, ')
-          ..write('referenceNo: $referenceNo, ')
           ..write('merchantName: $merchantName, ')
+          ..write('referenceNo: $referenceNo, ')
           ..write('date: $date, ')
           ..write('isApproved: $isApproved, ')
+          ..write('locationName: $locationName, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -16978,10 +17130,13 @@ typedef $$StagedTransactionsTableCreateCompanionBuilder =
       required double extractedAmount,
       required String inferredType,
       Value<String?> accountLast4,
-      Value<String?> referenceNo,
       Value<String?> merchantName,
+      Value<String?> referenceNo,
       required DateTime date,
       Value<bool> isApproved,
+      Value<String?> locationName,
+      Value<double?> latitude,
+      Value<double?> longitude,
       Value<int> rowid,
     });
 typedef $$StagedTransactionsTableUpdateCompanionBuilder =
@@ -16993,10 +17148,13 @@ typedef $$StagedTransactionsTableUpdateCompanionBuilder =
       Value<double> extractedAmount,
       Value<String> inferredType,
       Value<String?> accountLast4,
-      Value<String?> referenceNo,
       Value<String?> merchantName,
+      Value<String?> referenceNo,
       Value<DateTime> date,
       Value<bool> isApproved,
+      Value<String?> locationName,
+      Value<double?> latitude,
+      Value<double?> longitude,
       Value<int> rowid,
     });
 
@@ -17044,13 +17202,13 @@ class $$StagedTransactionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get referenceNo => $composableBuilder(
-    column: $table.referenceNo,
+  ColumnFilters<String> get merchantName => $composableBuilder(
+    column: $table.merchantName,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get merchantName => $composableBuilder(
-    column: $table.merchantName,
+  ColumnFilters<String> get referenceNo => $composableBuilder(
+    column: $table.referenceNo,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17061,6 +17219,21 @@ class $$StagedTransactionsTableFilterComposer
 
   ColumnFilters<bool> get isApproved => $composableBuilder(
     column: $table.isApproved,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locationName => $composableBuilder(
+    column: $table.locationName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get latitude => $composableBuilder(
+    column: $table.latitude,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get longitude => $composableBuilder(
+    column: $table.longitude,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -17109,13 +17282,13 @@ class $$StagedTransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get referenceNo => $composableBuilder(
-    column: $table.referenceNo,
+  ColumnOrderings<String> get merchantName => $composableBuilder(
+    column: $table.merchantName,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get merchantName => $composableBuilder(
-    column: $table.merchantName,
+  ColumnOrderings<String> get referenceNo => $composableBuilder(
+    column: $table.referenceNo,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -17126,6 +17299,21 @@ class $$StagedTransactionsTableOrderingComposer
 
   ColumnOrderings<bool> get isApproved => $composableBuilder(
     column: $table.isApproved,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get locationName => $composableBuilder(
+    column: $table.locationName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get latitude => $composableBuilder(
+    column: $table.latitude,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get longitude => $composableBuilder(
+    column: $table.longitude,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -17170,13 +17358,13 @@ class $$StagedTransactionsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get referenceNo => $composableBuilder(
-    column: $table.referenceNo,
+  GeneratedColumn<String> get merchantName => $composableBuilder(
+    column: $table.merchantName,
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get merchantName => $composableBuilder(
-    column: $table.merchantName,
+  GeneratedColumn<String> get referenceNo => $composableBuilder(
+    column: $table.referenceNo,
     builder: (column) => column,
   );
 
@@ -17187,6 +17375,17 @@ class $$StagedTransactionsTableAnnotationComposer
     column: $table.isApproved,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get locationName => $composableBuilder(
+    column: $table.locationName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get latitude =>
+      $composableBuilder(column: $table.latitude, builder: (column) => column);
+
+  GeneratedColumn<double> get longitude =>
+      $composableBuilder(column: $table.longitude, builder: (column) => column);
 }
 
 class $$StagedTransactionsTableTableManager
@@ -17236,10 +17435,13 @@ class $$StagedTransactionsTableTableManager
                 Value<double> extractedAmount = const Value.absent(),
                 Value<String> inferredType = const Value.absent(),
                 Value<String?> accountLast4 = const Value.absent(),
-                Value<String?> referenceNo = const Value.absent(),
                 Value<String?> merchantName = const Value.absent(),
+                Value<String?> referenceNo = const Value.absent(),
                 Value<DateTime> date = const Value.absent(),
                 Value<bool> isApproved = const Value.absent(),
+                Value<String?> locationName = const Value.absent(),
+                Value<double?> latitude = const Value.absent(),
+                Value<double?> longitude = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => StagedTransactionsCompanion(
                 id: id,
@@ -17249,10 +17451,13 @@ class $$StagedTransactionsTableTableManager
                 extractedAmount: extractedAmount,
                 inferredType: inferredType,
                 accountLast4: accountLast4,
-                referenceNo: referenceNo,
                 merchantName: merchantName,
+                referenceNo: referenceNo,
                 date: date,
                 isApproved: isApproved,
+                locationName: locationName,
+                latitude: latitude,
+                longitude: longitude,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -17264,10 +17469,13 @@ class $$StagedTransactionsTableTableManager
                 required double extractedAmount,
                 required String inferredType,
                 Value<String?> accountLast4 = const Value.absent(),
-                Value<String?> referenceNo = const Value.absent(),
                 Value<String?> merchantName = const Value.absent(),
+                Value<String?> referenceNo = const Value.absent(),
                 required DateTime date,
                 Value<bool> isApproved = const Value.absent(),
+                Value<String?> locationName = const Value.absent(),
+                Value<double?> latitude = const Value.absent(),
+                Value<double?> longitude = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => StagedTransactionsCompanion.insert(
                 id: id,
@@ -17277,10 +17485,13 @@ class $$StagedTransactionsTableTableManager
                 extractedAmount: extractedAmount,
                 inferredType: inferredType,
                 accountLast4: accountLast4,
-                referenceNo: referenceNo,
                 merchantName: merchantName,
+                referenceNo: referenceNo,
                 date: date,
                 isApproved: isApproved,
+                locationName: locationName,
+                latitude: latitude,
+                longitude: longitude,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
