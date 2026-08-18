@@ -129,6 +129,11 @@ class DashboardPage extends ConsumerWidget {
     // Scale down internal elements if the tiles shrink to prevent overflow
     final double barScale = hasBanner ? 0.6 : 1.0;
 
+    // --- 2x2 GRID SIZING CALCULATIONS ---
+    final double addTransHeight = baseTileHeight * 0.70; // 70% height
+    final double smallGridTileHeight =
+        (largeTileHeight - addTransHeight - (tileGap * 2)) / 2;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
@@ -200,7 +205,7 @@ class DashboardPage extends ConsumerWidget {
               sliver: SliverToBoxAdapter(
                 child: Column(
                   children: [
-                    // --- ROW 1: Money Tracker (Left) & Add/Buckets/Categories (Right) ---
+                    // --- ROW 1: Money Tracker (Left) & Dynamic 2x2 Grid (Right) ---
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -220,10 +225,10 @@ class DashboardPage extends ConsumerWidget {
                                 );
                               },
                               child: Container(
-                                height: largeTileHeight, // Dynamic Height
+                                height: largeTileHeight,
                                 padding: EdgeInsets.all(
                                   hasBanner ? 12.0 : 16.0,
-                                ), // Scaled Padding
+                                ),
                                 decoration: BoxDecoration(
                                   border: isDark
                                       ? null
@@ -269,9 +274,7 @@ class DashboardPage extends ConsumerWidget {
                                                     color: Colors.black54,
                                                   ),
                                             ),
-                                            SizedBox(
-                                              height: hasBanner ? 4 : 8,
-                                            ), // Scaled Spacing
+                                            SizedBox(height: hasBanner ? 4 : 8),
                                             FittedBox(
                                               fit: BoxFit.scaleDown,
                                               alignment: Alignment.centerLeft,
@@ -292,12 +295,11 @@ class DashboardPage extends ConsumerWidget {
                                             ),
                                             SizedBox(
                                               height: hasBanner ? 8 : 16,
-                                            ), // Scaled Spacing
+                                            ),
                                             Row(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.end,
                                               children: [
-                                                // Scaled Bars to prevent layout overflow
                                                 _buildFlatBar(
                                                   40 * barScale,
                                                   true,
@@ -366,7 +368,7 @@ class DashboardPage extends ConsumerWidget {
                               _buildMetroTile(
                                 title: 'ADD TRANSACTION',
                                 icon: Icons.add_rounded,
-                                height: baseTileHeight,
+                                height: addTransHeight, // 70% height
                                 color: darkTileColor,
                                 onTap: () {
                                   Navigator.push(
@@ -379,6 +381,7 @@ class DashboardPage extends ConsumerWidget {
                                 },
                               ),
                               const SizedBox(height: tileGap),
+                              // 2x2 Grid - Row 1
                               Row(
                                 children: [
                                   Expanded(
@@ -388,9 +391,8 @@ class DashboardPage extends ConsumerWidget {
                                       badge: liveBucketsCount > 0
                                           ? liveBucketsCount.toString()
                                           : '-',
-                                      height: baseTileHeight,
+                                      height: smallGridTileHeight,
                                       color: darkTileColor,
-                                      verticalText: true,
                                       onTap: () {
                                         Navigator.push(
                                           context,
@@ -405,17 +407,57 @@ class DashboardPage extends ConsumerWidget {
                                   const SizedBox(width: tileGap),
                                   Expanded(
                                     child: _buildMetroTile(
-                                      title: 'CATEGORIES',
-                                      icon: Icons.category_rounded,
-                                      height: baseTileHeight,
+                                      title:
+                                          'SETTINGS', // Swapped from Categories
+                                      icon: Icons.settings_rounded,
+                                      height: smallGridTileHeight,
                                       color: darkTileColor,
-                                      verticalText: true,
                                       onTap: () {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                const CategoryManagerPage(),
+                                                const SettingsPage(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: tileGap),
+                              // 2x2 Grid - Row 2
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildMetroTile(
+                                      title: 'REMINDERS',
+                                      icon: Icons.notifications_active_rounded,
+                                      height: smallGridTileHeight,
+                                      color: darkTileColor,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const ReminderDashboardPage(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: tileGap),
+                                  Expanded(
+                                    child: _buildMetroTile(
+                                      title: 'BACKUP',
+                                      icon: Icons.cloud_sync_rounded,
+                                      height: smallGridTileHeight,
+                                      color: darkTileColor,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const BackupPage(),
                                           ),
                                         );
                                       },
@@ -494,7 +536,7 @@ class DashboardPage extends ConsumerWidget {
 
                     const SizedBox(height: tileGap),
 
-                    // --- ROW 3: Automation & Settings ---
+                    // --- ROW 3: Automation & Categories ---
                     Row(
                       children: [
                         Expanded(
@@ -542,8 +584,9 @@ class DashboardPage extends ConsumerWidget {
                               ),
                               const SizedBox(height: tileGap),
                               _buildMetroTile(
-                                title: 'SETTINGS',
-                                icon: Icons.settings_rounded,
+                                title:
+                                    'CATEGORIES', // Swapped from Settings to get wider horizontal space
+                                icon: Icons.category_rounded,
                                 height: (baseTileHeight - tileGap) / 2,
                                 color: darkTileColor,
                                 onTap: () {
@@ -551,7 +594,7 @@ class DashboardPage extends ConsumerWidget {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          const SettingsPage(),
+                                          const CategoryManagerPage(),
                                     ),
                                   );
                                 },
@@ -564,51 +607,62 @@ class DashboardPage extends ConsumerWidget {
 
                     const SizedBox(height: tileGap),
 
-                    // --- ROW 4: Custom Entry, Reminders & Backup ---
+                    // --- ROW 4: VAULT (60%) & SMART TRACKERS (40%) ---
                     Row(
                       children: [
                         Expanded(
-                          flex: 2,
-                          child: _buildMetroTile(
-                            title: 'REMINDERS',
-                            icon: Icons.notifications_active_rounded,
+                          flex: 6, // 60% Width
+                          child: _buildWideMetroTile(
+                            title: 'VAULT',
+                            icon: Icons.security_rounded,
                             height: baseTileHeight,
                             color: darkTileColor,
-                            verticalText: true,
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const ReminderDashboardPage(),
+                                  builder: (context) => const VaultAuthPage(),
                                 ),
                               );
                             },
+                            customContent: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.lock_outline_rounded,
+                                  color: Colors.white70,
+                                  size: 28,
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blueAccent.withOpacity(0.2),
+                                  ),
+                                  child: const Text(
+                                    'AES-256 ENCRYPTED',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.blueAccent,
+                                      letterSpacing: 1.0,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(width: tileGap),
                         Expanded(
-                          flex: 2,
+                          flex: 4, // 40% Width
                           child: _buildMetroTile(
-                            title: 'BACKUP',
-                            icon: Icons.cloud_sync_rounded,
-                            height: baseTileHeight,
-                            color: darkTileColor,
-                            verticalText: true,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const BackupPage(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: tileGap),
-                        Expanded(
-                          flex: 5,
-                          child: _buildMetroTile(
-                            title: 'SMART TRACKERS',
+                            title:
+                                'SMART TRACKERS', // Uses standard tile to prevent overlap in smaller space
                             icon: Icons.post_add_rounded,
                             height: baseTileHeight,
                             color: darkTileColor,
@@ -626,55 +680,9 @@ class DashboardPage extends ConsumerWidget {
                       ],
                     ),
 
-                    const SizedBox(height: tileGap),
-
-                    // --- ROW 5: SECURE VAULT ---
-                    _buildWideMetroTile(
-                      title: 'VAULT',
-                      icon: Icons.security_rounded,
-                      height: baseTileHeight,
-                      color: darkTileColor,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const VaultAuthPage(),
-                          ),
-                        );
-                      },
-                      customContent: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.lock_outline_rounded,
-                            color: Colors.white70,
-                            size: 28,
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.blueAccent.withOpacity(0.2),
-                            ),
-                            child: const Text(
-                              'AES-256 ENCRYPTED',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.blueAccent,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
+                    const SizedBox(
+                      height: 32,
+                    ), // Row 5 removed, keeping standard bottom spacing
                   ],
                 ),
               ),
@@ -785,8 +793,8 @@ class DashboardPage extends ConsumerWidget {
     bool verticalText = false,
     Color? iconColor,
   }) {
-    // Determine if this is a split tile (height < 60) to scale padding/fonts safely
-    final bool isSmall = height < 60;
+    // Increased threshold to correctly identify the new 2x2 square tiles
+    final bool isSmall = height < 85;
 
     return Material(
       color: color,
@@ -817,7 +825,9 @@ class DashboardPage extends ConsumerWidget {
                               ? isSmall
                                     ? 24
                                     : 26
-                              : 28, // Scaled
+                              : isSmall
+                              ? 26
+                              : 28, // Scaled icon size
                           color: iconColor ?? Colors.white,
                         ),
                 ),
@@ -846,7 +856,8 @@ class DashboardPage extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: isSmall ? 9 : 11, // Scaled
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 1.0,
+                            letterSpacing:
+                                0.5, // Reduced letter spacing slightly for narrow tiles
                             color: Colors.white,
                           ),
                           maxLines: 1,
