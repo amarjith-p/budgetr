@@ -1,4 +1,3 @@
-// lib/features/reminders/views/reminder_dashboard_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +9,7 @@ import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_squircle_fab.dart';
 import '../../../core/components/premium_empty_state.dart';
 import '../../../core/components/boxy_slidable_card.dart';
+import '../../../core/components/confirmation_bottom_sheet.dart'; // Added import for confirmation sheet
 import '../providers/reminder_provider.dart';
 import '../components/create_reminder_bottom_sheet.dart';
 
@@ -233,8 +233,20 @@ class _LiveCountdownCardState extends State<_LiveCountdownCard> {
           CreateReminderBottomSheet.show(context, existingReminder: r);
         },
         onDelete: () {
-          HapticFeedback.lightImpact();
-          widget.ref.read(reminderActionProvider.notifier).deleteReminder(r);
+          HapticFeedback.heavyImpact();
+          ConfirmationBottomSheet.show(
+            context,
+            title: 'Delete Reminder?',
+            description:
+                'Are you sure you want to delete this reminder? This action cannot be undone.',
+            confirmText: 'DELETE',
+            isDestructive: true,
+            onConfirm: () {
+              widget.ref
+                  .read(reminderActionProvider.notifier)
+                  .deleteReminder(r);
+            },
+          );
         },
         child: Container(
           padding: const EdgeInsets.all(16),
