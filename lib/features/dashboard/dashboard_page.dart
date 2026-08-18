@@ -131,18 +131,9 @@ class DashboardPage extends ConsumerWidget {
     final stagedTxsAsync = ref.watch(stagedTransactionsProvider);
     final int stagedCount = stagedTxsAsync.asData?.value.length ?? 0;
 
-    // --- DYNAMIC METRO GRID SIZING & SCALING ---
     final bool hasBanner = triggeredReminders.isNotEmpty;
-    final double baseTileHeight = hasBanner ? 100.0 : 120.0;
-    final double largeTileHeight = (baseTileHeight * 2) + tileGap;
-
     // Scale down internal elements if the tiles shrink to prevent overflow
     final double barScale = hasBanner ? 0.6 : 1.0;
-
-    // --- 2x2 GRID SIZING CALCULATIONS ---
-    final double addTransHeight = baseTileHeight * 0.70; // 70% height
-    final double smallGridTileHeight =
-        (largeTileHeight - addTransHeight - (tileGap * 2)) / 2;
 
     return Scaffold(
       appBar: AppBar(
@@ -201,552 +192,639 @@ class DashboardPage extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
+        child: Column(
+          children: [
             // --- POPUP BANNERS FOR TRIGGERED REMINDERS ---
             if (hasBanner)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 0),
-                  child: Column(
-                    children: triggeredReminders
-                        .map(
-                          (r) => _buildReminderBanner(
-                            context,
-                            ref,
-                            r,
-                            theme,
-                            isDark,
-                          ),
-                        )
-                        .toList(),
-                  ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 0),
+                child: Column(
+                  children: triggeredReminders
+                      .map(
+                        (r) => _buildReminderBanner(
+                          context,
+                          ref,
+                          r,
+                          theme,
+                          isDark,
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
 
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              sliver: SliverToBoxAdapter(
+            // --- FIXED FULL SCREEN GRID ---
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // --- ROW 1: Money Tracker (Left) & Dynamic 2x2 Grid (Right) ---
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 5,
-                          child: Material(
-                            color: AppTokens.surfaceLight,
-                            borderRadius: BorderRadius.zero,
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const MoneyTrackerBasePage(),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                height: largeTileHeight,
-                                padding: EdgeInsets.all(
-                                  hasBanner ? 12.0 : 16.0,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: isDark
-                                      ? null
-                                      : Border.all(
-                                          color: theme.dividerColor,
-                                          width: 1.0,
-                                        ),
-                                ),
-                                child: Stack(
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Icon(
-                                              Icons
-                                                  .account_balance_wallet_rounded,
-                                              color: Colors.black,
-                                            ),
-                                            Icon(
-                                              Icons.arrow_forward_rounded,
-                                              color: Colors.black,
-                                              size: 18,
-                                            ),
-                                          ],
-                                        ),
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'MONEY TRACKER',
-                                              style: theme.textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    fontWeight: FontWeight.w600,
-                                                    letterSpacing: 0.5,
-                                                    color: Colors.black54,
-                                                  ),
-                                            ),
-                                            SizedBox(height: hasBanner ? 4 : 8),
-                                            FittedBox(
-                                              fit: BoxFit.scaleDown,
-                                              alignment: Alignment.centerLeft,
-                                              child: CurrencyText(
-                                                amount: netBalance.abs(),
-                                                sign: netSign,
-                                                amountStyle:
-                                                    valueStyle?.copyWith(
-                                                      fontSize: 28,
-                                                      color: Colors.black,
-                                                    ) ??
-                                                    const TextStyle(),
-                                                symbolStyle: const TextStyle(
-                                                  fontSize: 18,
-                                                  color: Colors.black87,
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(
-                                              height: hasBanner ? 8 : 16,
-                                            ),
-                                            Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.end,
-                                              children: [
-                                                _buildFlatBar(
-                                                  40 * barScale,
-                                                  true,
-                                                ),
-                                                _buildFlatBar(
-                                                  60 * barScale,
-                                                  true,
-                                                ),
-                                                _buildFlatBar(
-                                                  30 * barScale,
-                                                  true,
-                                                ),
-                                                _buildFlatBar(
-                                                  80 * barScale,
-                                                  true,
-                                                ),
-                                                _buildFlatBar(
-                                                  50 * barScale,
-                                                  true,
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    Positioned(
-                                      bottom: 0,
-                                      right: 0,
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (hasPayableShortage)
-                                            const Icon(
-                                              Icons.warning_amber_rounded,
-                                              color: Colors.redAccent,
-                                              size: 24,
-                                            ),
-                                          if (hasPayableShortage &&
-                                              (hasActiveTrip || hasPausedTrip))
-                                            const SizedBox(width: 8),
-                                          if (hasActiveTrip || hasPausedTrip)
-                                            Icon(
-                                              Icons.flight_takeoff_rounded,
-                                              color: hasActiveTrip
-                                                  ? Colors.green
-                                                  : Colors.orangeAccent,
-                                              size: 24,
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: tileGap),
-
-                        Expanded(
-                          flex: 4,
-                          child: Column(
-                            children: [
-                              _buildMetroTile(
-                                title: 'ADD TRANSACTION',
-                                icon: Icons.add_rounded,
-                                height: addTransHeight, // 70% height
-                                color: darkTileColor,
+                    Expanded(
+                      flex: 2, // Double height relative to the other rows
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: Material(
+                              color: AppTokens.surfaceLight,
+                              borderRadius: BorderRadius.zero,
+                              child: InkWell(
                                 onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          const TransactionFormPage(),
+                                          const MoneyTrackerBasePage(),
                                     ),
                                   );
                                 },
-                              ),
-                              const SizedBox(height: tileGap),
-                              // 2x2 Grid - Row 1
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildMetroTile(
-                                      title: 'BUCKETS',
-                                      icon: Icons.donut_small_rounded,
-                                      badge: liveBucketsCount > 0
-                                          ? liveBucketsCount.toString()
-                                          : '-',
-                                      height: smallGridTileHeight,
-                                      color: darkTileColor,
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const BudgetBucketsPage(),
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                child: Container(
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  padding: EdgeInsets.all(
+                                    hasBanner ? 12.0 : 16.0,
                                   ),
-                                  const SizedBox(width: tileGap),
-                                  Expanded(
-                                    child: _buildMetroTile(
-                                      title:
-                                          'SETTINGS', // Swapped from Categories
-                                      icon: Icons.settings_rounded,
-                                      height: smallGridTileHeight,
-                                      color: darkTileColor,
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const SettingsPage(),
+                                  decoration: BoxDecoration(
+                                    border: isDark
+                                        ? null
+                                        : Border.all(
+                                            color: theme.dividerColor,
+                                            width: 1.0,
                                           ),
-                                        );
-                                      },
-                                    ),
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: tileGap),
-                              // 2x2 Grid - Row 2
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildMetroTile(
-                                      title: 'REMINDERS',
-                                      icon: Icons.notifications_active_rounded,
-                                      height: smallGridTileHeight,
-                                      color: darkTileColor,
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                const ReminderDashboardPage(),
+                                  child: Stack(
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Icon(
+                                                Icons
+                                                    .account_balance_wallet_rounded,
+                                                color: Colors.black,
+                                              ),
+                                              Icon(
+                                                Icons.arrow_forward_rounded,
+                                                color: Colors.black,
+                                                size: 18,
+                                              ),
+                                            ],
                                           ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: tileGap),
-                                  Expanded(
-                                    child: _buildMetroTile(
-                                      title: 'BACKUP',
-                                      icon: Icons.cloud_sync_rounded,
-                                      height: smallGridTileHeight,
-                                      color: darkTileColor,
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => const BackupPage(),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'MONEY TRACKER',
+                                                style: theme.textTheme.bodySmall
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      letterSpacing: 0.5,
+                                                      color: Colors.black54,
+                                                    ),
+                                              ),
+                                              SizedBox(
+                                                height: hasBanner ? 4 : 8,
+                                              ),
+                                              FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                alignment: Alignment.centerLeft,
+                                                child: CurrencyText(
+                                                  amount: netBalance.abs(),
+                                                  sign: netSign,
+                                                  amountStyle:
+                                                      valueStyle?.copyWith(
+                                                        fontSize: 28,
+                                                        color: Colors.black,
+                                                      ) ??
+                                                      const TextStyle(),
+                                                  symbolStyle: const TextStyle(
+                                                    fontSize: 18,
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                height: hasBanner ? 8 : 16,
+                                              ),
+                                              Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.end,
+                                                children: [
+                                                  _buildFlatBar(
+                                                    40 * barScale,
+                                                    true,
+                                                  ),
+                                                  _buildFlatBar(
+                                                    60 * barScale,
+                                                    true,
+                                                  ),
+                                                  _buildFlatBar(
+                                                    30 * barScale,
+                                                    true,
+                                                  ),
+                                                  _buildFlatBar(
+                                                    80 * barScale,
+                                                    true,
+                                                  ),
+                                                  _buildFlatBar(
+                                                    50 * barScale,
+                                                    true,
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                           ),
-                                        );
-                                      },
-                                    ),
+                                        ],
+                                      ),
+                                      Positioned(
+                                        bottom: 0,
+                                        right: 0,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (hasPayableShortage)
+                                              const Icon(
+                                                Icons.warning_amber_rounded,
+                                                color: Colors.redAccent,
+                                                size: 24,
+                                              ),
+                                            if (hasPayableShortage &&
+                                                (hasActiveTrip ||
+                                                    hasPausedTrip))
+                                              const SizedBox(width: 8),
+                                            if (hasActiveTrip || hasPausedTrip)
+                                              Icon(
+                                                Icons.flight_takeoff_rounded,
+                                                color: hasActiveTrip
+                                                    ? Colors.green
+                                                    : Colors.orangeAccent,
+                                                size: 24,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: tileGap),
-
-                    // --- ROW 2: INVESTMENT TRACKER ---
-                    _buildWideMetroTile(
-                      title: 'INVESTMENT TRACKER',
-                      icon: Icons.trending_up_rounded,
-                      height: baseTileHeight,
-                      color: darkTileColor,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const InvestmentDashboardPage(),
-                          ),
-                        );
-                      },
-                      customContent: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CurrencyText(
-                            amount: totalInvestmentValue.abs(),
-                            sign: totalInvestmentValue < 0 ? '-₹ ' : '₹ ',
-                            amountStyle: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: -1.0,
-                            ),
-                            symbolStyle: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white70,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          if (totalInvestedAmount > 0)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: invReturnPct >= 0
-                                    ? Colors.green.withOpacity(0.2)
-                                    : Colors.redAccent.withOpacity(0.2),
-                                borderRadius: BorderRadius.zero,
-                              ),
-                              child: Text(
-                                '$invReturnSign${invReturnPct.toStringAsFixed(1)}% Return',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: invReturnPct >= 0
-                                      ? Colors.greenAccent
-                                      : Colors.redAccent,
                                 ),
                               ),
                             ),
+                          ),
+
+                          const SizedBox(width: tileGap),
+
+                          Expanded(
+                            flex: 4,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  flex:
+                                      70, // 70% height proportional to the row
+                                  child: _buildMetroTile(
+                                    title: 'ADD TRANSACTION',
+                                    icon: Icons.add_rounded,
+                                    height: double.infinity,
+                                    color: darkTileColor,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const TransactionFormPage(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: tileGap),
+                                // 2x2 Grid - Row 1
+                                Expanded(
+                                  flex: 65,
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        child: _buildMetroTile(
+                                          title: 'BUCKETS',
+                                          icon: Icons.donut_small_rounded,
+                                          badge: liveBucketsCount > 0
+                                              ? liveBucketsCount.toString()
+                                              : '-',
+                                          height: double.infinity,
+                                          color: darkTileColor,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const BudgetBucketsPage(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: tileGap),
+                                      Expanded(
+                                        child: _buildMetroTile(
+                                          title: 'SETTINGS',
+                                          icon: Icons.settings_rounded,
+                                          height: double.infinity,
+                                          color: darkTileColor,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const SettingsPage(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: tileGap),
+                                // 2x2 Grid - Row 2
+                                Expanded(
+                                  flex: 65,
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        child: _buildMetroTile(
+                                          title: 'REMINDERS',
+                                          icon: Icons
+                                              .notifications_active_rounded,
+                                          height: double.infinity,
+                                          color: darkTileColor,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const ReminderDashboardPage(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: tileGap),
+                                      Expanded(
+                                        child: _buildMetroTile(
+                                          title: 'BACKUP',
+                                          icon: Icons.cloud_sync_rounded,
+                                          height: double.infinity,
+                                          color: darkTileColor,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const BackupPage(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
 
                     const SizedBox(height: tileGap),
 
-                    // --- ROW 3: Automation & Categories ---
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMetroTile(
-                            title: 'RECURRING RULES',
-                            icon: Icons.autorenew_rounded,
-                            height: baseTileHeight,
-                            color: darkTileColor,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const AutomationDashboardPage(),
+                    // --- ROW 2: INVESTMENT TRACKER ---
+                    Expanded(
+                      flex: 1,
+                      child: _buildWideMetroTile(
+                        title: 'INVESTMENT TRACKER',
+                        icon: Icons.trending_up_rounded,
+                        height: double.infinity,
+                        color: darkTileColor,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const InvestmentDashboardPage(),
+                            ),
+                          );
+                        },
+                        customContent: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: CurrencyText(
+                                amount: totalInvestmentValue.abs(),
+                                sign: totalInvestmentValue < 0 ? '-₹ ' : '₹ ',
+                                amountStyle: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: -1.0,
                                 ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: tileGap),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              _buildMetroTile(
-                                title: 'TRIP MODE',
-                                icon: hasActiveTrip || hasPausedTrip
-                                    ? Icons.flight_takeoff_rounded
-                                    : Icons.flight_land_rounded,
-                                iconColor: hasActiveTrip
-                                    ? Colors.green
-                                    : (hasPausedTrip
-                                          ? Colors.orangeAccent
-                                          : Colors.white),
-                                height: (baseTileHeight - tileGap) / 2,
-                                color: darkTileColor,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const TripDashboardPage(),
-                                    ),
-                                  );
-                                },
+                                symbolStyle: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70,
+                                ),
                               ),
-                              const SizedBox(height: tileGap),
-                              _buildMetroTile(
-                                title:
-                                    'CATEGORIES', // Swapped from Settings to get wider horizontal space
-                                icon: Icons.category_rounded,
-                                height: (baseTileHeight - tileGap) / 2,
-                                color: darkTileColor,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const CategoryManagerPage(),
-                                    ),
-                                  );
-                                },
+                            ),
+                            const SizedBox(height: 6),
+                            if (totalInvestedAmount > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: invReturnPct >= 0
+                                      ? Colors.green.withOpacity(0.2)
+                                      : Colors.redAccent.withOpacity(0.2),
+                                  borderRadius: BorderRadius.zero,
+                                ),
+                                child: Text(
+                                  '$invReturnSign${invReturnPct.toStringAsFixed(1)}% Return',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: invReturnPct >= 0
+                                        ? Colors.greenAccent
+                                        : Colors.redAccent,
+                                  ),
+                                ),
                               ),
-                            ],
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
 
                     const SizedBox(height: tileGap),
 
-                    // --- ROW 4: VAULT (60%) & SMART TRACKERS (40%) ---
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 6, // 60% Width
-                          child: _buildWideMetroTile(
-                            title: 'VAULT',
-                            icon: Icons.security_rounded,
-                            height: baseTileHeight,
-                            color: darkTileColor,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const VaultAuthPage(),
-                                ),
-                              );
-                            },
-                            customContent: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisAlignment: MainAxisAlignment.center,
+                    // --- ROW 3: Automation & Categories ---
+                    Expanded(
+                      flex: 1,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: _buildMetroTile(
+                              title: 'RECURRING RULES',
+                              icon: Icons.autorenew_rounded,
+                              height: double.infinity,
+                              color: darkTileColor,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const AutomationDashboardPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: tileGap),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Icon(
-                                  Icons.lock_outline_rounded,
-                                  color: Colors.white70,
-                                  size: 28,
+                                Expanded(
+                                  child: _buildMetroTile(
+                                    title: 'TRIP MODE',
+                                    icon: hasActiveTrip || hasPausedTrip
+                                        ? Icons.flight_takeoff_rounded
+                                        : Icons.flight_land_rounded,
+                                    iconColor: hasActiveTrip
+                                        ? Colors.green
+                                        : (hasPausedTrip
+                                              ? Colors.orangeAccent
+                                              : Colors.white),
+                                    height: double.infinity,
+                                    color: darkTileColor,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const TripDashboardPage(),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
-                                const SizedBox(height: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blueAccent.withOpacity(0.2),
-                                  ),
-                                  child: const Text(
-                                    'AES-256 ENCRYPTED',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.blueAccent,
-                                      letterSpacing: 1.0,
-                                    ),
+                                const SizedBox(height: tileGap),
+                                Expanded(
+                                  child: _buildMetroTile(
+                                    title: 'CATEGORIES',
+                                    icon: Icons.category_rounded,
+                                    height: double.infinity,
+                                    color: darkTileColor,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const CategoryManagerPage(),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                        const SizedBox(width: tileGap),
-                        Expanded(
-                          flex: 4, // 40% Width
-                          child: _buildMetroTile(
-                            title:
-                                'SMART TRACKERS', // Uses standard tile to prevent overlap in smaller space
-                            icon: Icons.post_add_rounded,
-                            height: baseTileHeight,
-                            color: darkTileColor,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const SmartTrackersDashboardPage(),
-                                ),
-                              );
-                            },
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: tileGap),
+
+                    // --- ROW 4: VAULT (60%) & SMART TRACKERS (40%) ---
+                    Expanded(
+                      flex: 1,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            flex: 6, // 60% Width
+                            child: _buildWideMetroTile(
+                              title: 'VAULT',
+                              icon: Icons.security_rounded,
+                              height: double.infinity,
+                              color: darkTileColor,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const VaultAuthPage(),
+                                  ),
+                                );
+                              },
+                              customContent: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.lock_outline_rounded,
+                                    color: Colors.white70,
+                                    size: 28,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blueAccent.withOpacity(0.2),
+                                    ),
+                                    child: const Text(
+                                      'AES-256 ENCRYPTED',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.blueAccent,
+                                        letterSpacing: 1.0,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: tileGap),
+                          Expanded(
+                            flex: 4, // 40% Width
+                            child: _buildMetroTile(
+                              title: 'SMART TRACKERS',
+                              icon: Icons.post_add_rounded,
+                              height: double.infinity,
+                              color: darkTileColor,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const SmartTrackersDashboardPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: tileGap),
 
                     // --- ROW 5: DEBTS & BALANCE SHEET ---
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMetroTile(
-                            title: 'DEBTS',
-                            icon: Icons.money_off_rounded,
-                            height: baseTileHeight,
-                            color: darkTileColor,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const DebtDashboardPage(),
-                                ),
-                              );
-                            },
+                    Expanded(
+                      flex: 1,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            flex: 6, // 60% Width for custom metric layout
+                            child: _buildWideMetroTile(
+                              title: 'DEBTS',
+                              icon: Icons.money_off_rounded,
+                              height: double.infinity,
+                              color: darkTileColor,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const DebtDashboardPage(),
+                                  ),
+                                );
+                              },
+                              customContent: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: CurrencyText(
+                                      amount: totalLiabilities.abs(),
+                                      sign: '₹ ',
+                                      amountStyle: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        letterSpacing: -1.0,
+                                      ),
+                                      symbolStyle: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent.withOpacity(0.2),
+                                      borderRadius: BorderRadius.zero,
+                                    ),
+                                    child: const Text(
+                                      'NET BALANCE',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.redAccent,
+                                        letterSpacing: 1.0,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: tileGap),
-                        Expanded(
-                          child: _buildMetroTile(
-                            title: 'BALANCE SHEET',
-                            icon: Icons.account_balance_rounded,
-                            height: baseTileHeight,
-                            color: darkTileColor,
-                            onTap: () {
-                              // TODO: Add Navigation to Balance Sheet Page
-                            },
+                          const SizedBox(width: tileGap),
+                          Expanded(
+                            flex: 4, // 40% Width
+                            child: _buildMetroTile(
+                              title: 'BALANCE SHEET',
+                              icon: Icons.account_balance_rounded,
+                              height: double.infinity,
+                              color: darkTileColor,
+                              onTap: () {
+                                // TODO: Add Navigation to Balance Sheet Page
+                              },
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-
-                    const SizedBox(
-                      height: 32,
-                    ), // Row 5 removed, keeping standard bottom spacing
                   ],
                 ),
               ),
@@ -857,9 +935,6 @@ class DashboardPage extends ConsumerWidget {
     bool verticalText = false,
     Color? iconColor,
   }) {
-    // Increased threshold to correctly identify the new 2x2 square tiles
-    final bool isSmall = height < 85;
-
     return Material(
       color: color,
       borderRadius: BorderRadius.zero,
@@ -867,69 +942,75 @@ class DashboardPage extends ConsumerWidget {
         onTap: onTap,
         child: SizedBox(
           height: height,
-          child: Stack(
-            children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: EdgeInsets.all(isSmall ? 8.0 : 10.0), // Scaled
-                  child: badge != null
-                      ? Text(
-                          badge,
-                          style: TextStyle(
-                            fontSize: verticalText ? 20 : 24,
-                            fontWeight: FontWeight.w300,
-                            color: Colors.white,
-                            height: 1.0,
-                          ),
-                        )
-                      : Icon(
-                          icon,
-                          size: verticalText
-                              ? isSmall
-                                    ? 24
-                                    : 26
-                              : isSmall
-                              ? 26
-                              : 28, // Scaled icon size
-                          color: iconColor ?? Colors.white,
-                        ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomLeft,
-                child: Padding(
-                  padding: EdgeInsets.all(isSmall ? 8.0 : 12.0), // Scaled
-                  child: verticalText
-                      ? RotatedBox(
-                          quarterTurns: 3,
-                          child: Text(
-                            title,
-                            style: TextStyle(
-                              fontSize: isSmall ? 9 : 10, // Scaled
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
-                              color: Colors.white,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Calculates dynamically based on available screen space instead of hardcoded numbers
+              final bool isSmall = constraints.maxHeight < 85;
+
+              return Stack(
+                children: [
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: EdgeInsets.all(isSmall ? 8.0 : 10.0),
+                      child: badge != null
+                          ? Text(
+                              badge,
+                              style: TextStyle(
+                                fontSize: verticalText ? 20 : 24,
+                                fontWeight: FontWeight.w300,
+                                color: Colors.white,
+                                height: 1.0,
+                              ),
+                            )
+                          : Icon(
+                              icon,
+                              size: verticalText
+                                  ? isSmall
+                                        ? 24
+                                        : 26
+                                  : isSmall
+                                  ? 26
+                                  : 28,
+                              color: iconColor ?? Colors.white,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        )
-                      : Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: isSmall ? 9 : 11, // Scaled
-                            fontWeight: FontWeight.w800,
-                            letterSpacing:
-                                0.5, // Reduced letter spacing slightly for narrow tiles
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                ),
-              ),
-            ],
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Padding(
+                      padding: EdgeInsets.all(isSmall ? 8.0 : 12.0),
+                      child: verticalText
+                          ? RotatedBox(
+                              quarterTurns: 3,
+                              child: Text(
+                                title,
+                                style: TextStyle(
+                                  fontSize: isSmall ? 9 : 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.0,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )
+                          : Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: isSmall ? 9 : 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                                color: Colors.white,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

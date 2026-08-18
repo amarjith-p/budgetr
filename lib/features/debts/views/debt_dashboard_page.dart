@@ -179,7 +179,7 @@ class _DebtDashboardPageState extends ConsumerState<DebtDashboardPage> {
                     padding: const EdgeInsets.all(20.0),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: theme.dividerColor, width: 1.0),
                       boxShadow: [
                         BoxShadow(
@@ -324,14 +324,14 @@ class _DebtDashboardPageState extends ConsumerState<DebtDashboardPage> {
                                 child: Column(
                                   children: [
                                     _buildSleekRow(
-                                      'Borrowed',
+                                      'Borrowed  ',
                                       totalBorrowed,
                                       theme.colorScheme.error,
                                       theme,
                                     ),
                                     const SizedBox(height: 8),
                                     _buildSleekRow(
-                                      'Lent',
+                                      'Lent  ',
                                       totalLent,
                                       Colors.green,
                                       theme,
@@ -348,14 +348,14 @@ class _DebtDashboardPageState extends ConsumerState<DebtDashboardPage> {
                                 child: Column(
                                   children: [
                                     _buildSleekRow(
-                                      'Int. Paid',
+                                      'Int. Paid  ',
                                       interestPaid,
                                       theme.colorScheme.error,
                                       theme,
                                     ),
                                     const SizedBox(height: 8),
                                     _buildSleekRow(
-                                      'Int. Earned',
+                                      'Int. Earned  ',
                                       interestEarned,
                                       Colors.green,
                                       theme,
