@@ -22,7 +22,7 @@ import '../../accounts/providers/account_provider.dart';
 import '../../category_manager/providers/category_provider.dart';
 import '../providers/transaction_provider.dart';
 
-// --- NEW IMPORT FOR SMART INBOX ---
+// --- IMPORT FOR SMART INBOX ---
 import '../../automation/providers/smart_inbox_provider.dart';
 
 class _BucketItem {
@@ -42,7 +42,7 @@ final _formBudgetProvider = StreamProvider.family
 
 class TransactionFormPage extends ConsumerStatefulWidget {
   final TransactionWithDetails? existingTransaction;
-  final StagedTransaction? stagedTransaction; // <-- NEW
+  final StagedTransaction? stagedTransaction;
   final String? preSelectedAccountId;
   final bool isClone;
   final bool isSplit;
@@ -50,7 +50,7 @@ class TransactionFormPage extends ConsumerStatefulWidget {
   const TransactionFormPage({
     Key? key,
     this.existingTransaction,
-    this.stagedTransaction, // <-- NEW
+    this.stagedTransaction,
     this.preSelectedAccountId,
     this.isClone = false,
     this.isSplit = false,
@@ -123,7 +123,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
     String initialAmount = '';
 
-    // Check where to pull the initial amount from
     if (txDetails != null && !widget.isSplit) {
       initialAmount = txDetails.transaction.amount.toStringAsFixed(2);
     } else if (stagedTx != null) {
@@ -196,7 +195,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       _latitude = stagedTx.latitude;
       _longitude = stagedTx.longitude;
 
-      // Auto-match account after frame renders
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final rawAccounts =
             ref.read(accountsStreamProvider).asData?.value ?? [];

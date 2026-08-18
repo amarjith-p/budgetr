@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/database/app_database.dart';
@@ -41,10 +42,24 @@ class SmartInboxActionNotifier extends AsyncNotifier<void> {
   }
 
   Future<void> requestPermissionsAndListen() async {
+    // 1. Notification Listener Permission
     final bool isGranted =
         await NotificationListenerService.isPermissionGranted();
     if (!isGranted) {
       await NotificationListenerService.requestPermission();
+    }
+
+    // 2. Foreground Location Permission
+    var locStatus = await Permission.location.status;
+    if (!locStatus.isGranted) {
+      await Permission.location.request();
+    }
+
+    // 3. Background Location Permission (Allow all the time)
+    // On Android 11+, this takes the user to the app's settings page
+    var bgLocStatus = await Permission.locationAlways.status;
+    if (!bgLocStatus.isGranted) {
+      await Permission.locationAlways.request();
     }
 
     _subscription?.cancel();
@@ -84,13 +99,16 @@ class SmartInboxActionNotifier extends AsyncNotifier<void> {
           bucketName: bucketName,
           notes:
               notes ?? stagedTx.merchantName ?? 'Auto-logged via Smart Inbox',
+          locationName:
+              stagedTx.locationName, // <-- Propagate background location
+          latitude: stagedTx.latitude,
+          longitude: stagedTx.longitude,
         );
 
     if (success) {
       await db
           .update(db.stagedTransactions)
           .replace(stagedTx.copyWith(isApproved: true));
-      // Clean up approved item from staging table
       await (db.delete(
         db.stagedTransactions,
       )..where((t) => t.id.equals(stagedTx.id))).go();

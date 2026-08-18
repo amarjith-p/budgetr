@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:notification_listener_service/notification_event.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/utils/location_helper.dart';
+import '../../../core/services/notification_service.dart';
 
 class ParsedNotificationResult {
   final double amount;
@@ -28,31 +29,31 @@ class NotificationParserService {
   final AppDatabase _db;
   final _uuid = const Uuid();
 
-  // 1. Independent Amount Extractor (Matches Rs 500, INR 500, ₹500)
   static final RegExp _amountRegex = RegExp(
     r'(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)',
     caseSensitive: false,
   );
 
-  // 2. Independent Keyword Extractors
   static final RegExp _defaultExpenseKeywords = RegExp(
     r'\b(debited|paid|spent|sent|transferred|deducted|vpa)\b',
     caseSensitive: false,
   );
+
   static final RegExp _defaultIncomeKeywords = RegExp(
     r'\b(credited|received|deposited|added|refunded)\b',
     caseSensitive: false,
   );
 
-  // 3. Metadata Extractors
   static final RegExp _accountRegex = RegExp(
     r'(?:a/c|acct|card|ending with|ending in|xx|x)\s*([0-9]{3,4})',
     caseSensitive: false,
   );
+
   static final RegExp _merchantRegex = RegExp(
     r'(?:to|at|vpa|info|for)\s+([A-Za-z0-9\s&.\-@]{3,25})(?:\s+on|\s+ref|\s+upi|\s+avl|\.|$)',
     caseSensitive: false,
   );
+
   static final RegExp _refRegex = RegExp(
     r'(?:upi ref|ref no|utr|txn id|ref)\s*[:]?\s*([0-9]{6,12})',
     caseSensitive: false,
@@ -60,11 +61,9 @@ class NotificationParserService {
 
   NotificationParserService(this._db);
 
-  /// Test parsing raw text against both custom DB rules and universal defaults
   Future<ParsedNotificationResult?> testParseText(String fullText) async {
     if (fullText.trim().isEmpty) return null;
 
-    // STEP 1: Find the Amount first. If no amount, it's not a transaction.
     final amountMatch = _amountRegex.firstMatch(fullText);
     if (amountMatch == null) return null;
 
@@ -72,7 +71,6 @@ class NotificationParserService {
     final amount = double.tryParse(rawAmount);
     if (amount == null || amount <= 0) return null;
 
-    // Extract optional metadata
     final accMatch = _accountRegex.firstMatch(fullText);
     final merchantMatch = _merchantRegex.firstMatch(fullText);
     final refMatch = _refRegex.firstMatch(fullText);
@@ -81,7 +79,6 @@ class NotificationParserService {
     final merchant = merchantMatch?.group(1)?.trim();
     final refNo = refMatch?.group(1);
 
-    // STEP 2: Check custom active rules in database
     final customRules = await (_db.select(
       _db.parserRules,
     )..where((r) => r.isActive.equals(true))).get();
@@ -102,7 +99,6 @@ class NotificationParserService {
       } catch (_) {}
     }
 
-    // STEP 3: Universal Heuristic Check
     if (_defaultExpenseKeywords.hasMatch(fullText)) {
       return ParsedNotificationResult(
         amount: amount,
@@ -126,7 +122,6 @@ class NotificationParserService {
     return null;
   }
 
-  /// Background stream processor for intercepted system notifications
   Future<void> processNotification(ServiceNotificationEvent event) async {
     try {
       final String title = event.title ?? '';
@@ -134,7 +129,6 @@ class NotificationParserService {
       final String fullText = '$title $content'.trim();
       final String packageName = event.packageName ?? 'unknown';
 
-      // Ignore system logs or messaging noise early
       if (packageName.contains('android.system') ||
           packageName.contains('whatsapp'))
         return;
@@ -145,7 +139,6 @@ class NotificationParserService {
       final now = DateTime.now();
       final windowStart = now.subtract(const Duration(minutes: 3));
 
-      // Smart Deduplication: Avoid duplicate logs if UPI push and SMS arrive together
       final existingMatches =
           await (_db.select(_db.stagedTransactions)..where(
                 (t) =>
@@ -171,13 +164,13 @@ class NotificationParserService {
           ? title
           : packageName.split('.').last.toUpperCase();
 
-      // --- NEW: FETCH LOCATION IN BACKGROUND ---
+      // --- FETCH LOCATION IN BACKGROUND ---
       String? locName;
       double? lat;
       double? lng;
 
       try {
-        // Wrap in a 5-second timeout so a bad GPS signal doesn't crash or stall the background service
+        // 5-second timeout ensures the background parser doesn't hang if GPS is weak
         final locData = await LocationHelper.fetchCurrentLocation().timeout(
           const Duration(seconds: 5),
         );
@@ -188,7 +181,6 @@ class NotificationParserService {
         }
       } catch (e) {
         debugPrint("Background location fetch failed or timed out: $e");
-        // We continue silently without location so the transaction still logs
       }
 
       await _db
@@ -205,11 +197,25 @@ class NotificationParserService {
               merchantName: Value(parsed.merchantName),
               referenceNo: Value(parsed.referenceNo),
               date: now,
-              locationName: Value(locName), // <-- Saved to Staging
-              latitude: Value(lat), // <-- Saved to Staging
-              longitude: Value(lng), // <-- Saved to Staging
+              locationName: Value(locName), // Fully captured in background
+              latitude: Value(lat),
+              longitude: Value(lng),
             ),
           );
+
+      // Trigger user prompt
+      final String sign = parsed.type == 'Expense' ? '-' : '+';
+      final String alertTitle = 'New Transaction Detected';
+      final String bodyText =
+          '$sign ₹${parsed.amount} via $sourceName. Tap to review and approve.';
+
+      // Using your existing centralized notification service
+      NotificationService.instance.scheduleNotification(
+        id: DateTime.now().millisecond,
+        title: alertTitle,
+        body: bodyText,
+        scheduledDate: now.add(const Duration(seconds: 1)),
+      );
     } catch (e) {
       debugPrint("Notification Parser Error: $e");
     }
