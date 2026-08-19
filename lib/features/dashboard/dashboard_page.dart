@@ -669,7 +669,7 @@ class DashboardPage extends ConsumerWidget {
                                     },
                                   ),
                                 ),
-                                const SizedBox(width: tileGap),
+                                const SizedBox(height: tileGap),
                                 Expanded(
                                   child: _buildMetroTile(
                                     title: 'CATEGORIES',
@@ -806,8 +806,10 @@ class DashboardPage extends ConsumerWidget {
                                       amount: netDebtBalance
                                           .abs(), // Uses Debt Module Balance
                                       sign: netDebtBalance < 0
-                                          ? '-₹ '
-                                          : (netDebtBalance > 0 ? '+₹ ' : '₹ '),
+                                          ? ' -₹ '
+                                          : (netDebtBalance > 0
+                                                ? ' +₹ '
+                                                : ' ₹ '),
                                       amountStyle: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w800,
@@ -882,8 +884,8 @@ class DashboardPage extends ConsumerWidget {
                                     child: CurrencyText(
                                       amount: liveNetWorth.abs(),
                                       sign: liveNetWorth < 0
-                                          ? '-₹ '
-                                          : (liveNetWorth > 0 ? '+₹ ' : '₹ '),
+                                          ? ' -₹ '
+                                          : (liveNetWorth > 0 ? ' +₹ ' : ' ₹ '),
                                       amountStyle: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w800,
@@ -909,7 +911,7 @@ class DashboardPage extends ConsumerWidget {
                                       borderRadius: BorderRadius.zero,
                                     ),
                                     child: Text(
-                                      isNwPositive ? 'SURPLUS' : 'DEFICIT',
+                                      isNwPositive ? 'POSITIVE' : 'NEGATIVE',
                                       style: TextStyle(
                                         fontSize: 6,
                                         fontWeight: FontWeight.w700,

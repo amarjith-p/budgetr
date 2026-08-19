@@ -264,7 +264,7 @@ class _NetWorthSummaryCardState extends State<NetWorthSummaryCard>
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  isPositive ? 'SURPLUS' : 'DEFICIT',
+                  isPositive ? 'POSITIVE' : 'NEGATIVE',
                   style: TextStyle(
                     fontSize: 8,
                     fontWeight: FontWeight.w900,

@@ -11,6 +11,8 @@ import '../../../core/components/modern_boxy_input.dart';
 import '../../../core/components/modern_boxy_button.dart';
 import '../../../core/components/custom_snackbars.dart';
 import '../../../core/components/futuristic_loader.dart';
+import '../../../core/components/inline_calculator_pad.dart';
+import '../../../core/utils/bodmas_calculator.dart';
 
 import '../../accounts/providers/account_provider.dart';
 import '../../accounts/providers/credit_math_provider.dart';
@@ -64,41 +66,142 @@ class _NetWorthReconciliationPageState
 
   final _notesCtrl = TextEditingController();
 
+  // --- CALCULATOR ENGINE ---
+  TextEditingController? _activeCalcController;
+  final Map<TextEditingController, FocusNode> _focusNodes = {};
+  final FocusNode _notesFocus = FocusNode();
+
+  late final List<TextEditingController> _orderedCalcCtrls = [
+    _accBalCtrl,
+    _savingsCtrl,
+    _mfCtrl,
+    _stocksCtrl,
+    _bondsCtrl,
+    _fdCtrl,
+    _rdCtrl,
+    _p2pCtrl,
+    _otherInvCtrl,
+    _lentCtrl,
+    _assetExtraCtrl,
+    _ccCtrl,
+    _loanCtrl,
+    _borrowedCtrl,
+    _liabExtraCtrl,
+    _cfTotalIncCtrl,
+    _cfTotalExpCtrl,
+    _cfBudgetIncCtrl,
+    _cfBudgetExpCtrl,
+    _cfNonCalcIncCtrl,
+    _cfNonCalcExpCtrl,
+    _cfOutOfBucketCtrl,
+    _cfNetTotalCtrl,
+    _cfNetBudgetedCtrl,
+  ];
+
+  bool _isFetchingNetWorth = false;
+  bool _isFetchingCashflow = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize focus nodes and listeners for the calculator
+    for (var ctrl in _orderedCalcCtrls) {
+      _focusNodes[ctrl] = FocusNode();
+      _focusNodes[ctrl]!.addListener(() {
+        if (_focusNodes[ctrl]!.hasFocus && _activeCalcController != ctrl) {
+          _openCalculatorFor(ctrl);
+        }
+      });
+    }
+
+    _notesFocus.addListener(() {
+      if (_notesFocus.hasFocus) {
+        _closeCalculatorSafely();
+      }
+    });
+  }
+
   @override
   void dispose() {
-    _accBalCtrl.dispose();
-    _savingsCtrl.dispose();
-    _mfCtrl.dispose();
-    _stocksCtrl.dispose();
-    _bondsCtrl.dispose();
-    _fdCtrl.dispose();
-    _rdCtrl.dispose();
-    _p2pCtrl.dispose();
-    _otherInvCtrl.dispose();
-    _lentCtrl.dispose();
-    _assetExtraCtrl.dispose();
-    _ccCtrl.dispose();
-    _loanCtrl.dispose();
-    _borrowedCtrl.dispose();
-    _liabExtraCtrl.dispose();
-    _cfTotalIncCtrl.dispose();
-    _cfTotalExpCtrl.dispose();
-    _cfBudgetIncCtrl.dispose();
-    _cfBudgetExpCtrl.dispose();
-    _cfNonCalcIncCtrl.dispose();
-    _cfNonCalcExpCtrl.dispose();
-    _cfOutOfBucketCtrl.dispose();
-    _cfNetTotalCtrl.dispose();
-    _cfNetBudgetedCtrl.dispose();
+    _closeCalculatorSafely();
+    for (var node in _focusNodes.values) {
+      node.dispose();
+    }
+    _notesFocus.dispose();
+    for (var ctrl in _orderedCalcCtrls) {
+      ctrl.dispose();
+    }
     _notesCtrl.dispose();
     super.dispose();
+  }
+
+  // ===========================================================================
+  // CALCULATOR NAVIGATION & FOCUS ENGINE
+  // ===========================================================================
+  void _openCalculatorFor(TextEditingController controller) {
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+    if (_activeCalcController != null && _activeCalcController != controller) {
+      final text = _activeCalcController!.text.trim();
+      _activeCalcController!.text = text.isEmpty
+          ? ''
+          : BodmasCalculator.evaluate(text);
+    }
+    setState(() => _activeCalcController = controller);
+    if (!_focusNodes[controller]!.hasFocus) {
+      _focusNodes[controller]!.requestFocus();
+    }
+
+    // Ensure the field scrolls perfectly into the center of the viewport
+    Future.delayed(const Duration(milliseconds: 150), () {
+      final context = _focusNodes[controller]?.context;
+      if (context != null && mounted) {
+        Scrollable.ensureVisible(
+          context,
+          alignment: 0.5,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
+  }
+
+  void _closeCalculatorSafely() {
+    if (_activeCalcController != null) {
+      final text = _activeCalcController!.text.trim();
+      _activeCalcController!.text = text.isEmpty
+          ? ''
+          : BodmasCalculator.evaluate(text);
+      setState(() => _activeCalcController = null);
+    }
+  }
+
+  void _handleCalcNext() {
+    if (_activeCalcController == null) return;
+    final currentIndex = _orderedCalcCtrls.indexOf(_activeCalcController!);
+    if (currentIndex >= 0 && currentIndex < _orderedCalcCtrls.length - 1) {
+      _openCalculatorFor(_orderedCalcCtrls[currentIndex + 1]);
+    } else {
+      // Reached the end of numerical inputs, jump to Notes
+      _closeCalculatorSafely();
+      _notesFocus.requestFocus();
+      SystemChannels.textInput.invokeMethod('TextInput.show');
+    }
+  }
+
+  void _handleCalcPrev() {
+    if (_activeCalcController == null) return;
+    final currentIndex = _orderedCalcCtrls.indexOf(_activeCalcController!);
+    if (currentIndex > 0) {
+      _openCalculatorFor(_orderedCalcCtrls[currentIndex - 1]);
+    }
   }
 
   // ===========================================================================
   // PREMIUM FULL-SCREEN LOADING OVERLAY
   // ===========================================================================
   void _showLoadingOverlay(String message) {
-    FocusScope.of(context).unfocus(); // Drop keyboard
+    _closeCalculatorSafely();
+    FocusScope.of(context).unfocus();
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -208,20 +311,18 @@ class _NetWorthReconciliationPageState
       _borrowedCtrl.text = borrowed.toStringAsFixed(2);
 
       _hideLoadingOverlay();
-      if (mounted) {
+      if (mounted)
         CustomSnackbars.showSuccess(
           context,
           message: 'Live Net Worth Balances fetched.',
         );
-      }
     } catch (e) {
       _hideLoadingOverlay();
-      if (mounted) {
+      if (mounted)
         CustomSnackbars.showError(
           context,
           message: 'Failed to fetch balances: $e',
         );
-      }
     }
   }
 
@@ -284,20 +385,18 @@ class _NetWorthReconciliationPageState
       _cfOutOfBucketCtrl.text = outBucket.toStringAsFixed(2);
 
       _hideLoadingOverlay();
-      if (mounted) {
+      if (mounted)
         CustomSnackbars.showSuccess(
           context,
           message: 'Monthly Cashflow fetched.',
         );
-      }
     } catch (e) {
       _hideLoadingOverlay();
-      if (mounted) {
+      if (mounted)
         CustomSnackbars.showError(
           context,
           message: 'Failed to fetch cashflow: $e',
         );
-      }
     }
   }
 
@@ -306,6 +405,7 @@ class _NetWorthReconciliationPageState
   // ===========================================================================
   void _calculateCashflow() {
     HapticFeedback.mediumImpact();
+    _closeCalculatorSafely();
     FocusScope.of(context).unfocus();
 
     double parseAmt(TextEditingController ctrl) =>
@@ -327,6 +427,7 @@ class _NetWorthReconciliationPageState
   // SAVE & VALIDATE
   // ===========================================================================
   Future<void> _submit() async {
+    _closeCalculatorSafely();
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate()) {
@@ -339,38 +440,11 @@ class _NetWorthReconciliationPageState
 
     double parseLiability(TextEditingController ctrl) {
       final val = double.tryParse(ctrl.text) ?? 0.0;
-      return val > 0 ? -val : val; // Force Negative mathematically[cite: 15]
+      return val > 0 ? -val : val; // Force Negative mathematically
     }
 
-    final allControllers = [
-      _accBalCtrl,
-      _savingsCtrl,
-      _mfCtrl,
-      _stocksCtrl,
-      _bondsCtrl,
-      _fdCtrl,
-      _rdCtrl,
-      _p2pCtrl,
-      _otherInvCtrl,
-      _lentCtrl,
-      _assetExtraCtrl,
-      _ccCtrl,
-      _loanCtrl,
-      _borrowedCtrl,
-      _liabExtraCtrl,
-      _cfTotalIncCtrl,
-      _cfTotalExpCtrl,
-      _cfBudgetIncCtrl,
-      _cfBudgetExpCtrl,
-      _cfNonCalcIncCtrl,
-      _cfNonCalcExpCtrl,
-      _cfOutOfBucketCtrl,
-      _cfNetTotalCtrl,
-      _cfNetBudgetedCtrl,
-    ];
-
     double totalAbsoluteSum = 0.0;
-    for (var ctrl in allControllers) {
+    for (var ctrl in _orderedCalcCtrls) {
       totalAbsoluteSum += parseAmt(ctrl).abs();
     }
 
@@ -442,7 +516,7 @@ class _NetWorthReconciliationPageState
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: theme.dividerColor, width: 1.0),
         boxShadow: [
           BoxShadow(
@@ -501,22 +575,20 @@ class _NetWorthReconciliationPageState
           Expanded(
             child: ModernBoxyInput(
               controller: ctrl1,
+              focusNode: _focusNodes[ctrl1],
               labelText: label1,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-                signed: true,
-              ),
+              readOnly: true, // Hide native keyboard
+              onTap: () => _openCalculatorFor(ctrl1),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: ModernBoxyInput(
               controller: ctrl2,
+              focusNode: _focusNodes[ctrl2],
               labelText: label2,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-                signed: true,
-              ),
+              readOnly: true, // Hide native keyboard
+              onTap: () => _openCalculatorFor(ctrl2),
             ),
           ),
         ],
@@ -534,13 +606,16 @@ class _NetWorthReconciliationPageState
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          _closeCalculatorSafely();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: theme.colorScheme.primary.withOpacity(isDark ? 0.1 : 0.05),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: theme.colorScheme.primary.withOpacity(0.3),
               width: 1.0,
@@ -589,7 +664,7 @@ class _NetWorthReconciliationPageState
     final theme = Theme.of(context);
     final actionState = ref.watch(netWorthRecordActionProvider);
 
-    // --- KEEP ALL PROVIDERS ALIVE TO PREVENT DISPOSAL CRASHES ---
+    // Keep providers alive
     ref.watch(accountsStreamProvider);
     ref.watch(investmentsStreamProvider);
     ref.watch(allTransactionsProvider);
@@ -620,176 +695,207 @@ class _NetWorthReconciliationPageState
           ),
         ),
       ),
-      body: Form(
-        key: _formKey,
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.all(DesignTokens.spacingLg),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // --- NET WORTH SECTION ---
-                    _buildActionBanner(
-                      label: 'Auto-Fetch Live Balances',
-                      icon: Icons.account_balance_wallet_rounded,
-                      onTap: _fetchLiveNetWorth,
-                      theme: theme,
-                    ),
-
-                    _buildSectionCard(
-                      title: 'Assets',
-                      accentColor: Colors.green,
-                      theme: theme,
-                      children: [
-                        _buildRowInput(
-                          'Account Balance',
-                          _accBalCtrl,
-                          'Savings Accounts',
-                          _savingsCtrl,
-                        ),
-                        _buildRowInput(
-                          'Mutual Funds',
-                          _mfCtrl,
-                          'Stocks / Equity',
-                          _stocksCtrl,
-                        ),
-                        _buildRowInput(
-                          'Bonds',
-                          _bondsCtrl,
-                          'Fixed Deposits',
-                          _fdCtrl,
-                        ),
-                        _buildRowInput(
-                          'Recurring Deposits',
-                          _rdCtrl,
-                          'P2P Lending',
-                          _p2pCtrl,
-                        ),
-                        _buildRowInput(
-                          'Other Investments',
-                          _otherInvCtrl,
-                          'Lent (I am owed)',
-                          _lentCtrl,
-                        ),
-                        ModernBoxyInput(
-                          controller: _assetExtraCtrl,
-                          labelText: 'Any Extra Asset Value (Manual)',
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
+      body: Column(
+        children: [
+          Expanded(
+            child: Form(
+              key: _formKey,
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.all(DesignTokens.spacingLg),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // --- NET WORTH SECTION ---
+                          _buildActionBanner(
+                            label: 'Auto-Fetch Live Balances',
+                            icon: Icons.account_balance_wallet_rounded,
+                            onTap: _fetchLiveNetWorth,
+                            theme: theme,
                           ),
-                        ),
-                      ],
-                    ),
 
-                    _buildSectionCard(
-                      title: 'Liabilities (-ve)',
-                      accentColor: theme.colorScheme.error,
-                      theme: theme,
-                      children: [
-                        _buildRowInput(
-                          'Credit Card Dues',
-                          _ccCtrl,
-                          'Loan Outstanding',
-                          _loanCtrl,
-                        ),
-                        _buildRowInput(
-                          'Borrowed (I owe)',
-                          _borrowedCtrl,
-                          'Any Extra Liability',
-                          _liabExtraCtrl,
-                        ),
-                      ],
-                    ),
-
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.0),
-                      child: Divider(height: 1),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // --- CASHFLOW SECTION ---
-                    _buildActionBanner(
-                      label: 'Auto-Fetch Current Cashflow',
-                      icon: Icons.sync_rounded,
-                      onTap: _fetchMonthlyCashflow,
-                      theme: theme,
-                    ),
-
-                    _buildSectionCard(
-                      title: 'Monthly Cashflow',
-                      accentColor: Colors.blueAccent,
-                      theme: theme,
-                      children: [
-                        _buildRowInput(
-                          'Total Income',
-                          _cfTotalIncCtrl,
-                          'Total Expense',
-                          _cfTotalExpCtrl,
-                        ),
-                        _buildRowInput(
-                          'Budgeted Income',
-                          _cfBudgetIncCtrl,
-                          'Budgeted Expense',
-                          _cfBudgetExpCtrl,
-                        ),
-                        _buildRowInput(
-                          'Non-Calc Income',
-                          _cfNonCalcIncCtrl,
-                          'Non-Calc Expense',
-                          _cfNonCalcExpCtrl,
-                        ),
-                        ModernBoxyInput(
-                          controller: _cfOutOfBucketCtrl,
-                          labelText: 'Out of Bucket Expenses',
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
+                          _buildSectionCard(
+                            title: 'Assets',
+                            accentColor: Colors.green,
+                            theme: theme,
+                            children: [
+                              _buildRowInput(
+                                'Account Balance',
+                                _accBalCtrl,
+                                'Savings Accounts',
+                                _savingsCtrl,
+                              ),
+                              _buildRowInput(
+                                'Mutual Funds',
+                                _mfCtrl,
+                                'Stocks / Equity',
+                                _stocksCtrl,
+                              ),
+                              _buildRowInput(
+                                'Bonds',
+                                _bondsCtrl,
+                                'Fixed Deposits',
+                                _fdCtrl,
+                              ),
+                              _buildRowInput(
+                                'Recurring Deposits',
+                                _rdCtrl,
+                                'P2P Lending',
+                                _p2pCtrl,
+                              ),
+                              _buildRowInput(
+                                'Other Investments',
+                                _otherInvCtrl,
+                                'Lent (I am owed)',
+                                _lentCtrl,
+                              ),
+                              ModernBoxyInput(
+                                controller: _assetExtraCtrl,
+                                focusNode: _focusNodes[_assetExtraCtrl],
+                                labelText: 'Any Extra Asset Value (Manual)',
+                                readOnly: true,
+                                onTap: () =>
+                                    _openCalculatorFor(_assetExtraCtrl),
+                              ),
+                            ],
                           ),
-                        ),
 
-                        // Inline Calculation Button
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          child: ModernBoxyButton(
-                            onPressed: _calculateCashflow,
-                            label: 'Calculate Net Totals',
-                            backgroundColor:
-                                theme.colorScheme.surfaceContainerHighest,
-                            foregroundColor: theme.colorScheme.onSurface,
-                            icon: Icons.calculate_rounded,
+                          _buildSectionCard(
+                            title: 'Liabilities',
+                            accentColor: theme.colorScheme.error,
+                            theme: theme,
+                            children: [
+                              _buildRowInput(
+                                'Credit Card Dues',
+                                _ccCtrl,
+                                'Loan Outstanding',
+                                _loanCtrl,
+                              ),
+                              _buildRowInput(
+                                'Borrowed (I owe)',
+                                _borrowedCtrl,
+                                'Any Extra Liability',
+                                _liabExtraCtrl,
+                              ),
+                            ],
                           ),
-                        ),
 
-                        _buildRowInput(
-                          'Net Total Cashflow',
-                          _cfNetTotalCtrl,
-                          'Net Budgeted Cashflow',
-                          _cfNetBudgetedCtrl,
-                        ),
-                      ],
-                    ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Divider(height: 1),
+                          ),
+                          const SizedBox(height: 24),
 
-                    // --- METADATA SECTION ---
-                    _buildSectionCard(
-                      title: 'Metadata',
-                      accentColor: theme.colorScheme.onSurfaceVariant,
-                      theme: theme,
-                      children: [
-                        ModernBoxyInput(
-                          controller: _notesCtrl,
-                          labelText: 'Reconciliation Notes (Optional)',
-                          hintText: 'e.g., Q3 Financial Review',
-                        ),
-                      ],
+                          // --- CASHFLOW SECTION ---
+                          _buildActionBanner(
+                            label: 'Auto-Fetch Current Cashflow',
+                            icon: Icons.sync_rounded,
+                            onTap: _fetchMonthlyCashflow,
+                            theme: theme,
+                          ),
+
+                          _buildSectionCard(
+                            title: 'Monthly Cashflow',
+                            accentColor: Colors.blueAccent,
+                            theme: theme,
+                            children: [
+                              _buildRowInput(
+                                'Total Income',
+                                _cfTotalIncCtrl,
+                                'Total Expense',
+                                _cfTotalExpCtrl,
+                              ),
+                              _buildRowInput(
+                                'Budgeted Income',
+                                _cfBudgetIncCtrl,
+                                'Budgeted Expense',
+                                _cfBudgetExpCtrl,
+                              ),
+                              _buildRowInput(
+                                'Non-Calc Income',
+                                _cfNonCalcIncCtrl,
+                                'Non-Calc Expense',
+                                _cfNonCalcExpCtrl,
+                              ),
+                              ModernBoxyInput(
+                                controller: _cfOutOfBucketCtrl,
+                                focusNode: _focusNodes[_cfOutOfBucketCtrl],
+                                labelText: 'Out of Bucket Expenses',
+                                readOnly: true,
+                                onTap: () =>
+                                    _openCalculatorFor(_cfOutOfBucketCtrl),
+                              ),
+
+                              // Inline Calculation Button
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16.0,
+                                ),
+                                child: ModernBoxyButton(
+                                  onPressed: _calculateCashflow,
+                                  label: 'Calculate Net Totals',
+                                  backgroundColor:
+                                      theme.colorScheme.surfaceContainerHighest,
+                                  foregroundColor: theme.colorScheme.onSurface,
+                                  icon: Icons.calculate_rounded,
+                                ),
+                              ),
+
+                              _buildRowInput(
+                                'Net Total Cashflow',
+                                _cfNetTotalCtrl,
+                                'Net Budgeted Cashflow',
+                                _cfNetBudgetedCtrl,
+                              ),
+                            ],
+                          ),
+
+                          // --- METADATA SECTION ---
+                          _buildSectionCard(
+                            title: 'Metadata',
+                            accentColor: theme.colorScheme.onSurfaceVariant,
+                            theme: theme,
+                            children: [
+                              ModernBoxyInput(
+                                controller: _notesCtrl,
+                                focusNode: _notesFocus,
+                                labelText: 'Reconciliation Notes (Optional)',
+                                hintText: 'e.g., Q3 Financial Review',
+                                onTap: _closeCalculatorSafely,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          // --- DOCKED CALCULATOR AT BOTTOM ---
+          if (_activeCalcController != null)
+            InlineCalculatorPad(
+              key: ValueKey(_activeCalcController.hashCode),
+              controller: _activeCalcController!,
+              onNext: _handleCalcNext,
+              onPrevious: _orderedCalcCtrls.indexOf(_activeCalcController!) > 0
+                  ? _handleCalcPrev
+                  : null,
+              onSubmit: () {
+                _closeCalculatorSafely();
+                FocusScope.of(context).unfocus();
+              },
+              onClose: () {
+                _closeCalculatorSafely();
+                FocusScope.of(context).unfocus();
+              },
+            ),
+        ],
       ),
     );
   }

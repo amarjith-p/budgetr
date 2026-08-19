@@ -39,13 +39,18 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
   late TextEditingController _purposeCtrl;
   late TextEditingController _amountCtrl;
 
+  // --- NEW: FOCUS NODES FOR ENTER-TO-NEXT ---
+  final FocusNode _personFocus = FocusNode();
+  final FocusNode _amountFocus = FocusNode();
+  final FocusNode _purposeFocus = FocusNode();
+
   DateTime _date = DateTime.now();
   DateTime _dueDate = DateTime.now().add(const Duration(days: 7));
   TimeOfDay _dueTime = const TimeOfDay(hour: 9, minute: 0);
 
   late bool _isPushEnabled;
   late int _priorDays;
-  bool _logToLedger = true; // Modern toggle state for new debts
+  bool _logToLedger = true;
 
   @override
   void initState() {
@@ -81,6 +86,10 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
     _personCtrl.dispose();
     _purposeCtrl.dispose();
     _amountCtrl.dispose();
+    // Dispose focus nodes
+    _personFocus.dispose();
+    _amountFocus.dispose();
+    _purposeFocus.dispose();
     super.dispose();
   }
 
@@ -161,7 +170,6 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
         );
 
     if (success && mounted) {
-      // Only sync if it's a new debt and the toggle is active
       if (_logToLedger && widget.existingDebt == null) {
         final staged = StagedTransaction(
           id: 'DEBT_${DateTime.now().millisecondsSinceEpoch}',
@@ -169,7 +177,6 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
           sourceName: 'FinStack 360',
           packageName: 'com.finstack',
           extractedAmount: amt,
-          // Borrowing adds to your assets (Income). Lending subtracts from your assets (Expense).
           inferredType: type == 'Borrowed' ? 'Income' : 'Expense',
           date: _date,
           merchantName: type == 'Borrowed'
@@ -239,8 +246,13 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
               ),
               const SizedBox(height: DesignTokens.spacingLg),
 
+              // --- PERSON FIELD (Jumps to Amount) ---
               ModernBoxyInput(
                 controller: _personCtrl,
+                focusNode: _personFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_amountFocus),
                 labelText: _typeIndex == 0
                     ? 'Who did you borrow from?'
                     : 'Who did you lend to?',
@@ -254,8 +266,13 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
               ),
               const SizedBox(height: DesignTokens.spacingMd),
 
+              // --- AMOUNT FIELD (Jumps to Purpose) ---
               ModernBoxyInput(
                 controller: _amountCtrl,
+                focusNode: _amountFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_purposeFocus),
                 labelText: 'Amount',
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -275,8 +292,12 @@ class _DebtFormBottomSheetState extends ConsumerState<DebtFormBottomSheet> {
               ),
               const SizedBox(height: DesignTokens.spacingMd),
 
+              // --- PURPOSE FIELD (Submits Form) ---
               ModernBoxyInput(
                 controller: _purposeCtrl,
+                focusNode: _purposeFocus,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
                 labelText: 'Purpose / Notes',
                 prefixIcon: Icon(
                   Icons.notes_rounded,
