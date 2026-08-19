@@ -356,3 +356,59 @@ class Debts extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+@DataClassName('NetWorthRecord')
+class NetWorthRecords extends Table {
+  TextColumn get id => text()();
+  DateTimeColumn get recordedAt => dateTime().withDefault(currentDateAndTime)();
+
+  // --- ASSETS ---
+  RealColumn get assetAccountBalance =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get assetSavings => real().withDefault(const Constant(0.0))();
+  RealColumn get assetMutualFunds => real().withDefault(const Constant(0.0))();
+  RealColumn get assetStocks => real().withDefault(const Constant(0.0))();
+  RealColumn get assetBonds => real().withDefault(const Constant(0.0))();
+  RealColumn get assetFixedDeposits =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get assetRecurringDeposits =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get assetP2PLending => real().withDefault(const Constant(0.0))();
+  RealColumn get assetOtherInvestments =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get assetLentDebts => real().withDefault(const Constant(0.0))();
+  RealColumn get assetExtraOthers => real().withDefault(const Constant(0.0))();
+
+  // --- LIABILITIES ---
+  RealColumn get liabilityCreditCards =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get liabilityLoans => real().withDefault(const Constant(0.0))();
+  RealColumn get liabilityBorrowedDebts =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get liabilityExtraOthers =>
+      real().withDefault(const Constant(0.0))();
+
+  // --- MONTHLY CASHFLOW ---
+  RealColumn get cashflowTotalIncome =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get cashflowTotalExpense =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get cashflowBudgetedIncome =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get cashflowBudgetedExpense =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get cashflowNonCalcIncome =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get cashflowNonCalcExpense =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get cashflowOutOfBucket =>
+      real().withDefault(const Constant(0.0))();
+  RealColumn get cashflowNetTotal => real().withDefault(const Constant(0.0))();
+  RealColumn get cashflowNetBudgeted =>
+      real().withDefault(const Constant(0.0))();
+
+  TextColumn get notes => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

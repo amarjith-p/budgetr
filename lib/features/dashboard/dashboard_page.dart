@@ -3,6 +3,7 @@ import 'package:budgetr/features/debts/views/debt_dashboard_page.dart';
 import 'package:budgetr/features/developer/views/developer_support_page.dart';
 import 'package:budgetr/features/investments/views/investment_dashboard_page.dart';
 import 'package:budgetr/features/money_tracker/views/money_tracker_base_page.dart';
+import 'package:budgetr/features/net_worth/views/net_worth_page.dart';
 import 'package:budgetr/features/smart_trackers/views/smart_trackers_dashboard_page.dart';
 import 'package:budgetr/features/trips/views/trip_dashboard_page.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +39,9 @@ import '../secure_vault/views/vault_auth_page.dart';
 
 // --- DEBT IMPORT ---
 import '../debts/providers/debt_provider.dart';
+
+// --- NET WORTH IMPORT ---
+import '../net_worth/providers/net_worth_provider.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -152,8 +156,12 @@ class DashboardPage extends ConsumerWidget {
       }
     }
 
-    // Lent is an asset (+), Borrowed is a liability (-)
     final double netDebtBalance = totalLent - totalBorrowed;
+
+    // --- LIVE NET WORTH MATH ---
+    final netWorthAsync = ref.watch(netWorthMetricsProvider);
+    final double liveNetWorth = netWorthAsync.asData?.value.netWorth ?? 0.0;
+    final bool isNwPositive = liveNetWorth >= 0;
 
     final bool hasBanner = triggeredReminders.isNotEmpty;
     // Scale down internal elements if the tiles shrink to prevent overflow
@@ -661,7 +669,7 @@ class DashboardPage extends ConsumerWidget {
                                     },
                                   ),
                                 ),
-                                const SizedBox(height: tileGap),
+                                const SizedBox(width: tileGap),
                                 Expanded(
                                   child: _buildMetroTile(
                                     title: 'CATEGORIES',
@@ -765,7 +773,7 @@ class DashboardPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: tileGap),
 
-                    // --- ROW 5: DEBTS & BALANCE SHEET ---
+                    // --- ROW 5: DEBTS & NET WORTH ---
                     Expanded(
                       flex: 1,
                       child: Row(
@@ -847,16 +855,73 @@ class DashboardPage extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: tileGap),
+
+                          // --- UPDATED LIVE NET WORTH TILE ---
                           Expanded(
                             flex: 4, // 40% Width
-                            child: _buildMetroTile(
-                              title: 'BALANCE SHEET',
-                              icon: Icons.account_balance_rounded,
+                            child: _buildWideMetroTile(
+                              title: 'NET WORTH',
+                              icon: Icons.diamond_rounded,
                               height: double.infinity,
                               color: darkTileColor,
                               onTap: () {
-                                // TODO: Add Navigation to Balance Sheet Page
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const NetWorthPage(),
+                                  ),
+                                );
                               },
+                              customContent: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: CurrencyText(
+                                      amount: liveNetWorth.abs(),
+                                      sign: liveNetWorth < 0
+                                          ? '-₹ '
+                                          : (liveNetWorth > 0 ? '+₹ ' : '₹ '),
+                                      amountStyle: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        letterSpacing: -1.0,
+                                      ),
+                                      symbolStyle: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isNwPositive
+                                          ? Colors.green.withOpacity(0.2)
+                                          : Colors.redAccent.withOpacity(0.2),
+                                      borderRadius: BorderRadius.zero,
+                                    ),
+                                    child: Text(
+                                      isNwPositive ? 'SURPLUS' : 'DEFICIT',
+                                      style: TextStyle(
+                                        fontSize: 6,
+                                        fontWeight: FontWeight.w700,
+                                        color: isNwPositive
+                                            ? Colors.greenAccent
+                                            : Colors.redAccent,
+                                        letterSpacing: 1.0,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],

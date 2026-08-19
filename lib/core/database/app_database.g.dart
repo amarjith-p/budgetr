@@ -12703,6 +12703,1595 @@ class DebtsCompanion extends UpdateCompanion<Debt> {
   }
 }
 
+class $NetWorthRecordsTable extends NetWorthRecords
+    with TableInfo<$NetWorthRecordsTable, NetWorthRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $NetWorthRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordedAtMeta = const VerificationMeta(
+    'recordedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> recordedAt = GeneratedColumn<DateTime>(
+    'recorded_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _assetAccountBalanceMeta =
+      const VerificationMeta('assetAccountBalance');
+  @override
+  late final GeneratedColumn<double> assetAccountBalance =
+      GeneratedColumn<double>(
+        'asset_account_balance',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _assetSavingsMeta = const VerificationMeta(
+    'assetSavings',
+  );
+  @override
+  late final GeneratedColumn<double> assetSavings = GeneratedColumn<double>(
+    'asset_savings',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _assetMutualFundsMeta = const VerificationMeta(
+    'assetMutualFunds',
+  );
+  @override
+  late final GeneratedColumn<double> assetMutualFunds = GeneratedColumn<double>(
+    'asset_mutual_funds',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _assetStocksMeta = const VerificationMeta(
+    'assetStocks',
+  );
+  @override
+  late final GeneratedColumn<double> assetStocks = GeneratedColumn<double>(
+    'asset_stocks',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _assetBondsMeta = const VerificationMeta(
+    'assetBonds',
+  );
+  @override
+  late final GeneratedColumn<double> assetBonds = GeneratedColumn<double>(
+    'asset_bonds',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _assetFixedDepositsMeta =
+      const VerificationMeta('assetFixedDeposits');
+  @override
+  late final GeneratedColumn<double> assetFixedDeposits =
+      GeneratedColumn<double>(
+        'asset_fixed_deposits',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _assetRecurringDepositsMeta =
+      const VerificationMeta('assetRecurringDeposits');
+  @override
+  late final GeneratedColumn<double> assetRecurringDeposits =
+      GeneratedColumn<double>(
+        'asset_recurring_deposits',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _assetP2PLendingMeta = const VerificationMeta(
+    'assetP2PLending',
+  );
+  @override
+  late final GeneratedColumn<double> assetP2PLending = GeneratedColumn<double>(
+    'asset_p2_p_lending',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _assetOtherInvestmentsMeta =
+      const VerificationMeta('assetOtherInvestments');
+  @override
+  late final GeneratedColumn<double> assetOtherInvestments =
+      GeneratedColumn<double>(
+        'asset_other_investments',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _assetLentDebtsMeta = const VerificationMeta(
+    'assetLentDebts',
+  );
+  @override
+  late final GeneratedColumn<double> assetLentDebts = GeneratedColumn<double>(
+    'asset_lent_debts',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _assetExtraOthersMeta = const VerificationMeta(
+    'assetExtraOthers',
+  );
+  @override
+  late final GeneratedColumn<double> assetExtraOthers = GeneratedColumn<double>(
+    'asset_extra_others',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _liabilityCreditCardsMeta =
+      const VerificationMeta('liabilityCreditCards');
+  @override
+  late final GeneratedColumn<double> liabilityCreditCards =
+      GeneratedColumn<double>(
+        'liability_credit_cards',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _liabilityLoansMeta = const VerificationMeta(
+    'liabilityLoans',
+  );
+  @override
+  late final GeneratedColumn<double> liabilityLoans = GeneratedColumn<double>(
+    'liability_loans',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _liabilityBorrowedDebtsMeta =
+      const VerificationMeta('liabilityBorrowedDebts');
+  @override
+  late final GeneratedColumn<double> liabilityBorrowedDebts =
+      GeneratedColumn<double>(
+        'liability_borrowed_debts',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _liabilityExtraOthersMeta =
+      const VerificationMeta('liabilityExtraOthers');
+  @override
+  late final GeneratedColumn<double> liabilityExtraOthers =
+      GeneratedColumn<double>(
+        'liability_extra_others',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _cashflowTotalIncomeMeta =
+      const VerificationMeta('cashflowTotalIncome');
+  @override
+  late final GeneratedColumn<double> cashflowTotalIncome =
+      GeneratedColumn<double>(
+        'cashflow_total_income',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _cashflowTotalExpenseMeta =
+      const VerificationMeta('cashflowTotalExpense');
+  @override
+  late final GeneratedColumn<double> cashflowTotalExpense =
+      GeneratedColumn<double>(
+        'cashflow_total_expense',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _cashflowBudgetedIncomeMeta =
+      const VerificationMeta('cashflowBudgetedIncome');
+  @override
+  late final GeneratedColumn<double> cashflowBudgetedIncome =
+      GeneratedColumn<double>(
+        'cashflow_budgeted_income',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _cashflowBudgetedExpenseMeta =
+      const VerificationMeta('cashflowBudgetedExpense');
+  @override
+  late final GeneratedColumn<double> cashflowBudgetedExpense =
+      GeneratedColumn<double>(
+        'cashflow_budgeted_expense',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _cashflowNonCalcIncomeMeta =
+      const VerificationMeta('cashflowNonCalcIncome');
+  @override
+  late final GeneratedColumn<double> cashflowNonCalcIncome =
+      GeneratedColumn<double>(
+        'cashflow_non_calc_income',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _cashflowNonCalcExpenseMeta =
+      const VerificationMeta('cashflowNonCalcExpense');
+  @override
+  late final GeneratedColumn<double> cashflowNonCalcExpense =
+      GeneratedColumn<double>(
+        'cashflow_non_calc_expense',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _cashflowOutOfBucketMeta =
+      const VerificationMeta('cashflowOutOfBucket');
+  @override
+  late final GeneratedColumn<double> cashflowOutOfBucket =
+      GeneratedColumn<double>(
+        'cashflow_out_of_bucket',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _cashflowNetTotalMeta = const VerificationMeta(
+    'cashflowNetTotal',
+  );
+  @override
+  late final GeneratedColumn<double> cashflowNetTotal = GeneratedColumn<double>(
+    'cashflow_net_total',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _cashflowNetBudgetedMeta =
+      const VerificationMeta('cashflowNetBudgeted');
+  @override
+  late final GeneratedColumn<double> cashflowNetBudgeted =
+      GeneratedColumn<double>(
+        'cashflow_net_budgeted',
+        aliasedName,
+        false,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0.0),
+      );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    recordedAt,
+    assetAccountBalance,
+    assetSavings,
+    assetMutualFunds,
+    assetStocks,
+    assetBonds,
+    assetFixedDeposits,
+    assetRecurringDeposits,
+    assetP2PLending,
+    assetOtherInvestments,
+    assetLentDebts,
+    assetExtraOthers,
+    liabilityCreditCards,
+    liabilityLoans,
+    liabilityBorrowedDebts,
+    liabilityExtraOthers,
+    cashflowTotalIncome,
+    cashflowTotalExpense,
+    cashflowBudgetedIncome,
+    cashflowBudgetedExpense,
+    cashflowNonCalcIncome,
+    cashflowNonCalcExpense,
+    cashflowOutOfBucket,
+    cashflowNetTotal,
+    cashflowNetBudgeted,
+    notes,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'net_worth_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<NetWorthRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('recorded_at')) {
+      context.handle(
+        _recordedAtMeta,
+        recordedAt.isAcceptableOrUnknown(data['recorded_at']!, _recordedAtMeta),
+      );
+    }
+    if (data.containsKey('asset_account_balance')) {
+      context.handle(
+        _assetAccountBalanceMeta,
+        assetAccountBalance.isAcceptableOrUnknown(
+          data['asset_account_balance']!,
+          _assetAccountBalanceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('asset_savings')) {
+      context.handle(
+        _assetSavingsMeta,
+        assetSavings.isAcceptableOrUnknown(
+          data['asset_savings']!,
+          _assetSavingsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('asset_mutual_funds')) {
+      context.handle(
+        _assetMutualFundsMeta,
+        assetMutualFunds.isAcceptableOrUnknown(
+          data['asset_mutual_funds']!,
+          _assetMutualFundsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('asset_stocks')) {
+      context.handle(
+        _assetStocksMeta,
+        assetStocks.isAcceptableOrUnknown(
+          data['asset_stocks']!,
+          _assetStocksMeta,
+        ),
+      );
+    }
+    if (data.containsKey('asset_bonds')) {
+      context.handle(
+        _assetBondsMeta,
+        assetBonds.isAcceptableOrUnknown(data['asset_bonds']!, _assetBondsMeta),
+      );
+    }
+    if (data.containsKey('asset_fixed_deposits')) {
+      context.handle(
+        _assetFixedDepositsMeta,
+        assetFixedDeposits.isAcceptableOrUnknown(
+          data['asset_fixed_deposits']!,
+          _assetFixedDepositsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('asset_recurring_deposits')) {
+      context.handle(
+        _assetRecurringDepositsMeta,
+        assetRecurringDeposits.isAcceptableOrUnknown(
+          data['asset_recurring_deposits']!,
+          _assetRecurringDepositsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('asset_p2_p_lending')) {
+      context.handle(
+        _assetP2PLendingMeta,
+        assetP2PLending.isAcceptableOrUnknown(
+          data['asset_p2_p_lending']!,
+          _assetP2PLendingMeta,
+        ),
+      );
+    }
+    if (data.containsKey('asset_other_investments')) {
+      context.handle(
+        _assetOtherInvestmentsMeta,
+        assetOtherInvestments.isAcceptableOrUnknown(
+          data['asset_other_investments']!,
+          _assetOtherInvestmentsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('asset_lent_debts')) {
+      context.handle(
+        _assetLentDebtsMeta,
+        assetLentDebts.isAcceptableOrUnknown(
+          data['asset_lent_debts']!,
+          _assetLentDebtsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('asset_extra_others')) {
+      context.handle(
+        _assetExtraOthersMeta,
+        assetExtraOthers.isAcceptableOrUnknown(
+          data['asset_extra_others']!,
+          _assetExtraOthersMeta,
+        ),
+      );
+    }
+    if (data.containsKey('liability_credit_cards')) {
+      context.handle(
+        _liabilityCreditCardsMeta,
+        liabilityCreditCards.isAcceptableOrUnknown(
+          data['liability_credit_cards']!,
+          _liabilityCreditCardsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('liability_loans')) {
+      context.handle(
+        _liabilityLoansMeta,
+        liabilityLoans.isAcceptableOrUnknown(
+          data['liability_loans']!,
+          _liabilityLoansMeta,
+        ),
+      );
+    }
+    if (data.containsKey('liability_borrowed_debts')) {
+      context.handle(
+        _liabilityBorrowedDebtsMeta,
+        liabilityBorrowedDebts.isAcceptableOrUnknown(
+          data['liability_borrowed_debts']!,
+          _liabilityBorrowedDebtsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('liability_extra_others')) {
+      context.handle(
+        _liabilityExtraOthersMeta,
+        liabilityExtraOthers.isAcceptableOrUnknown(
+          data['liability_extra_others']!,
+          _liabilityExtraOthersMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cashflow_total_income')) {
+      context.handle(
+        _cashflowTotalIncomeMeta,
+        cashflowTotalIncome.isAcceptableOrUnknown(
+          data['cashflow_total_income']!,
+          _cashflowTotalIncomeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cashflow_total_expense')) {
+      context.handle(
+        _cashflowTotalExpenseMeta,
+        cashflowTotalExpense.isAcceptableOrUnknown(
+          data['cashflow_total_expense']!,
+          _cashflowTotalExpenseMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cashflow_budgeted_income')) {
+      context.handle(
+        _cashflowBudgetedIncomeMeta,
+        cashflowBudgetedIncome.isAcceptableOrUnknown(
+          data['cashflow_budgeted_income']!,
+          _cashflowBudgetedIncomeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cashflow_budgeted_expense')) {
+      context.handle(
+        _cashflowBudgetedExpenseMeta,
+        cashflowBudgetedExpense.isAcceptableOrUnknown(
+          data['cashflow_budgeted_expense']!,
+          _cashflowBudgetedExpenseMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cashflow_non_calc_income')) {
+      context.handle(
+        _cashflowNonCalcIncomeMeta,
+        cashflowNonCalcIncome.isAcceptableOrUnknown(
+          data['cashflow_non_calc_income']!,
+          _cashflowNonCalcIncomeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cashflow_non_calc_expense')) {
+      context.handle(
+        _cashflowNonCalcExpenseMeta,
+        cashflowNonCalcExpense.isAcceptableOrUnknown(
+          data['cashflow_non_calc_expense']!,
+          _cashflowNonCalcExpenseMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cashflow_out_of_bucket')) {
+      context.handle(
+        _cashflowOutOfBucketMeta,
+        cashflowOutOfBucket.isAcceptableOrUnknown(
+          data['cashflow_out_of_bucket']!,
+          _cashflowOutOfBucketMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cashflow_net_total')) {
+      context.handle(
+        _cashflowNetTotalMeta,
+        cashflowNetTotal.isAcceptableOrUnknown(
+          data['cashflow_net_total']!,
+          _cashflowNetTotalMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cashflow_net_budgeted')) {
+      context.handle(
+        _cashflowNetBudgetedMeta,
+        cashflowNetBudgeted.isAcceptableOrUnknown(
+          data['cashflow_net_budgeted']!,
+          _cashflowNetBudgetedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  NetWorthRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return NetWorthRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      recordedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}recorded_at'],
+      )!,
+      assetAccountBalance: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}asset_account_balance'],
+      )!,
+      assetSavings: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}asset_savings'],
+      )!,
+      assetMutualFunds: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}asset_mutual_funds'],
+      )!,
+      assetStocks: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}asset_stocks'],
+      )!,
+      assetBonds: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}asset_bonds'],
+      )!,
+      assetFixedDeposits: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}asset_fixed_deposits'],
+      )!,
+      assetRecurringDeposits: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}asset_recurring_deposits'],
+      )!,
+      assetP2PLending: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}asset_p2_p_lending'],
+      )!,
+      assetOtherInvestments: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}asset_other_investments'],
+      )!,
+      assetLentDebts: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}asset_lent_debts'],
+      )!,
+      assetExtraOthers: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}asset_extra_others'],
+      )!,
+      liabilityCreditCards: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}liability_credit_cards'],
+      )!,
+      liabilityLoans: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}liability_loans'],
+      )!,
+      liabilityBorrowedDebts: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}liability_borrowed_debts'],
+      )!,
+      liabilityExtraOthers: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}liability_extra_others'],
+      )!,
+      cashflowTotalIncome: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cashflow_total_income'],
+      )!,
+      cashflowTotalExpense: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cashflow_total_expense'],
+      )!,
+      cashflowBudgetedIncome: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cashflow_budgeted_income'],
+      )!,
+      cashflowBudgetedExpense: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cashflow_budgeted_expense'],
+      )!,
+      cashflowNonCalcIncome: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cashflow_non_calc_income'],
+      )!,
+      cashflowNonCalcExpense: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cashflow_non_calc_expense'],
+      )!,
+      cashflowOutOfBucket: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cashflow_out_of_bucket'],
+      )!,
+      cashflowNetTotal: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cashflow_net_total'],
+      )!,
+      cashflowNetBudgeted: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cashflow_net_budgeted'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+    );
+  }
+
+  @override
+  $NetWorthRecordsTable createAlias(String alias) {
+    return $NetWorthRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class NetWorthRecord extends DataClass implements Insertable<NetWorthRecord> {
+  final String id;
+  final DateTime recordedAt;
+  final double assetAccountBalance;
+  final double assetSavings;
+  final double assetMutualFunds;
+  final double assetStocks;
+  final double assetBonds;
+  final double assetFixedDeposits;
+  final double assetRecurringDeposits;
+  final double assetP2PLending;
+  final double assetOtherInvestments;
+  final double assetLentDebts;
+  final double assetExtraOthers;
+  final double liabilityCreditCards;
+  final double liabilityLoans;
+  final double liabilityBorrowedDebts;
+  final double liabilityExtraOthers;
+  final double cashflowTotalIncome;
+  final double cashflowTotalExpense;
+  final double cashflowBudgetedIncome;
+  final double cashflowBudgetedExpense;
+  final double cashflowNonCalcIncome;
+  final double cashflowNonCalcExpense;
+  final double cashflowOutOfBucket;
+  final double cashflowNetTotal;
+  final double cashflowNetBudgeted;
+  final String? notes;
+  const NetWorthRecord({
+    required this.id,
+    required this.recordedAt,
+    required this.assetAccountBalance,
+    required this.assetSavings,
+    required this.assetMutualFunds,
+    required this.assetStocks,
+    required this.assetBonds,
+    required this.assetFixedDeposits,
+    required this.assetRecurringDeposits,
+    required this.assetP2PLending,
+    required this.assetOtherInvestments,
+    required this.assetLentDebts,
+    required this.assetExtraOthers,
+    required this.liabilityCreditCards,
+    required this.liabilityLoans,
+    required this.liabilityBorrowedDebts,
+    required this.liabilityExtraOthers,
+    required this.cashflowTotalIncome,
+    required this.cashflowTotalExpense,
+    required this.cashflowBudgetedIncome,
+    required this.cashflowBudgetedExpense,
+    required this.cashflowNonCalcIncome,
+    required this.cashflowNonCalcExpense,
+    required this.cashflowOutOfBucket,
+    required this.cashflowNetTotal,
+    required this.cashflowNetBudgeted,
+    this.notes,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['recorded_at'] = Variable<DateTime>(recordedAt);
+    map['asset_account_balance'] = Variable<double>(assetAccountBalance);
+    map['asset_savings'] = Variable<double>(assetSavings);
+    map['asset_mutual_funds'] = Variable<double>(assetMutualFunds);
+    map['asset_stocks'] = Variable<double>(assetStocks);
+    map['asset_bonds'] = Variable<double>(assetBonds);
+    map['asset_fixed_deposits'] = Variable<double>(assetFixedDeposits);
+    map['asset_recurring_deposits'] = Variable<double>(assetRecurringDeposits);
+    map['asset_p2_p_lending'] = Variable<double>(assetP2PLending);
+    map['asset_other_investments'] = Variable<double>(assetOtherInvestments);
+    map['asset_lent_debts'] = Variable<double>(assetLentDebts);
+    map['asset_extra_others'] = Variable<double>(assetExtraOthers);
+    map['liability_credit_cards'] = Variable<double>(liabilityCreditCards);
+    map['liability_loans'] = Variable<double>(liabilityLoans);
+    map['liability_borrowed_debts'] = Variable<double>(liabilityBorrowedDebts);
+    map['liability_extra_others'] = Variable<double>(liabilityExtraOthers);
+    map['cashflow_total_income'] = Variable<double>(cashflowTotalIncome);
+    map['cashflow_total_expense'] = Variable<double>(cashflowTotalExpense);
+    map['cashflow_budgeted_income'] = Variable<double>(cashflowBudgetedIncome);
+    map['cashflow_budgeted_expense'] = Variable<double>(
+      cashflowBudgetedExpense,
+    );
+    map['cashflow_non_calc_income'] = Variable<double>(cashflowNonCalcIncome);
+    map['cashflow_non_calc_expense'] = Variable<double>(cashflowNonCalcExpense);
+    map['cashflow_out_of_bucket'] = Variable<double>(cashflowOutOfBucket);
+    map['cashflow_net_total'] = Variable<double>(cashflowNetTotal);
+    map['cashflow_net_budgeted'] = Variable<double>(cashflowNetBudgeted);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    return map;
+  }
+
+  NetWorthRecordsCompanion toCompanion(bool nullToAbsent) {
+    return NetWorthRecordsCompanion(
+      id: Value(id),
+      recordedAt: Value(recordedAt),
+      assetAccountBalance: Value(assetAccountBalance),
+      assetSavings: Value(assetSavings),
+      assetMutualFunds: Value(assetMutualFunds),
+      assetStocks: Value(assetStocks),
+      assetBonds: Value(assetBonds),
+      assetFixedDeposits: Value(assetFixedDeposits),
+      assetRecurringDeposits: Value(assetRecurringDeposits),
+      assetP2PLending: Value(assetP2PLending),
+      assetOtherInvestments: Value(assetOtherInvestments),
+      assetLentDebts: Value(assetLentDebts),
+      assetExtraOthers: Value(assetExtraOthers),
+      liabilityCreditCards: Value(liabilityCreditCards),
+      liabilityLoans: Value(liabilityLoans),
+      liabilityBorrowedDebts: Value(liabilityBorrowedDebts),
+      liabilityExtraOthers: Value(liabilityExtraOthers),
+      cashflowTotalIncome: Value(cashflowTotalIncome),
+      cashflowTotalExpense: Value(cashflowTotalExpense),
+      cashflowBudgetedIncome: Value(cashflowBudgetedIncome),
+      cashflowBudgetedExpense: Value(cashflowBudgetedExpense),
+      cashflowNonCalcIncome: Value(cashflowNonCalcIncome),
+      cashflowNonCalcExpense: Value(cashflowNonCalcExpense),
+      cashflowOutOfBucket: Value(cashflowOutOfBucket),
+      cashflowNetTotal: Value(cashflowNetTotal),
+      cashflowNetBudgeted: Value(cashflowNetBudgeted),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+    );
+  }
+
+  factory NetWorthRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return NetWorthRecord(
+      id: serializer.fromJson<String>(json['id']),
+      recordedAt: serializer.fromJson<DateTime>(json['recordedAt']),
+      assetAccountBalance: serializer.fromJson<double>(
+        json['assetAccountBalance'],
+      ),
+      assetSavings: serializer.fromJson<double>(json['assetSavings']),
+      assetMutualFunds: serializer.fromJson<double>(json['assetMutualFunds']),
+      assetStocks: serializer.fromJson<double>(json['assetStocks']),
+      assetBonds: serializer.fromJson<double>(json['assetBonds']),
+      assetFixedDeposits: serializer.fromJson<double>(
+        json['assetFixedDeposits'],
+      ),
+      assetRecurringDeposits: serializer.fromJson<double>(
+        json['assetRecurringDeposits'],
+      ),
+      assetP2PLending: serializer.fromJson<double>(json['assetP2PLending']),
+      assetOtherInvestments: serializer.fromJson<double>(
+        json['assetOtherInvestments'],
+      ),
+      assetLentDebts: serializer.fromJson<double>(json['assetLentDebts']),
+      assetExtraOthers: serializer.fromJson<double>(json['assetExtraOthers']),
+      liabilityCreditCards: serializer.fromJson<double>(
+        json['liabilityCreditCards'],
+      ),
+      liabilityLoans: serializer.fromJson<double>(json['liabilityLoans']),
+      liabilityBorrowedDebts: serializer.fromJson<double>(
+        json['liabilityBorrowedDebts'],
+      ),
+      liabilityExtraOthers: serializer.fromJson<double>(
+        json['liabilityExtraOthers'],
+      ),
+      cashflowTotalIncome: serializer.fromJson<double>(
+        json['cashflowTotalIncome'],
+      ),
+      cashflowTotalExpense: serializer.fromJson<double>(
+        json['cashflowTotalExpense'],
+      ),
+      cashflowBudgetedIncome: serializer.fromJson<double>(
+        json['cashflowBudgetedIncome'],
+      ),
+      cashflowBudgetedExpense: serializer.fromJson<double>(
+        json['cashflowBudgetedExpense'],
+      ),
+      cashflowNonCalcIncome: serializer.fromJson<double>(
+        json['cashflowNonCalcIncome'],
+      ),
+      cashflowNonCalcExpense: serializer.fromJson<double>(
+        json['cashflowNonCalcExpense'],
+      ),
+      cashflowOutOfBucket: serializer.fromJson<double>(
+        json['cashflowOutOfBucket'],
+      ),
+      cashflowNetTotal: serializer.fromJson<double>(json['cashflowNetTotal']),
+      cashflowNetBudgeted: serializer.fromJson<double>(
+        json['cashflowNetBudgeted'],
+      ),
+      notes: serializer.fromJson<String?>(json['notes']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'recordedAt': serializer.toJson<DateTime>(recordedAt),
+      'assetAccountBalance': serializer.toJson<double>(assetAccountBalance),
+      'assetSavings': serializer.toJson<double>(assetSavings),
+      'assetMutualFunds': serializer.toJson<double>(assetMutualFunds),
+      'assetStocks': serializer.toJson<double>(assetStocks),
+      'assetBonds': serializer.toJson<double>(assetBonds),
+      'assetFixedDeposits': serializer.toJson<double>(assetFixedDeposits),
+      'assetRecurringDeposits': serializer.toJson<double>(
+        assetRecurringDeposits,
+      ),
+      'assetP2PLending': serializer.toJson<double>(assetP2PLending),
+      'assetOtherInvestments': serializer.toJson<double>(assetOtherInvestments),
+      'assetLentDebts': serializer.toJson<double>(assetLentDebts),
+      'assetExtraOthers': serializer.toJson<double>(assetExtraOthers),
+      'liabilityCreditCards': serializer.toJson<double>(liabilityCreditCards),
+      'liabilityLoans': serializer.toJson<double>(liabilityLoans),
+      'liabilityBorrowedDebts': serializer.toJson<double>(
+        liabilityBorrowedDebts,
+      ),
+      'liabilityExtraOthers': serializer.toJson<double>(liabilityExtraOthers),
+      'cashflowTotalIncome': serializer.toJson<double>(cashflowTotalIncome),
+      'cashflowTotalExpense': serializer.toJson<double>(cashflowTotalExpense),
+      'cashflowBudgetedIncome': serializer.toJson<double>(
+        cashflowBudgetedIncome,
+      ),
+      'cashflowBudgetedExpense': serializer.toJson<double>(
+        cashflowBudgetedExpense,
+      ),
+      'cashflowNonCalcIncome': serializer.toJson<double>(cashflowNonCalcIncome),
+      'cashflowNonCalcExpense': serializer.toJson<double>(
+        cashflowNonCalcExpense,
+      ),
+      'cashflowOutOfBucket': serializer.toJson<double>(cashflowOutOfBucket),
+      'cashflowNetTotal': serializer.toJson<double>(cashflowNetTotal),
+      'cashflowNetBudgeted': serializer.toJson<double>(cashflowNetBudgeted),
+      'notes': serializer.toJson<String?>(notes),
+    };
+  }
+
+  NetWorthRecord copyWith({
+    String? id,
+    DateTime? recordedAt,
+    double? assetAccountBalance,
+    double? assetSavings,
+    double? assetMutualFunds,
+    double? assetStocks,
+    double? assetBonds,
+    double? assetFixedDeposits,
+    double? assetRecurringDeposits,
+    double? assetP2PLending,
+    double? assetOtherInvestments,
+    double? assetLentDebts,
+    double? assetExtraOthers,
+    double? liabilityCreditCards,
+    double? liabilityLoans,
+    double? liabilityBorrowedDebts,
+    double? liabilityExtraOthers,
+    double? cashflowTotalIncome,
+    double? cashflowTotalExpense,
+    double? cashflowBudgetedIncome,
+    double? cashflowBudgetedExpense,
+    double? cashflowNonCalcIncome,
+    double? cashflowNonCalcExpense,
+    double? cashflowOutOfBucket,
+    double? cashflowNetTotal,
+    double? cashflowNetBudgeted,
+    Value<String?> notes = const Value.absent(),
+  }) => NetWorthRecord(
+    id: id ?? this.id,
+    recordedAt: recordedAt ?? this.recordedAt,
+    assetAccountBalance: assetAccountBalance ?? this.assetAccountBalance,
+    assetSavings: assetSavings ?? this.assetSavings,
+    assetMutualFunds: assetMutualFunds ?? this.assetMutualFunds,
+    assetStocks: assetStocks ?? this.assetStocks,
+    assetBonds: assetBonds ?? this.assetBonds,
+    assetFixedDeposits: assetFixedDeposits ?? this.assetFixedDeposits,
+    assetRecurringDeposits:
+        assetRecurringDeposits ?? this.assetRecurringDeposits,
+    assetP2PLending: assetP2PLending ?? this.assetP2PLending,
+    assetOtherInvestments: assetOtherInvestments ?? this.assetOtherInvestments,
+    assetLentDebts: assetLentDebts ?? this.assetLentDebts,
+    assetExtraOthers: assetExtraOthers ?? this.assetExtraOthers,
+    liabilityCreditCards: liabilityCreditCards ?? this.liabilityCreditCards,
+    liabilityLoans: liabilityLoans ?? this.liabilityLoans,
+    liabilityBorrowedDebts:
+        liabilityBorrowedDebts ?? this.liabilityBorrowedDebts,
+    liabilityExtraOthers: liabilityExtraOthers ?? this.liabilityExtraOthers,
+    cashflowTotalIncome: cashflowTotalIncome ?? this.cashflowTotalIncome,
+    cashflowTotalExpense: cashflowTotalExpense ?? this.cashflowTotalExpense,
+    cashflowBudgetedIncome:
+        cashflowBudgetedIncome ?? this.cashflowBudgetedIncome,
+    cashflowBudgetedExpense:
+        cashflowBudgetedExpense ?? this.cashflowBudgetedExpense,
+    cashflowNonCalcIncome: cashflowNonCalcIncome ?? this.cashflowNonCalcIncome,
+    cashflowNonCalcExpense:
+        cashflowNonCalcExpense ?? this.cashflowNonCalcExpense,
+    cashflowOutOfBucket: cashflowOutOfBucket ?? this.cashflowOutOfBucket,
+    cashflowNetTotal: cashflowNetTotal ?? this.cashflowNetTotal,
+    cashflowNetBudgeted: cashflowNetBudgeted ?? this.cashflowNetBudgeted,
+    notes: notes.present ? notes.value : this.notes,
+  );
+  NetWorthRecord copyWithCompanion(NetWorthRecordsCompanion data) {
+    return NetWorthRecord(
+      id: data.id.present ? data.id.value : this.id,
+      recordedAt: data.recordedAt.present
+          ? data.recordedAt.value
+          : this.recordedAt,
+      assetAccountBalance: data.assetAccountBalance.present
+          ? data.assetAccountBalance.value
+          : this.assetAccountBalance,
+      assetSavings: data.assetSavings.present
+          ? data.assetSavings.value
+          : this.assetSavings,
+      assetMutualFunds: data.assetMutualFunds.present
+          ? data.assetMutualFunds.value
+          : this.assetMutualFunds,
+      assetStocks: data.assetStocks.present
+          ? data.assetStocks.value
+          : this.assetStocks,
+      assetBonds: data.assetBonds.present
+          ? data.assetBonds.value
+          : this.assetBonds,
+      assetFixedDeposits: data.assetFixedDeposits.present
+          ? data.assetFixedDeposits.value
+          : this.assetFixedDeposits,
+      assetRecurringDeposits: data.assetRecurringDeposits.present
+          ? data.assetRecurringDeposits.value
+          : this.assetRecurringDeposits,
+      assetP2PLending: data.assetP2PLending.present
+          ? data.assetP2PLending.value
+          : this.assetP2PLending,
+      assetOtherInvestments: data.assetOtherInvestments.present
+          ? data.assetOtherInvestments.value
+          : this.assetOtherInvestments,
+      assetLentDebts: data.assetLentDebts.present
+          ? data.assetLentDebts.value
+          : this.assetLentDebts,
+      assetExtraOthers: data.assetExtraOthers.present
+          ? data.assetExtraOthers.value
+          : this.assetExtraOthers,
+      liabilityCreditCards: data.liabilityCreditCards.present
+          ? data.liabilityCreditCards.value
+          : this.liabilityCreditCards,
+      liabilityLoans: data.liabilityLoans.present
+          ? data.liabilityLoans.value
+          : this.liabilityLoans,
+      liabilityBorrowedDebts: data.liabilityBorrowedDebts.present
+          ? data.liabilityBorrowedDebts.value
+          : this.liabilityBorrowedDebts,
+      liabilityExtraOthers: data.liabilityExtraOthers.present
+          ? data.liabilityExtraOthers.value
+          : this.liabilityExtraOthers,
+      cashflowTotalIncome: data.cashflowTotalIncome.present
+          ? data.cashflowTotalIncome.value
+          : this.cashflowTotalIncome,
+      cashflowTotalExpense: data.cashflowTotalExpense.present
+          ? data.cashflowTotalExpense.value
+          : this.cashflowTotalExpense,
+      cashflowBudgetedIncome: data.cashflowBudgetedIncome.present
+          ? data.cashflowBudgetedIncome.value
+          : this.cashflowBudgetedIncome,
+      cashflowBudgetedExpense: data.cashflowBudgetedExpense.present
+          ? data.cashflowBudgetedExpense.value
+          : this.cashflowBudgetedExpense,
+      cashflowNonCalcIncome: data.cashflowNonCalcIncome.present
+          ? data.cashflowNonCalcIncome.value
+          : this.cashflowNonCalcIncome,
+      cashflowNonCalcExpense: data.cashflowNonCalcExpense.present
+          ? data.cashflowNonCalcExpense.value
+          : this.cashflowNonCalcExpense,
+      cashflowOutOfBucket: data.cashflowOutOfBucket.present
+          ? data.cashflowOutOfBucket.value
+          : this.cashflowOutOfBucket,
+      cashflowNetTotal: data.cashflowNetTotal.present
+          ? data.cashflowNetTotal.value
+          : this.cashflowNetTotal,
+      cashflowNetBudgeted: data.cashflowNetBudgeted.present
+          ? data.cashflowNetBudgeted.value
+          : this.cashflowNetBudgeted,
+      notes: data.notes.present ? data.notes.value : this.notes,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NetWorthRecord(')
+          ..write('id: $id, ')
+          ..write('recordedAt: $recordedAt, ')
+          ..write('assetAccountBalance: $assetAccountBalance, ')
+          ..write('assetSavings: $assetSavings, ')
+          ..write('assetMutualFunds: $assetMutualFunds, ')
+          ..write('assetStocks: $assetStocks, ')
+          ..write('assetBonds: $assetBonds, ')
+          ..write('assetFixedDeposits: $assetFixedDeposits, ')
+          ..write('assetRecurringDeposits: $assetRecurringDeposits, ')
+          ..write('assetP2PLending: $assetP2PLending, ')
+          ..write('assetOtherInvestments: $assetOtherInvestments, ')
+          ..write('assetLentDebts: $assetLentDebts, ')
+          ..write('assetExtraOthers: $assetExtraOthers, ')
+          ..write('liabilityCreditCards: $liabilityCreditCards, ')
+          ..write('liabilityLoans: $liabilityLoans, ')
+          ..write('liabilityBorrowedDebts: $liabilityBorrowedDebts, ')
+          ..write('liabilityExtraOthers: $liabilityExtraOthers, ')
+          ..write('cashflowTotalIncome: $cashflowTotalIncome, ')
+          ..write('cashflowTotalExpense: $cashflowTotalExpense, ')
+          ..write('cashflowBudgetedIncome: $cashflowBudgetedIncome, ')
+          ..write('cashflowBudgetedExpense: $cashflowBudgetedExpense, ')
+          ..write('cashflowNonCalcIncome: $cashflowNonCalcIncome, ')
+          ..write('cashflowNonCalcExpense: $cashflowNonCalcExpense, ')
+          ..write('cashflowOutOfBucket: $cashflowOutOfBucket, ')
+          ..write('cashflowNetTotal: $cashflowNetTotal, ')
+          ..write('cashflowNetBudgeted: $cashflowNetBudgeted, ')
+          ..write('notes: $notes')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    recordedAt,
+    assetAccountBalance,
+    assetSavings,
+    assetMutualFunds,
+    assetStocks,
+    assetBonds,
+    assetFixedDeposits,
+    assetRecurringDeposits,
+    assetP2PLending,
+    assetOtherInvestments,
+    assetLentDebts,
+    assetExtraOthers,
+    liabilityCreditCards,
+    liabilityLoans,
+    liabilityBorrowedDebts,
+    liabilityExtraOthers,
+    cashflowTotalIncome,
+    cashflowTotalExpense,
+    cashflowBudgetedIncome,
+    cashflowBudgetedExpense,
+    cashflowNonCalcIncome,
+    cashflowNonCalcExpense,
+    cashflowOutOfBucket,
+    cashflowNetTotal,
+    cashflowNetBudgeted,
+    notes,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NetWorthRecord &&
+          other.id == this.id &&
+          other.recordedAt == this.recordedAt &&
+          other.assetAccountBalance == this.assetAccountBalance &&
+          other.assetSavings == this.assetSavings &&
+          other.assetMutualFunds == this.assetMutualFunds &&
+          other.assetStocks == this.assetStocks &&
+          other.assetBonds == this.assetBonds &&
+          other.assetFixedDeposits == this.assetFixedDeposits &&
+          other.assetRecurringDeposits == this.assetRecurringDeposits &&
+          other.assetP2PLending == this.assetP2PLending &&
+          other.assetOtherInvestments == this.assetOtherInvestments &&
+          other.assetLentDebts == this.assetLentDebts &&
+          other.assetExtraOthers == this.assetExtraOthers &&
+          other.liabilityCreditCards == this.liabilityCreditCards &&
+          other.liabilityLoans == this.liabilityLoans &&
+          other.liabilityBorrowedDebts == this.liabilityBorrowedDebts &&
+          other.liabilityExtraOthers == this.liabilityExtraOthers &&
+          other.cashflowTotalIncome == this.cashflowTotalIncome &&
+          other.cashflowTotalExpense == this.cashflowTotalExpense &&
+          other.cashflowBudgetedIncome == this.cashflowBudgetedIncome &&
+          other.cashflowBudgetedExpense == this.cashflowBudgetedExpense &&
+          other.cashflowNonCalcIncome == this.cashflowNonCalcIncome &&
+          other.cashflowNonCalcExpense == this.cashflowNonCalcExpense &&
+          other.cashflowOutOfBucket == this.cashflowOutOfBucket &&
+          other.cashflowNetTotal == this.cashflowNetTotal &&
+          other.cashflowNetBudgeted == this.cashflowNetBudgeted &&
+          other.notes == this.notes);
+}
+
+class NetWorthRecordsCompanion extends UpdateCompanion<NetWorthRecord> {
+  final Value<String> id;
+  final Value<DateTime> recordedAt;
+  final Value<double> assetAccountBalance;
+  final Value<double> assetSavings;
+  final Value<double> assetMutualFunds;
+  final Value<double> assetStocks;
+  final Value<double> assetBonds;
+  final Value<double> assetFixedDeposits;
+  final Value<double> assetRecurringDeposits;
+  final Value<double> assetP2PLending;
+  final Value<double> assetOtherInvestments;
+  final Value<double> assetLentDebts;
+  final Value<double> assetExtraOthers;
+  final Value<double> liabilityCreditCards;
+  final Value<double> liabilityLoans;
+  final Value<double> liabilityBorrowedDebts;
+  final Value<double> liabilityExtraOthers;
+  final Value<double> cashflowTotalIncome;
+  final Value<double> cashflowTotalExpense;
+  final Value<double> cashflowBudgetedIncome;
+  final Value<double> cashflowBudgetedExpense;
+  final Value<double> cashflowNonCalcIncome;
+  final Value<double> cashflowNonCalcExpense;
+  final Value<double> cashflowOutOfBucket;
+  final Value<double> cashflowNetTotal;
+  final Value<double> cashflowNetBudgeted;
+  final Value<String?> notes;
+  final Value<int> rowid;
+  const NetWorthRecordsCompanion({
+    this.id = const Value.absent(),
+    this.recordedAt = const Value.absent(),
+    this.assetAccountBalance = const Value.absent(),
+    this.assetSavings = const Value.absent(),
+    this.assetMutualFunds = const Value.absent(),
+    this.assetStocks = const Value.absent(),
+    this.assetBonds = const Value.absent(),
+    this.assetFixedDeposits = const Value.absent(),
+    this.assetRecurringDeposits = const Value.absent(),
+    this.assetP2PLending = const Value.absent(),
+    this.assetOtherInvestments = const Value.absent(),
+    this.assetLentDebts = const Value.absent(),
+    this.assetExtraOthers = const Value.absent(),
+    this.liabilityCreditCards = const Value.absent(),
+    this.liabilityLoans = const Value.absent(),
+    this.liabilityBorrowedDebts = const Value.absent(),
+    this.liabilityExtraOthers = const Value.absent(),
+    this.cashflowTotalIncome = const Value.absent(),
+    this.cashflowTotalExpense = const Value.absent(),
+    this.cashflowBudgetedIncome = const Value.absent(),
+    this.cashflowBudgetedExpense = const Value.absent(),
+    this.cashflowNonCalcIncome = const Value.absent(),
+    this.cashflowNonCalcExpense = const Value.absent(),
+    this.cashflowOutOfBucket = const Value.absent(),
+    this.cashflowNetTotal = const Value.absent(),
+    this.cashflowNetBudgeted = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  NetWorthRecordsCompanion.insert({
+    required String id,
+    this.recordedAt = const Value.absent(),
+    this.assetAccountBalance = const Value.absent(),
+    this.assetSavings = const Value.absent(),
+    this.assetMutualFunds = const Value.absent(),
+    this.assetStocks = const Value.absent(),
+    this.assetBonds = const Value.absent(),
+    this.assetFixedDeposits = const Value.absent(),
+    this.assetRecurringDeposits = const Value.absent(),
+    this.assetP2PLending = const Value.absent(),
+    this.assetOtherInvestments = const Value.absent(),
+    this.assetLentDebts = const Value.absent(),
+    this.assetExtraOthers = const Value.absent(),
+    this.liabilityCreditCards = const Value.absent(),
+    this.liabilityLoans = const Value.absent(),
+    this.liabilityBorrowedDebts = const Value.absent(),
+    this.liabilityExtraOthers = const Value.absent(),
+    this.cashflowTotalIncome = const Value.absent(),
+    this.cashflowTotalExpense = const Value.absent(),
+    this.cashflowBudgetedIncome = const Value.absent(),
+    this.cashflowBudgetedExpense = const Value.absent(),
+    this.cashflowNonCalcIncome = const Value.absent(),
+    this.cashflowNonCalcExpense = const Value.absent(),
+    this.cashflowOutOfBucket = const Value.absent(),
+    this.cashflowNetTotal = const Value.absent(),
+    this.cashflowNetBudgeted = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id);
+  static Insertable<NetWorthRecord> custom({
+    Expression<String>? id,
+    Expression<DateTime>? recordedAt,
+    Expression<double>? assetAccountBalance,
+    Expression<double>? assetSavings,
+    Expression<double>? assetMutualFunds,
+    Expression<double>? assetStocks,
+    Expression<double>? assetBonds,
+    Expression<double>? assetFixedDeposits,
+    Expression<double>? assetRecurringDeposits,
+    Expression<double>? assetP2PLending,
+    Expression<double>? assetOtherInvestments,
+    Expression<double>? assetLentDebts,
+    Expression<double>? assetExtraOthers,
+    Expression<double>? liabilityCreditCards,
+    Expression<double>? liabilityLoans,
+    Expression<double>? liabilityBorrowedDebts,
+    Expression<double>? liabilityExtraOthers,
+    Expression<double>? cashflowTotalIncome,
+    Expression<double>? cashflowTotalExpense,
+    Expression<double>? cashflowBudgetedIncome,
+    Expression<double>? cashflowBudgetedExpense,
+    Expression<double>? cashflowNonCalcIncome,
+    Expression<double>? cashflowNonCalcExpense,
+    Expression<double>? cashflowOutOfBucket,
+    Expression<double>? cashflowNetTotal,
+    Expression<double>? cashflowNetBudgeted,
+    Expression<String>? notes,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (recordedAt != null) 'recorded_at': recordedAt,
+      if (assetAccountBalance != null)
+        'asset_account_balance': assetAccountBalance,
+      if (assetSavings != null) 'asset_savings': assetSavings,
+      if (assetMutualFunds != null) 'asset_mutual_funds': assetMutualFunds,
+      if (assetStocks != null) 'asset_stocks': assetStocks,
+      if (assetBonds != null) 'asset_bonds': assetBonds,
+      if (assetFixedDeposits != null)
+        'asset_fixed_deposits': assetFixedDeposits,
+      if (assetRecurringDeposits != null)
+        'asset_recurring_deposits': assetRecurringDeposits,
+      if (assetP2PLending != null) 'asset_p2_p_lending': assetP2PLending,
+      if (assetOtherInvestments != null)
+        'asset_other_investments': assetOtherInvestments,
+      if (assetLentDebts != null) 'asset_lent_debts': assetLentDebts,
+      if (assetExtraOthers != null) 'asset_extra_others': assetExtraOthers,
+      if (liabilityCreditCards != null)
+        'liability_credit_cards': liabilityCreditCards,
+      if (liabilityLoans != null) 'liability_loans': liabilityLoans,
+      if (liabilityBorrowedDebts != null)
+        'liability_borrowed_debts': liabilityBorrowedDebts,
+      if (liabilityExtraOthers != null)
+        'liability_extra_others': liabilityExtraOthers,
+      if (cashflowTotalIncome != null)
+        'cashflow_total_income': cashflowTotalIncome,
+      if (cashflowTotalExpense != null)
+        'cashflow_total_expense': cashflowTotalExpense,
+      if (cashflowBudgetedIncome != null)
+        'cashflow_budgeted_income': cashflowBudgetedIncome,
+      if (cashflowBudgetedExpense != null)
+        'cashflow_budgeted_expense': cashflowBudgetedExpense,
+      if (cashflowNonCalcIncome != null)
+        'cashflow_non_calc_income': cashflowNonCalcIncome,
+      if (cashflowNonCalcExpense != null)
+        'cashflow_non_calc_expense': cashflowNonCalcExpense,
+      if (cashflowOutOfBucket != null)
+        'cashflow_out_of_bucket': cashflowOutOfBucket,
+      if (cashflowNetTotal != null) 'cashflow_net_total': cashflowNetTotal,
+      if (cashflowNetBudgeted != null)
+        'cashflow_net_budgeted': cashflowNetBudgeted,
+      if (notes != null) 'notes': notes,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  NetWorthRecordsCompanion copyWith({
+    Value<String>? id,
+    Value<DateTime>? recordedAt,
+    Value<double>? assetAccountBalance,
+    Value<double>? assetSavings,
+    Value<double>? assetMutualFunds,
+    Value<double>? assetStocks,
+    Value<double>? assetBonds,
+    Value<double>? assetFixedDeposits,
+    Value<double>? assetRecurringDeposits,
+    Value<double>? assetP2PLending,
+    Value<double>? assetOtherInvestments,
+    Value<double>? assetLentDebts,
+    Value<double>? assetExtraOthers,
+    Value<double>? liabilityCreditCards,
+    Value<double>? liabilityLoans,
+    Value<double>? liabilityBorrowedDebts,
+    Value<double>? liabilityExtraOthers,
+    Value<double>? cashflowTotalIncome,
+    Value<double>? cashflowTotalExpense,
+    Value<double>? cashflowBudgetedIncome,
+    Value<double>? cashflowBudgetedExpense,
+    Value<double>? cashflowNonCalcIncome,
+    Value<double>? cashflowNonCalcExpense,
+    Value<double>? cashflowOutOfBucket,
+    Value<double>? cashflowNetTotal,
+    Value<double>? cashflowNetBudgeted,
+    Value<String?>? notes,
+    Value<int>? rowid,
+  }) {
+    return NetWorthRecordsCompanion(
+      id: id ?? this.id,
+      recordedAt: recordedAt ?? this.recordedAt,
+      assetAccountBalance: assetAccountBalance ?? this.assetAccountBalance,
+      assetSavings: assetSavings ?? this.assetSavings,
+      assetMutualFunds: assetMutualFunds ?? this.assetMutualFunds,
+      assetStocks: assetStocks ?? this.assetStocks,
+      assetBonds: assetBonds ?? this.assetBonds,
+      assetFixedDeposits: assetFixedDeposits ?? this.assetFixedDeposits,
+      assetRecurringDeposits:
+          assetRecurringDeposits ?? this.assetRecurringDeposits,
+      assetP2PLending: assetP2PLending ?? this.assetP2PLending,
+      assetOtherInvestments:
+          assetOtherInvestments ?? this.assetOtherInvestments,
+      assetLentDebts: assetLentDebts ?? this.assetLentDebts,
+      assetExtraOthers: assetExtraOthers ?? this.assetExtraOthers,
+      liabilityCreditCards: liabilityCreditCards ?? this.liabilityCreditCards,
+      liabilityLoans: liabilityLoans ?? this.liabilityLoans,
+      liabilityBorrowedDebts:
+          liabilityBorrowedDebts ?? this.liabilityBorrowedDebts,
+      liabilityExtraOthers: liabilityExtraOthers ?? this.liabilityExtraOthers,
+      cashflowTotalIncome: cashflowTotalIncome ?? this.cashflowTotalIncome,
+      cashflowTotalExpense: cashflowTotalExpense ?? this.cashflowTotalExpense,
+      cashflowBudgetedIncome:
+          cashflowBudgetedIncome ?? this.cashflowBudgetedIncome,
+      cashflowBudgetedExpense:
+          cashflowBudgetedExpense ?? this.cashflowBudgetedExpense,
+      cashflowNonCalcIncome:
+          cashflowNonCalcIncome ?? this.cashflowNonCalcIncome,
+      cashflowNonCalcExpense:
+          cashflowNonCalcExpense ?? this.cashflowNonCalcExpense,
+      cashflowOutOfBucket: cashflowOutOfBucket ?? this.cashflowOutOfBucket,
+      cashflowNetTotal: cashflowNetTotal ?? this.cashflowNetTotal,
+      cashflowNetBudgeted: cashflowNetBudgeted ?? this.cashflowNetBudgeted,
+      notes: notes ?? this.notes,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (recordedAt.present) {
+      map['recorded_at'] = Variable<DateTime>(recordedAt.value);
+    }
+    if (assetAccountBalance.present) {
+      map['asset_account_balance'] = Variable<double>(
+        assetAccountBalance.value,
+      );
+    }
+    if (assetSavings.present) {
+      map['asset_savings'] = Variable<double>(assetSavings.value);
+    }
+    if (assetMutualFunds.present) {
+      map['asset_mutual_funds'] = Variable<double>(assetMutualFunds.value);
+    }
+    if (assetStocks.present) {
+      map['asset_stocks'] = Variable<double>(assetStocks.value);
+    }
+    if (assetBonds.present) {
+      map['asset_bonds'] = Variable<double>(assetBonds.value);
+    }
+    if (assetFixedDeposits.present) {
+      map['asset_fixed_deposits'] = Variable<double>(assetFixedDeposits.value);
+    }
+    if (assetRecurringDeposits.present) {
+      map['asset_recurring_deposits'] = Variable<double>(
+        assetRecurringDeposits.value,
+      );
+    }
+    if (assetP2PLending.present) {
+      map['asset_p2_p_lending'] = Variable<double>(assetP2PLending.value);
+    }
+    if (assetOtherInvestments.present) {
+      map['asset_other_investments'] = Variable<double>(
+        assetOtherInvestments.value,
+      );
+    }
+    if (assetLentDebts.present) {
+      map['asset_lent_debts'] = Variable<double>(assetLentDebts.value);
+    }
+    if (assetExtraOthers.present) {
+      map['asset_extra_others'] = Variable<double>(assetExtraOthers.value);
+    }
+    if (liabilityCreditCards.present) {
+      map['liability_credit_cards'] = Variable<double>(
+        liabilityCreditCards.value,
+      );
+    }
+    if (liabilityLoans.present) {
+      map['liability_loans'] = Variable<double>(liabilityLoans.value);
+    }
+    if (liabilityBorrowedDebts.present) {
+      map['liability_borrowed_debts'] = Variable<double>(
+        liabilityBorrowedDebts.value,
+      );
+    }
+    if (liabilityExtraOthers.present) {
+      map['liability_extra_others'] = Variable<double>(
+        liabilityExtraOthers.value,
+      );
+    }
+    if (cashflowTotalIncome.present) {
+      map['cashflow_total_income'] = Variable<double>(
+        cashflowTotalIncome.value,
+      );
+    }
+    if (cashflowTotalExpense.present) {
+      map['cashflow_total_expense'] = Variable<double>(
+        cashflowTotalExpense.value,
+      );
+    }
+    if (cashflowBudgetedIncome.present) {
+      map['cashflow_budgeted_income'] = Variable<double>(
+        cashflowBudgetedIncome.value,
+      );
+    }
+    if (cashflowBudgetedExpense.present) {
+      map['cashflow_budgeted_expense'] = Variable<double>(
+        cashflowBudgetedExpense.value,
+      );
+    }
+    if (cashflowNonCalcIncome.present) {
+      map['cashflow_non_calc_income'] = Variable<double>(
+        cashflowNonCalcIncome.value,
+      );
+    }
+    if (cashflowNonCalcExpense.present) {
+      map['cashflow_non_calc_expense'] = Variable<double>(
+        cashflowNonCalcExpense.value,
+      );
+    }
+    if (cashflowOutOfBucket.present) {
+      map['cashflow_out_of_bucket'] = Variable<double>(
+        cashflowOutOfBucket.value,
+      );
+    }
+    if (cashflowNetTotal.present) {
+      map['cashflow_net_total'] = Variable<double>(cashflowNetTotal.value);
+    }
+    if (cashflowNetBudgeted.present) {
+      map['cashflow_net_budgeted'] = Variable<double>(
+        cashflowNetBudgeted.value,
+      );
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NetWorthRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('recordedAt: $recordedAt, ')
+          ..write('assetAccountBalance: $assetAccountBalance, ')
+          ..write('assetSavings: $assetSavings, ')
+          ..write('assetMutualFunds: $assetMutualFunds, ')
+          ..write('assetStocks: $assetStocks, ')
+          ..write('assetBonds: $assetBonds, ')
+          ..write('assetFixedDeposits: $assetFixedDeposits, ')
+          ..write('assetRecurringDeposits: $assetRecurringDeposits, ')
+          ..write('assetP2PLending: $assetP2PLending, ')
+          ..write('assetOtherInvestments: $assetOtherInvestments, ')
+          ..write('assetLentDebts: $assetLentDebts, ')
+          ..write('assetExtraOthers: $assetExtraOthers, ')
+          ..write('liabilityCreditCards: $liabilityCreditCards, ')
+          ..write('liabilityLoans: $liabilityLoans, ')
+          ..write('liabilityBorrowedDebts: $liabilityBorrowedDebts, ')
+          ..write('liabilityExtraOthers: $liabilityExtraOthers, ')
+          ..write('cashflowTotalIncome: $cashflowTotalIncome, ')
+          ..write('cashflowTotalExpense: $cashflowTotalExpense, ')
+          ..write('cashflowBudgetedIncome: $cashflowBudgetedIncome, ')
+          ..write('cashflowBudgetedExpense: $cashflowBudgetedExpense, ')
+          ..write('cashflowNonCalcIncome: $cashflowNonCalcIncome, ')
+          ..write('cashflowNonCalcExpense: $cashflowNonCalcExpense, ')
+          ..write('cashflowOutOfBucket: $cashflowOutOfBucket, ')
+          ..write('cashflowNetTotal: $cashflowNetTotal, ')
+          ..write('cashflowNetBudgeted: $cashflowNetBudgeted, ')
+          ..write('notes: $notes, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -12733,6 +14322,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $StagedTransactionsTable(this);
   late final $ParserRulesTable parserRules = $ParserRulesTable(this);
   late final $DebtsTable debts = $DebtsTable(this);
+  late final $NetWorthRecordsTable netWorthRecords = $NetWorthRecordsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -12757,6 +14349,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     stagedTransactions,
     parserRules,
     debts,
+    netWorthRecords,
   ];
 }
 
@@ -18931,6 +20524,680 @@ typedef $$DebtsTableProcessedTableManager =
       Debt,
       PrefetchHooks Function()
     >;
+typedef $$NetWorthRecordsTableCreateCompanionBuilder =
+    NetWorthRecordsCompanion Function({
+      required String id,
+      Value<DateTime> recordedAt,
+      Value<double> assetAccountBalance,
+      Value<double> assetSavings,
+      Value<double> assetMutualFunds,
+      Value<double> assetStocks,
+      Value<double> assetBonds,
+      Value<double> assetFixedDeposits,
+      Value<double> assetRecurringDeposits,
+      Value<double> assetP2PLending,
+      Value<double> assetOtherInvestments,
+      Value<double> assetLentDebts,
+      Value<double> assetExtraOthers,
+      Value<double> liabilityCreditCards,
+      Value<double> liabilityLoans,
+      Value<double> liabilityBorrowedDebts,
+      Value<double> liabilityExtraOthers,
+      Value<double> cashflowTotalIncome,
+      Value<double> cashflowTotalExpense,
+      Value<double> cashflowBudgetedIncome,
+      Value<double> cashflowBudgetedExpense,
+      Value<double> cashflowNonCalcIncome,
+      Value<double> cashflowNonCalcExpense,
+      Value<double> cashflowOutOfBucket,
+      Value<double> cashflowNetTotal,
+      Value<double> cashflowNetBudgeted,
+      Value<String?> notes,
+      Value<int> rowid,
+    });
+typedef $$NetWorthRecordsTableUpdateCompanionBuilder =
+    NetWorthRecordsCompanion Function({
+      Value<String> id,
+      Value<DateTime> recordedAt,
+      Value<double> assetAccountBalance,
+      Value<double> assetSavings,
+      Value<double> assetMutualFunds,
+      Value<double> assetStocks,
+      Value<double> assetBonds,
+      Value<double> assetFixedDeposits,
+      Value<double> assetRecurringDeposits,
+      Value<double> assetP2PLending,
+      Value<double> assetOtherInvestments,
+      Value<double> assetLentDebts,
+      Value<double> assetExtraOthers,
+      Value<double> liabilityCreditCards,
+      Value<double> liabilityLoans,
+      Value<double> liabilityBorrowedDebts,
+      Value<double> liabilityExtraOthers,
+      Value<double> cashflowTotalIncome,
+      Value<double> cashflowTotalExpense,
+      Value<double> cashflowBudgetedIncome,
+      Value<double> cashflowBudgetedExpense,
+      Value<double> cashflowNonCalcIncome,
+      Value<double> cashflowNonCalcExpense,
+      Value<double> cashflowOutOfBucket,
+      Value<double> cashflowNetTotal,
+      Value<double> cashflowNetBudgeted,
+      Value<String?> notes,
+      Value<int> rowid,
+    });
+
+class $$NetWorthRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $NetWorthRecordsTable> {
+  $$NetWorthRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get assetAccountBalance => $composableBuilder(
+    column: $table.assetAccountBalance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get assetSavings => $composableBuilder(
+    column: $table.assetSavings,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get assetMutualFunds => $composableBuilder(
+    column: $table.assetMutualFunds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get assetStocks => $composableBuilder(
+    column: $table.assetStocks,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get assetBonds => $composableBuilder(
+    column: $table.assetBonds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get assetFixedDeposits => $composableBuilder(
+    column: $table.assetFixedDeposits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get assetRecurringDeposits => $composableBuilder(
+    column: $table.assetRecurringDeposits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get assetP2PLending => $composableBuilder(
+    column: $table.assetP2PLending,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get assetOtherInvestments => $composableBuilder(
+    column: $table.assetOtherInvestments,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get assetLentDebts => $composableBuilder(
+    column: $table.assetLentDebts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get assetExtraOthers => $composableBuilder(
+    column: $table.assetExtraOthers,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get liabilityCreditCards => $composableBuilder(
+    column: $table.liabilityCreditCards,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get liabilityLoans => $composableBuilder(
+    column: $table.liabilityLoans,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get liabilityBorrowedDebts => $composableBuilder(
+    column: $table.liabilityBorrowedDebts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get liabilityExtraOthers => $composableBuilder(
+    column: $table.liabilityExtraOthers,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cashflowTotalIncome => $composableBuilder(
+    column: $table.cashflowTotalIncome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cashflowTotalExpense => $composableBuilder(
+    column: $table.cashflowTotalExpense,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cashflowBudgetedIncome => $composableBuilder(
+    column: $table.cashflowBudgetedIncome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cashflowBudgetedExpense => $composableBuilder(
+    column: $table.cashflowBudgetedExpense,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cashflowNonCalcIncome => $composableBuilder(
+    column: $table.cashflowNonCalcIncome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cashflowNonCalcExpense => $composableBuilder(
+    column: $table.cashflowNonCalcExpense,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cashflowOutOfBucket => $composableBuilder(
+    column: $table.cashflowOutOfBucket,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cashflowNetTotal => $composableBuilder(
+    column: $table.cashflowNetTotal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cashflowNetBudgeted => $composableBuilder(
+    column: $table.cashflowNetBudgeted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$NetWorthRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $NetWorthRecordsTable> {
+  $$NetWorthRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get assetAccountBalance => $composableBuilder(
+    column: $table.assetAccountBalance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get assetSavings => $composableBuilder(
+    column: $table.assetSavings,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get assetMutualFunds => $composableBuilder(
+    column: $table.assetMutualFunds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get assetStocks => $composableBuilder(
+    column: $table.assetStocks,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get assetBonds => $composableBuilder(
+    column: $table.assetBonds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get assetFixedDeposits => $composableBuilder(
+    column: $table.assetFixedDeposits,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get assetRecurringDeposits => $composableBuilder(
+    column: $table.assetRecurringDeposits,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get assetP2PLending => $composableBuilder(
+    column: $table.assetP2PLending,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get assetOtherInvestments => $composableBuilder(
+    column: $table.assetOtherInvestments,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get assetLentDebts => $composableBuilder(
+    column: $table.assetLentDebts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get assetExtraOthers => $composableBuilder(
+    column: $table.assetExtraOthers,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get liabilityCreditCards => $composableBuilder(
+    column: $table.liabilityCreditCards,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get liabilityLoans => $composableBuilder(
+    column: $table.liabilityLoans,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get liabilityBorrowedDebts => $composableBuilder(
+    column: $table.liabilityBorrowedDebts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get liabilityExtraOthers => $composableBuilder(
+    column: $table.liabilityExtraOthers,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cashflowTotalIncome => $composableBuilder(
+    column: $table.cashflowTotalIncome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cashflowTotalExpense => $composableBuilder(
+    column: $table.cashflowTotalExpense,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cashflowBudgetedIncome => $composableBuilder(
+    column: $table.cashflowBudgetedIncome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cashflowBudgetedExpense => $composableBuilder(
+    column: $table.cashflowBudgetedExpense,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cashflowNonCalcIncome => $composableBuilder(
+    column: $table.cashflowNonCalcIncome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cashflowNonCalcExpense => $composableBuilder(
+    column: $table.cashflowNonCalcExpense,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cashflowOutOfBucket => $composableBuilder(
+    column: $table.cashflowOutOfBucket,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cashflowNetTotal => $composableBuilder(
+    column: $table.cashflowNetTotal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cashflowNetBudgeted => $composableBuilder(
+    column: $table.cashflowNetBudgeted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$NetWorthRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $NetWorthRecordsTable> {
+  $$NetWorthRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get assetAccountBalance => $composableBuilder(
+    column: $table.assetAccountBalance,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get assetSavings => $composableBuilder(
+    column: $table.assetSavings,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get assetMutualFunds => $composableBuilder(
+    column: $table.assetMutualFunds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get assetStocks => $composableBuilder(
+    column: $table.assetStocks,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get assetBonds => $composableBuilder(
+    column: $table.assetBonds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get assetFixedDeposits => $composableBuilder(
+    column: $table.assetFixedDeposits,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get assetRecurringDeposits => $composableBuilder(
+    column: $table.assetRecurringDeposits,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get assetP2PLending => $composableBuilder(
+    column: $table.assetP2PLending,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get assetOtherInvestments => $composableBuilder(
+    column: $table.assetOtherInvestments,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get assetLentDebts => $composableBuilder(
+    column: $table.assetLentDebts,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get assetExtraOthers => $composableBuilder(
+    column: $table.assetExtraOthers,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get liabilityCreditCards => $composableBuilder(
+    column: $table.liabilityCreditCards,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get liabilityLoans => $composableBuilder(
+    column: $table.liabilityLoans,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get liabilityBorrowedDebts => $composableBuilder(
+    column: $table.liabilityBorrowedDebts,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get liabilityExtraOthers => $composableBuilder(
+    column: $table.liabilityExtraOthers,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get cashflowTotalIncome => $composableBuilder(
+    column: $table.cashflowTotalIncome,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get cashflowTotalExpense => $composableBuilder(
+    column: $table.cashflowTotalExpense,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get cashflowBudgetedIncome => $composableBuilder(
+    column: $table.cashflowBudgetedIncome,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get cashflowBudgetedExpense => $composableBuilder(
+    column: $table.cashflowBudgetedExpense,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get cashflowNonCalcIncome => $composableBuilder(
+    column: $table.cashflowNonCalcIncome,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get cashflowNonCalcExpense => $composableBuilder(
+    column: $table.cashflowNonCalcExpense,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get cashflowOutOfBucket => $composableBuilder(
+    column: $table.cashflowOutOfBucket,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get cashflowNetTotal => $composableBuilder(
+    column: $table.cashflowNetTotal,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get cashflowNetBudgeted => $composableBuilder(
+    column: $table.cashflowNetBudgeted,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+}
+
+class $$NetWorthRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $NetWorthRecordsTable,
+          NetWorthRecord,
+          $$NetWorthRecordsTableFilterComposer,
+          $$NetWorthRecordsTableOrderingComposer,
+          $$NetWorthRecordsTableAnnotationComposer,
+          $$NetWorthRecordsTableCreateCompanionBuilder,
+          $$NetWorthRecordsTableUpdateCompanionBuilder,
+          (
+            NetWorthRecord,
+            BaseReferences<
+              _$AppDatabase,
+              $NetWorthRecordsTable,
+              NetWorthRecord
+            >,
+          ),
+          NetWorthRecord,
+          PrefetchHooks Function()
+        > {
+  $$NetWorthRecordsTableTableManager(
+    _$AppDatabase db,
+    $NetWorthRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$NetWorthRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$NetWorthRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$NetWorthRecordsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> recordedAt = const Value.absent(),
+                Value<double> assetAccountBalance = const Value.absent(),
+                Value<double> assetSavings = const Value.absent(),
+                Value<double> assetMutualFunds = const Value.absent(),
+                Value<double> assetStocks = const Value.absent(),
+                Value<double> assetBonds = const Value.absent(),
+                Value<double> assetFixedDeposits = const Value.absent(),
+                Value<double> assetRecurringDeposits = const Value.absent(),
+                Value<double> assetP2PLending = const Value.absent(),
+                Value<double> assetOtherInvestments = const Value.absent(),
+                Value<double> assetLentDebts = const Value.absent(),
+                Value<double> assetExtraOthers = const Value.absent(),
+                Value<double> liabilityCreditCards = const Value.absent(),
+                Value<double> liabilityLoans = const Value.absent(),
+                Value<double> liabilityBorrowedDebts = const Value.absent(),
+                Value<double> liabilityExtraOthers = const Value.absent(),
+                Value<double> cashflowTotalIncome = const Value.absent(),
+                Value<double> cashflowTotalExpense = const Value.absent(),
+                Value<double> cashflowBudgetedIncome = const Value.absent(),
+                Value<double> cashflowBudgetedExpense = const Value.absent(),
+                Value<double> cashflowNonCalcIncome = const Value.absent(),
+                Value<double> cashflowNonCalcExpense = const Value.absent(),
+                Value<double> cashflowOutOfBucket = const Value.absent(),
+                Value<double> cashflowNetTotal = const Value.absent(),
+                Value<double> cashflowNetBudgeted = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => NetWorthRecordsCompanion(
+                id: id,
+                recordedAt: recordedAt,
+                assetAccountBalance: assetAccountBalance,
+                assetSavings: assetSavings,
+                assetMutualFunds: assetMutualFunds,
+                assetStocks: assetStocks,
+                assetBonds: assetBonds,
+                assetFixedDeposits: assetFixedDeposits,
+                assetRecurringDeposits: assetRecurringDeposits,
+                assetP2PLending: assetP2PLending,
+                assetOtherInvestments: assetOtherInvestments,
+                assetLentDebts: assetLentDebts,
+                assetExtraOthers: assetExtraOthers,
+                liabilityCreditCards: liabilityCreditCards,
+                liabilityLoans: liabilityLoans,
+                liabilityBorrowedDebts: liabilityBorrowedDebts,
+                liabilityExtraOthers: liabilityExtraOthers,
+                cashflowTotalIncome: cashflowTotalIncome,
+                cashflowTotalExpense: cashflowTotalExpense,
+                cashflowBudgetedIncome: cashflowBudgetedIncome,
+                cashflowBudgetedExpense: cashflowBudgetedExpense,
+                cashflowNonCalcIncome: cashflowNonCalcIncome,
+                cashflowNonCalcExpense: cashflowNonCalcExpense,
+                cashflowOutOfBucket: cashflowOutOfBucket,
+                cashflowNetTotal: cashflowNetTotal,
+                cashflowNetBudgeted: cashflowNetBudgeted,
+                notes: notes,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<DateTime> recordedAt = const Value.absent(),
+                Value<double> assetAccountBalance = const Value.absent(),
+                Value<double> assetSavings = const Value.absent(),
+                Value<double> assetMutualFunds = const Value.absent(),
+                Value<double> assetStocks = const Value.absent(),
+                Value<double> assetBonds = const Value.absent(),
+                Value<double> assetFixedDeposits = const Value.absent(),
+                Value<double> assetRecurringDeposits = const Value.absent(),
+                Value<double> assetP2PLending = const Value.absent(),
+                Value<double> assetOtherInvestments = const Value.absent(),
+                Value<double> assetLentDebts = const Value.absent(),
+                Value<double> assetExtraOthers = const Value.absent(),
+                Value<double> liabilityCreditCards = const Value.absent(),
+                Value<double> liabilityLoans = const Value.absent(),
+                Value<double> liabilityBorrowedDebts = const Value.absent(),
+                Value<double> liabilityExtraOthers = const Value.absent(),
+                Value<double> cashflowTotalIncome = const Value.absent(),
+                Value<double> cashflowTotalExpense = const Value.absent(),
+                Value<double> cashflowBudgetedIncome = const Value.absent(),
+                Value<double> cashflowBudgetedExpense = const Value.absent(),
+                Value<double> cashflowNonCalcIncome = const Value.absent(),
+                Value<double> cashflowNonCalcExpense = const Value.absent(),
+                Value<double> cashflowOutOfBucket = const Value.absent(),
+                Value<double> cashflowNetTotal = const Value.absent(),
+                Value<double> cashflowNetBudgeted = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => NetWorthRecordsCompanion.insert(
+                id: id,
+                recordedAt: recordedAt,
+                assetAccountBalance: assetAccountBalance,
+                assetSavings: assetSavings,
+                assetMutualFunds: assetMutualFunds,
+                assetStocks: assetStocks,
+                assetBonds: assetBonds,
+                assetFixedDeposits: assetFixedDeposits,
+                assetRecurringDeposits: assetRecurringDeposits,
+                assetP2PLending: assetP2PLending,
+                assetOtherInvestments: assetOtherInvestments,
+                assetLentDebts: assetLentDebts,
+                assetExtraOthers: assetExtraOthers,
+                liabilityCreditCards: liabilityCreditCards,
+                liabilityLoans: liabilityLoans,
+                liabilityBorrowedDebts: liabilityBorrowedDebts,
+                liabilityExtraOthers: liabilityExtraOthers,
+                cashflowTotalIncome: cashflowTotalIncome,
+                cashflowTotalExpense: cashflowTotalExpense,
+                cashflowBudgetedIncome: cashflowBudgetedIncome,
+                cashflowBudgetedExpense: cashflowBudgetedExpense,
+                cashflowNonCalcIncome: cashflowNonCalcIncome,
+                cashflowNonCalcExpense: cashflowNonCalcExpense,
+                cashflowOutOfBucket: cashflowOutOfBucket,
+                cashflowNetTotal: cashflowNetTotal,
+                cashflowNetBudgeted: cashflowNetBudgeted,
+                notes: notes,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$NetWorthRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $NetWorthRecordsTable,
+      NetWorthRecord,
+      $$NetWorthRecordsTableFilterComposer,
+      $$NetWorthRecordsTableOrderingComposer,
+      $$NetWorthRecordsTableAnnotationComposer,
+      $$NetWorthRecordsTableCreateCompanionBuilder,
+      $$NetWorthRecordsTableUpdateCompanionBuilder,
+      (
+        NetWorthRecord,
+        BaseReferences<_$AppDatabase, $NetWorthRecordsTable, NetWorthRecord>,
+      ),
+      NetWorthRecord,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -18976,4 +21243,6 @@ class $AppDatabaseManager {
       $$ParserRulesTableTableManager(_db, _db.parserRules);
   $$DebtsTableTableManager get debts =>
       $$DebtsTableTableManager(_db, _db.debts);
+  $$NetWorthRecordsTableTableManager get netWorthRecords =>
+      $$NetWorthRecordsTableTableManager(_db, _db.netWorthRecords);
 }
