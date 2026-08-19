@@ -723,7 +723,7 @@ class _NetWorthReconciliationPageState
                             theme: theme,
                             children: [
                               _buildRowInput(
-                                'Account Balance',
+                                'Cash,Wallets & Others',
                                 _accBalCtrl,
                                 'Savings Accounts',
                                 _savingsCtrl,

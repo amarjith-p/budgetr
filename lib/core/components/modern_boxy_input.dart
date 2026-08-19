@@ -85,7 +85,7 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
       textInputAction: widget.textInputAction,
       onFieldSubmitted: widget.onFieldSubmitted,
       style: TextStyle(
-        fontSize: 15,
+        fontSize: 13,
         fontWeight: FontWeight.w700,
         color: !widget.enabled
             ? theme.colorScheme.onSurface.withOpacity(0.5)
@@ -96,7 +96,7 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
         labelText: widget.labelText,
         hintText: widget.hintText,
         labelStyle: TextStyle(
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: _isFocused ? FontWeight.w800 : FontWeight.w600,
           color: _isFocused
               ? theme.colorScheme.primary
@@ -104,7 +104,7 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
           letterSpacing: 0.5,
         ),
         floatingLabelStyle: TextStyle(
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: FontWeight.w900,
           color: theme.colorScheme.primary,
           letterSpacing: 1.0,
@@ -154,7 +154,7 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
         ),
         errorStyle: TextStyle(
           fontWeight: FontWeight.w800,
-          fontSize: 11,
+          fontSize: 9,
           color: theme.colorScheme.error,
           letterSpacing: 0.2,
         ),

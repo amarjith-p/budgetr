@@ -26,11 +26,8 @@ class NetWorthView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Extract the latest snapshot to display on the Summary Card
-    NetWorthRecord? latestRecord;
-    if (recordsAsync.hasValue && recordsAsync.value!.isNotEmpty) {
-      latestRecord = recordsAsync.value!.first;
-    }
+    // Pass the entire record list safely to the Summary Card
+    final records = recordsAsync.asData?.value ?? [];
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -55,14 +52,11 @@ class NetWorthView extends StatelessWidget {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // 1. LIVE SUMMARY CARD
+          // 1. LIVE SUMMARY CARD (Now receives full record history)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(DesignTokens.spacingMd),
-              child: NetWorthSummaryCard(
-                metrics: metrics,
-                latestRecord: latestRecord,
-              ),
+              child: NetWorthSummaryCard(metrics: metrics, records: records),
             ),
           ),
 
