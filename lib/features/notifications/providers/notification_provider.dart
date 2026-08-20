@@ -168,9 +168,11 @@ Future<void> _scheduleNotificationsForAccounts(
   WidgetRef ref,
 ) async {
   final service = NotificationService.instance;
-  await service.cancelAllNotifications();
 
-  // --- NEW: Clear future in-app notifications to prevent duplicates ---
+  // --- FIX 1: Use targeted cancellation instead of a global wipe ---
+  await service.cancelAccountNotifications();
+
+  // Clear future in-app notifications to prevent duplicates
   await ref
       .read(inAppNotificationServiceProvider)
       .clearFutureNotifications(prefix: 'alert_');
@@ -264,7 +266,8 @@ Future<void> _scheduleNotificationsForAccounts(
       addEvent(nextEmiDate.subtract(const Duration(days: 5)), 'emi5', loan);
   }
 
-  int notificationId = 0;
+  // --- FIX 2: Shift starting ID to 100000 to prevent collisions ---
+  int notificationId = 100000;
   int delaySeconds = 0;
   final uuid = const Uuid();
 
@@ -358,7 +361,6 @@ Future<void> _scheduleNotificationsForAccounts(
         break;
     }
 
-    // Schedule Native Notification
     await service.scheduleNotification(
       id: notificationId,
       title: title,
@@ -366,7 +368,6 @@ Future<void> _scheduleNotificationsForAccounts(
       scheduledDate: scheduledDate,
     );
 
-    // --- NEW: Save to In-App DB using a strict UUID so history is never overwritten ---
     await ref
         .read(inAppNotificationServiceProvider)
         .saveNotification(
@@ -379,8 +380,5 @@ Future<void> _scheduleNotificationsForAccounts(
     notificationId++;
   }
 
-  // --- FIX 2: Re-establish Automation Native Pushes ---
-  // Because cancelAllNotifications() wiped the OS layer, we force the
-  // Automation Engine to instantly re-register its native push notifications.
   ref.read(automationEngineProvider).runCatchUp();
 }

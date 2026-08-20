@@ -5,6 +5,8 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/services/notification_service.dart';
+// --- NEW: IMPORT IN-APP NOTIFICATION PROVIDER ---
+import '../../notifications/providers/in_app_notification_provider.dart';
 
 final allDebtsProvider = StreamProvider.autoDispose<List<Debt>>((ref) {
   final db = ref.watch(databaseProvider);
@@ -36,16 +38,27 @@ class DebtActionNotifier extends AsyncNotifier<void> {
 
     state = await AsyncValue.guard(() async {
       if (existingId != null && existingNotificationId != null) {
+        // Clear OS Notifications
         await NotificationService.instance.cancelSpecific(
           existingNotificationId,
         );
         await NotificationService.instance.cancelSpecific(
           existingNotificationId + 1,
         );
+
+        // --- NEW: Clear In-App Notifications ---
+        await ref
+            .read(inAppNotificationServiceProvider)
+            .deleteNotification('debt_$existingNotificationId');
+        await ref
+            .read(inAppNotificationServiceProvider)
+            .deleteNotification('debt_${existingNotificationId + 1}');
       }
 
+      // Generate a safe ID below 100000 to prevent collisions with the Account module
       final int newNotifId =
-          existingNotificationId ?? DateTime.now().millisecond;
+          existingNotificationId ??
+          DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
       if (isPushEnabled) {
         final title = type == 'Borrowed'
@@ -53,6 +66,7 @@ class DebtActionNotifier extends AsyncNotifier<void> {
             : 'Collect Debt: $person';
         final body = 'Amount: ₹$amount | Purpose: $purpose';
 
+        // 1. Schedule Native OS Notification
         await NotificationService.instance.scheduleNotification(
           id: newNotifId,
           title: title,
@@ -60,15 +74,36 @@ class DebtActionNotifier extends AsyncNotifier<void> {
           scheduledDate: dueDate,
         );
 
+        // --- 2. NEW: Save to In-App Queue ---
+        await ref
+            .read(inAppNotificationServiceProvider)
+            .saveNotification(
+              id: 'debt_$newNotifId',
+              title: title,
+              body: body,
+              scheduledDate: dueDate,
+            );
+
         if (priorDays != null && priorDays > 0) {
           final priorDate = dueDate.subtract(Duration(days: priorDays));
           if (priorDate.isAfter(DateTime.now())) {
+            // 1. Schedule Native OS Notification
             await NotificationService.instance.scheduleNotification(
               id: newNotifId + 1,
               title: 'Upcoming $title',
               body: body,
               scheduledDate: priorDate,
             );
+
+            // --- 2. NEW: Save to In-App Queue ---
+            await ref
+                .read(inAppNotificationServiceProvider)
+                .saveNotification(
+                  id: 'debt_${newNotifId + 1}',
+                  title: 'Upcoming $title',
+                  body: body,
+                  scheduledDate: priorDate,
+                );
           }
         }
       }
@@ -114,7 +149,6 @@ class DebtActionNotifier extends AsyncNotifier<void> {
     return !state.hasError;
   }
 
-  // --- NEW: Accumulate Interest ---
   Future<void> addInterest(Debt debt, double interestAmount) async {
     final db = ref.read(databaseProvider);
     await db
@@ -126,7 +160,6 @@ class DebtActionNotifier extends AsyncNotifier<void> {
         );
   }
 
-  // --- NEW: Partial & Full Settlement ---
   Future<void> recordSettlement(Debt debt, double amountPaid) async {
     final db = ref.read(databaseProvider);
     final newSettledAmount = debt.settledAmount + amountPaid;
@@ -137,6 +170,14 @@ class DebtActionNotifier extends AsyncNotifier<void> {
       await NotificationService.instance.cancelSpecific(
         debt.notificationId + 1,
       );
+
+      // --- NEW: Clear In-App Notifications on Settlement ---
+      await ref
+          .read(inAppNotificationServiceProvider)
+          .deleteNotification('debt_${debt.notificationId}');
+      await ref
+          .read(inAppNotificationServiceProvider)
+          .deleteNotification('debt_${debt.notificationId + 1}');
     }
 
     await db
@@ -152,8 +193,18 @@ class DebtActionNotifier extends AsyncNotifier<void> {
 
   Future<void> deleteDebt(Debt debt) async {
     final db = ref.read(databaseProvider);
+
     await NotificationService.instance.cancelSpecific(debt.notificationId);
     await NotificationService.instance.cancelSpecific(debt.notificationId + 1);
+
+    // --- NEW: Clear In-App Notifications on Delete ---
+    await ref
+        .read(inAppNotificationServiceProvider)
+        .deleteNotification('debt_${debt.notificationId}');
+    await ref
+        .read(inAppNotificationServiceProvider)
+        .deleteNotification('debt_${debt.notificationId + 1}');
+
     await (db.delete(db.debts)..where((t) => t.id.equals(debt.id))).go();
   }
 }

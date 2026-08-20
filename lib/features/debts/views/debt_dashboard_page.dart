@@ -62,7 +62,11 @@ class _DebtCountdownBadgeState extends State<_DebtCountdownBadge> {
     } else {
       final h = absDiff.inHours.toString().padLeft(2, '0');
       final m = absDiff.inMinutes.remainder(60).toString().padLeft(2, '0');
-      text = isOverdue ? 'Overdue $h:$m' : 'Due in $h:$m';
+      final s = absDiff.inSeconds
+          .remainder(60)
+          .toString()
+          .padLeft(2, '0'); // <-- SECONDS ADDED
+      text = isOverdue ? 'Overdue $h:$m:$s' : 'Due in $h:$m:$s';
     }
 
     final color = isOverdue

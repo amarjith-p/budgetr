@@ -148,6 +148,27 @@ class NotificationService {
     await prefs.remove(_registryKey);
   }
 
+  Future<void> cancelAccountNotifications() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> list = prefs.getStringList(_registryKey) ?? [];
+    final List<String> keptList = [];
+
+    for (String item in list) {
+      final map = jsonDecode(item);
+      final id = map['id'] as int;
+
+      // Target only the dedicated ID range for Accounts (Credit Cards & Loans)
+      if (id >= 100000 && id <= 199999) {
+        // FIXED: Using named parameter 'id: id'
+        await _flutterLocalNotificationsPlugin.cancel(id: id);
+      } else {
+        keptList.add(item); // Preserve Reminders, Debts, etc.
+      }
+    }
+
+    await prefs.setStringList(_registryKey, keptList);
+  }
+
   Future<void> _saveToRegistry(
     int id,
     String title,
