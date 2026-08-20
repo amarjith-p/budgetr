@@ -782,6 +782,76 @@ class DashboardPage extends ConsumerWidget {
                           Expanded(
                             flex: 6, // 60% Width for custom metric layout
                             child: _buildWideMetroTile(
+                              title: 'NET WORTH',
+                              icon: Icons.diamond_rounded,
+                              height: double.infinity,
+                              color: darkTileColor,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const NetWorthPage(),
+                                  ),
+                                );
+                              },
+                              customContent: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: CurrencyText(
+                                      amount: liveNetWorth.abs(),
+                                      sign: liveNetWorth < 0
+                                          ? ' -₹ '
+                                          : (liveNetWorth > 0 ? ' +₹ ' : ' ₹ '),
+                                      amountStyle: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        letterSpacing: -1.0,
+                                      ),
+                                      symbolStyle: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isNwPositive
+                                          ? Colors.green.withOpacity(0.2)
+                                          : Colors.redAccent.withOpacity(0.2),
+                                      borderRadius: BorderRadius.zero,
+                                    ),
+                                    child: Text(
+                                      isNwPositive ? 'POSITIVE' : 'NEGATIVE',
+                                      style: TextStyle(
+                                        fontSize: 6,
+                                        fontWeight: FontWeight.w700,
+                                        color: isNwPositive
+                                            ? Colors.greenAccent
+                                            : Colors.redAccent,
+                                        letterSpacing: 1.0,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: tileGap),
+
+                          // --- UPDATED LIVE NET WORTH TILE ---
+                          Expanded(
+                            flex: 4, // 40% Width
+                            child: _buildWideMetroTile(
                               title: 'DEBTS',
                               icon: Icons.money_off_rounded,
                               height: double.infinity,
@@ -848,76 +918,6 @@ class DashboardPage extends ConsumerWidget {
                                             : (netDebtBalance > 0
                                                   ? Colors.greenAccent
                                                   : Colors.white70),
-                                        letterSpacing: 1.0,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: tileGap),
-
-                          // --- UPDATED LIVE NET WORTH TILE ---
-                          Expanded(
-                            flex: 4, // 40% Width
-                            child: _buildWideMetroTile(
-                              title: 'NET WORTH',
-                              icon: Icons.diamond_rounded,
-                              height: double.infinity,
-                              color: darkTileColor,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const NetWorthPage(),
-                                  ),
-                                );
-                              },
-                              customContent: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerRight,
-                                    child: CurrencyText(
-                                      amount: liveNetWorth.abs(),
-                                      sign: liveNetWorth < 0
-                                          ? ' -₹ '
-                                          : (liveNetWorth > 0 ? ' +₹ ' : ' ₹ '),
-                                      amountStyle: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                        letterSpacing: -1.0,
-                                      ),
-                                      symbolStyle: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isNwPositive
-                                          ? Colors.green.withOpacity(0.2)
-                                          : Colors.redAccent.withOpacity(0.2),
-                                      borderRadius: BorderRadius.zero,
-                                    ),
-                                    child: Text(
-                                      isNwPositive ? 'POSITIVE' : 'NEGATIVE',
-                                      style: TextStyle(
-                                        fontSize: 6,
-                                        fontWeight: FontWeight.w700,
-                                        color: isNwPositive
-                                            ? Colors.greenAccent
-                                            : Colors.redAccent,
                                         letterSpacing: 1.0,
                                       ),
                                     ),

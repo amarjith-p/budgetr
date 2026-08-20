@@ -1,4 +1,3 @@
-// lib/features/investments/views/investment_form_page.dart
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -51,6 +50,39 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
   final _purposeCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
 
+  // --- NEW: FOCUS NODES FOR ENTER-TO-NEXT ---
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _providerFocus = FocusNode();
+  final FocusNode _urlFocus = FocusNode();
+  final FocusNode _initialAmtFocus = FocusNode();
+  final FocusNode _targetAmtFocus = FocusNode();
+  final FocusNode _expectedReturnFocus = FocusNode();
+  final FocusNode _folioFocus = FocusNode();
+  final FocusNode _unitsFocus = FocusNode();
+  final FocusNode _brokerFocus = FocusNode();
+  final FocusNode _linkedAccFocus = FocusNode();
+  final FocusNode _linkedIfscFocus = FocusNode();
+  final FocusNode _linkedBankFocus = FocusNode();
+  final FocusNode _purposeFocus = FocusNode();
+  final FocusNode _notesFocus = FocusNode();
+
+  late final List<FocusNode> _allFocusNodes = [
+    _nameFocus,
+    _providerFocus,
+    _urlFocus,
+    _initialAmtFocus,
+    _targetAmtFocus,
+    _expectedReturnFocus,
+    _folioFocus,
+    _unitsFocus,
+    _brokerFocus,
+    _linkedAccFocus,
+    _linkedIfscFocus,
+    _linkedBankFocus,
+    _purposeFocus,
+    _notesFocus,
+  ];
+
   final List<String> _investmentTypes = [
     'Mutual Fund',
     'Stocks',
@@ -65,6 +97,26 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
   @override
   void initState() {
     super.initState();
+
+    // Smooth scrolling listener for all focus nodes
+    for (var node in _allFocusNodes) {
+      node.addListener(() {
+        if (node.hasFocus) {
+          Future.delayed(const Duration(milliseconds: 150), () {
+            final ctx = node.context;
+            if (ctx != null && mounted) {
+              Scrollable.ensureVisible(
+                ctx,
+                alignment: 0.5,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOutCubic,
+              );
+            }
+          });
+        }
+      });
+    }
+
     final inv = widget.existingInvestment;
     if (inv != null) {
       _nameCtrl.text = inv.name;
@@ -106,6 +158,12 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
     _linkedBankCtrl.dispose();
     _purposeCtrl.dispose();
     _notesCtrl.dispose();
+
+    // Dispose Focus Nodes safely
+    for (var node in _allFocusNodes) {
+      node.dispose();
+    }
+
     super.dispose();
   }
 
@@ -151,7 +209,6 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
         : const Uuid().v4();
 
     // STRICTLY OMIT `initialAmount` and `currentValue` HERE
-    // By omitting them, Drift's .write() will completely ignore them during updates.
     final entry = InvestmentsCompanion(
       id: drift.Value(id),
       name: drift.Value(_nameCtrl.text.trim()),
@@ -232,6 +289,10 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
               _buildHeader('BASIC INFO', theme),
               ModernBoxyInput(
                 controller: _nameCtrl,
+                focusNode: _nameFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_providerFocus),
                 labelText: 'Investment Name *',
                 validator: (v) =>
                     v == null || v.trim().isEmpty ? 'Required' : null,
@@ -253,6 +314,10 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
               const SizedBox(height: 12),
               ModernBoxyInput(
                 controller: _providerCtrl,
+                focusNode: _providerFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_urlFocus),
                 labelText: 'Provider (e.g., Zerodha, HDFC) *',
                 validator: (v) =>
                     v == null || v.trim().isEmpty ? 'Required' : null,
@@ -260,6 +325,11 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
               const SizedBox(height: 12),
               ModernBoxyInput(
                 controller: _urlCtrl,
+                focusNode: _urlFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) => FocusScope.of(
+                  context,
+                ).nextFocus(), // Drops into Autocomplete
                 labelText: 'Provider Website URL (For Icon)',
               ),
               const SizedBox(height: 12),
@@ -288,6 +358,13 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                       return ModernBoxyInput(
                         controller: controller,
                         focusNode: focusNode,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) {
+                          onFieldSubmitted(); // Call internal Autocomplete submit
+                          FocusScope.of(context).requestFocus(
+                            isEdit ? _targetAmtFocus : _initialAmtFocus,
+                          );
+                        },
                         labelText: 'Special ID / Tag *',
                         validator: (v) =>
                             v == null || v.trim().isEmpty ? 'Required' : null,
@@ -401,6 +478,11 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                           )
                         : ModernBoxyInput(
                             controller: _initialAmtCtrl,
+                            focusNode: _initialAmtFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) => FocusScope.of(
+                              context,
+                            ).requestFocus(_targetAmtFocus),
                             labelText: 'Initial Amount (₹) *',
                             keyboardType: const TextInputType.numberWithOptions(
                               decimal: true,
@@ -418,6 +500,11 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                   Expanded(
                     child: ModernBoxyInput(
                       controller: _targetAmtCtrl,
+                      focusNode: _targetAmtFocus,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => FocusScope.of(
+                        context,
+                      ).requestFocus(_expectedReturnFocus),
                       labelText: 'Target Amount (₹)',
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
@@ -472,6 +559,10 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
               const SizedBox(height: 12),
               ModernBoxyInput(
                 controller: _expectedReturnCtrl,
+                focusNode: _expectedReturnFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_folioFocus),
                 labelText: 'Expected Return (%)',
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -481,6 +572,10 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
               _buildHeader('PORTFOLIO DATA', theme),
               ModernBoxyInput(
                 controller: _folioCtrl,
+                focusNode: _folioFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_unitsFocus),
                 labelText: 'Folio / Account No.',
               ),
               const SizedBox(height: 12),
@@ -489,6 +584,10 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                   Expanded(
                     child: ModernBoxyInput(
                       controller: _unitsCtrl,
+                      focusNode: _unitsFocus,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) =>
+                          FocusScope.of(context).requestFocus(_brokerFocus),
                       labelText: 'Units / Qty',
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
@@ -499,6 +598,10 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                   Expanded(
                     child: ModernBoxyInput(
                       controller: _brokerCtrl,
+                      focusNode: _brokerFocus,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) =>
+                          FocusScope.of(context).requestFocus(_linkedAccFocus),
                       labelText: 'Broker Name',
                     ),
                   ),
@@ -508,6 +611,10 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
               _buildHeader('LINKED BANK (Auto-Debit/Credit)', theme),
               ModernBoxyInput(
                 controller: _linkedAccCtrl,
+                focusNode: _linkedAccFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_linkedIfscFocus),
                 labelText: 'Linked Account No.',
               ),
               const SizedBox(height: 12),
@@ -516,6 +623,10 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                   Expanded(
                     child: ModernBoxyInput(
                       controller: _linkedIfscCtrl,
+                      focusNode: _linkedIfscFocus,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) =>
+                          FocusScope.of(context).requestFocus(_linkedBankFocus),
                       labelText: 'IFSC Code',
                     ),
                   ),
@@ -523,6 +634,10 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                   Expanded(
                     child: ModernBoxyInput(
                       controller: _linkedBankCtrl,
+                      focusNode: _linkedBankFocus,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) =>
+                          FocusScope.of(context).requestFocus(_purposeFocus),
                       labelText: 'Bank Name',
                     ),
                   ),
@@ -532,10 +647,20 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
               _buildHeader('EXTRA DETAILS', theme),
               ModernBoxyInput(
                 controller: _purposeCtrl,
+                focusNode: _purposeFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_notesFocus),
                 labelText: 'Purpose of Investment',
               ),
               const SizedBox(height: 12),
-              ModernBoxyInput(controller: _notesCtrl, labelText: 'Notes'),
+              ModernBoxyInput(
+                controller: _notesCtrl,
+                focusNode: _notesFocus,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
+                labelText: 'Notes',
+              ),
 
               const SizedBox(height: 40),
               ModernBoxyButton(

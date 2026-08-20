@@ -154,7 +154,7 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
         ),
         errorStyle: TextStyle(
           fontWeight: FontWeight.w800,
-          fontSize: 9,
+          fontSize: 10,
           color: theme.colorScheme.error,
           letterSpacing: 0.2,
         ),
