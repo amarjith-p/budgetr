@@ -51,7 +51,7 @@ class InsightsTab extends ConsumerWidget {
     if (filterState.accountId == 'ASSETS') {
       accountDisplayName = 'Assets Only';
     } else if (filterState.accountId == 'CREDIT') {
-      accountDisplayName = 'Liabilities Only';
+      accountDisplayName = 'Credit Cards Only';
     } else if (filterState.accountId != null) {
       final acc = accounts
           .where((a) => a.id == filterState.accountId)
@@ -359,7 +359,7 @@ class InsightExportUI {
     if (filterState.accountId == 'ASSETS') {
       accountDisplayName = 'Assets Only';
     } else if (filterState.accountId == 'CREDIT') {
-      accountDisplayName = 'Liabilities Only';
+      accountDisplayName = 'Credit Cards Only';
     } else if (filterState.accountId != null) {
       final acc = accounts
           .where((a) => a.id == filterState.accountId)

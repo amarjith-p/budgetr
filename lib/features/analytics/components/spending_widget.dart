@@ -298,7 +298,7 @@ class _SpendingWidgetState extends ConsumerState<SpendingWidget> {
             if (_accountFilterId == 'ASSETS')
               dropdownLabel = 'Assets Only';
             else if (_accountFilterId == 'CREDIT')
-              dropdownLabel = 'Liabilities Only';
+              dropdownLabel = 'Credit Cards Only';
             else if (_accountFilterId != 'ALL') {
               dropdownLabel =
                   rawAccounts
@@ -313,7 +313,7 @@ class _SpendingWidgetState extends ConsumerState<SpendingWidget> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: theme.dividerColor.withOpacity(0.5),
                   width: 1.0,
@@ -380,7 +380,7 @@ class _SpendingWidgetState extends ConsumerState<SpendingWidget> {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest
                           .withOpacity(isDark ? 0.3 : 0.5),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
@@ -613,7 +613,7 @@ class _SpendingWidgetState extends ConsumerState<SpendingWidget> {
                                             .colorScheme
                                             .surfaceContainerHighest
                                             .withOpacity(isDark ? 0.15 : 0.3),
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: isSelected
                                         ? seg.color.withOpacity(0.5)

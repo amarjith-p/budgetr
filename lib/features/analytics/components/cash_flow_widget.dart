@@ -389,7 +389,7 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
             if (_accountFilterId == 'ASSETS')
               dropdownLabel = 'Assets Only';
             else if (_accountFilterId == 'CREDIT')
-              dropdownLabel = 'Liabilities Only';
+              dropdownLabel = 'Credit Cards Only';
             else if (_accountFilterId != 'ALL') {
               dropdownLabel =
                   rawAccounts
@@ -404,7 +404,7 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: theme.dividerColor.withOpacity(0.5),
                   width: 1.0,

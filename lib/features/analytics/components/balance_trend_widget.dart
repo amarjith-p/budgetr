@@ -280,7 +280,7 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
             if (_accountFilterId == 'ASSETS')
               dropdownLabel = 'Assets Only';
             else if (_accountFilterId == 'CREDIT')
-              dropdownLabel = 'Liabilities Only';
+              dropdownLabel = 'Credit Cards Only';
             else if (_accountFilterId != 'ALL') {
               dropdownLabel =
                   rawAccounts
@@ -295,7 +295,7 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: theme.dividerColor.withOpacity(0.5),
                   width: 1.0,

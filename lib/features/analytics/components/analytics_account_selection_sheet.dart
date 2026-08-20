@@ -241,7 +241,7 @@ class AnalyticsAccountSelectionSheet extends StatelessWidget {
                     ),
                     _buildSheetOption(
                       context,
-                      'Liabilities Only',
+                      'Credit Cards Only',
                       'CREDIT',
                       Icons.credit_card_rounded,
                       theme,

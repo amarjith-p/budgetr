@@ -262,13 +262,13 @@ class NetWorthRecordCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     _buildDetailRow(
-                      'Accounts',
+                      'Cash & Others',
                       record.assetAccountBalance,
                       Colors.green,
                       theme,
                     ),
                     _buildDetailRow(
-                      'Savings',
+                      'Savings Account',
                       record.assetSavings,
                       Colors.green,
                       theme,

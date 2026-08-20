@@ -242,7 +242,7 @@ class InsightAccountSelectionSheet extends StatelessWidget {
                     ),
                     _buildSheetOption(
                       context,
-                      'Liabilities Only',
+                      'Credit Cards Only',
                       'CREDIT', // Pseudo-ID
                       Icons.credit_card_rounded,
                       theme,

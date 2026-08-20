@@ -1,3 +1,4 @@
+import 'package:budgetr/features/analytics/components/closed_budget_snapshot_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,6 +25,8 @@ class PinnedWidgetsDisplay extends ConsumerWidget {
         return const CreditTrackerWidget();
       case 'BUDGET_SIMULATOR':
         return const BudgetSimulatorWidget();
+      case 'BUDGET_SNAPSHOT':
+        return const ClosedBudgetSnapshotWidget();
       default:
         return const SizedBox.shrink();
     }

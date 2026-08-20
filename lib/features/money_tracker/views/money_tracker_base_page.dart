@@ -1,4 +1,5 @@
 // features/money_tracker/views/money_tracker_base_page.dart
+import 'package:budgetr/features/analytics/components/closed_budget_snapshot_widget.dart';
 import 'package:budgetr/features/analytics/providers/pinned_widgets_provider.dart';
 import 'package:budgetr/features/budgets/views/budget_management_tab.dart';
 import 'package:flutter/material.dart';
@@ -177,7 +178,9 @@ class _AnalyticsTab extends ConsumerWidget {
         if (!pinned.contains('SPENDING')) const SpendingWidget(),
         if (!pinned.contains('CREDIT_TRACKER')) const CreditTrackerWidget(),
         if (!pinned.contains('BUDGET_SIMULATOR')) const BudgetSimulatorWidget(),
-        if (pinned.length >= 5)
+        if (!pinned.contains('BUDGET_SNAPSHOT'))
+          const ClosedBudgetSnapshotWidget(),
+        if (pinned.length >= 6)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 40.0),
             child: Center(

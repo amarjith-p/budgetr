@@ -53,7 +53,7 @@ class _BudgetSimulatorWidgetState extends ConsumerState<BudgetSimulatorWidget> {
             return Dialog(
               backgroundColor: theme.colorScheme.surface,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -290,7 +290,7 @@ class _BudgetSimulatorWidgetState extends ConsumerState<BudgetSimulatorWidget> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: theme.colorScheme.primary.withOpacity(0.3),
           width: 1.5,
@@ -595,7 +595,7 @@ class _BudgetSimulatorWidgetState extends ConsumerState<BudgetSimulatorWidget> {
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surfaceContainerHighest
                                 .withOpacity(isDark ? 0.3 : 0.5),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: theme.dividerColor),
                           ),
                           child: SmartBudgetChart(

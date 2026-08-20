@@ -179,7 +179,7 @@ class _GlobalSummaryCardState extends State<GlobalSummaryCard> {
                     color: theme.dividerColor,
                   ),
                   _buildInteractiveMiniStat(
-                    'LIABILITIES',
+                    'CREDIT CARDS',
                     widget.liabilities,
                     theme.colorScheme.error,
                     theme,

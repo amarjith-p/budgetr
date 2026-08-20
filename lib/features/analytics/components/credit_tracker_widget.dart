@@ -101,7 +101,7 @@ class CreditTrackerWidget extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: theme.scaffoldBackgroundColor,
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
+                  top: Radius.circular(8),
                 ),
               ),
               child: Column(
@@ -243,7 +243,7 @@ class CreditTrackerWidget extends ConsumerWidget {
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   color: theme.colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: theme.dividerColor.withOpacity(0.5),
                                   ),
@@ -573,7 +573,7 @@ class CreditTrackerWidget extends ConsumerWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: color.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: color.withOpacity(0.3), width: 1.0),
           ),
           child: Column(
@@ -829,7 +829,7 @@ class CreditTrackerWidget extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: overdueCards.isNotEmpty
                       ? theme.colorScheme.error.withOpacity(0.5)
