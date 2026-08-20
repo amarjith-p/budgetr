@@ -339,12 +339,12 @@ class DashboardPage extends ConsumerWidget {
                                                   sign: netSign,
                                                   amountStyle:
                                                       valueStyle?.copyWith(
-                                                        fontSize: 28,
+                                                        fontSize: 26,
                                                         color: Colors.black,
                                                       ) ??
                                                       const TextStyle(),
                                                   symbolStyle: const TextStyle(
-                                                    fontSize: 18,
+                                                    fontSize: 16,
                                                     color: Colors.black87,
                                                   ),
                                                 ),
@@ -454,6 +454,7 @@ class DashboardPage extends ConsumerWidget {
                                         child: _buildMetroTile(
                                           title: 'BUCKETS',
                                           icon: Icons.donut_small_rounded,
+                                          verticalText: true,
                                           badge: liveBucketsCount > 0
                                               ? liveBucketsCount.toString()
                                               : '-',
@@ -475,6 +476,7 @@ class DashboardPage extends ConsumerWidget {
                                         child: _buildMetroTile(
                                           title: 'SETTINGS',
                                           icon: Icons.settings_rounded,
+                                          verticalText: true,
                                           height: double.infinity,
                                           color: darkTileColor,
                                           onTap: () {
@@ -501,9 +503,10 @@ class DashboardPage extends ConsumerWidget {
                                     children: [
                                       Expanded(
                                         child: _buildMetroTile(
-                                          title: 'REMINDERS',
+                                          title: 'REMINDER',
                                           icon: Icons
                                               .notifications_active_rounded,
+                                          verticalText: true,
                                           height: double.infinity,
                                           color: darkTileColor,
                                           onTap: () {
@@ -522,6 +525,7 @@ class DashboardPage extends ConsumerWidget {
                                         child: _buildMetroTile(
                                           title: 'BACKUP',
                                           icon: Icons.cloud_sync_rounded,
+                                          verticalText: true,
                                           height: double.infinity,
                                           color: darkTileColor,
                                           onTap: () {
@@ -575,13 +579,13 @@ class DashboardPage extends ConsumerWidget {
                                 amount: totalInvestmentValue.abs(),
                                 sign: totalInvestmentValue < 0 ? '-₹ ' : '₹ ',
                                 amountStyle: const TextStyle(
-                                  fontSize: 28,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                   letterSpacing: -1.0,
                                 ),
                                 symbolStyle: const TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 18,
                                   color: Colors.white70,
                                 ),
                               ),
@@ -602,7 +606,7 @@ class DashboardPage extends ConsumerWidget {
                                 child: Text(
                                   '$invReturnSign${invReturnPct.toStringAsFixed(1)}% Return',
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 9,
                                     fontWeight: FontWeight.w700,
                                     color: invReturnPct >= 0
                                         ? Colors.greenAccent
@@ -651,6 +655,7 @@ class DashboardPage extends ConsumerWidget {
                                     icon: hasActiveTrip || hasPausedTrip
                                         ? Icons.flight_takeoff_rounded
                                         : Icons.flight_land_rounded,
+                                    swapPositions: false,
                                     iconColor: hasActiveTrip
                                         ? Colors.green
                                         : (hasPausedTrip
@@ -674,6 +679,7 @@ class DashboardPage extends ConsumerWidget {
                                   child: _buildMetroTile(
                                     title: 'CATEGORIES',
                                     icon: Icons.category_rounded,
+                                    swapPositions: false,
                                     height: double.infinity,
                                     color: darkTileColor,
                                     onTap: () {
@@ -1037,6 +1043,7 @@ class DashboardPage extends ConsumerWidget {
     required VoidCallback onTap,
     String? badge,
     bool verticalText = false,
+    bool swapPositions = false,
     Color? iconColor,
   }) {
     return Material(
@@ -1048,69 +1055,75 @@ class DashboardPage extends ConsumerWidget {
           height: height,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Calculates dynamically based on available screen space instead of hardcoded numbers
               final bool isSmall = constraints.maxHeight < 85;
 
               return Stack(
                 children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Padding(
-                      padding: EdgeInsets.all(isSmall ? 8.0 : 10.0),
-                      child: badge != null
-                          ? Text(
-                              badge,
-                              style: TextStyle(
-                                fontSize: verticalText ? 20 : 24,
-                                fontWeight: FontWeight.w300,
-                                color: Colors.white,
-                                height: 1.0,
-                              ),
-                            )
-                          : Icon(
-                              icon,
-                              size: verticalText
-                                  ? isSmall
-                                        ? 24
-                                        : 26
-                                  : isSmall
-                                  ? 26
-                                  : 28,
-                              color: iconColor ?? Colors.white,
+                  Positioned(
+                    top: swapPositions ? null : (isSmall ? 8.0 : 10.0),
+                    bottom: swapPositions ? (isSmall ? 8.0 : 10.0) : null,
+                    left: swapPositions ? (isSmall ? 8.0 : 10.0) : null,
+                    right: swapPositions ? null : (isSmall ? 8.0 : 10.0),
+                    child: badge != null
+                        ? Text(
+                            badge,
+                            style: TextStyle(
+                              fontSize: verticalText ? 20 : 24,
+                              fontWeight: FontWeight.w300,
+                              color: Colors.white,
+                              height: 1.0,
                             ),
-                    ),
+                          )
+                        : Icon(
+                            icon,
+                            size: verticalText
+                                ? isSmall
+                                      ? 24
+                                      : 26
+                                : isSmall
+                                ? 26
+                                : 28,
+                            color: iconColor ?? Colors.white,
+                          ),
                   ),
-                  Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Padding(
-                      padding: EdgeInsets.all(isSmall ? 8.0 : 12.0),
-                      child: verticalText
-                          ? RotatedBox(
-                              quarterTurns: 3,
-                              child: Text(
-                                title,
-                                style: TextStyle(
-                                  fontSize: isSmall ? 9 : 10,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.0,
-                                  color: Colors.white,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            )
-                          : Text(
+                  Positioned(
+                    top: swapPositions
+                        ? (isSmall ? 8.0 : 12.0)
+                        : (verticalText ? (isSmall ? 8.0 : 12.0) : null),
+                    bottom: swapPositions ? null : (isSmall ? 8.0 : 12.0),
+                    left: swapPositions
+                        ? (isSmall ? 8.0 : 12.0)
+                        : (isSmall ? 8.0 : 12.0),
+                    right: verticalText ? null : (isSmall ? 8.0 : 12.0),
+                    child: verticalText
+                        ? RotatedBox(
+                            quarterTurns: 3,
+                            child: Text(
                               title,
                               style: TextStyle(
-                                fontSize: isSmall ? 9 : 11,
+                                fontSize: isSmall ? 9 : 10,
                                 fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
+                                letterSpacing: 1.0,
                                 color: Colors.white,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                    ),
+                          )
+                        : Text(
+                            title,
+                            textAlign: swapPositions
+                                ? TextAlign.right
+                                : TextAlign.left,
+                            style: TextStyle(
+                              fontSize: isSmall ? 9 : 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                   ),
                 ],
               );
