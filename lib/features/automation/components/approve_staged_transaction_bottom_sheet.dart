@@ -205,7 +205,7 @@ class _ApproveStagedTransactionBottomSheetState
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
               ),
               child: Row(
@@ -262,7 +262,7 @@ class _ApproveStagedTransactionBottomSheetState
                 vertical: 4,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 side: BorderSide(
                   color: _showValidationErrors && _selectedAccountId == null
                       ? theme.colorScheme.error
@@ -315,7 +315,7 @@ class _ApproveStagedTransactionBottomSheetState
                 vertical: 4,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 side: BorderSide(
                   color: _showValidationErrors && _selectedCategoryId == null
                       ? theme.colorScheme.error

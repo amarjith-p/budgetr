@@ -118,7 +118,7 @@ class _ModernSmartChartState extends State<ModernSmartChart> {
       padding: const EdgeInsets.fromLTRB(12, 16, 0, 12),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: theme.dividerColor, width: 1.0),
         boxShadow: [
           BoxShadow(

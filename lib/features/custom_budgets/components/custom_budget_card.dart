@@ -29,7 +29,7 @@ class CustomBudgetCard extends ConsumerWidget {
     final activeColor = isDanger
         ? theme.colorScheme.error
         : theme.colorScheme.primary;
-    final activeRadius = BorderRadius.circular(12.0);
+    final activeRadius = BorderRadius.circular(8.0);
 
     return Slidable(
       key: ValueKey(data.budget.id),

@@ -80,7 +80,7 @@ class ActiveFilterBanner extends StatelessWidget {
         color: theme.colorScheme.primaryContainer.withOpacity(
           isDark ? 0.2 : 0.4,
         ),
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(8.0),
         border: Border.all(
           color: theme.colorScheme.primary.withOpacity(0.3),
           width: 1.0,

@@ -45,7 +45,7 @@ class BudgetProgressCard extends StatelessWidget {
         color: theme.colorScheme.surface,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           side: BorderSide(
             color: isDanger
                 ? theme.colorScheme.error.withOpacity(0.4)

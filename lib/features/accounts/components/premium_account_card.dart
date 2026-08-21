@@ -137,7 +137,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onCardTap,
-            borderRadius: BorderRadius.circular(16.0),
+            borderRadius: BorderRadius.circular(8.0),
             child: Transform(
               transform: Matrix4.identity()
                 ..setEntry(3, 2, 0.001)
@@ -191,7 +191,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
       padding: const EdgeInsets.all(DesignTokens.spacingLg),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: BorderRadius.circular(8.0),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
               ? Colors.white12
@@ -425,7 +425,7 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
       height: 190,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: BorderRadius.circular(8.0),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
               ? Colors.white12

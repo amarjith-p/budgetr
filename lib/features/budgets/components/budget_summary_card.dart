@@ -31,7 +31,7 @@ class BudgetSummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final effectiveIncome = (salaryIncome + extraIncome) - deductions;
-    final activeRadius = BorderRadius.circular(16.0);
+    final activeRadius = BorderRadius.circular(8.0);
 
     return Slidable(
       key: const ValueKey('budget_summary_card'),

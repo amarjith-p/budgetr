@@ -30,7 +30,7 @@ class BudgetMetricsGrid extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isOverBudget
               ? theme.colorScheme.error.withOpacity(0.5)
@@ -200,7 +200,7 @@ class BudgetMetricsGrid extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isError
               ? theme.colorScheme.error.withOpacity(0.3)

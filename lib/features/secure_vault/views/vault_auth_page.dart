@@ -298,7 +298,7 @@ class _VaultAuthPageState extends ConsumerState<VaultAuthPage>
                               // Frosted Glass Bottom Input Panel
                               ClipRRect(
                                 borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(32),
+                                  top: Radius.circular(8),
                                 ),
                                 child: BackdropFilter(
                                   filter: ImageFilter.blur(
@@ -377,7 +377,7 @@ class _VaultAuthPageState extends ConsumerState<VaultAuthPage>
                                                         .withOpacity(0.3),
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                          12,
+                                                          8,
                                                         ),
                                                     border: Border.all(
                                                       color: Colors.white10,
@@ -400,7 +400,7 @@ class _VaultAuthPageState extends ConsumerState<VaultAuthPage>
                                                     shape: RoundedRectangleBorder(
                                                       borderRadius:
                                                           BorderRadius.circular(
-                                                            12,
+                                                            8,
                                                           ),
                                                     ),
                                                     onChanged: (val) {
@@ -438,7 +438,7 @@ class _VaultAuthPageState extends ConsumerState<VaultAuthPage>
                                               }
                                             },
                                             borderRadius: BorderRadius.circular(
-                                              16,
+                                              8,
                                             ),
                                             child: Container(
                                               width: double.infinity,
@@ -450,7 +450,7 @@ class _VaultAuthPageState extends ConsumerState<VaultAuthPage>
                                                 color: theme.colorScheme.primary
                                                     .withOpacity(0.1),
                                                 borderRadius:
-                                                    BorderRadius.circular(16),
+                                                    BorderRadius.circular(8),
                                                 border: Border.all(
                                                   color: theme
                                                       .colorScheme
@@ -558,7 +558,7 @@ class _VaultAuthPageState extends ConsumerState<VaultAuthPage>
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Colors.white24),
                           ),
                           child: const Text(

@@ -219,7 +219,7 @@ class _ParserRulesPlaygroundPageState
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHighest
                             .withOpacity(isDark ? 0.3 : 0.5),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
@@ -333,7 +333,7 @@ class _ParserRulesPlaygroundPageState
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                         boxShadow: [
                           BoxShadow(
                             color: theme.colorScheme.primary.withOpacity(0.3),
@@ -347,7 +347,7 @@ class _ParserRulesPlaygroundPageState
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                         onPressed: () async {
@@ -420,7 +420,7 @@ class _ParserRulesPlaygroundPageState
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: theme.dividerColor.withOpacity(0.5),
                 width: 1.0,
@@ -482,7 +482,7 @@ class _ParserRulesPlaygroundPageState
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     boxShadow: _isTesting
                         ? []
                         : [
@@ -498,7 +498,7 @@ class _ParserRulesPlaygroundPageState
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     onPressed: _isTesting ? null : _runTest,
@@ -622,7 +622,7 @@ class _ParserRulesPlaygroundPageState
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerHighest
                         .withOpacity(isDark ? 0.2 : 0.4),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: theme.dividerColor,
                       style: BorderStyle.solid,
@@ -686,7 +686,7 @@ class _ParserRulesPlaygroundPageState
                       child: Container(
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: theme.dividerColor.withOpacity(0.5),
                           ),
@@ -701,7 +701,7 @@ class _ParserRulesPlaygroundPageState
                           ],
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(11),
+                          borderRadius: BorderRadius.circular(8),
                           child: IntrinsicHeight(
                             child: Row(
                               children: [
@@ -829,7 +829,7 @@ class _ParserRulesPlaygroundPageState
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: amountColor.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: amountColor.withOpacity(0.3), width: 1.5),
       ),
       child: Column(
@@ -976,7 +976,7 @@ class _ParserRulesPlaygroundPageState
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.error.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
       ),
       child: Row(

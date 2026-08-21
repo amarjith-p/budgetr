@@ -206,7 +206,7 @@ class _SmartTrackerBuilderPageState
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surfaceContainerHighest
                                 .withOpacity(isDark ? 0.2 : 0.4),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: theme.dividerColor,
                               width: 1.0,

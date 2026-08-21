@@ -300,7 +300,7 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
               const SizedBox(height: 12),
               InkWell(
                 onTap: _selectType,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 child: AbsorbPointer(
                   child: ModernBoxyInput(
                     controller: _typeCtrl,

@@ -160,7 +160,7 @@ class _SmartTrackerChartSheetState extends State<SmartTrackerChartSheet> {
       height: screenHeight * 0.70,
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
       ),
       padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset : 24),
       child: Column(
@@ -219,7 +219,7 @@ class _SmartTrackerChartSheetState extends State<SmartTrackerChartSheet> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: theme.dividerColor, width: 1.0),
                       boxShadow: [
                         BoxShadow(
@@ -376,7 +376,7 @@ class _SmartTrackerChartSheetState extends State<SmartTrackerChartSheet> {
                           height: 200,
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: theme.dividerColor),
                           ),
                           child: Center(

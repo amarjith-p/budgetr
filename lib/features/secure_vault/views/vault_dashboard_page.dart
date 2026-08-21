@@ -272,7 +272,7 @@ class _FuturisticVaultCardState extends State<_FuturisticVaultCard> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: const Color(0xFF121826),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: _isExpanded
                   ? accentColor.withOpacity(0.8)

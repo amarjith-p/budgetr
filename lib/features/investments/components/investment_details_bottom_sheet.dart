@@ -100,7 +100,7 @@ class InvestmentDetailsBottomSheet extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
       ),
       padding: EdgeInsets.only(bottom: bottomInset, top: 16),
       child: SafeArea(
@@ -144,7 +144,7 @@ class InvestmentDetailsBottomSheet extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: theme.dividerColor, width: 1.0),
                   ),
                   child: Column(

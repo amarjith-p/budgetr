@@ -127,7 +127,7 @@ class BudgetTransactionsPage extends ConsumerWidget {
                         padding: const EdgeInsets.fromLTRB(0, 20, 0, 16),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isOverBudget && isCurrentMonth
                                 ? theme.colorScheme.error.withOpacity(0.5)

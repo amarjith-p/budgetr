@@ -177,7 +177,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
           ),
           decoration: BoxDecoration(
             color: theme.scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -200,7 +200,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: QrImageView(
                   data: url,
@@ -345,7 +345,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         title: Text(
           'Restoration Complete',
           style: TextStyle(
@@ -392,7 +392,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
           height: MediaQuery.of(context).size.height * 0.6,
           decoration: BoxDecoration(
             color: theme.scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
           ),
           child: Column(
             children: [
@@ -530,7 +530,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
         padding: const EdgeInsets.all(12.0), // Compact Padding
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isInteractive
                 ? theme.colorScheme.primary.withOpacity(0.4)
@@ -551,7 +551,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
               padding: const EdgeInsets.all(10), // Scaled Icon Container
               decoration: BoxDecoration(
                 color: theme.colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: theme.colorScheme.primary, size: 20),
             ),
@@ -717,7 +717,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHighest
                             .withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: theme.dividerColor,
                           width: 1.0,

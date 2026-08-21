@@ -106,7 +106,7 @@ class InsightTimeframeSelectionSheet extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             color: theme.scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

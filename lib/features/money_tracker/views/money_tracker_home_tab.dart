@@ -159,7 +159,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                           style: IconButton.styleFrom(
                             backgroundColor: theme.colorScheme.surface,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               side: BorderSide(
                                 color: theme.dividerColor,
                                 width: 1.0,
@@ -383,7 +383,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: theme.dividerColor, width: 1.0),
         boxShadow: [
           BoxShadow(
@@ -396,7 +396,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(8),
           onTap: () => _openPayableSheet(context, bankAccounts, crBalance),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

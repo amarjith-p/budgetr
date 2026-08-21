@@ -697,7 +697,7 @@ class _AutomationRuleFormPageState
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: theme.colorScheme.primary.withOpacity(0.5)),
       ),
       child: Column(
@@ -1130,7 +1130,7 @@ class _AutomationRuleFormPageState
                       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: theme.dividerColor,
                           width: 1.0,

@@ -146,7 +146,7 @@ class _AddFormulaBottomSheetState extends State<AddFormulaBottomSheet> {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: accentColor.withOpacity(isDark ? 0.1 : 0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: accentColor.withOpacity(0.3)),
       ),
       child: Column(
@@ -157,7 +157,7 @@ class _AddFormulaBottomSheetState extends State<AddFormulaBottomSheet> {
             decoration: BoxDecoration(
               color: accentColor.withOpacity(0.2),
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(11),
+                top: Radius.circular(8),
               ),
             ),
             child: Text(
@@ -225,7 +225,7 @@ class _AddFormulaBottomSheetState extends State<AddFormulaBottomSheet> {
     return Container(
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
       ),
       padding: EdgeInsets.only(
         bottom: bottomInset + 24,

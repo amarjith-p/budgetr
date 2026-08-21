@@ -184,7 +184,7 @@ class _BudgetCreationViewState extends ConsumerState<BudgetCreationView> {
                     color: theme.colorScheme.primaryContainer.withOpacity(
                       isDark ? 0.2 : 0.4,
                     ),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: theme.colorScheme.primary.withOpacity(0.3),
                       width: 1.5,
@@ -350,7 +350,7 @@ class _BudgetCreationViewState extends ConsumerState<BudgetCreationView> {
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.error.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: theme.colorScheme.error.withOpacity(0.3),
                           ),
@@ -387,7 +387,7 @@ class _BudgetCreationViewState extends ConsumerState<BudgetCreationView> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: theme.dividerColor,
                               width: 1.0,

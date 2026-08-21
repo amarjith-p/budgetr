@@ -978,7 +978,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               decoration: BoxDecoration(
                 color: theme.scaffoldBackgroundColor,
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
+                  top: Radius.circular(8),
                 ),
               ),
               padding: EdgeInsets.only(
@@ -2221,7 +2221,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                   color: theme.colorScheme.error.withOpacity(
                                     0.1,
                                   ),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: theme.colorScheme.error.withOpacity(
                                       0.3,
@@ -2255,7 +2255,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                             margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: theme.dividerColor,
                                 width: 1.0,

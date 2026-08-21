@@ -184,7 +184,7 @@ class _PassiveIncomeActionBottomSheetState
       child: Container(
         decoration: BoxDecoration(
           color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -233,7 +233,7 @@ class _PassiveIncomeActionBottomSheetState
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           color: activeColor.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: activeColor.withOpacity(0.3),
                             width: 1.5,
@@ -318,7 +318,7 @@ class _PassiveIncomeActionBottomSheetState
                           ),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: theme.dividerColor),
                           ),
                           child: Row(

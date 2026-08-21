@@ -142,7 +142,7 @@ class InvestmentActivityLedger extends ConsumerWidget {
               margin: const EdgeInsets.only(top: 12),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: theme.dividerColor, width: 1.0),
               ),
               clipBehavior: Clip.antiAlias,

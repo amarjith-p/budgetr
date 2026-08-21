@@ -68,7 +68,7 @@ class MiniAccountCard extends ConsumerWidget {
     return Container(
       width: 170,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(8.0),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
@@ -78,7 +78,7 @@ class MiniAccountCard extends ConsumerWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(8.0),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Material(
@@ -89,7 +89,7 @@ class MiniAccountCard extends ConsumerWidget {
                 padding: const EdgeInsets.all(10.0),
                 decoration: BoxDecoration(
                   color: bgColor,
-                  borderRadius: BorderRadius.circular(12.0),
+                  borderRadius: BorderRadius.circular(8.0),
                   border: Border.all(
                     color: isDebtCard
                         ? theme.colorScheme.onPrimary.withOpacity(0.2)

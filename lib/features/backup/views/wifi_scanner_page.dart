@@ -54,7 +54,7 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
               height: 250,
               decoration: BoxDecoration(
                 border: Border.all(color: theme.colorScheme.primary, width: 2),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
                     color: theme.colorScheme.primary.withOpacity(0.3),

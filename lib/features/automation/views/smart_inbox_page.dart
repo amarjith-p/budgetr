@@ -72,7 +72,7 @@ class _SmartInboxPageState extends ConsumerState<SmartInboxPage> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.orangeAccent.withOpacity(isDark ? 0.15 : 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: Colors.orangeAccent.withOpacity(0.4),
                   ),

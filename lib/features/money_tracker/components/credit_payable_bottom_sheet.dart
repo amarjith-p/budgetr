@@ -124,7 +124,7 @@ class _CreditPayableBottomSheetState
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: statusColor.withOpacity(isDark ? 0.15 : 0.1),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: statusColor.withOpacity(0.3),
                           width: 1.5,
@@ -249,7 +249,7 @@ class _CreditPayableBottomSheetState
                                 0.3,
                               )
                             : theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: isSelected
                               ? theme.colorScheme.primary

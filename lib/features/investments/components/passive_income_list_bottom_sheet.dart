@@ -50,7 +50,7 @@ class PassiveIncomeListBottomSheet extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
       ),
       padding: EdgeInsets.only(
         top: 16,
@@ -119,7 +119,7 @@ class PassiveIncomeListBottomSheet extends ConsumerWidget {
                       Container(
                         decoration: BoxDecoration(
                           color: theme.colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: theme.colorScheme.primary.withOpacity(0.2),
                           ),
@@ -203,7 +203,7 @@ class PassiveIncomeListBottomSheet extends ConsumerWidget {
                           ),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: theme.dividerColor),
                           ),
                           child: Row(

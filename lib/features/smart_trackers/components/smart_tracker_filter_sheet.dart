@@ -206,7 +206,7 @@ class _SmartTrackerFilterSheetState extends State<SmartTrackerFilterSheet> {
     return Container(
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
       ),
       padding: EdgeInsets.only(
         bottom: bottomInset + 24,

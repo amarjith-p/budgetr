@@ -308,7 +308,7 @@ class AccountsTab extends ConsumerWidget {
           }
 
           Widget cardChild = BoxySlidableCard(
-            customBorderRadius: BorderRadius.circular(16.0),
+            customBorderRadius: BorderRadius.circular(8.0),
             customBackgroundColor: Colors.transparent,
             onEdit: (isSelectionMode || isSettled)
                 ? null
@@ -351,7 +351,7 @@ class AccountsTab extends ConsumerWidget {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16.0),
+                          borderRadius: BorderRadius.circular(8.0),
                           color: isSelected
                               ? Colors.transparent
                               : Theme.of(
@@ -460,7 +460,7 @@ class _StickySelectionHeaderDelegate extends SliverPersistentHeaderDelegate {
               color: theme.colorScheme.primaryContainer.withOpacity(
                 isDark ? 0.2 : 0.6,
               ),
-              borderRadius: BorderRadius.circular(16.0),
+              borderRadius: BorderRadius.circular(8.0),
               border: Border.all(
                 color: theme.colorScheme.primary.withOpacity(0.4),
                 width: 1.5,

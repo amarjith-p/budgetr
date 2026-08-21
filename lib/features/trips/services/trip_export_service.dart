@@ -434,7 +434,7 @@ class TripExportUI {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
           border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
         ),
         child: Column(
@@ -598,7 +598,7 @@ class TripExportUI {
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
           color: color.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Column(
@@ -629,7 +629,7 @@ class TripExportUI {
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
           border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
         ),
         child: Column(
@@ -667,7 +667,7 @@ class TripExportUI {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: Column(
@@ -702,7 +702,7 @@ class TripExportUI {
                       side: BorderSide(color: themeColor.withOpacity(0.5)),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     icon: Icon(Icons.ios_share_rounded, color: themeColor),
@@ -730,7 +730,7 @@ class TripExportUI {
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     icon: const Icon(Icons.file_open_rounded),

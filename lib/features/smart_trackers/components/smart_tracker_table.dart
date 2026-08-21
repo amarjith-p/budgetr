@@ -93,7 +93,7 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
       context: context,
       backgroundColor: theme.scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
       ),
       builder: (ctx) {
         return SafeArea(
@@ -112,7 +112,7 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                 const SizedBox(height: 16),
                 ListTile(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   tileColor: theme.colorScheme.surface,
                   leading: Icon(
@@ -140,7 +140,7 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                 const SizedBox(height: 8),
                 ListTile(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   tileColor: theme.colorScheme.error.withOpacity(0.1),
                   leading: Icon(
@@ -608,7 +608,7 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                     ),
                     decoration: BoxDecoration(
                       color: Colors.amberAccent.shade400.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: Colors.amberAccent.shade400.withOpacity(0.4),
                       ),
@@ -654,7 +654,7 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                     ),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: theme.colorScheme.primary.withOpacity(0.3),
                       ),
@@ -711,7 +711,7 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                       ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: theme.colorScheme.primary.withOpacity(0.3),
                         ),
@@ -780,7 +780,7 @@ class _SmartTrackerTableState extends ConsumerState<SmartTrackerTable> {
                       ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: theme.dividerColor),
                       ),
                       child: Row(

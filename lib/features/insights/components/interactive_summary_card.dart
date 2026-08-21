@@ -32,7 +32,7 @@ class InteractiveSummaryCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: theme.dividerColor, width: 1.0),
         boxShadow: [
           BoxShadow(
@@ -123,7 +123,7 @@ class InteractiveSummaryCard extends StatelessWidget {
                         onIncomeTap();
                       },
                       borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(16),
+                        bottomLeft: Radius.circular(8),
                       ),
                       child: Container(
                         decoration: BoxDecoration(
@@ -131,7 +131,7 @@ class InteractiveSummaryCard extends StatelessWidget {
                               ? Colors.green.withOpacity(0.1)
                               : Colors.transparent,
                           borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(16),
+                            bottomLeft: Radius.circular(8),
                           ),
                           border: !isExpenseActive
                               ? Border(
@@ -218,7 +218,7 @@ class InteractiveSummaryCard extends StatelessWidget {
                         onExpenseTap();
                       },
                       borderRadius: const BorderRadius.only(
-                        bottomRight: Radius.circular(16),
+                        bottomRight: Radius.circular(8),
                       ),
                       child: Container(
                         decoration: BoxDecoration(
@@ -226,7 +226,7 @@ class InteractiveSummaryCard extends StatelessWidget {
                               ? theme.colorScheme.error.withOpacity(0.1)
                               : Colors.transparent,
                           borderRadius: const BorderRadius.only(
-                            bottomRight: Radius.circular(16),
+                            bottomRight: Radius.circular(8),
                           ),
                           border: isExpenseActive
                               ? Border(

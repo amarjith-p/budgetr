@@ -89,7 +89,7 @@ class InsightBreakdownScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: theme.dividerColor, width: 1.0),
               boxShadow: [
                 BoxShadow(

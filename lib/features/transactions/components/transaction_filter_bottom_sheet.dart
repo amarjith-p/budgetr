@@ -198,7 +198,7 @@ class _TransactionFilterBottomSheetState
               : theme.colorScheme.surfaceContainerHighest.withOpacity(
                   isDark ? 0.3 : 0.5,
                 ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? theme.colorScheme.primary : Colors.transparent,
             width: 1.2,
@@ -247,7 +247,7 @@ class _TransactionFilterBottomSheetState
               : theme.colorScheme.surfaceContainerHighest.withOpacity(
                   isDark ? 0.3 : 0.5,
                 ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? theme.colorScheme.primary : Colors.transparent,
             width: 1.2,
@@ -362,7 +362,7 @@ class _TransactionFilterBottomSheetState
                                     ? theme.colorScheme.primaryContainer
                                           .withOpacity(0.3)
                                     : theme.colorScheme.surface,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color: isChecked
                                       ? theme.colorScheme.primary
@@ -716,7 +716,7 @@ class _TransactionFilterBottomSheetState
                                     ? theme.colorScheme.primary
                                     : theme.colorScheme.surfaceContainerHighest
                                           .withOpacity(isDark ? 0.3 : 0.5),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color:
                                       _draft.timeframe == TimeframeOption.custom
