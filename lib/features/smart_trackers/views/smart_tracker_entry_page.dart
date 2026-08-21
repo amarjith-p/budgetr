@@ -10,6 +10,7 @@ import '../../../core/components/modern_boxy_button.dart';
 import '../../../core/components/modern_boxy_input.dart';
 import '../../../core/components/global_selection_sheet.dart';
 import '../../../core/components/inline_calculator_pad.dart'; // <-- IMPORTED CUSTOM KEYBOARD
+import '../../../core/components/custom_snackbars.dart'; // <-- NEW: For manual validations
 import '../../../core/theme/design_tokens.dart';
 import '../models/tracker_field_model.dart';
 import '../providers/smart_tracker_provider.dart';
@@ -226,6 +227,34 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
 
   Future<void> _submit() async {
     _closeAllKeyboards();
+
+    // --- NEW: MANUAL VALIDATION FOR NON-FORMFIELD TYPES ---
+    for (var field in _fields) {
+      if (field.isMandatory) {
+        if (field.type == TrackerFieldType.radio) {
+          if (_formData[field.id] == null ||
+              _formData[field.id].toString().isEmpty) {
+            CustomSnackbars.showError(
+              context,
+              message: '${field.name} is required.',
+            );
+            HapticFeedback.heavyImpact();
+            return;
+          }
+        } else if (field.type == TrackerFieldType.checkbox) {
+          final list = _formData[field.id] as List<String>?;
+          if (list == null || list.isEmpty) {
+            CustomSnackbars.showError(
+              context,
+              message: '${field.name} is required.',
+            );
+            HapticFeedback.heavyImpact();
+            return;
+          }
+        }
+      }
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     for (var field in _fields) {
@@ -257,11 +286,19 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   Widget _buildDynamicField(TrackerField field, ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
 
+    // Construct label with visual mandatory indicator if needed
+    final displayLabel =
+        field.isMandatory &&
+            field.type != TrackerFieldType.serialNo &&
+            field.type != TrackerFieldType.formula
+        ? '${field.name} *'
+        : field.name;
+
     switch (field.type) {
       case TrackerFieldType.serialNo:
         return ModernBoxyInput(
           controller: _controllers[field.id]!,
-          labelText: field.name,
+          labelText: displayLabel,
           readOnly: true,
           prefixIcon: Icon(
             Icons.pin_rounded,
@@ -278,8 +315,10 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
               ? TextInputAction.done
               : TextInputAction.next,
           onFieldSubmitted: (_) => _focusNextField(field.id),
-          labelText: field.name,
-          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+          labelText: displayLabel,
+          validator: field.isMandatory
+              ? (v) => v == null || v.isEmpty ? 'Required' : null
+              : null,
         );
 
       case TrackerFieldType.number:
@@ -292,8 +331,10 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
               _focusNodes[field.id]!.requestFocus();
             SystemChannels.textInput.invokeMethod('TextInput.hide');
           },
-          labelText: field.name,
-          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+          labelText: displayLabel,
+          validator: field.isMandatory
+              ? (v) => v == null || v.isEmpty ? 'Required' : null
+              : null,
         );
 
       case TrackerFieldType.currency:
@@ -306,7 +347,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
               _focusNodes[field.id]!.requestFocus();
             SystemChannels.textInput.invokeMethod('TextInput.hide');
           },
-          labelText: field.name,
+          labelText: displayLabel,
           prefixIcon: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
@@ -318,7 +359,9 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
               ),
             ),
           ),
-          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+          validator: field.isMandatory
+              ? (v) => v == null || v.isEmpty ? 'Required' : null
+              : null,
         );
 
       case TrackerFieldType.date:
@@ -327,13 +370,15 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
           child: AbsorbPointer(
             child: ModernBoxyInput(
               controller: _controllers[field.id]!,
-              labelText: field.name,
+              labelText: displayLabel,
               suffixIcon: Icon(
                 Icons.calendar_month_rounded,
                 color: theme.colorScheme.primary,
                 size: 18,
               ),
-              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              validator: field.isMandatory
+                  ? (v) => v == null || v.isEmpty ? 'Required' : null
+                  : null,
             ),
           ),
         );
@@ -359,13 +404,15 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
           child: AbsorbPointer(
             child: ModernBoxyInput(
               controller: _controllers[field.id]!,
-              labelText: field.name,
+              labelText: displayLabel,
               suffixIcon: Icon(
                 Icons.keyboard_arrow_down_rounded,
                 color: theme.colorScheme.primary,
                 size: 18,
               ),
-              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              validator: field.isMandatory
+                  ? (v) => v == null || v.isEmpty ? 'Required' : null
+                  : null,
             ),
           ),
         );
@@ -385,7 +432,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
             children: [
               Expanded(
                 child: Text(
-                  field.name,
+                  displayLabel,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
@@ -414,7 +461,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              field.name.toUpperCase(),
+              displayLabel.toUpperCase(),
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w900,
@@ -491,7 +538,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
       case TrackerFieldType.formula:
         return ModernBoxyInput(
           controller: _controllers[field.id]!,
-          labelText: field.name,
+          labelText: displayLabel,
           readOnly: true,
           prefixIcon: Icon(
             Icons.functions_rounded,
@@ -506,7 +553,7 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              field.name.toUpperCase(),
+              displayLabel.toUpperCase(),
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w900,
@@ -677,21 +724,14 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
             // --- CUSTOM INLINE CALCULATOR PAD ---
             if (_showCustomKeyboard && _activeCalculatorFieldId != null)
               InlineCalculatorPad(
-                // Dynamically binds to the active Number/Currency controller
                 controller: _controllers[_activeCalculatorFieldId]!,
-
-                // Jump to Previous
                 onPrevious:
                     _focusableFieldIds.indexOf(_activeCalculatorFieldId!) > 0
                     ? () => _focusPreviousField(_activeCalculatorFieldId!)
                     : null,
-
-                // Jump to Next (if not last)
                 onNext: !_isLastFocusable(_activeCalculatorFieldId!)
                     ? () => _focusNextField(_activeCalculatorFieldId!)
                     : null,
-
-                // Submit/Done Button
                 onSubmit: () {
                   if (_isLastFocusable(_activeCalculatorFieldId!)) {
                     _submit();
@@ -699,8 +739,6 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
                     _focusNextField(_activeCalculatorFieldId!);
                   }
                 },
-
-                // Dismiss Keyboard
                 onClose: _closeAllKeyboards,
               ),
           ],

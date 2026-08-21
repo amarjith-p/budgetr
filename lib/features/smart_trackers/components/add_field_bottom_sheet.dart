@@ -32,8 +32,8 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
 
   late TrackerFieldType _selectedType;
   late String _selectedCurrency;
+  late bool _isMandatory; // <-- NEW
 
-  // --- FIXED: Properly closed string array that was causing the compiler crash ---
   final List<String> _currencySymbols = ['₹', '\$', '€', '£', '¥'];
 
   final List<TrackerFieldType> _availableTypes = TrackerFieldType.values
@@ -60,6 +60,7 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
     );
     _selectedType = widget.existingField?.type ?? TrackerFieldType.text;
     _selectedCurrency = widget.existingField?.currencySymbol ?? '₹';
+    _isMandatory = widget.existingField?.isMandatory ?? true; // <-- NEW
   }
 
   @override
@@ -113,6 +114,7 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
           : null,
       formulaConfig: widget.existingField?.formulaConfig,
       aggregate: widget.existingField?.aggregate,
+      isMandatory: _isMandatory, // <-- NEW
     );
 
     widget.onFieldAdded(newField);
@@ -331,7 +333,58 @@ class _AddFieldBottomSheetState extends State<AddFieldBottomSheet> {
                   ),
                 ),
               ],
+              const SizedBox(height: 24),
+
+              // --- NEW: MANDATORY TOGGLE ---
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: theme.dividerColor),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Mandatory Field',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Require a value when logging entries',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _isMandatory,
+                      activeColor: theme.colorScheme.primary,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        setState(() => _isMandatory = val);
+                      },
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 32),
+
               Row(
                 children: [
                   Expanded(

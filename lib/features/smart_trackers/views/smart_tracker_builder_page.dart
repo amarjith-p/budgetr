@@ -105,11 +105,14 @@ class _SmartTrackerBuilderPageState
   }
 
   String _buildMetadataString(TrackerField field) {
+    final String reqStatus = field.isMandatory
+        ? 'REQUIRED'
+        : 'OPTIONAL'; // <-- NEW
     if (field.type == TrackerFieldType.formula) {
       return 'FORMULA: ${field.formulaConfig?.type.toUpperCase() ?? "COMPUTED"}';
     }
     if (field.type == TrackerFieldType.currency) {
-      return '${TrackerFieldUIHelper.formatEnumName(field.type.name).toUpperCase()} (${field.currencySymbol})';
+      return '${TrackerFieldUIHelper.formatEnumName(field.type.name).toUpperCase()} ($reqStatus) (${field.currencySymbol})';
     }
     if (field.type == TrackerFieldType.serialNo) {
       String meta = 'AUTO-GENERATED';
@@ -119,7 +122,7 @@ class _SmartTrackerBuilderPageState
         meta += ' | Suffix: ${field.suffix}';
       return meta;
     }
-    return '${TrackerFieldUIHelper.formatEnumName(field.type.name).toUpperCase()} FIELD${field.options != null ? '   ${field.options!.length} OPTIONS' : ''}';
+    return '${TrackerFieldUIHelper.formatEnumName(field.type.name).toUpperCase()} ($reqStatus)${field.options != null ? '   ${field.options!.length} OPTIONS' : ''}';
   }
 
   @override

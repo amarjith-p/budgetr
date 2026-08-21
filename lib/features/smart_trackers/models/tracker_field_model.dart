@@ -84,6 +84,7 @@ class TrackerField {
   final String? currencySymbol;
   final FormulaConfig? formulaConfig;
   final String? aggregate;
+  final bool isMandatory; // <-- NEW
 
   TrackerField({
     required this.id,
@@ -95,6 +96,7 @@ class TrackerField {
     this.currencySymbol,
     this.formulaConfig,
     this.aggregate,
+    this.isMandatory = true, // <-- NEW
   });
 
   Map<String, dynamic> toJson() {
@@ -108,6 +110,7 @@ class TrackerField {
       'currencySymbol': currencySymbol,
       'formulaConfig': formulaConfig?.toJson(),
       'aggregate': aggregate,
+      'isMandatory': isMandatory, // <-- NEW
     };
   }
 
@@ -126,6 +129,7 @@ class TrackerField {
           ? FormulaConfig.fromJson(json['formulaConfig'])
           : null,
       aggregate: json['aggregate'] as String?,
+      isMandatory: json['isMandatory'] as bool? ?? true, // <-- NEW
     );
   }
 }
