@@ -33,7 +33,7 @@ class HomeWidgetSyncService {
             for (var b in decoded) {
               bucketsData.add({
                 'id': b['id'],
-                'name': b['name'],
+                'name': b['name'] ?? 'Unnamed Bucket',
                 'allocated': totalBudget * ((b['percentage'] as num) / 100.0),
                 'spent': 0.0,
               });
@@ -86,18 +86,18 @@ class HomeWidgetSyncService {
           : 0.0;
 
       // 3. Prepare JSON for Android Buckets
-      List<Map<String, dynamic>> finalBucketsJson = bucketsData.take(3).map((
-        b,
-      ) {
-        double allocated = b['allocated'];
-        double spent = b['spent'];
+      // Removed .take(3) to include ALL buckets.
+      List<Map<String, dynamic>> finalBucketsJson = bucketsData.map((b) {
+        double allocated = (b['allocated'] as num?)?.toDouble() ?? 0.0;
+        double spent = (b['spent'] as num?)?.toDouble() ?? 0.0;
         int bucketProgress = allocated > 0
             ? ((spent / allocated) * 100).clamp(0, 100).toInt()
             : 0;
+
         return {
-          'name': b['name'],
-          'spent': '₹${spent.toStringAsFixed(0)}',
-          'allocated': '₹${allocated.toStringAsFixed(0)}',
+          'name': b['name'].toString(),
+          'spent': '₹${spent.toStringAsFixed(2)}',
+          'allocated': '₹${allocated.toStringAsFixed(2)}',
           'progress': bucketProgress,
         };
       }).toList();
@@ -111,15 +111,15 @@ class HomeWidgetSyncService {
       );
       await HomeWidget.saveWidgetData<String>(
         'budget_total',
-        totalBudget.toStringAsFixed(0),
+        totalBudget.toStringAsFixed(2),
       );
       await HomeWidget.saveWidgetData<String>(
         'budget_spent',
-        '₹${totalSpentInBuckets.toStringAsFixed(0)}',
+        '₹${totalSpentInBuckets.toStringAsFixed(2)}',
       );
       await HomeWidget.saveWidgetData<String>(
         'budget_remaining',
-        '₹${remaining.toStringAsFixed(0)} left',
+        '₹${remaining.toStringAsFixed(2)} left',
       );
       await HomeWidget.saveWidgetData<int>(
         'budget_progress_int',
@@ -135,7 +135,7 @@ class HomeWidgetSyncService {
         androidName: androidWidgetName,
       );
 
-      debugPrint("WIDGET SYNC SUCCESSFUL (BUCKETS INCLUDED)");
+      debugPrint("WIDGET SYNC SUCCESSFUL (ALL BUCKETS INCLUDED)");
     } catch (e) {
       debugPrint("WIDGET SYNC ERROR: $e");
     }

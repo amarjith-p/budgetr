@@ -18,12 +18,12 @@ class BudgetWidgetProvider : HomeWidgetProvider() {
     ) {
         appWidgetIds.forEach { widgetId ->
             val views = RemoteViews(context.packageName, R.layout.budget_widget).apply {
-                val month = widgetData.getString("budget_month", "NO BUDGET")
-                val spent = widgetData.getString("budget_spent", "₹0")
-                val total = widgetData.getString("budget_total", "0")
-                val remaining = widgetData.getString("budget_remaining", "₹0 left")
+                val month = widgetData.getString("budget_month", "NO BUDGET") ?: "NO BUDGET"
+                val spent = widgetData.getString("budget_spent", "₹0") ?: "₹0"
+                val total = widgetData.getString("budget_total", "0") ?: "0"
+                val remaining = widgetData.getString("budget_remaining", "₹0 left") ?: "₹0 left"
                 val progressInt = widgetData.getInt("budget_progress_int", 0)
-                val bucketsJson = widgetData.getString("buckets_json", "[]")
+                val bucketsJson = widgetData.getString("buckets_json", "[]") ?: "[]"
 
                 setTextViewText(R.id.widget_month_text, month)
                 setTextViewText(R.id.widget_spent_text, spent)
@@ -39,10 +39,16 @@ class BudgetWidgetProvider : HomeWidgetProvider() {
                         val obj = array.getJSONObject(i)
                         val bucketView = RemoteViews(context.packageName, R.layout.widget_bucket_item)
                         
-                        bucketView.setTextViewText(R.id.bucket_name, obj.getString("name").uppercase())
-                        bucketView.setTextViewText(R.id.bucket_spent, obj.getString("spent"))
-                        bucketView.setTextViewText(R.id.bucket_allocated, " / " + obj.getString("allocated"))
-                        bucketView.setProgressBar(R.id.bucket_progress, 100, obj.getInt("progress"), false)
+                        // Use optString to prevent JSONException from crashing the loop
+                        val bucketName = obj.optString("name", "Bucket").uppercase()
+                        val bucketSpent = obj.optString("spent", "₹0")
+                        val bucketAllocated = " / " + obj.optString("allocated", "₹0")
+                        val bucketProgress = obj.optInt("progress", 0)
+
+                        bucketView.setTextViewText(R.id.bucket_name, bucketName)
+                        bucketView.setTextViewText(R.id.bucket_spent, bucketSpent)
+                        bucketView.setTextViewText(R.id.bucket_allocated, bucketAllocated)
+                        bucketView.setProgressBar(R.id.bucket_progress, 100, bucketProgress, false)
                         
                         addView(R.id.buckets_container, bucketView)
                     }
