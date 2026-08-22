@@ -39,10 +39,10 @@ class ReminderActionNotifier extends AsyncNotifier<void> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      // --- FIX: DETERMINISTIC HASH ID ---
       final id = existingId ?? _uuid.v4();
       final notificationId =
-          existingNotificationId ??
-          DateTime.now().millisecondsSinceEpoch.remainder(100000);
+          existingNotificationId ?? (id.hashCode.abs() % 80000);
 
       if (existingId != null && existingNotificationId != null) {
         await NotificationService.instance.cancelSpecific(
@@ -52,7 +52,6 @@ class ReminderActionNotifier extends AsyncNotifier<void> {
             .read(inAppNotificationServiceProvider)
             .deleteNotification('rem_$existingNotificationId');
 
-        // --- FIX: CLEAR FROM DISMISSED CACHE SO IT CAN RETRIGGER ON THE NEW DATE ---
         ref.read(dismissedRemindersProvider.notifier).undismiss(existingId);
       }
 
@@ -134,7 +133,6 @@ class DismissedRemindersNotifier extends StateNotifier<Set<String>> {
     await prefs.setStringList('dismissed_dashboard_reminders', state.toList());
   }
 
-  // --- NEW: UNDISMISS LOGIC FOR RESCHEDULED ALERTS ---
   Future<void> undismiss(String id) async {
     if (state.contains(id)) {
       final newState = Set<String>.from(state)..remove(id);

@@ -271,8 +271,10 @@ Future<void> _scheduleNotificationsForAccounts(
   int delaySeconds = 0;
   final uuid = const Uuid();
 
+  // --- FIX 2: Use deterministic hash IDs and remove shifting delay timestamps ---
   for (var entry in groupedEvents.entries) {
-    final parts = entry.key.split('|');
+    final groupKey = entry.key;
+    final parts = groupKey.split('|');
     final dateTimeStr = parts[0];
     final eventType = parts[1];
     final accountNames = entry.value;
@@ -281,7 +283,9 @@ Future<void> _scheduleNotificationsForAccounts(
     final dateParts = dtParts[0].split('-');
     final timeParts = dtParts[1].split(':');
 
-    DateTime baseDate = DateTime(
+    // We no longer add arbitrary seconds to this date.
+    // Keeping it exactly on the minute ensures OS-level alarm overwrites work perfectly.
+    final scheduledDate = DateTime(
       int.parse(dateParts[0]),
       int.parse(dateParts[1]),
       int.parse(dateParts[2]),
@@ -289,8 +293,9 @@ Future<void> _scheduleNotificationsForAccounts(
       int.parse(timeParts[1]),
     );
 
-    final scheduledDate = baseDate.add(Duration(seconds: delaySeconds));
-    delaySeconds += 5;
+    // Create a 100% deterministic, repeatable ID based on the exact time and event type.
+    // This bounds the ID between 100000 and 189999 safely.
+    final int notificationId = 100000 + (groupKey.hashCode.abs() % 90000);
 
     String title = '';
     String body = '';
@@ -376,8 +381,6 @@ Future<void> _scheduleNotificationsForAccounts(
           body: body,
           scheduledDate: scheduledDate,
         );
-
-    notificationId++;
   }
 
   ref.read(automationEngineProvider).runCatchUp();

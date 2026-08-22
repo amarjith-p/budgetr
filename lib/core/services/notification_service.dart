@@ -149,6 +149,18 @@ class NotificationService {
   }
 
   Future<void> cancelAccountNotifications() async {
+    // 1. Ask the OS directly to wipe any existing alarms in our designated range.
+    final pendingRequests = await _flutterLocalNotificationsPlugin
+        .pendingNotificationRequests();
+
+    for (final request in pendingRequests) {
+      if (request.id >= 100000 && request.id <= 199999) {
+        // FIX: Added the 'id:' named parameter here
+        await _flutterLocalNotificationsPlugin.cancel(id: request.id);
+      }
+    }
+
+    // 2. Safely clean up our shared preferences registry
     final prefs = await SharedPreferences.getInstance();
     final List<String> list = prefs.getStringList(_registryKey) ?? [];
     final List<String> keptList = [];
@@ -157,11 +169,7 @@ class NotificationService {
       final map = jsonDecode(item);
       final id = map['id'] as int;
 
-      // Target only the dedicated ID range for Accounts (Credit Cards & Loans)
-      if (id >= 100000 && id <= 199999) {
-        // FIXED: Using named parameter 'id: id'
-        await _flutterLocalNotificationsPlugin.cancel(id: id);
-      } else {
+      if (id < 100000 || id > 199999) {
         keptList.add(item); // Preserve Reminders, Debts, etc.
       }
     }

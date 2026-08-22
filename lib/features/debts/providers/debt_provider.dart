@@ -5,7 +5,6 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/services/notification_service.dart';
-// --- NEW: IMPORT IN-APP NOTIFICATION PROVIDER ---
 import '../../notifications/providers/in_app_notification_provider.dart';
 
 final allDebtsProvider = StreamProvider.autoDispose<List<Debt>>((ref) {
@@ -46,7 +45,7 @@ class DebtActionNotifier extends AsyncNotifier<void> {
           existingNotificationId + 1,
         );
 
-        // --- NEW: Clear In-App Notifications ---
+        // Clear In-App Notifications
         await ref
             .read(inAppNotificationServiceProvider)
             .deleteNotification('debt_$existingNotificationId');
@@ -55,10 +54,13 @@ class DebtActionNotifier extends AsyncNotifier<void> {
             .deleteNotification('debt_${existingNotificationId + 1}');
       }
 
-      // Generate a safe ID below 100000 to prevent collisions with the Account module
+      // --- FIX: DETERMINISTIC HASH ID ---
+      // We generate the UUID immediately if it doesn't exist so we can hash it.
+      // We multiply by 2 to ensure the "+ 1" for the prior day alert NEVER collides.
+      // The % 40000 keeps it safely under the 100,000 threshold used by Accounts.
+      final String finalDebtId = existingId ?? _uuid.v4();
       final int newNotifId =
-          existingNotificationId ??
-          DateTime.now().millisecondsSinceEpoch.remainder(100000);
+          existingNotificationId ?? ((finalDebtId.hashCode.abs() % 40000) * 2);
 
       if (isPushEnabled) {
         final title = type == 'Borrowed'
@@ -74,7 +76,7 @@ class DebtActionNotifier extends AsyncNotifier<void> {
           scheduledDate: dueDate,
         );
 
-        // --- 2. NEW: Save to In-App Queue ---
+        // 2. Save to In-App Queue
         await ref
             .read(inAppNotificationServiceProvider)
             .saveNotification(
@@ -95,7 +97,7 @@ class DebtActionNotifier extends AsyncNotifier<void> {
               scheduledDate: priorDate,
             );
 
-            // --- 2. NEW: Save to In-App Queue ---
+            // 2. Save to In-App Queue
             await ref
                 .read(inAppNotificationServiceProvider)
                 .saveNotification(
@@ -113,7 +115,7 @@ class DebtActionNotifier extends AsyncNotifier<void> {
             .into(db.debts)
             .insert(
               DebtsCompanion.insert(
-                id: _uuid.v4(),
+                id: finalDebtId, // Use the finalized ID here
                 type: type,
                 person: person,
                 purpose: purpose,
@@ -171,7 +173,6 @@ class DebtActionNotifier extends AsyncNotifier<void> {
         debt.notificationId + 1,
       );
 
-      // --- NEW: Clear In-App Notifications on Settlement ---
       await ref
           .read(inAppNotificationServiceProvider)
           .deleteNotification('debt_${debt.notificationId}');
@@ -197,7 +198,6 @@ class DebtActionNotifier extends AsyncNotifier<void> {
     await NotificationService.instance.cancelSpecific(debt.notificationId);
     await NotificationService.instance.cancelSpecific(debt.notificationId + 1);
 
-    // --- NEW: Clear In-App Notifications on Delete ---
     await ref
         .read(inAppNotificationServiceProvider)
         .deleteNotification('debt_${debt.notificationId}');

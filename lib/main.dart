@@ -10,7 +10,6 @@ import 'core/providers/theme_provider.dart';
 import 'core/services/notification_service.dart';
 import 'features/notifications/providers/notification_provider.dart';
 
-// --- NEW IMPORT FOR AUTOMATION ENGINE ---
 import 'features/automation/providers/automation_provider.dart';
 
 void main() async {
@@ -28,16 +27,23 @@ class BudgetrApp extends ConsumerStatefulWidget {
 
 class _BudgetrAppState extends ConsumerState<BudgetrApp>
     with WidgetsBindingObserver {
+  bool _hasInitializedSchedulers = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     NotificationService.instance.requestPermissions();
 
-    // --- TRIGGER ENGINE ON FRESH APP LAUNCH ---
+    // --- TRIGGER ENGINE ON FRESH APP LAUNCH ONCE ---
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(automationEngineProvider).runCatchUp();
-      ref.read(smartInboxActionProvider.notifier).requestPermissionsAndListen();
+      if (!_hasInitializedSchedulers) {
+        _hasInitializedSchedulers = true;
+        // Moved out of build() to prevent endless duplicate scheduling loops
+        initializeNotificationScheduler(ref);
+        ref.read(automationEngineProvider).runCatchUp();
+        ref.read(smartInboxActionProvider.notifier).requestPermissionsAndListen();
+      }
     });
   }
 
@@ -53,7 +59,6 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp>
       ref.read(authProvider.notifier).lockApp();
     } else if (state == AppLifecycleState.resumed) {
       ref.read(authProvider.notifier).attemptBiometricUnlock();
-      // --- TRIGGER ENGINE ON APP RESUME ---
       ref.read(automationEngineProvider).runCatchUp();
       ref.read(smartInboxActionProvider.notifier).requestPermissionsAndListen();
     }
@@ -63,8 +68,6 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp>
   Widget build(BuildContext context) {
     final authStatus = ref.watch(authProvider);
     final currentThemeMode = ref.watch(themeModeProvider);
-
-    initializeNotificationScheduler(ref);
 
     return MaterialApp(
       title: 'FinStack 360',
