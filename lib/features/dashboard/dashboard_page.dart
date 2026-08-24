@@ -1,3 +1,4 @@
+// lib/features/dashboard/dashboard_page.dart
 import 'package:budgetr/features/backup/views/backup_page.dart';
 import 'package:budgetr/features/debts/views/debt_dashboard_page.dart';
 import 'package:budgetr/features/developer/views/developer_support_page.dart';
@@ -43,8 +44,54 @@ import '../debts/providers/debt_provider.dart';
 // --- NET WORTH IMPORT ---
 import '../net_worth/providers/net_worth_provider.dart';
 
+// --- NEW BACKUP IMPORTS ---
+import 'package:share_plus/share_plus.dart';
+import '../backup/services/backup_service.dart';
+import '../backup/providers/backup_reminder_provider.dart';
+import '../../core/components/futuristic_loader.dart';
+
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
+
+  Future<void> _handleQuickBackup(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.selectionClick();
+
+    // Show FuturisticLoader Overlay
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.85),
+      barrierDismissible: false,
+      builder: (_) => const Material(
+        color: Colors.transparent,
+        child: Center(
+          child: FuturisticLoader(size: 80, label: "PREPARING BACKUP..."),
+        ),
+      ),
+    );
+
+    // Call existing service
+    final result = await ref
+        .read(backupServiceProvider)
+        .exportDatabaseExternal();
+
+    if (context.mounted) Navigator.pop(context); // Close loader
+
+    if (result != null && result.startsWith('ERROR:')) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.replaceFirst('ERROR: ', ''))),
+        );
+      }
+    } else if (result != null) {
+      // Fire share prompt so user can select Drive/Email
+      await Share.shareXFiles([
+        XFile(result),
+      ], subject: 'FinStack 360 Daily Backup');
+
+      // Reset the 24-hour clock and clear active warnings
+      await ref.read(backupReminderProvider.notifier).recordBackup();
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -163,6 +210,9 @@ class DashboardPage extends ConsumerWidget {
     final double liveNetWorth = netWorthAsync.asData?.value.netWorth ?? 0.0;
     final bool isNwPositive = liveNetWorth >= 0;
 
+    // --- WATCH THE BACKUP REMINDER PROVIDER ---
+    final bool isBackupDue = ref.watch(backupReminderProvider);
+
     final bool hasBanner = triggeredReminders.isNotEmpty;
     // Scale down internal elements if the tiles shrink to prevent overflow
     final double barScale = hasBanner ? 0.6 : 1.0;
@@ -199,6 +249,17 @@ class DashboardPage extends ConsumerWidget {
           ),
         ),
         actions: [
+          // --- NEW: BACKUP WARNING ICON ---
+          if (isBackupDue)
+            IconButton(
+              icon: const Icon(
+                Icons.cloud_upload_rounded,
+                color: Colors.orangeAccent,
+              ),
+              tooltip: 'Backup Overdue',
+              onPressed: () => _handleQuickBackup(context, ref),
+            ),
+
           // --- SMART INBOX ENTRY POINT WITH BADGE ---
           IconButton(
             icon: Badge(

@@ -1,4 +1,4 @@
-// features/notifications/providers/notification_provider.dart
+// lib/features/notifications/providers/notification_provider.dart
 import 'package:budgetr/features/automation/providers/automation_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -9,8 +9,12 @@ import '../../../core/services/notification_service.dart';
 import '../../accounts/providers/account_provider.dart';
 import 'in_app_notification_provider.dart';
 
+// --- ADDED BACKUP REMINDER IMPORT ---
+import '../../backup/providers/backup_reminder_provider.dart';
+
 class NotificationSettings {
   final bool enableNotifications;
+  final bool backupReminderEnabled; // <-- NEW
 
   // Credit Card Settings
   final int ccAlertHour;
@@ -31,6 +35,7 @@ class NotificationSettings {
 
   NotificationSettings({
     this.enableNotifications = true,
+    this.backupReminderEnabled = true, // <-- NEW
     this.ccAlertHour = 9,
     this.ccAlertMinute = 0,
     this.notifyOnBillDate = true,
@@ -48,6 +53,7 @@ class NotificationSettings {
 
   NotificationSettings copyWith({
     bool? enableNotifications,
+    bool? backupReminderEnabled, // <-- NEW
     int? ccAlertHour,
     int? ccAlertMinute,
     bool? notifyOnBillDate,
@@ -64,6 +70,8 @@ class NotificationSettings {
   }) {
     return NotificationSettings(
       enableNotifications: enableNotifications ?? this.enableNotifications,
+      backupReminderEnabled:
+          backupReminderEnabled ?? this.backupReminderEnabled, // <-- NEW
       ccAlertHour: ccAlertHour ?? this.ccAlertHour,
       ccAlertMinute: ccAlertMinute ?? this.ccAlertMinute,
       notifyOnBillDate: notifyOnBillDate ?? this.notifyOnBillDate,
@@ -92,6 +100,8 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
     final prefs = await SharedPreferences.getInstance();
     state = NotificationSettings(
       enableNotifications: prefs.getBool('enableNotifications') ?? true,
+      backupReminderEnabled:
+          prefs.getBool('backupReminderEnabled') ?? true, // <-- NEW
       ccAlertHour: prefs.getInt('ccAlertHour') ?? 9,
       ccAlertMinute: prefs.getInt('ccAlertMinute') ?? 0,
       notifyOnBillDate: prefs.getBool('notifyOnBillDate') ?? true,
@@ -112,6 +122,10 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
     state = newSettings;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('enableNotifications', newSettings.enableNotifications);
+    await prefs.setBool(
+      'backupReminderEnabled',
+      newSettings.backupReminderEnabled,
+    ); // <-- NEW
     await prefs.setInt('ccAlertHour', newSettings.ccAlertHour);
     await prefs.setInt('ccAlertMinute', newSettings.ccAlertMinute);
     await prefs.setBool('notifyOnBillDate', newSettings.notifyOnBillDate);
@@ -159,6 +173,9 @@ void initializeNotificationScheduler(WidgetRef ref) {
   ) {
     final accounts = ref.read(accountsStreamProvider).asData?.value ?? [];
     _scheduleNotificationsForAccounts(accounts, next, ref);
+
+    // --- NEW: Recalculate backup timer immediately if settings are toggled ---
+    ref.read(backupReminderProvider.notifier).scheduleNextReminder();
   });
 }
 

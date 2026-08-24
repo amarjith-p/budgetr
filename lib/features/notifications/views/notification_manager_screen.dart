@@ -1,4 +1,4 @@
-// features/notifications/views/notification_manager_screen.dart
+// lib/features/notifications/views/notification_manager_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,6 +100,27 @@ class NotificationManagerScreen extends ConsumerWidget {
           _buildBoxyMasterToggle(context, ref, settings),
 
           if (settings.enableNotifications) ...[
+            const SizedBox(height: DesignTokens.spacingXl),
+
+            // --- NEW: SYSTEM SECURITY ---
+            _buildSectionHeader('SYSTEM SECURITY', theme),
+            const SizedBox(height: 8),
+            _buildBoxySettingsGroup(
+              context,
+              children: [
+                _buildBoxyToggleRow(
+                  context,
+                  title: 'Daily Backup Reminder',
+                  subtitle: 'Warn me 24 hours after last backup',
+                  value: settings.backupReminderEnabled,
+                  onChanged: (val) => ref
+                      .read(notificationSettingsProvider.notifier)
+                      .updateSettings(
+                        settings.copyWith(backupReminderEnabled: val),
+                      ),
+                ),
+              ],
+            ),
             const SizedBox(height: DesignTokens.spacingXl),
 
             _buildSectionHeader('ACTIVE MODULES', theme),
