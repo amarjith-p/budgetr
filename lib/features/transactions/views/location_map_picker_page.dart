@@ -10,7 +10,7 @@ import 'package:geocoding/geocoding.dart';
 import '../../../core/components/modern_app_bar.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/utils/location_helper.dart';
-import '../../../core/components/futuristic_loader.dart'; // <-- ADDED FUTURISTIC LOADER
+import '../../../core/components/futuristic_loader.dart';
 
 class LocationMapPickerPage extends StatefulWidget {
   const LocationMapPickerPage({Key? key}) : super(key: key);
@@ -84,14 +84,24 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
 
   void _onSearchChanged(String query) {
     if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 500), () async {
+
+    _searchDebounce = Timer(const Duration(milliseconds: 600), () async {
       if (query.trim().isEmpty) {
         setState(() => _searchResults = []);
         return;
       }
 
+      // 1. Get current map center to bias the search locally
+      final pos = _mapController.camera.center;
+      final left = pos.longitude - 0.5;
+      final right = pos.longitude + 0.5;
+      final top = pos.latitude + 0.5;
+      final bottom = pos.latitude - 0.5;
+
+      // 2. Add 'countrycodes=in' to force India-only results, drastically improving accuracy.
+      // Also apply the viewbox to prioritize results near the map center.
       final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&limit=5',
+        'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=jsonv2&addressdetails=1&limit=8&countrycodes=in&viewbox=$left,$top,$right,$bottom&bounded=0',
       );
 
       try {
@@ -99,9 +109,38 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
           url,
           headers: {'User-Agent': 'FinStack360_App'},
         );
+
         if (response.statusCode == 200 && mounted) {
+          final List<dynamic> rawData = jsonDecode(response.body);
+
           setState(() {
-            _searchResults = jsonDecode(response.body);
+            _searchResults = rawData.map((res) {
+              String mainName = res['name']?.toString() ?? '';
+
+              // Extract specific POI type if name is missing
+              if (mainName.isEmpty && res['address'] != null) {
+                final addr = res['address'];
+                mainName =
+                    addr['amenity'] ??
+                    addr['shop'] ??
+                    addr['building'] ??
+                    addr['tourism'] ??
+                    addr['office'] ??
+                    '';
+              }
+
+              if (mainName.isEmpty) {
+                mainName =
+                    res['display_name']?.split(',').first ?? 'Unknown Place';
+              }
+
+              return {
+                'lat': res['lat'],
+                'lon': res['lon'],
+                'name': mainName,
+                'display_name': res['display_name'],
+              };
+            }).toList();
           });
         }
       } catch (_) {}
@@ -114,10 +153,10 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
     final lon = double.parse(result['lon']);
     final pos = LatLng(lat, lon);
 
+    // Zoom in very close (18.0) since they searched for a specific place
     _mapController.move(pos, 18.0);
     setState(() {
-      _selectedPoiName =
-          result['name'] ?? result['display_name']?.split(',')?.first;
+      _selectedPoiName = result['name']; // Store the exact name they tapped
       _isAddressManuallyEdited = false;
       _searchResults = [];
       _searchCtrl.clear();
@@ -325,7 +364,6 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.pop(context),
       ),
-      // --- UPDATED: Uses FuturisticLoader instead of CircularProgressIndicator ---
       body: _isLoadingLoc
           ? Center(
               child: FuturisticLoader(size: 80.0, label: 'INITIALIZING MAP...'),
@@ -506,7 +544,7 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
                   ),
                 ),
 
-                // 4. Current Location FAB (Moved just above the address card)
+                // 4. Current Location FAB
                 Positioned(
                   bottom:
                       DesignTokens.spacingLg +
