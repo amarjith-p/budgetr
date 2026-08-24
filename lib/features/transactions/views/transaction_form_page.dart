@@ -18,12 +18,17 @@ import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../../../core/components/global_selection_sheet.dart';
 import '../../../core/components/currency_text.dart';
 import '../../../core/utils/location_helper.dart';
+import '../../../core/components/futuristic_loader.dart'; // <-- ADDED FUTURISTIC LOADER
 import '../../accounts/providers/account_provider.dart';
 import '../../category_manager/providers/category_provider.dart';
 import '../providers/transaction_provider.dart';
 
 // --- IMPORT FOR SMART INBOX ---
 import '../../automation/providers/smart_inbox_provider.dart';
+
+// --- IMPORTS FOR LOCATION PICKER ---
+import '../../settings/providers/location_settings_provider.dart';
+import 'location_map_picker_page.dart';
 
 class _BucketItem {
   final int id;
@@ -233,6 +238,45 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   }
 
   Future<void> _fetchLocation() async {
+    FocusScope.of(context).unfocus(); // Good practice before opening Modals
+
+    final pref = ref.read(locationSettingsProvider);
+    LocationPreference activePref = pref;
+
+    // 1. Handle "Ask Each Time"
+    if (pref == LocationPreference.ask) {
+      HapticFeedback.lightImpact();
+      final choice = await GlobalSelectionSheet.showSimple(
+        context: context,
+        title: 'Set Location',
+        items: const ['Use Current GPS Location', 'Choose on Map'],
+        selectedValue: '',
+      );
+
+      if (choice == null) return; // User dismissed sheet
+      activePref = choice == 'Choose on Map'
+          ? LocationPreference.map
+          : LocationPreference.current;
+    }
+
+    // 2. Handle Visual Map Picker
+    if (activePref == LocationPreference.map) {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LocationMapPickerPage()),
+      );
+
+      if (result != null && result is Map<String, dynamic>) {
+        setState(() {
+          _locationName = result['name'];
+          _latitude = result['latitude'];
+          _longitude = result['longitude'];
+        });
+      }
+      return;
+    }
+
+    // 3. Handle Current GPS Location (Existing behavior)
     setState(() => _isFetchingLoc = true);
     try {
       final locData = await LocationHelper.fetchCurrentLocation();
@@ -1437,6 +1481,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     return text;
   }
 
+  // --- MODIFIED TO SUPPORT ONCLEAR FOR REMOVING LOCATION ---
   Widget _buildTableCell(
     String label,
     String? value,
@@ -1444,6 +1489,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     VoidCallback? onTap,
     bool isError, {
     bool isActive = false,
+    VoidCallback? onClear, // <-- NEW
   }) {
     final theme = Theme.of(context);
     final hasValue =
@@ -1489,24 +1535,46 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                hasValue ? value : (onTap != null ? 'Select' : ''),
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: hasValue ? FontWeight.w800 : FontWeight.w500,
-                  color: isError
-                      ? theme.colorScheme.error
-                      : (hasValue
-                            ? (isActive
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface)
-                            : theme.colorScheme.onSurfaceVariant.withOpacity(
-                                0.5,
-                              )),
-                  letterSpacing: -0.3,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      hasValue ? value! : (onTap != null ? 'Select' : ''),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: hasValue
+                            ? FontWeight.w800
+                            : FontWeight.w500,
+                        color: isError
+                            ? theme.colorScheme.error
+                            : (hasValue
+                                  ? (isActive
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.onSurface)
+                                  : theme.colorScheme.onSurfaceVariant
+                                        .withOpacity(0.5)),
+                        letterSpacing: -0.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (hasValue && onClear != null)
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        onClear();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: Icon(
+                          Icons.cancel_rounded,
+                          size: 20,
+                          color: theme.colorScheme.error.withOpacity(0.8),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
@@ -1685,13 +1753,24 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         false,
       ),
     );
+
+    // --- UPDATED LOCATION CELL WITH onClear CALLBACK ---
     cells.add(
       _buildTableCell(
         'LOCATION',
-        _isFetchingLoc ? 'Locating...' : _locationName,
+        _locationName,
         Icons.pin_drop_rounded,
         _fetchLocation,
         false,
+        onClear: _locationName != null
+            ? () {
+                setState(() {
+                  _locationName = null;
+                  _latitude = null;
+                  _longitude = null;
+                });
+              }
+            : null,
       ),
     );
 
@@ -1810,13 +1889,24 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         false,
       ),
     );
+
+    // --- UPDATED LOCATION CELL WITH onClear CALLBACK ---
     cells.add(
       _buildTableCell(
         'LOCATION',
-        _isFetchingLoc ? 'Locating...' : _locationName,
+        _locationName,
         Icons.pin_drop_rounded,
         _fetchLocation,
         false,
+        onClear: _locationName != null
+            ? () {
+                setState(() {
+                  _locationName = null;
+                  _latitude = null;
+                  _longitude = null;
+                });
+              }
+            : null,
       ),
     );
 
@@ -1999,141 +2089,66 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         trailingIcon: Icons.done_all_rounded,
         onTrailingPressed: () => _submit(bucketItems),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              flex: 60,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                    child: AbsorbPointer(
-                      absorbing: isLoanRep,
-                      child: Opacity(
-                        opacity: isLoanRep ? 0.6 : 1.0,
-                        child: ModernBoxyToggle(
-                          labels: _types,
-                          selectedIndex: _typeIndex,
-                          onSelected: (index) => setState(() {
-                            final oldIndex = _typeIndex;
-                            _typeIndex = index;
+      // --- WRAPPED BODY IN A STACK TO SHOW FUTURISTIC LOADER OVERLAY ---
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  flex: 60,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        child: AbsorbPointer(
+                          absorbing: isLoanRep,
+                          child: Opacity(
+                            opacity: isLoanRep ? 0.6 : 1.0,
+                            child: ModernBoxyToggle(
+                              labels: _types,
+                              selectedIndex: _typeIndex,
+                              onSelected: (index) => setState(() {
+                                final oldIndex = _typeIndex;
+                                _typeIndex = index;
 
-                            _selectedCategoryId = null;
-                            _historicalCategoryName = null;
-                            _selectedSubCategory = null;
+                                _selectedCategoryId = null;
+                                _historicalCategoryName = null;
+                                _selectedSubCategory = null;
 
-                            if (index == 1) _selectedBucketId = null;
-                            if (oldIndex == 2 && index != 2) {
-                              _selectedAccountId = null;
-                              _selectedToAccountId = null;
-                            } else if (index != 2 &&
-                                _selectedAccountId == 'EXTERNAL') {
-                              _selectedAccountId = null;
-                            }
+                                if (index == 1) _selectedBucketId = null;
+                                if (oldIndex == 2 && index != 2) {
+                                  _selectedAccountId = null;
+                                  _selectedToAccountId = null;
+                                } else if (index != 2 &&
+                                    _selectedAccountId == 'EXTERNAL') {
+                                  _selectedAccountId = null;
+                                }
 
-                            if (_isToLoanMode()) {
-                              _activeCalcController = _loanPrinCtrl;
-                              _updateLoanTransferTotal();
-                            } else {
-                              _activeCalcController = _amountController;
-                            }
-                          }),
+                                if (_isToLoanMode()) {
+                                  _activeCalcController = _loanPrinCtrl;
+                                  _updateLoanTransferTotal();
+                                } else {
+                                  _activeCalcController = _amountController;
+                                }
+                              }),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: isToLoan ? 2 : 3,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (widget.isSplit)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8.0),
-                                child: Text(
-                                  'SPLITTING FROM ₹${CurrencyFormatter.format(origAmount)}',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                    color: theme.colorScheme.primary,
-                                    letterSpacing: 1.5,
-                                  ),
-                                ),
-                              ),
-
-                            AnimatedCrossFade(
-                              duration: const Duration(milliseconds: 250),
-                              crossFadeState: isToLoan
-                                  ? CrossFadeState.showSecond
-                                  : CrossFadeState.showFirst,
-                              firstChild: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      '₹ ',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .displayMedium!
-                                          .copyWith(
-                                            color: displayAmountColor
-                                                .withOpacity(0.7),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                    IntrinsicWidth(
-                                      child: ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          minWidth: 40,
-                                        ),
-                                        child: TextField(
-                                          controller: _amountController,
-                                          readOnly: true,
-                                          showCursor: true,
-                                          autofocus: true,
-                                          cursorColor: displayAmountColor,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .displayLarge!
-                                              .copyWith(
-                                                color: displayAmountColor,
-                                              ),
-                                          decoration: InputDecoration(
-                                            border: InputBorder.none,
-                                            focusedBorder: InputBorder.none,
-                                            enabledBorder: InputBorder.none,
-                                            errorBorder: InputBorder.none,
-                                            disabledBorder: InputBorder.none,
-                                            isDense: true,
-                                            contentPadding: EdgeInsets.zero,
-                                            hintText: '0.00',
-                                            hintStyle: Theme.of(context)
-                                                .textTheme
-                                                .displayLarge!
-                                                .copyWith(
-                                                  color: displayAmountColor
-                                                      .withOpacity(0.3),
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              secondChild: Padding(
-                                padding: const EdgeInsets.only(bottom: 0.0),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'TOTAL REPAYMENT',
+                      Expanded(
+                        flex: isToLoan ? 2 : 3,
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (widget.isSplit)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                    child: Text(
+                                      'SPLITTING FROM ₹${CurrencyFormatter.format(origAmount)}',
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w900,
@@ -2141,166 +2156,270 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                         letterSpacing: 1.5,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    RichText(
-                                      text: TextSpan(
-                                        children: [
-                                          TextSpan(
-                                            text: '₹ ',
-                                            style: TextStyle(
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.w600,
-                                              color: displayAmountColor
-                                                  .withOpacity(0.7),
-                                            ),
-                                          ),
-                                          TextSpan(
-                                            text: CurrencyFormatter.format(
-                                              double.tryParse(_liveResult) ??
-                                                  0.0,
-                                            ),
-                                            style: TextStyle(
-                                              fontSize: 32,
-                                              fontWeight: FontWeight.w900,
-                                              color: displayAmountColor,
-                                              letterSpacing: -1.0,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                                  ),
 
-                            if (_expression.isNotEmpty &&
-                                _expression != _liveResult &&
-                                !hasAmountError &&
-                                !isToLoan)
-                              Text(
-                                '= ₹${CurrencyFormatter.format(double.tryParse(_liveResult) ?? 0.0)}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: displayAmountColor,
-                                ),
-                              ),
-                            if (hasAmountError)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4.0),
-                                child: Text(
-                                  errorMsg,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    color: theme.colorScheme.error,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: isToLoan ? 6 : 5,
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        children: [
-                          if (isExpense &&
-                              isBudgetLocked &&
-                              !isEditingExisting &&
-                              !isLoanRep)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.error.withOpacity(
-                                    0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: theme.colorScheme.error.withOpacity(
-                                      0.3,
-                                    ),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline_rounded,
-                                      color: theme.colorScheme.error,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Only "Out of Bucket" is available because $lockedReason',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: theme.colorScheme.error,
-                                          fontWeight: FontWeight.w700,
+                                AnimatedCrossFade(
+                                  duration: const Duration(milliseconds: 250),
+                                  crossFadeState: isToLoan
+                                      ? CrossFadeState.showSecond
+                                      : CrossFadeState.showFirst,
+                                  firstChild: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          '₹ ',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .displayMedium!
+                                              .copyWith(
+                                                color: displayAmountColor
+                                                    .withOpacity(0.7),
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                         ),
+                                        IntrinsicWidth(
+                                          child: ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              minWidth: 40,
+                                            ),
+                                            child: TextField(
+                                              controller: _amountController,
+                                              readOnly: true,
+                                              showCursor: true,
+                                              autofocus: true,
+                                              cursorColor: displayAmountColor,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .displayLarge!
+                                                  .copyWith(
+                                                    color: displayAmountColor,
+                                                  ),
+                                              decoration: InputDecoration(
+                                                border: InputBorder.none,
+                                                focusedBorder: InputBorder.none,
+                                                enabledBorder: InputBorder.none,
+                                                errorBorder: InputBorder.none,
+                                                disabledBorder:
+                                                    InputBorder.none,
+                                                isDense: true,
+                                                contentPadding: EdgeInsets.zero,
+                                                hintText: '0.00',
+                                                hintStyle: Theme.of(context)
+                                                    .textTheme
+                                                    .displayLarge!
+                                                    .copyWith(
+                                                      color: displayAmountColor
+                                                          .withOpacity(0.3),
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  secondChild: Padding(
+                                    padding: const EdgeInsets.only(bottom: 0.0),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'TOTAL REPAYMENT',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w900,
+                                            color: theme.colorScheme.primary,
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        RichText(
+                                          text: TextSpan(
+                                            children: [
+                                              TextSpan(
+                                                text: '₹ ',
+                                                style: TextStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: displayAmountColor
+                                                      .withOpacity(0.7),
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: CurrencyFormatter.format(
+                                                  double.tryParse(
+                                                        _liveResult,
+                                                      ) ??
+                                                      0.0,
+                                                ),
+                                                style: TextStyle(
+                                                  fontSize: 32,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: displayAmountColor,
+                                                  letterSpacing: -1.0,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                                if (_expression.isNotEmpty &&
+                                    _expression != _liveResult &&
+                                    !hasAmountError &&
+                                    !isToLoan)
+                                  Text(
+                                    '= ₹${CurrencyFormatter.format(double.tryParse(_liveResult) ?? 0.0)}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: displayAmountColor,
+                                    ),
+                                  ),
+                                if (hasAmountError)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4.0),
+                                    child: Text(
+                                      errorMsg,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: theme.colorScheme.error,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                          Container(
-                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: theme.dividerColor,
-                                width: 1.0,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(
-                                    isDark ? 0.2 : 0.05,
                                   ),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
                               ],
                             ),
-                            clipBehavior: Clip.antiAlias,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: Table(
-                                border: TableBorder.symmetric(
-                                  inside: BorderSide(
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: isToLoan ? 6 : 5,
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Column(
+                            children: [
+                              if (isExpense &&
+                                  isBudgetLocked &&
+                                  !isEditingExisting &&
+                                  !isLoanRep)
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    0,
+                                    16,
+                                    12,
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.error
+                                          .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: theme.colorScheme.error
+                                            .withOpacity(0.3),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline_rounded,
+                                          color: theme.colorScheme.error,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Only "Out of Bucket" is available because $lockedReason',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: theme.colorScheme.error,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                              Container(
+                                margin: const EdgeInsets.fromLTRB(
+                                  16,
+                                  0,
+                                  16,
+                                  16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
                                     color: theme.dividerColor,
                                     width: 1.0,
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(
+                                        isDark ? 0.2 : 0.05,
+                                      ),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
                                 ),
-                                children: tableRows,
+                                clipBehavior: Clip.antiAlias,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: Table(
+                                    border: TableBorder.symmetric(
+                                      inside: BorderSide(
+                                        color: theme.dividerColor,
+                                        width: 1.0,
+                                      ),
+                                    ),
+                                    children: tableRows,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
+                Expanded(
+                  flex: 40,
+                  child: DockedCalculatorPad(
+                    backgroundColor: theme.scaffoldBackgroundColor,
+                    actionColor: txColor,
+                    onKeyPress: _onCalcKeyPress,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // --- NEW: FUTURISTIC LOADER OVERLAY DURING GPS FETCH ---
+          if (_isFetchingLoc)
+            Container(
+              color: Colors.black.withOpacity(isDark ? 0.6 : 0.3),
+              child: Center(
+                child: FuturisticLoader(
+                  size: 80.0,
+                  label: 'FETCHING LOCATION...',
+                ),
               ),
             ),
-            Expanded(
-              flex: 40,
-              child: DockedCalculatorPad(
-                backgroundColor: theme.scaffoldBackgroundColor,
-                actionColor: txColor,
-                onKeyPress: _onCalcKeyPress,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

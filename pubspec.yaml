@@ -68,6 +68,8 @@ dependencies:
   screen_protector: ^1.5.1
   notification_listener_service: ^1.0.0
   home_widget: ^0.8.1
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
 
 dev_dependencies:
   flutter_test:

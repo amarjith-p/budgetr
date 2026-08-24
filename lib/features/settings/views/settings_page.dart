@@ -1,4 +1,6 @@
 // features/settings/views/settings_page.dart
+import 'package:budgetr/core/components/global_selection_sheet.dart';
+import 'package:budgetr/features/settings/providers/location_settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +17,7 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final securitySettings = ref.watch(securitySettingsProvider);
+    final locationPref = ref.watch(locationSettingsProvider);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -32,6 +35,53 @@ class SettingsPage extends ConsumerWidget {
 
           // --- EXISTING THEME SWITCHER ---
           const ThemeSwitcherCard(),
+          const SizedBox(height: 16), // Spacing between cards
+          // --- NEW: LOCATION PREFERENCE ---
+          _buildBoxySettingsGroup(
+            context,
+            children: [
+              _buildBoxyTile(
+                context,
+                icon: Icons.pin_drop_rounded,
+                title: 'Location Capture',
+                subtitle: locationPref == LocationPreference.current
+                    ? 'Use current GPS location'
+                    : (locationPref == LocationPreference.map
+                          ? 'Always choose on map'
+                          : 'Ask each time'),
+                onTap: () async {
+                  HapticFeedback.selectionClick();
+                  final result = await GlobalSelectionSheet.showSimple(
+                    context: context,
+                    title: 'Location Capture Method',
+                    items: const [
+                      'Use current GPS location',
+                      'Always choose on map',
+                      'Ask each time',
+                    ],
+                    selectedValue: locationPref == LocationPreference.current
+                        ? 'Use current GPS location'
+                        : (locationPref == LocationPreference.map
+                              ? 'Always choose on map'
+                              : 'Ask each time'),
+                  );
+
+                  if (result != null) {
+                    final notifier = ref.read(
+                      locationSettingsProvider.notifier,
+                    );
+                    if (result == 'Use current GPS location') {
+                      notifier.updatePreference(LocationPreference.current);
+                    } else if (result == 'Always choose on map') {
+                      notifier.updatePreference(LocationPreference.map);
+                    } else {
+                      notifier.updatePreference(LocationPreference.ask);
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
 
           const SizedBox(height: 24),
 
