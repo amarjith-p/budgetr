@@ -200,9 +200,28 @@ class NotificationService {
   Future<List<Map<String, dynamic>>> getScheduledNotifications() async {
     final prefs = await SharedPreferences.getInstance();
     final List<String> list = prefs.getStringList(_registryKey) ?? [];
-    return list
-        .map((item) => jsonDecode(item) as Map<String, dynamic>)
-        .toList();
+
+    final now = DateTime.now();
+    final List<Map<String, dynamic>> validNotifications = [];
+    final List<String> keptList = [];
+
+    for (String item in list) {
+      final map = jsonDecode(item) as Map<String, dynamic>;
+      final scheduledDate = DateTime.parse(map['scheduledDate']);
+
+      // Only keep notifications that are scheduled for the future
+      if (scheduledDate.isAfter(now)) {
+        validNotifications.add(map);
+        keptList.add(item);
+      }
+    }
+
+    // Automatically clean up expired notifications from SharedPreferences
+    if (keptList.length != list.length) {
+      await prefs.setStringList(_registryKey, keptList);
+    }
+
+    return validNotifications;
   }
 
   Future<void> showInstantTestNotification() async {

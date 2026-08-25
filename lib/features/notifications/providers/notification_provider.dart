@@ -323,19 +323,19 @@ Future<void> _scheduleNotificationsForAccounts(
     switch (eventType) {
       case 'bill':
         title = isPlural
-            ? '${accountNames.length} Statements Generated'
-            : 'Statement Generated';
+            ? '${accountNames.length} Credit Card Bills Generated'
+            : 'Credit Card Bill Generated';
         body = isPlural
-            ? 'Statements have been generated for:\n$bulletedList'
-            : 'Statement generated for:\n$bulletedList';
+            ? 'Credit Card Bills have been generated for:\n$bulletedList'
+            : 'Credit Card Bill generated for:\n$bulletedList';
         break;
       case 'due0':
         title = isPlural
             ? '${accountNames.length} Payments Due Today!'
             : 'Payment Due Today!';
         body = isPlural
-            ? 'Bills are due today to avoid penalties for:\n$bulletedList'
-            : 'Bill is due today to avoid penalties for:\n$bulletedList';
+            ? 'Bills are due today for:\n$bulletedList'
+            : 'Bill is due today for:\n$bulletedList';
         break;
       case 'due1':
         title = isPlural

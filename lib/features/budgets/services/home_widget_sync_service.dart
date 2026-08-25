@@ -1,3 +1,4 @@
+// lib/features/budgets/services/home_widget_sync_service.dart
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:home_widget/home_widget.dart';
@@ -80,30 +81,43 @@ class HomeWidgetSyncService {
         }
       }
 
+      // --- CALCULATE GLOBAL OVERFLOW ---
       double remaining = totalBudget - totalSpentInBuckets;
+      bool isGlobalOverBudget = remaining < 0;
       double progress = totalBudget > 0
           ? (totalSpentInBuckets / totalBudget).clamp(0.0, 1.0)
           : 0.0;
 
-      // 3. Prepare JSON for Android Buckets
-      // Removed .take(3) to include ALL buckets.
+      // 3. Prepare JSON for Android Buckets with Overflow Logic
       List<Map<String, dynamic>> finalBucketsJson = bucketsData.map((b) {
         double allocated = (b['allocated'] as num?)?.toDouble() ?? 0.0;
         double spent = (b['spent'] as num?)?.toDouble() ?? 0.0;
+        double bucketRemaining = allocated - spent;
+        bool isOverBudget = bucketRemaining < 0;
+
         int bucketProgress = allocated > 0
             ? ((spent / allocated) * 100).clamp(0, 100).toInt()
             : 0;
 
+        String remainingText = isOverBudget
+            ? 'OVER: ₹${bucketRemaining.abs().toStringAsFixed(2)}'
+            : '₹${bucketRemaining.toStringAsFixed(2)} left';
+
         return {
           'name': b['name'].toString(),
-          'spent': '₹${spent.toStringAsFixed(2)}',
-          'allocated': '₹${allocated.toStringAsFixed(2)}',
+          'remaining_text': remainingText,
+          'allocated_text': ' / ₹${allocated.toStringAsFixed(2)}',
+          'is_over_budget': isOverBudget,
           'progress': bucketProgress,
         };
       }).toList();
 
       // 4. Save to Native Widget SharedPreferences
       final monthName = DateFormat('MMMM yyyy').format(now);
+
+      String globalRemainingText = isGlobalOverBudget
+          ? 'OVER: ₹${remaining.abs().toStringAsFixed(2)}'
+          : '₹${remaining.toStringAsFixed(2)} left';
 
       await HomeWidget.saveWidgetData<String>(
         'budget_month',
@@ -119,7 +133,11 @@ class HomeWidgetSyncService {
       );
       await HomeWidget.saveWidgetData<String>(
         'budget_remaining',
-        '₹${remaining.toStringAsFixed(2)} left',
+        globalRemainingText,
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'is_global_over_budget',
+        isGlobalOverBudget ? 'true' : 'false',
       );
       await HomeWidget.saveWidgetData<int>(
         'budget_progress_int',
@@ -135,7 +153,7 @@ class HomeWidgetSyncService {
         androidName: androidWidgetName,
       );
 
-      debugPrint("WIDGET SYNC SUCCESSFUL (ALL BUCKETS INCLUDED)");
+      debugPrint("WIDGET SYNC SUCCESSFUL (REMAINING MODE)");
     } catch (e) {
       debugPrint("WIDGET SYNC ERROR: $e");
     }
