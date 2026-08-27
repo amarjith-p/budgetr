@@ -56,10 +56,14 @@ class SmartInboxActionNotifier extends AsyncNotifier<void> {
     }
 
     // 3. Background Location Permission (Allow all the time)
-    // On Android 11+, this takes the user to the app's settings page
     var bgLocStatus = await Permission.locationAlways.status;
     if (!bgLocStatus.isGranted) {
       await Permission.locationAlways.request();
+    }
+
+    // 4. BATTERY OPTIMIZATION WHITELIST (Crucial for 100% Background Capture)
+    if (await Permission.ignoreBatteryOptimizations.isDenied) {
+      await Permission.ignoreBatteryOptimizations.request();
     }
 
     _subscription?.cancel();
@@ -99,8 +103,7 @@ class SmartInboxActionNotifier extends AsyncNotifier<void> {
           bucketName: bucketName,
           notes:
               notes ?? stagedTx.merchantName ?? 'Auto-logged via Smart Inbox',
-          locationName:
-              stagedTx.locationName, // <-- Propagate background location
+          locationName: stagedTx.locationName,
           latitude: stagedTx.latitude,
           longitude: stagedTx.longitude,
         );

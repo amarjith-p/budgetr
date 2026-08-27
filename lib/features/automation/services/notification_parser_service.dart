@@ -1,6 +1,9 @@
 // lib/features/automation/services/notification_parser_service.dart
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:notification_listener_service/notification_event.dart';
 import '../../../core/database/app_database.dart';
@@ -133,38 +136,40 @@ class NotificationParserService {
           packageName.contains('whatsapp'))
         return;
 
+      // 1. DEDUPLICATION VIA SHA-256 HASH
+      // We append the day to allow identical transactions on DIFFERENT days,
+      // but block spammy duplicates on the SAME day triggered by the Messages app UI updates.
+      final String hashData =
+          '$fullText|${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}';
+      final String txHash = sha256.convert(utf8.encode(hashData)).toString();
+
+      final prefs = await SharedPreferences.getInstance();
+      List<String> processedHashes =
+          prefs.getStringList('smart_inbox_hashes') ?? [];
+
+      if (processedHashes.contains(txHash)) {
+        debugPrint("Duplicate notification detected and dropped: $txHash");
+        return; // Instantly drop duplicates (even if discarded previously)
+      }
+
       final parsed = await testParseText(fullText);
       if (parsed == null) return;
 
-      final now = DateTime.now();
-      final windowStart = now.subtract(const Duration(minutes: 3));
-
-      final existingMatches =
-          await (_db.select(_db.stagedTransactions)..where(
-                (t) =>
-                    t.extractedAmount.equals(parsed.amount) &
-                    t.isApproved.equals(false) &
-                    t.date.isBiggerThanValue(windowStart),
-              ))
-              .get();
-
-      if (existingMatches.isNotEmpty) {
-        final existing = existingMatches.first;
-        if (existing.accountLast4 == null && parsed.accountLast4 != null) {
-          await _db
-              .update(_db.stagedTransactions)
-              .replace(
-                existing.copyWith(accountLast4: Value(parsed.accountLast4)),
-              );
-        }
-        return;
+      // Save hash to prevent future duplicates of this parsed transaction
+      processedHashes.add(txHash);
+      if (processedHashes.length > 500) {
+        processedHashes = processedHashes.sublist(
+          processedHashes.length - 500,
+        ); // Rolling cache of last 500
       }
+      await prefs.setStringList('smart_inbox_hashes', processedHashes);
 
-      final sourceName = title.isNotEmpty && title.length < 20
-          ? title
-          : packageName.split('.').last.toUpperCase();
+      // 2. TIMING
+      // Because we requested ignoreBatteryOptimizations, this will fire instantly
+      // when the SMS arrives, making DateTime.now() highly accurate.
+      final txDate = DateTime.now();
 
-      // --- FETCH LOCATION IN BACKGROUND ---
+      // 3. LOCATION CAPTURE
       String? locName;
       double? lat;
       double? lng;
@@ -183,6 +188,10 @@ class NotificationParserService {
         debugPrint("Background location fetch failed or timed out: $e");
       }
 
+      final sourceName = title.isNotEmpty && title.length < 20
+          ? title
+          : packageName.split('.').last.toUpperCase();
+
       await _db
           .into(_db.stagedTransactions)
           .insert(
@@ -196,8 +205,8 @@ class NotificationParserService {
               accountLast4: Value(parsed.accountLast4),
               merchantName: Value(parsed.merchantName),
               referenceNo: Value(parsed.referenceNo),
-              date: now,
-              locationName: Value(locName), // Fully captured in background
+              date: txDate,
+              locationName: Value(locName),
               latitude: Value(lat),
               longitude: Value(lng),
             ),
@@ -214,7 +223,7 @@ class NotificationParserService {
         id: DateTime.now().millisecond,
         title: alertTitle,
         body: bodyText,
-        scheduledDate: now.add(const Duration(seconds: 1)),
+        scheduledDate: DateTime.now().add(const Duration(seconds: 1)),
       );
     } catch (e) {
       debugPrint("Notification Parser Error: $e");
