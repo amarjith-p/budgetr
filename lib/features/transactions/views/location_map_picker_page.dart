@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:geocoding/geocoding.dart';
@@ -11,15 +12,17 @@ import '../../../core/components/modern_app_bar.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/utils/location_helper.dart';
 import '../../../core/components/futuristic_loader.dart';
+import '../providers/transaction_provider.dart';
 
-class LocationMapPickerPage extends StatefulWidget {
+class LocationMapPickerPage extends ConsumerStatefulWidget {
   const LocationMapPickerPage({Key? key}) : super(key: key);
 
   @override
-  State<LocationMapPickerPage> createState() => _LocationMapPickerPageState();
+  ConsumerState<LocationMapPickerPage> createState() =>
+      _LocationMapPickerPageState();
 }
 
-class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
+class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
   final MapController _mapController = MapController();
   final TextEditingController _searchCtrl = TextEditingController();
 
@@ -27,11 +30,9 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
   bool _isLoadingLoc = true;
   bool _isConfirming = false;
   bool _isFetchingCurrentLoc = false;
-
   List<dynamic> _searchResults = [];
   Timer? _searchDebounce;
   Timer? _addressDebounce;
-
   String? _selectedPoiName;
   String _currentAddress = 'Locating...';
   bool _isFetchingAddress = true;
@@ -84,40 +85,30 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
 
   void _onSearchChanged(String query) {
     if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
-
     _searchDebounce = Timer(const Duration(milliseconds: 600), () async {
       if (query.trim().isEmpty) {
         setState(() => _searchResults = []);
         return;
       }
-
-      // 1. Get current map center to bias the search locally
       final pos = _mapController.camera.center;
       final left = pos.longitude - 0.5;
       final right = pos.longitude + 0.5;
       final top = pos.latitude + 0.5;
       final bottom = pos.latitude - 0.5;
 
-      // 2. Add 'countrycodes=in' to force India-only results, drastically improving accuracy.
-      // Also apply the viewbox to prioritize results near the map center.
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=jsonv2&addressdetails=1&limit=8&countrycodes=in&viewbox=$left,$top,$right,$bottom&bounded=0',
       );
-
       try {
         final response = await http.get(
           url,
           headers: {'User-Agent': 'FinStack360_App'},
         );
-
         if (response.statusCode == 200 && mounted) {
           final List<dynamic> rawData = jsonDecode(response.body);
-
           setState(() {
             _searchResults = rawData.map((res) {
               String mainName = res['name']?.toString() ?? '';
-
-              // Extract specific POI type if name is missing
               if (mainName.isEmpty && res['address'] != null) {
                 final addr = res['address'];
                 mainName =
@@ -128,12 +119,10 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
                     addr['office'] ??
                     '';
               }
-
               if (mainName.isEmpty) {
                 mainName =
                     res['display_name']?.split(',').first ?? 'Unknown Place';
               }
-
               return {
                 'lat': res['lat'],
                 'lon': res['lon'],
@@ -153,10 +142,9 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
     final lon = double.parse(result['lon']);
     final pos = LatLng(lat, lon);
 
-    // Zoom in very close (18.0) since they searched for a specific place
     _mapController.move(pos, 18.0);
     setState(() {
-      _selectedPoiName = result['name']; // Store the exact name they tapped
+      _selectedPoiName = result['name'];
       _isAddressManuallyEdited = false;
       _searchResults = [];
       _searchCtrl.clear();
@@ -166,10 +154,8 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
 
   void _debounceAddressFetch() {
     if (_isAddressManuallyEdited) return;
-
     if (_addressDebounce?.isActive ?? false) _addressDebounce!.cancel();
     setState(() => _isFetchingAddress = true);
-
     _addressDebounce = Timer(const Duration(milliseconds: 600), () async {
       final pos = _mapController.camera.center;
       await _resolveAddress(pos);
@@ -186,9 +172,7 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
       }
       return;
     }
-
     String resolvedName = '';
-
     try {
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/reverse?lat=${pos.latitude}&lon=${pos.longitude}&format=jsonv2&zoom=18&addressdetails=1',
@@ -197,7 +181,6 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
         url,
         headers: {'User-Agent': 'FinStack360_App'},
       );
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['name'] != null && data['name'].toString().isNotEmpty) {
@@ -219,7 +202,6 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
         }
       }
     } catch (_) {}
-
     if (resolvedName.isEmpty) {
       try {
         List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -233,7 +215,6 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
               s.isNotEmpty &&
               !s.contains('+') &&
               !s.toLowerCase().contains('unnamed');
-
           if (isValid(place.name) &&
               !RegExp(r'^[0-9]+$').hasMatch(place.name!)) {
             resolvedName = place.name!;
@@ -247,7 +228,6 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
         }
       } catch (_) {}
     }
-
     if (mounted) {
       setState(() {
         _currentAddress = resolvedName.isNotEmpty
@@ -258,84 +238,224 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
     }
   }
 
-  Future<void> _editLocationNameManually() async {
-    HapticFeedback.selectionClick();
+  void _editLocationNameManually() {
+    HapticFeedback.lightImpact();
+
+    final allTxs = ref.read(allTransactionsProvider).asData?.value ?? [];
+    final Map<String, LatLng> pastLocations = {};
+
+    for (var txData in allTxs) {
+      final t = txData.transaction;
+      if (t.locationName != null &&
+          t.locationName!.isNotEmpty &&
+          t.latitude != null &&
+          t.longitude != null) {
+        pastLocations.putIfAbsent(
+          t.locationName!.trim(),
+          () => LatLng(t.latitude!, t.longitude!),
+        );
+      }
+    }
+
     final TextEditingController editCtrl = TextEditingController(
       text: _currentAddress == 'Locating...' ? '' : _currentAddress,
     );
 
-    final theme = Theme.of(context);
-    final result = await showDialog<String>(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: theme.colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(
-          'Edit Location Name',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
-        content: TextField(
-          controller: editCtrl,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Enter exact place or shop name...',
-            filled: true,
-            fillColor: theme.scaffoldBackgroundColor,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: theme.dividerColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: theme.colorScheme.primary,
-                width: 2,
-              ),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: theme.colorScheme.onPrimary,
-              elevation: 0,
-            ),
-            onPressed: () => Navigator.pop(ctx, editCtrl.text),
-            child: const Text(
-              'Save',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final query = editCtrl.text.trim().toLowerCase();
 
-    if (result != null && result.trim().isNotEmpty && mounted) {
-      setState(() {
-        _currentAddress = result.trim();
-        _isAddressManuallyEdited = true;
-      });
-    }
+            // --- CHANGED: Now taking only the last 6 locations ---
+            final List<String> suggestions = pastLocations.keys
+                .where((name) => name.toLowerCase().contains(query))
+                .take(6)
+                .toList();
+
+            final theme = Theme.of(context);
+
+            return Container(
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(8),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+                left: 24,
+                right: 24,
+                top: 12,
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 24),
+                        decoration: BoxDecoration(
+                          color: theme.dividerColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Edit Location Name',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: editCtrl,
+                      autofocus: true,
+                      textInputAction: TextInputAction.done,
+                      onChanged: (val) => setModalState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Enter exact place or shop name...',
+                        hintStyle: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                            0.5,
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: theme.colorScheme.surface,
+                        contentPadding: const EdgeInsets.all(16),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: theme.dividerColor.withOpacity(0.5),
+                            width: 1.0,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: theme.colorScheme.primary.withOpacity(0.5),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      onSubmitted: (value) {
+                        if (value.trim().isNotEmpty) {
+                          setState(() {
+                            _currentAddress = value.trim();
+                            _isAddressManuallyEdited = true;
+                          });
+                        }
+                        Navigator.pop(ctx);
+                      },
+                    ),
+
+                    if (suggestions.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Text(
+                        'SAVED LOCATIONS',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8.0,
+                        runSpacing: 8.0,
+                        children: suggestions.map((suggestion) {
+                          return ActionChip(
+                            label: Text(
+                              suggestion,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                            backgroundColor: theme
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withOpacity(0.3),
+                            side: BorderSide(
+                              color: theme.dividerColor.withOpacity(0.3),
+                              width: 1.0,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+
+                              final LatLng savedPos =
+                                  pastLocations[suggestion]!;
+
+                              _mapController.move(savedPos, 18.0);
+
+                              setState(() {
+                                _currentAddress = suggestion;
+                                _isAddressManuallyEdited = true;
+                              });
+
+                              Navigator.pop(ctx);
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        if (editCtrl.text.trim().isNotEmpty) {
+                          setState(() {
+                            _currentAddress = editCtrl.text.trim();
+                            _isAddressManuallyEdited = true;
+                          });
+                        }
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text(
+                        'Save Name',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _confirmLocation() async {
     HapticFeedback.selectionClick();
     setState(() => _isConfirming = true);
-
     final pos = _mapController.camera.center;
-
     Navigator.pop(context, {
       'latitude': pos.latitude,
       'longitude': pos.longitude,
@@ -408,7 +528,6 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
                     ),
                   ],
                 ),
-
                 // 2. Fixed Center Pin
                 IgnorePointer(
                   child: Center(
@@ -431,7 +550,6 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
                     ),
                   ),
                 ),
-
                 // 3. Search Bar & Dropdown
                 Positioned(
                   top: DesignTokens.spacingMd,
@@ -543,7 +661,6 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
                     ],
                   ),
                 ),
-
                 // 4. Current Location FAB
                 Positioned(
                   bottom:
@@ -574,7 +691,6 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
                     ),
                   ),
                 ),
-
                 // 5. Consolidated Address & Done Button Card
                 Positioned(
                   bottom:
@@ -655,7 +771,6 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
                             ),
                           ),
                         ),
-
                         const SizedBox(width: 12),
                         Container(
                           width: 1,
@@ -663,7 +778,6 @@ class _LocationMapPickerPageState extends State<LocationMapPickerPage> {
                           color: theme.dividerColor.withOpacity(0.3),
                         ), // Separator
                         const SizedBox(width: 12),
-
                         // Right Side: Done Button
                         InkWell(
                           onTap: _isFetchingAddress ? null : _confirmLocation,
