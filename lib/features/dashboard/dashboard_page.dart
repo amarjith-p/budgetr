@@ -253,8 +253,8 @@ class DashboardPage extends ConsumerWidget {
           if (isBackupDue)
             IconButton(
               icon: const Icon(
-                Icons.cloud_upload_rounded,
-                color: Colors.orangeAccent,
+                Icons.cloud_sync_rounded,
+                color: Colors.redAccent,
               ),
               tooltip: 'Backup Overdue',
               onPressed: () => _handleQuickBackup(context, ref),
