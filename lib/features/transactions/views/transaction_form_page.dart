@@ -18,7 +18,7 @@ import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../../../core/components/global_selection_sheet.dart';
 import '../../../core/components/currency_text.dart';
 import '../../../core/utils/location_helper.dart';
-import '../../../core/components/futuristic_loader.dart'; // <-- ADDED FUTURISTIC LOADER
+import '../../../core/components/futuristic_loader.dart';
 import '../../accounts/providers/account_provider.dart';
 import '../../category_manager/providers/category_provider.dart';
 import '../providers/transaction_provider.dart';
@@ -187,7 +187,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       _selectedBucketId = tx.bucketId ?? -1;
       _historicalBucketName = tx.bucketName ?? txDetails.bucket?.name;
     } else if (stagedTx != null) {
-      // --- PREFILL DATA FROM SMART INBOX ---
       int tIdx = _types.indexOf(stagedTx.inferredType);
       _typeIndex = tIdx != -1 ? tIdx : 0;
       _selectedDateTime = stagedTx.date;
@@ -195,7 +194,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         text: stagedTx.merchantName ?? stagedTx.sourceName,
       );
 
-      // --- INHERIT BACKGROUND CAPTURED LOCATION ---
       _locationName = stagedTx.locationName;
       _latitude = stagedTx.latitude;
       _longitude = stagedTx.longitude;
@@ -238,12 +236,11 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   }
 
   Future<void> _fetchLocation() async {
-    FocusScope.of(context).unfocus(); // Good practice before opening Modals
+    FocusScope.of(context).unfocus();
 
     final pref = ref.read(locationSettingsProvider);
     LocationPreference activePref = pref;
 
-    // 1. Handle "Ask Each Time"
     if (pref == LocationPreference.ask) {
       HapticFeedback.lightImpact();
       final choice = await GlobalSelectionSheet.showSimple(
@@ -253,13 +250,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         selectedValue: '',
       );
 
-      if (choice == null) return; // User dismissed sheet
+      if (choice == null) return;
       activePref = choice == 'Choose on Map'
           ? LocationPreference.map
           : LocationPreference.current;
     }
 
-    // 2. Handle Visual Map Picker
     if (activePref == LocationPreference.map) {
       final result = await Navigator.push(
         context,
@@ -276,7 +272,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       return;
     }
 
-    // 3. Handle Current GPS Location (Existing behavior)
     setState(() => _isFetchingLoc = true);
     try {
       final locData = await LocationHelper.fetchCurrentLocation();
@@ -1015,7 +1010,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                   .toList();
             }
 
-            suggestions = suggestions.take(12).toList();
+            // --- CHANGED: Now taking only the last 6 note suggestions ---
+            suggestions = suggestions.take(6).toList();
+
             final theme = Theme.of(context);
 
             return Container(
