@@ -42,26 +42,22 @@ class SmartInboxActionNotifier extends AsyncNotifier<void> {
   }
 
   Future<void> requestPermissionsAndListen() async {
-    // 1. Notification Listener Permission
     final bool isGranted =
         await NotificationListenerService.isPermissionGranted();
     if (!isGranted) {
       await NotificationListenerService.requestPermission();
     }
 
-    // 2. Foreground Location Permission
     var locStatus = await Permission.location.status;
     if (!locStatus.isGranted) {
       await Permission.location.request();
     }
 
-    // 3. Background Location Permission (Allow all the time)
     var bgLocStatus = await Permission.locationAlways.status;
     if (!bgLocStatus.isGranted) {
       await Permission.locationAlways.request();
     }
 
-    // 4. BATTERY OPTIMIZATION WHITELIST (Crucial for 100% Background Capture)
     if (await Permission.ignoreBatteryOptimizations.isDenied) {
       await Permission.ignoreBatteryOptimizations.request();
     }
@@ -151,6 +147,29 @@ class SmartInboxActionNotifier extends AsyncNotifier<void> {
             targetType: targetType,
             isActive: const Value(true),
             isCustom: const Value(true),
+          ),
+        );
+  }
+
+  // --- NEW: EDIT RULE METHOD ---
+  Future<void> editCustomRule({
+    required String id,
+    required String name,
+    required String regexPattern,
+    required String targetType,
+  }) async {
+    final db = ref.read(databaseProvider);
+    final rule = await (db.select(
+      db.parserRules,
+    )..where((r) => r.id.equals(id))).getSingle();
+
+    await db
+        .update(db.parserRules)
+        .replace(
+          rule.copyWith(
+            name: name,
+            regexPattern: regexPattern,
+            targetType: targetType,
           ),
         );
   }

@@ -12,7 +12,7 @@ import '../../../core/services/notification_service.dart';
 
 class ParsedNotificationResult {
   final double amount;
-  final String type; // 'Expense' or 'Income'
+  final String type; // 'Expense', 'Income', or 'Ignore'
   final String? accountLast4;
   final String? merchantName;
   final String? referenceNo;
@@ -67,6 +67,32 @@ class NotificationParserService {
   Future<ParsedNotificationResult?> testParseText(String fullText) async {
     if (fullText.trim().isEmpty) return null;
 
+    // =========================================================================
+    // 1. ISOLATED CODE BLOCK: OMIT / IGNORE RULES
+    // Checked first, before anything else, so promotional texts without amounts
+    // are correctly caught and omitted by the system.
+    // =========================================================================
+    final ignoreRules =
+        await (_db.select(_db.parserRules)..where(
+              (r) => r.isActive.equals(true) & r.targetType.equals('Ignore'),
+            ))
+            .get();
+
+    for (var rule in ignoreRules) {
+      try {
+        final keywordRegex = RegExp(rule.regexPattern, caseSensitive: false);
+        if (keywordRegex.hasMatch(fullText)) {
+          return ParsedNotificationResult(
+            amount: 0.0,
+            type: 'Ignore',
+            matchedPattern: 'Omit Rule: ${rule.name}',
+          );
+        }
+      } catch (_) {}
+    }
+    // =========================================================================
+
+    // 2. EXTRACT AMOUNT
     final amountMatch = _amountRegex.firstMatch(fullText);
     if (amountMatch == null) return null;
 
@@ -82,9 +108,13 @@ class NotificationParserService {
     final merchant = merchantMatch?.group(1)?.trim();
     final refNo = refMatch?.group(1);
 
-    final customRules = await (_db.select(
-      _db.parserRules,
-    )..where((r) => r.isActive.equals(true))).get();
+    // 3. CHECK ACTIVE CUSTOM RULES (Priority over Default Universal Rules)
+    final customRules =
+        await (_db.select(_db.parserRules)..where(
+              (r) =>
+                  r.isActive.equals(true) & r.targetType.isNotValue('Ignore'),
+            ))
+            .get();
 
     for (var rule in customRules) {
       try {
@@ -102,6 +132,7 @@ class NotificationParserService {
       } catch (_) {}
     }
 
+    // 4. FALLBACK TO UNIVERSAL DEFAULT RULES
     if (_defaultExpenseKeywords.hasMatch(fullText)) {
       return ParsedNotificationResult(
         amount: amount,
@@ -136,9 +167,6 @@ class NotificationParserService {
           packageName.contains('whatsapp'))
         return;
 
-      // 1. DEDUPLICATION VIA SHA-256 HASH
-      // We append the day to allow identical transactions on DIFFERENT days,
-      // but block spammy duplicates on the SAME day triggered by the Messages app UI updates.
       final String hashData =
           '$fullText|${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}';
       final String txHash = sha256.convert(utf8.encode(hashData)).toString();
@@ -149,43 +177,46 @@ class NotificationParserService {
 
       if (processedHashes.contains(txHash)) {
         debugPrint("Duplicate notification detected and dropped: $txHash");
-        return; // Instantly drop duplicates (even if discarded previously)
+        return;
       }
 
       final parsed = await testParseText(fullText);
       if (parsed == null) return;
 
-      // Save hash to prevent future duplicates of this parsed transaction
+      // --- ABORT IF IT TRIGGERED THE OMIT/IGNORE RULE ---
+      if (parsed.type == 'Ignore') {
+        debugPrint("Notification deliberately omitted by custom rule.");
+        return;
+      }
+
       processedHashes.add(txHash);
       if (processedHashes.length > 500) {
-        processedHashes = processedHashes.sublist(
-          processedHashes.length - 500,
-        ); // Rolling cache of last 500
+        processedHashes = processedHashes.sublist(processedHashes.length - 500);
       }
       await prefs.setStringList('smart_inbox_hashes', processedHashes);
 
-      // 2. TIMING
-      // Because we requested ignoreBatteryOptimizations, this will fire instantly
-      // when the SMS arrives, making DateTime.now() highly accurate.
       final txDate = DateTime.now();
 
-      // 3. LOCATION CAPTURE
       String? locName;
       double? lat;
       double? lng;
 
-      try {
-        // 5-second timeout ensures the background parser doesn't hang if GPS is weak
-        final locData = await LocationHelper.fetchCurrentLocation().timeout(
-          const Duration(seconds: 5),
-        );
-        if (locData != null) {
-          locName = locData['name'];
-          lat = locData['latitude'];
-          lng = locData['longitude'];
+      final bool isFreshNotification =
+          DateTime.now().difference(txDate).inMinutes < 5;
+
+      if (isFreshNotification) {
+        try {
+          final locData = await LocationHelper.fetchCurrentLocation().timeout(
+            const Duration(seconds: 5),
+          );
+          if (locData != null) {
+            locName = locData['name'];
+            lat = locData['latitude'];
+            lng = locData['longitude'];
+          }
+        } catch (e) {
+          debugPrint("Background location fetch failed or timed out: $e");
         }
-      } catch (e) {
-        debugPrint("Background location fetch failed or timed out: $e");
       }
 
       final sourceName = title.isNotEmpty && title.length < 20
@@ -212,13 +243,11 @@ class NotificationParserService {
             ),
           );
 
-      // Trigger user prompt
       final String sign = parsed.type == 'Expense' ? '-' : '+';
       final String alertTitle = 'New Transaction Detected';
       final String bodyText =
           '$sign ₹${parsed.amount} via $sourceName. Tap to review and approve.';
 
-      // Using your existing centralized notification service
       NotificationService.instance.scheduleNotification(
         id: DateTime.now().millisecond,
         title: alertTitle,

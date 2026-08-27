@@ -8,6 +8,7 @@ import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/currency_text.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/theme/transaction_colors.dart';
+import '../../../core/database/app_database.dart';
 import '../services/notification_parser_service.dart';
 import '../providers/smart_inbox_provider.dart';
 
@@ -34,7 +35,6 @@ class _ParserRulesPlaygroundPageState
   Future<void> _runTest() async {
     final text = _testCtrl.text.trim();
 
-    // --- ADDED MISSING VALIDATION HERE ---
     if (text.isEmpty) {
       HapticFeedback.heavyImpact();
       if (mounted) {
@@ -83,12 +83,23 @@ class _ParserRulesPlaygroundPageState
     }
   }
 
-  void _openAddRuleSheet() {
+  void _openRuleSheet({ParserRule? existingRule}) {
     HapticFeedback.lightImpact();
     final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController();
     final keywordCtrl = TextEditingController();
     String targetType = 'Expense';
+
+    // Populate data if editing
+    if (existingRule != null) {
+      nameCtrl.text = existingRule.name;
+      targetType = existingRule.targetType;
+      // Convert Regex pattern back to comma separated string
+      keywordCtrl.text = existingRule.regexPattern
+          .replaceAll(r'\b(', '')
+          .replaceAll(r')\b', '')
+          .replaceAll('|', ', ');
+    }
 
     showModalBottomSheet(
       context: context,
@@ -142,7 +153,9 @@ class _ParserRulesPlaygroundPageState
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
-                            Icons.rule_rounded,
+                            existingRule == null
+                                ? Icons.rule_rounded
+                                : Icons.edit_rounded,
                             color: theme.colorScheme.primary,
                             size: 20,
                           ),
@@ -153,7 +166,9 @@ class _ParserRulesPlaygroundPageState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Custom Keyword Rule',
+                                existingRule == null
+                                    ? 'Custom Keyword Rule'
+                                    : 'Edit Rule',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: -0.5,
@@ -175,7 +190,6 @@ class _ParserRulesPlaygroundPageState
                     ),
                     const SizedBox(height: 32),
 
-                    // --- VALIDATED FIELDS ---
                     ModernBoxyInput(
                       controller: nameCtrl,
                       labelText: 'Rule Name (e.g., SBI Regional SMS)',
@@ -213,7 +227,8 @@ class _ParserRulesPlaygroundPageState
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // Modern Segmented Toggle for Type
+
+                    // --- MODIFIED: THREE OPTION TOGGLE INCLUDING IGNORE/OMIT ---
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
@@ -223,104 +238,32 @@ class _ParserRulesPlaygroundPageState
                       ),
                       child: Row(
                         children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                setModalState(() => targetType = 'Expense');
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: targetType == 'Expense'
-                                      ? theme.colorScheme.surface
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: targetType == 'Expense'
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                              0.05,
-                                            ),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'Expense',
-                                  style: TextStyle(
-                                    fontWeight: targetType == 'Expense'
-                                        ? FontWeight.w900
-                                        : FontWeight.w600,
-                                    color: targetType == 'Expense'
-                                        ? TransactionColors.getTypeColor(
-                                            'Expense',
-                                            theme,
-                                          )
-                                        : theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ),
+                          _buildTypeSegment(
+                            'Expense',
+                            targetType,
+                            TransactionColors.getTypeColor('Expense', theme),
+                            theme,
+                            () => setModalState(() => targetType = 'Expense'),
                           ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                setModalState(() => targetType = 'Income');
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: targetType == 'Income'
-                                      ? theme.colorScheme.surface
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: targetType == 'Income'
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                              0.05,
-                                            ),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'Income',
-                                  style: TextStyle(
-                                    fontWeight: targetType == 'Income'
-                                        ? FontWeight.w900
-                                        : FontWeight.w600,
-                                    color: targetType == 'Income'
-                                        ? TransactionColors.getTypeColor(
-                                            'Income',
-                                            theme,
-                                          )
-                                        : theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ),
+                          _buildTypeSegment(
+                            'Income',
+                            targetType,
+                            TransactionColors.getTypeColor('Income', theme),
+                            theme,
+                            () => setModalState(() => targetType = 'Income'),
+                          ),
+                          _buildTypeSegment(
+                            'Ignore',
+                            targetType,
+                            Colors.orangeAccent.shade700,
+                            theme,
+                            () => setModalState(() => targetType = 'Ignore'),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 32),
 
-                    // --- PREMIUM SAVE BUTTON ---
                     Container(
                       width: double.infinity,
                       height: 56,
@@ -351,7 +294,6 @@ class _ParserRulesPlaygroundPageState
                           ),
                         ),
                         onPressed: () async {
-                          // FORM VALIDATION CHECK
                           if (!formKey.currentState!.validate()) {
                             HapticFeedback.heavyImpact();
                             return;
@@ -359,7 +301,6 @@ class _ParserRulesPlaygroundPageState
 
                           HapticFeedback.selectionClick();
 
-                          // Convert user keywords into a safe Regex pattern
                           final rawWords = keywordCtrl.text
                               .split(',')
                               .map((e) => e.trim())
@@ -368,18 +309,29 @@ class _ParserRulesPlaygroundPageState
 
                           final pattern = r'\b(' + rawWords.join('|') + r')\b';
 
-                          await ref
-                              .read(smartInboxActionProvider.notifier)
-                              .addCustomRule(
-                                name: nameCtrl.text.trim(),
-                                regexPattern: pattern,
-                                targetType: targetType,
-                              );
+                          if (existingRule == null) {
+                            await ref
+                                .read(smartInboxActionProvider.notifier)
+                                .addCustomRule(
+                                  name: nameCtrl.text.trim(),
+                                  regexPattern: pattern,
+                                  targetType: targetType,
+                                );
+                          } else {
+                            await ref
+                                .read(smartInboxActionProvider.notifier)
+                                .editCustomRule(
+                                  id: existingRule.id,
+                                  name: nameCtrl.text.trim(),
+                                  regexPattern: pattern,
+                                  targetType: targetType,
+                                );
+                          }
                           if (ctx.mounted) Navigator.pop(ctx);
                         },
-                        child: const Text(
-                          'SAVE RULE',
-                          style: TextStyle(
+                        child: Text(
+                          existingRule == null ? 'SAVE RULE' : 'UPDATE RULE',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
@@ -394,6 +346,51 @@ class _ParserRulesPlaygroundPageState
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildTypeSegment(
+    String label,
+    String currentValue,
+    Color activeColor,
+    ThemeData theme,
+    VoidCallback onTap,
+  ) {
+    final isSelected = currentValue == label;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? theme.colorScheme.surface : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+              color: isSelected
+                  ? activeColor
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -415,7 +412,6 @@ class _ParserRulesPlaygroundPageState
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         children: [
-          // --- LIVE TESTER CARD ---
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -462,8 +458,6 @@ class _ParserRulesPlaygroundPageState
                   keyboardType: TextInputType.multiline,
                 ),
                 const SizedBox(height: 20),
-
-                // --- PREMIUM TEST BUTTON ---
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: double.infinity,
@@ -541,7 +535,6 @@ class _ParserRulesPlaygroundPageState
 
           const SizedBox(height: 24),
 
-          // --- TEST RESULT AREA ---
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOutCubic,
@@ -554,7 +547,6 @@ class _ParserRulesPlaygroundPageState
 
           const SizedBox(height: 32),
 
-          // --- CUSTOM RULES HEADER ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -569,7 +561,7 @@ class _ParserRulesPlaygroundPageState
                 ),
               ),
               GestureDetector(
-                onTap: _openAddRuleSheet,
+                onTap: () => _openRuleSheet(),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -606,7 +598,6 @@ class _ParserRulesPlaygroundPageState
 
           const SizedBox(height: 16),
 
-          // --- RULES LIST ---
           rulesAsync.when(
             loading: () => const Center(
               child: Padding(
@@ -662,12 +653,10 @@ class _ParserRulesPlaygroundPageState
               }
               return Column(
                 children: rules.map((r) {
-                  final ruleTypeColor = TransactionColors.getTypeColor(
-                    r.targetType,
-                    theme,
-                  );
+                  final ruleTypeColor = r.targetType == 'Ignore'
+                      ? Colors.orangeAccent.shade700
+                      : TransactionColors.getTypeColor(r.targetType, theme);
 
-                  // Extract raw keywords from regex for clean display
                   final displayKeywords = r.regexPattern
                       .replaceAll(r'\b(', '')
                       .replaceAll(r')\b', '')
@@ -677,6 +666,9 @@ class _ParserRulesPlaygroundPageState
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: BoxySlidableCard(
                       key: ValueKey(r.id),
+                      onEdit: () => _openRuleSheet(
+                        existingRule: r,
+                      ), // <-- EDIT CAPABILITY
                       onDelete: () {
                         HapticFeedback.lightImpact();
                         ref
@@ -705,7 +697,6 @@ class _ParserRulesPlaygroundPageState
                           child: IntrinsicHeight(
                             child: Row(
                               children: [
-                                // Left Color Indicator Bar
                                 Container(width: 6, color: ruleTypeColor),
                                 Expanded(
                                   child: Padding(
@@ -750,8 +741,10 @@ class _ParserRulesPlaygroundPageState
                                                           ),
                                                     ),
                                                     child: Text(
-                                                      r.targetType
-                                                          .toUpperCase(),
+                                                      r.targetType == 'Ignore'
+                                                          ? 'OMIT'
+                                                          : r.targetType
+                                                                .toUpperCase(),
                                                       style: TextStyle(
                                                         fontSize: 8,
                                                         fontWeight:
@@ -818,6 +811,96 @@ class _ParserRulesPlaygroundPageState
   }
 
   Widget _buildSuccessResult(ThemeData theme) {
+    if (_testResult!.type == 'Ignore') {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.orangeAccent.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.orangeAccent.withOpacity(0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.orangeAccent.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.block_rounded,
+                    color: Colors.orangeAccent.shade700,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'NOTIFICATION IGNORED',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: Colors.orangeAccent.shade700,
+                    letterSpacing: 1.0,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.0),
+              child: Divider(height: 1),
+            ),
+            Text(
+              'This notification was matched by an Omit/Ignore Rule and will be completely ignored by the Smart Inbox in the background.',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'RULE MATCHED',
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _testResult!.matchedPattern,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final amountColor = TransactionColors.getTypeColor(
       _testResult!.type,
       theme,
