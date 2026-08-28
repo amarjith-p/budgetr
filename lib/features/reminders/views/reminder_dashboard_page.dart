@@ -249,54 +249,60 @@ class _LiveCountdownCardState extends State<_LiveCountdownCard> {
           );
         },
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(
+            10,
+          ), // Reduced from 16 to keep it compact
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(8),
+            color: theme.colorScheme.surface, // Restored global color
+            borderRadius: BorderRadius.circular(8), // Restored global radius
             border: Border.all(
               color: isCritical
                   ? Colors.orangeAccent.withOpacity(0.5)
-                  : theme.dividerColor,
+                  : theme.dividerColor, // Restored global border
             ),
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: widget.isPast
-                      ? theme.colorScheme.surfaceContainerHighest.withOpacity(
-                          0.5,
-                        )
-                      : (isCritical
-                            ? Colors.orangeAccent.withOpacity(0.1)
-                            : theme.colorScheme.primary.withOpacity(0.1)),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(
-                  widget.isPast
-                      ? Icons.done_all_rounded
-                      : (isCritical
-                            ? Icons.timer_rounded
-                            : Icons.notifications_active_rounded),
-                  color: widget.isPast
-                      ? theme.colorScheme.onSurfaceVariant
-                      : (isCritical
-                            ? Colors.orangeAccent
-                            : theme.colorScheme.primary),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+              // --- TOP ROW: Icon and Title ONLY ---
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(
+                      8,
+                    ), // Slightly tighter for compact look
+                    decoration: BoxDecoration(
+                      color: widget.isPast
+                          ? theme.colorScheme.surfaceContainerHighest
+                                .withOpacity(0.5)
+                          : (isCritical
+                                ? Colors.orangeAccent.withOpacity(0.1)
+                                : theme.colorScheme.primary.withOpacity(0.1)),
+                      borderRadius: BorderRadius.circular(6), // Restored
+                    ),
+                    child: Icon(
+                      widget.isPast
+                          ? Icons.done_all_rounded
+                          : (isCritical
+                                ? Icons.timer_rounded
+                                : Icons.notifications_active_rounded),
+                      color: widget.isPast
+                          ? theme.colorScheme.onSurfaceVariant
+                          : (isCritical
+                                ? Colors.orangeAccent
+                                : theme.colorScheme.primary),
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Expanded Title takes ALL remaining space naturally
+                  Expanded(
+                    child: Text(
                       r.title,
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
-                        fontSize: 15,
+                        fontSize: 14, // Restored original size
                         color: widget.isPast
                             ? theme.colorScheme.onSurfaceVariant
                             : theme.colorScheme.onSurface,
@@ -307,87 +313,121 @@ class _LiveCountdownCardState extends State<_LiveCountdownCard> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      DateFormat('dd MMM yyyy, hh:mm a').format(r.targetDate),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    if (r.notes != null && r.notes!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        r.notes!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurfaceVariant.withOpacity(
-                            0.8,
-                          ),
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: widget.isPast
-                          ? Colors.transparent
-                          : (isCritical
-                                ? Colors.orangeAccent
-                                : theme.colorScheme.primary),
-                      borderRadius: BorderRadius.circular(4),
-                      border: widget.isPast
-                          ? Border.all(color: theme.dividerColor)
-                          : null,
-                    ),
-                    child: Text(
-                      _formatCountdown(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.0,
-                        color: widget.isPast
-                            ? theme.colorScheme.onSurfaceVariant
-                            : (isDark ? Colors.black : Colors.white),
-                      ),
-                    ),
                   ),
-                  const SizedBox(height: 12),
-                  if (r.isPushEnabled && !widget.isPast)
-                    Row(
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // --- BOTTOM ROW: Date, Notes, Due Counter, and Push Indicator ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // LEFT SIDE: Date and Notes
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.bolt_rounded,
-                          size: 12,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 2),
                         Text(
-                          r.priorDays == 0
-                              ? 'On Time'
-                              : '${r.priorDays}d Prior',
+                          DateFormat(
+                            'dd MMM yyyy, hh:mm a',
+                          ).format(r.targetDate),
                           style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.primary,
+                            fontSize: 11, // Restored original
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
+                        if (r.notes != null && r.notes!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            r.notes!,
+                            style: TextStyle(
+                              fontSize: 12, // Restored original
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.8),
+                            ),
+                            maxLines: 1, // Kept at 1 to maintain reduced height
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  // RIGHT SIDE: Due Counter (Top) & Push Indicator (Bottom)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // Due Counter moved here
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: widget.isPast
+                              ? Colors.transparent
+                              : (isCritical
+                                    ? Colors.orangeAccent
+                                    : theme
+                                          .colorScheme
+                                          .primary), // Restored global
+                          borderRadius: BorderRadius.circular(
+                            4,
+                          ), // Restored global
+                          border: widget.isPast
+                              ? Border.all(color: theme.dividerColor)
+                              : null,
+                        ),
+                        child: Text(
+                          _formatCountdown(),
+                          style: TextStyle(
+                            fontSize: 10, // Restored original size
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
+                            color: widget.isPast
+                                ? theme.colorScheme.onSurfaceVariant
+                                : (isDark
+                                      ? Colors.black
+                                      : Colors
+                                            .white), // Restored original logic
+                          ),
+                        ),
+                      ),
+
+                      // Notification Prior Text below the counter
+                      if (r.isPushEnabled && !widget.isPast) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.bolt_rounded,
+                              size: 12,
+                              color: theme
+                                  .colorScheme
+                                  .primary, // Restored original
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              r.priorDays == 0
+                                  ? 'On Time'
+                                  : '${r.priorDays}d Prior',
+                              style: TextStyle(
+                                fontSize: 9, // Restored original
+                                fontWeight: FontWeight.w800,
+                                color: theme
+                                    .colorScheme
+                                    .primary, // Restored original
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ],
