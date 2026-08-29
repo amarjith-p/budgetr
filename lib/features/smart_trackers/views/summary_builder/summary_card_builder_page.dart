@@ -11,6 +11,7 @@ import '../../../../core/components/modern_boxy_button.dart';
 import '../../../../core/components/modern_boxy_input.dart';
 import '../../../../core/components/modern_boxy_toggle.dart';
 import '../../../../core/components/currency_text.dart';
+import '../../../../core/components/confirmation_bottom_sheet.dart'; // <-- IMPORTED
 import '../../../../core/theme/design_tokens.dart';
 
 import '../../models/summary_card_model.dart';
@@ -104,6 +105,25 @@ class _SummaryCardBuilderPageState
         .read(smartTrackerActionProvider.notifier)
         .saveSummaryLayout(widget.template.id, jsonStr);
     if (mounted) Navigator.pop(context);
+  }
+
+  // --- NEW: DELETE DASHBOARD ---
+  Future<void> _deleteDashboard() async {
+    HapticFeedback.heavyImpact();
+    ConfirmationBottomSheet.show(
+      context,
+      title: 'Delete Dashboard?',
+      description:
+          'This will permanently remove the summary dashboard configuration from this tracker. Proceed?',
+      confirmText: 'DELETE',
+      isDestructive: true,
+      onConfirm: () async {
+        await ref
+            .read(smartTrackerActionProvider.notifier)
+            .saveSummaryLayout(widget.template.id, '');
+        if (mounted) Navigator.pop(context);
+      },
+    );
   }
 
   Widget _buildMetricTile(
@@ -222,10 +242,13 @@ class _SummaryCardBuilderPageState
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: const ModernAppBar(
+      appBar: ModernAppBar(
         title: 'Card Builder',
         subtitle: 'SUMMARY DASHBOARD',
         leadingIcon: Icons.arrow_back_rounded,
+        trailingIcon: Icons.delete_outline_rounded, // <-- NEW: Delete Icon
+        extraIconColor: theme.colorScheme.error,
+        onTrailingPressed: _deleteDashboard, // <-- NEW: Delete Action
       ),
       body: Column(
         children: [
@@ -364,7 +387,6 @@ class _SummaryCardBuilderPageState
             ),
           ),
 
-          // --- FIXED FULL WIDTH ACTION BUTTON ---
           // --- ROUNDED FULL WIDTH ACTION BUTTON ---
           Container(
             padding: EdgeInsets.only(
@@ -427,8 +449,10 @@ class _VisualFormulaEditorSheet extends ConsumerStatefulWidget {
 
 class _VisualFormulaEditorSheetState
     extends ConsumerState<_VisualFormulaEditorSheet> {
+  final _formKey = GlobalKey<FormState>(); // <-- NEW: Form Validation Key
   final _labelCtrl = TextEditingController();
   List<String> _tokens = [];
+  bool _hasFormulaError = false; // <-- NEW: Tracks if formula is empty
 
   String _format = 'number';
   String _colorHex = '#2EC4B6';
@@ -445,6 +469,7 @@ class _VisualFormulaEditorSheetState
     '#7209B7',
     '#F72585',
     '#2ECC71',
+    '#FFFFFF',
   ];
 
   final List<String> _symbols = ['₹', '\$', '€', '£', '¥', 'د.إ'];
@@ -473,19 +498,28 @@ class _VisualFormulaEditorSheetState
 
   void _appendToken(String token) {
     HapticFeedback.lightImpact();
-    setState(() => _tokens.add(token));
+    setState(() {
+      _tokens.add(token);
+      if (_tokens.isNotEmpty) _hasFormulaError = false; // Clear error on edit
+    });
   }
 
   void _backspace() {
     if (_tokens.isEmpty) return;
     HapticFeedback.lightImpact();
-    setState(() => _tokens.removeLast());
+    setState(() {
+      _tokens.removeLast();
+      if (_tokens.isEmpty) _hasFormulaError = true;
+    });
   }
 
   void _clearAll() {
     if (_tokens.isEmpty) return;
     HapticFeedback.mediumImpact();
-    setState(() => _tokens.clear());
+    setState(() {
+      _tokens.clear();
+      _hasFormulaError = true;
+    });
   }
 
   String get _currentFormula => _tokens.join('');
@@ -681,325 +715,26 @@ class _VisualFormulaEditorSheetState
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildLivePreview(records, theme),
-                  const SizedBox(height: 24),
+              child: Form(
+                // <-- NEW: Wrapped in Form
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLivePreview(records, theme),
+                    const SizedBox(height: 24),
 
-                  ModernBoxyInput(
-                    controller: _labelCtrl,
-                    labelText: 'Metric Label (e.g. TOTAL RETURN)',
-                  ),
-                  const SizedBox(height: 16),
-
-                  Text(
-                    'FORMULA / VALUE',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: theme.colorScheme.primary,
-                      letterSpacing: 1.5,
+                    ModernBoxyInput(
+                      controller: _labelCtrl,
+                      labelText: 'Metric Label (e.g. TOTAL RETURN)',
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Label is required'
+                          : null, // <-- NEW: Added Validator
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    constraints: const BoxConstraints(minHeight: 60),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest
-                          .withOpacity(isDark ? 0.3 : 0.5),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: theme.dividerColor),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _currentFormula.isEmpty
-                                ? 'Tap items below to build...'
-                                : _currentFormula,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              fontFamily: 'monospace',
-                              color: _currentFormula.isEmpty
-                                  ? theme.colorScheme.onSurfaceVariant
-                                        .withOpacity(0.5)
-                                  : theme.colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        if (_tokens.isNotEmpty) ...[
-                          IconButton(
-                            icon: const Icon(Icons.backspace_rounded, size: 20),
-                            color: theme.colorScheme.error,
-                            onPressed: _backspace,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 20),
-                            color: theme.colorScheme.onSurfaceVariant,
-                            onPressed: _clearAll,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  ModernBoxyToggle(
-                    labels: const ['Data Fields', 'Functions', 'Numpad'],
-                    selectedIndex: _toolboxIndex,
-                    onSelected: (i) => setState(() => _toolboxIndex = i),
-                  ),
-                  const SizedBox(height: 16),
-
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: Container(
-                      key: ValueKey(_toolboxIndex),
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: theme.dividerColor),
-                      ),
-                      child: _toolboxIndex == 0
-                          ? (allFields.isEmpty
-                                ? Text(
-                                    'No fields available.',
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  )
-                                : Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: allFields
-                                        .map(
-                                          (f) => _buildTokenChip(
-                                            f.name,
-                                            '[${f.name}]',
-                                            theme.colorScheme.primary
-                                                .withOpacity(0.1),
-                                            theme.colorScheme.primary,
-                                          ),
-                                        )
-                                        .toList(),
-                                  ))
-                          : _toolboxIndex == 1
-                          ? Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                _buildTokenChip(
-                                  'SUM(',
-                                  'SUM(',
-                                  Colors.blue.withOpacity(0.1),
-                                  Colors.blue,
-                                ),
-                                _buildTokenChip(
-                                  'AVG(',
-                                  'AVG(',
-                                  Colors.blue.withOpacity(0.1),
-                                  Colors.blue,
-                                ),
-                                _buildTokenChip(
-                                  'MAX(',
-                                  'MAX(',
-                                  Colors.blue.withOpacity(0.1),
-                                  Colors.blue,
-                                ),
-                                _buildTokenChip(
-                                  'MIN(',
-                                  'MIN(',
-                                  Colors.blue.withOpacity(0.1),
-                                  Colors.blue,
-                                ),
-                                _buildTokenChip(
-                                  'COUNT(',
-                                  'COUNT(',
-                                  Colors.purple.withOpacity(0.1),
-                                  Colors.purple,
-                                ),
-                                _buildTokenChip(
-                                  'FIRST (Oldest)',
-                                  'FIRST(',
-                                  Colors.green.withOpacity(0.1),
-                                  Colors.green,
-                                ),
-                                _buildTokenChip(
-                                  'LAST (Newest)',
-                                  'LAST(',
-                                  Colors.green.withOpacity(0.1),
-                                  Colors.green,
-                                ),
-                                _buildTokenChip(
-                                  'CELL(Idx, Field)',
-                                  'CELL(',
-                                  Colors.orange.withOpacity(0.1),
-                                  Colors.orange.shade700,
-                                ),
-                                _buildTokenChip(
-                                  'Close Bracket ")"',
-                                  ')',
-                                  theme.colorScheme.onSurface.withOpacity(0.1),
-                                  theme.colorScheme.onSurface,
-                                ),
-                                _buildTokenChip(
-                                  'Comma ","',
-                                  ', ',
-                                  theme.colorScheme.onSurface.withOpacity(0.1),
-                                  theme.colorScheme.onSurface,
-                                ),
-                              ],
-                            )
-                          : Column(
-                              children: [
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    _buildTokenChip(
-                                      ' + ',
-                                      ' + ',
-                                      theme.colorScheme.surfaceContainerHighest,
-                                      theme.colorScheme.onSurface,
-                                    ),
-                                    _buildTokenChip(
-                                      ' - ',
-                                      ' - ',
-                                      theme.colorScheme.surfaceContainerHighest,
-                                      theme.colorScheme.onSurface,
-                                    ),
-                                    _buildTokenChip(
-                                      ' × ',
-                                      ' * ',
-                                      theme.colorScheme.surfaceContainerHighest,
-                                      theme.colorScheme.onSurface,
-                                    ),
-                                    _buildTokenChip(
-                                      ' ÷ ',
-                                      ' / ',
-                                      theme.colorScheme.surfaceContainerHighest,
-                                      theme.colorScheme.onSurface,
-                                    ),
-                                    _buildTokenChip(
-                                      ' ( ',
-                                      '(',
-                                      theme.colorScheme.surfaceContainerHighest,
-                                      theme.colorScheme.onSurface,
-                                    ),
-                                    _buildTokenChip(
-                                      ' ) ',
-                                      ')',
-                                      theme.colorScheme.surfaceContainerHighest,
-                                      theme.colorScheme.onSurface,
-                                    ),
-                                  ],
-                                ),
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12),
-                                  child: Divider(height: 1),
-                                ),
-                                Wrap(
-                                  spacing: 12,
-                                  runSpacing: 12,
-                                  alignment: WrapAlignment.center,
-                                  children:
-                                      [
-                                        '1',
-                                        '2',
-                                        '3',
-                                        '4',
-                                        '5',
-                                        '6',
-                                        '7',
-                                        '8',
-                                        '9',
-                                        '0',
-                                        '.',
-                                        '100',
-                                      ].map((num) {
-                                        return InkWell(
-                                          onTap: () => _appendToken(num),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          child: Container(
-                                            width: 50,
-                                            height: 50,
-                                            alignment: Alignment.center,
-                                            decoration: BoxDecoration(
-                                              color: theme
-                                                  .colorScheme
-                                                  .surfaceContainerHighest
-                                                  .withOpacity(0.3),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: theme.dividerColor,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              num,
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w900,
-                                                color:
-                                                    theme.colorScheme.onSurface,
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Text(
-                    'APPEARANCE',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: theme.colorScheme.primary,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ModernBoxyToggle(
-                    labels: const ['Number', 'Currency', 'Percent %', 'Text'],
-                    selectedIndex: [
-                      'number',
-                      'currency',
-                      'percentage',
-                      'text',
-                    ].indexOf(_format),
-                    onSelected: (i) {
-                      setState(() {
-                        _format = [
-                          'number',
-                          'currency',
-                          'percentage',
-                          'text',
-                        ][i];
-                      });
-                    },
-                  ),
-
-                  if (_format == 'currency') ...[
                     const SizedBox(height: 16),
+
                     Text(
-                      'CURRENCY SYMBOL',
+                      'FORMULA / VALUE',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
@@ -1008,92 +743,441 @@ class _VisualFormulaEditorSheetState
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 12,
-                      children: _symbols.map((sym) {
-                        final isSelected = _currencySymbol == sym;
-                        return GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() => _currencySymbol = sym);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: 40,
-                            height: 40,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isSelected
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.surfaceContainerHighest
-                                        .withOpacity(0.3),
-                              border: Border.all(
-                                color: isSelected
-                                    ? theme.colorScheme.primary
-                                    : theme.dividerColor,
-                              ),
-                            ),
+                    Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(minHeight: 60),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withOpacity(isDark ? 0.3 : 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          // Show red border if there's a formula error
+                          color: _hasFormulaError
+                              ? theme.colorScheme.error
+                              : theme.dividerColor,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
                             child: Text(
-                              sym,
+                              _currentFormula.isEmpty
+                                  ? 'Tap items below to build...'
+                                  : _currentFormula,
                               style: TextStyle(
                                 fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: isSelected
-                                    ? theme.colorScheme.onPrimary
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'monospace',
+                                color: _currentFormula.isEmpty
+                                    ? theme.colorScheme.onSurfaceVariant
+                                          .withOpacity(0.5)
                                     : theme.colorScheme.onSurface,
                               ),
                             ),
                           ),
-                        );
-                      }).toList(),
+                          if (_tokens.isNotEmpty) ...[
+                            IconButton(
+                              icon: const Icon(
+                                Icons.backspace_rounded,
+                                size: 20,
+                              ),
+                              color: theme.colorScheme.error,
+                              onPressed: _backspace,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 20),
+                              color: theme.colorScheme.onSurfaceVariant,
+                              onPressed: _clearAll,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ],
+                    // --- NEW: Dynamic Error text for Formula ---
+                    if (_hasFormulaError)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                        child: Text(
+                          'A formula or value is required.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 24),
 
-                  const SizedBox(height: 16),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    child: Row(
-                      children: _colors.map((hex) {
-                        final isSelected = _colorHex == hex;
-                        final color = Color(
-                          int.parse(hex.replaceAll('#', '0xFF')),
-                        );
-                        return GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() => _colorHex = hex);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.only(right: 12),
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected ? color : Colors.transparent,
-                                width: 2,
+                    ModernBoxyToggle(
+                      labels: const ['Data Fields', 'Functions', 'Numpad'],
+                      selectedIndex: _toolboxIndex,
+                      onSelected: (i) => setState(() => _toolboxIndex = i),
+                    ),
+                    const SizedBox(height: 16),
+
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: Container(
+                        key: ValueKey(_toolboxIndex),
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: theme.dividerColor),
+                        ),
+                        child: _toolboxIndex == 0
+                            ? (allFields.isEmpty
+                                  ? Text(
+                                      'No fields available.',
+                                      style: TextStyle(
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    )
+                                  : Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: allFields
+                                          .map(
+                                            (f) => _buildTokenChip(
+                                              f.name,
+                                              '[${f.name}]',
+                                              theme.colorScheme.primary
+                                                  .withOpacity(0.1),
+                                              theme.colorScheme.primary,
+                                            ),
+                                          )
+                                          .toList(),
+                                    ))
+                            : _toolboxIndex == 1
+                            ? Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  _buildTokenChip(
+                                    'SUM(',
+                                    'SUM(',
+                                    Colors.blue.withOpacity(0.1),
+                                    Colors.blue,
+                                  ),
+                                  _buildTokenChip(
+                                    'AVG(',
+                                    'AVG(',
+                                    Colors.blue.withOpacity(0.1),
+                                    Colors.blue,
+                                  ),
+                                  _buildTokenChip(
+                                    'MAX(',
+                                    'MAX(',
+                                    Colors.blue.withOpacity(0.1),
+                                    Colors.blue,
+                                  ),
+                                  _buildTokenChip(
+                                    'MIN(',
+                                    'MIN(',
+                                    Colors.blue.withOpacity(0.1),
+                                    Colors.blue,
+                                  ),
+                                  _buildTokenChip(
+                                    'COUNT(',
+                                    'COUNT(',
+                                    Colors.purple.withOpacity(0.1),
+                                    Colors.purple,
+                                  ),
+                                  _buildTokenChip(
+                                    'FIRST (Oldest)',
+                                    'FIRST(',
+                                    Colors.green.withOpacity(0.1),
+                                    Colors.green,
+                                  ),
+                                  _buildTokenChip(
+                                    'LAST (Newest)',
+                                    'LAST(',
+                                    Colors.green.withOpacity(0.1),
+                                    Colors.green,
+                                  ),
+                                  _buildTokenChip(
+                                    'CELL(Idx, Field)',
+                                    'CELL(',
+                                    Colors.orange.withOpacity(0.1),
+                                    Colors.orange.shade700,
+                                  ),
+                                  _buildTokenChip(
+                                    'Close Bracket ")"',
+                                    ')',
+                                    theme.colorScheme.onSurface.withOpacity(
+                                      0.1,
+                                    ),
+                                    theme.colorScheme.onSurface,
+                                  ),
+                                  _buildTokenChip(
+                                    'Comma ","',
+                                    ', ',
+                                    theme.colorScheme.onSurface.withOpacity(
+                                      0.1,
+                                    ),
+                                    theme.colorScheme.onSurface,
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                children: [
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      _buildTokenChip(
+                                        ' + ',
+                                        ' + ',
+                                        theme
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                        theme.colorScheme.onSurface,
+                                      ),
+                                      _buildTokenChip(
+                                        ' - ',
+                                        ' - ',
+                                        theme
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                        theme.colorScheme.onSurface,
+                                      ),
+                                      _buildTokenChip(
+                                        ' × ',
+                                        ' * ',
+                                        theme
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                        theme.colorScheme.onSurface,
+                                      ),
+                                      _buildTokenChip(
+                                        ' ÷ ',
+                                        ' / ',
+                                        theme
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                        theme.colorScheme.onSurface,
+                                      ),
+                                      _buildTokenChip(
+                                        ' ( ',
+                                        '(',
+                                        theme
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                        theme.colorScheme.onSurface,
+                                      ),
+                                      _buildTokenChip(
+                                        ' ) ',
+                                        ')',
+                                        theme
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                        theme.colorScheme.onSurface,
+                                      ),
+                                    ],
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 12),
+                                    child: Divider(height: 1),
+                                  ),
+                                  Wrap(
+                                    spacing: 12,
+                                    runSpacing: 12,
+                                    alignment: WrapAlignment.center,
+                                    children:
+                                        [
+                                          '1',
+                                          '2',
+                                          '3',
+                                          '4',
+                                          '5',
+                                          '6',
+                                          '7',
+                                          '8',
+                                          '9',
+                                          '0',
+                                          '.',
+                                          '100',
+                                        ].map((num) {
+                                          return InkWell(
+                                            onTap: () => _appendToken(num),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            child: Container(
+                                              width: 50,
+                                              height: 50,
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                color: theme
+                                                    .colorScheme
+                                                    .surfaceContainerHighest
+                                                    .withOpacity(0.3),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: theme.dividerColor,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                num,
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurface,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    Text(
+                      'APPEARANCE',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.primary,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ModernBoxyToggle(
+                      labels: const ['Number', 'Currency', 'Percent %', 'Text'],
+                      selectedIndex: [
+                        'number',
+                        'currency',
+                        'percentage',
+                        'text',
+                      ].indexOf(_format),
+                      onSelected: (i) {
+                        setState(() {
+                          _format = [
+                            'number',
+                            'currency',
+                            'percentage',
+                            'text',
+                          ][i];
+                        });
+                      },
+                    ),
+
+                    if (_format == 'currency') ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'CURRENCY SYMBOL',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.primary,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 12,
+                        children: _symbols.map((sym) {
+                          final isSelected = _currencySymbol == sym;
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() => _currencySymbol = sym);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 40,
+                              height: 40,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isSelected
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.surfaceContainerHighest
+                                          .withOpacity(0.3),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? theme.colorScheme.primary
+                                      : theme.dividerColor,
+                                ),
+                              ),
+                              child: Text(
+                                sym,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: isSelected
+                                      ? theme.colorScheme.onPrimary
+                                      : theme.colorScheme.onSurface,
+                                ),
                               ),
                             ),
-                            child: CircleAvatar(
-                              backgroundColor: color,
-                              radius: 18,
-                              child: isSelected
-                                  ? const Icon(
-                                      Icons.check,
-                                      size: 18,
-                                      color: Colors.white,
-                                    )
-                                  : null,
+                          );
+                        }).toList(),
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        children: _colors.map((hex) {
+                          final isSelected = _colorHex == hex;
+                          final color = Color(
+                            int.parse(hex.replaceAll('#', '0xFF')),
+                          );
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() => _colorHex = hex);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              margin: const EdgeInsets.only(right: 12),
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? color
+                                      : Colors.transparent,
+                                  width: 2,
+                                ),
+                              ),
+                              child: CircleAvatar(
+                                backgroundColor: color,
+                                radius: 18,
+                                child: isSelected
+                                    ? Icon(
+                                        Icons.check,
+                                        size: 18,
+                                        color: hex == '#FFFFFF'
+                                            ? Colors.black
+                                            : Colors.white,
+                                      )
+                                    : null,
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1127,10 +1211,20 @@ class _VisualFormulaEditorSheetState
                   flex: 2,
                   child: ModernBoxyButton(
                     onPressed: () {
-                      if (_labelCtrl.text.isEmpty || _tokens.isEmpty) {
+                      // --- NEW: FORM & FORMULA VALIDATION EXECUTION ---
+                      final isFormValid =
+                          _formKey.currentState?.validate() ?? true;
+                      final hasTokens = _tokens.isNotEmpty;
+
+                      setState(() {
+                        _hasFormulaError = !hasTokens;
+                      });
+
+                      if (!isFormValid || !hasTokens) {
                         HapticFeedback.heavyImpact();
                         return;
                       }
+
                       HapticFeedback.selectionClick();
                       widget.onSave(
                         SmartSummaryMetric(
