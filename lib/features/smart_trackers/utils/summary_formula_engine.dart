@@ -10,8 +10,11 @@ class SummaryFormulaEngine {
   );
   static final RegExp _edgeRegex = RegExp(r'(FIRST|LAST)\(\[([^\]]+)\]\)');
   static final RegExp _cellRegex = RegExp(r'CELL\((\d+),\s*\[([^\]]+)\]\)');
+  // --- NEW: Regex for NTH Latest and NTH Oldest ---
+  static final RegExp _nthRegex = RegExp(
+    r'(NTH_LATEST|NTH_OLDEST)\((\d+),\s*\[([^\]]+)\]\)',
+  );
 
-  // Helper to nicely format raw text, dates, toggles, and lists
   static String _formatFieldValue(TrackerField field, dynamic rawValue) {
     if (rawValue == null || rawValue.toString().isEmpty) return '-';
 
@@ -38,7 +41,7 @@ class SummaryFormulaEngine {
 
   static String evaluate(
     String formula,
-    String formatAs, // <-- NEW: Engine now knows the target format
+    String formatAs,
     List<SmartTrackerRecord> records,
     List<TrackerField> fields,
   ) {
@@ -46,7 +49,30 @@ class SummaryFormulaEngine {
       if (formula.trim().isEmpty || records.isEmpty) return '-';
       String expr = formula;
 
-      // 1. Resolve Specific CELL(rowIndex, [Field])
+      // 1. Resolve NTH_LATEST and NTH_OLDEST
+      final nthMatches = _nthRegex.allMatches(expr).toList();
+      for (var match in nthMatches) {
+        final fullMatch = match.group(0)!;
+        final operation = match.group(1)!;
+        final nIndex = int.parse(match.group(2)!);
+        final fieldName = match.group(3)!;
+
+        final field = fields.where((f) => f.name == fieldName).firstOrNull;
+        if (field == null || nIndex < 1 || nIndex > records.length) {
+          expr = expr.replaceAll(fullMatch, '-');
+          continue;
+        }
+
+        // Database records are ordered newest first (index 0 = newest)
+        final targetRecord = operation == 'NTH_LATEST'
+            ? records[nIndex - 1]
+            : records[records.length - nIndex];
+
+        final rawVal = jsonDecode(targetRecord.dataJson)[field.id];
+        expr = expr.replaceAll(fullMatch, _formatFieldValue(field, rawVal));
+      }
+
+      // 2. Resolve Specific CELL(rowIndex, [Field]) (Legacy/Chronological)
       final cellMatches = _cellRegex.allMatches(expr).toList();
       for (var match in cellMatches) {
         final fullMatch = match.group(0)!;
@@ -63,7 +89,7 @@ class SummaryFormulaEngine {
         expr = expr.replaceAll(fullMatch, _formatFieldValue(field, rawVal));
       }
 
-      // 2. Resolve FIRST() and LAST()
+      // 3. Resolve FIRST() and LAST()
       final edgeMatches = _edgeRegex.allMatches(expr).toList();
       for (var match in edgeMatches) {
         final fullMatch = match.group(0)!;
@@ -83,7 +109,7 @@ class SummaryFormulaEngine {
         expr = expr.replaceAll(fullMatch, _formatFieldValue(field, rawVal));
       }
 
-      // 3. Resolve Column Aggregates (SUM, AVG, etc. remain numeric)
+      // 4. Resolve Column Aggregates (SUM, AVG, COUNT, etc.)
       final aggMatches = _aggRegex.allMatches(expr).toList();
       for (var match in aggMatches) {
         final fullMatch = match.group(0)!;
@@ -100,16 +126,14 @@ class SummaryFormulaEngine {
             minVal = double.infinity,
             maxVal = double.negativeInfinity;
         int numericCount = 0;
-        int textCount =
-            0; // NEW: Tracks all filled cells, regardless of data type
+        int textCount = 0;
 
         for (var record in records) {
           final rawVal =
               jsonDecode(record.dataJson)[field.id]?.toString() ?? '';
 
           if (rawVal.trim().isNotEmpty) {
-            textCount++; // Count every cell that isn't completely empty
-
+            textCount++;
             final val = double.tryParse(rawVal);
             if (val != null) {
               sum += val;
@@ -122,10 +146,8 @@ class SummaryFormulaEngine {
 
         double res = 0.0;
         if (operation == 'COUNT') {
-          // COUNT applies to anything (Text, Dates, Numbers)
           res = textCount.toDouble();
         } else if (numericCount > 0) {
-          // SUM, AVG, MAX, MIN strictly require numeric values
           if (operation == 'SUM') res = sum;
           if (operation == 'AVG') res = sum / numericCount;
           if (operation == 'MAX') res = maxVal;
@@ -134,14 +156,11 @@ class SummaryFormulaEngine {
         expr = expr.replaceAll(fullMatch, res.toString());
       }
 
-      // --- THE FIX ---
-      // If the user set the format to "text", BYPASS the Bodmas calculator entirely
-      // and return the exact string we just extracted!
       if (formatAs == 'text') {
         return expr;
       }
 
-      // 4. Otherwise, evaluate Mathematical Expression for numbers
+      // 5. Evaluate Mathematical Expression
       String rawResult = BodmasCalculator.evaluate(expr);
       double finalResult = double.tryParse(rawResult) ?? 0.0;
       return finalResult.toStringAsFixed(2);

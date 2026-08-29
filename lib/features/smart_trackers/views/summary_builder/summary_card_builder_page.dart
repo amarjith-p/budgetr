@@ -11,7 +11,7 @@ import '../../../../core/components/modern_boxy_button.dart';
 import '../../../../core/components/modern_boxy_input.dart';
 import '../../../../core/components/modern_boxy_toggle.dart';
 import '../../../../core/components/currency_text.dart';
-import '../../../../core/components/confirmation_bottom_sheet.dart'; // <-- IMPORTED
+import '../../../../core/components/confirmation_bottom_sheet.dart';
 import '../../../../core/theme/design_tokens.dart';
 
 import '../../models/summary_card_model.dart';
@@ -107,7 +107,6 @@ class _SummaryCardBuilderPageState
     if (mounted) Navigator.pop(context);
   }
 
-  // --- NEW: DELETE DASHBOARD ---
   Future<void> _deleteDashboard() async {
     HapticFeedback.heavyImpact();
     ConfirmationBottomSheet.show(
@@ -246,9 +245,9 @@ class _SummaryCardBuilderPageState
         title: 'Card Builder',
         subtitle: 'SUMMARY DASHBOARD',
         leadingIcon: Icons.arrow_back_rounded,
-        trailingIcon: Icons.delete_outline_rounded, // <-- NEW: Delete Icon
+        trailingIcon: Icons.delete_outline_rounded,
         extraIconColor: theme.colorScheme.error,
-        onTrailingPressed: _deleteDashboard, // <-- NEW: Delete Action
+        onTrailingPressed: _deleteDashboard,
       ),
       body: Column(
         children: [
@@ -449,10 +448,10 @@ class _VisualFormulaEditorSheet extends ConsumerStatefulWidget {
 
 class _VisualFormulaEditorSheetState
     extends ConsumerState<_VisualFormulaEditorSheet> {
-  final _formKey = GlobalKey<FormState>(); // <-- NEW: Form Validation Key
+  final _formKey = GlobalKey<FormState>();
   final _labelCtrl = TextEditingController();
   List<String> _tokens = [];
-  bool _hasFormulaError = false; // <-- NEW: Tracks if formula is empty
+  bool _hasFormulaError = false;
 
   String _format = 'number';
   String _colorHex = '#2EC4B6';
@@ -472,7 +471,7 @@ class _VisualFormulaEditorSheetState
     '#FFFFFF',
   ];
 
-  final List<String> _symbols = ['₹', '\$', '€', '£', '¥', 'د.إ'];
+  final List<String> _symbols = ['₹', '\$', '€', '£', '¥'];
 
   @override
   void initState() {
@@ -500,7 +499,7 @@ class _VisualFormulaEditorSheetState
     HapticFeedback.lightImpact();
     setState(() {
       _tokens.add(token);
-      if (_tokens.isNotEmpty) _hasFormulaError = false; // Clear error on edit
+      if (_tokens.isNotEmpty) _hasFormulaError = false;
     });
   }
 
@@ -716,7 +715,6 @@ class _VisualFormulaEditorSheetState
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Form(
-                // <-- NEW: Wrapped in Form
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -729,7 +727,7 @@ class _VisualFormulaEditorSheetState
                       labelText: 'Metric Label (e.g. TOTAL RETURN)',
                       validator: (v) => v == null || v.trim().isEmpty
                           ? 'Label is required'
-                          : null, // <-- NEW: Added Validator
+                          : null,
                     ),
                     const SizedBox(height: 16),
 
@@ -752,7 +750,6 @@ class _VisualFormulaEditorSheetState
                             .withOpacity(isDark ? 0.3 : 0.5),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          // Show red border if there's a formula error
                           color: _hasFormulaError
                               ? theme.colorScheme.error
                               : theme.dividerColor,
@@ -797,7 +794,6 @@ class _VisualFormulaEditorSheetState
                         ],
                       ),
                     ),
-                    // --- NEW: Dynamic Error text for Formula ---
                     if (_hasFormulaError)
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0, left: 4.0),
@@ -901,12 +897,20 @@ class _VisualFormulaEditorSheetState
                                     Colors.green.withOpacity(0.1),
                                     Colors.green,
                                   ),
+                                  // --- NEW CHIPS IMPLEMENTED HERE ---
                                   _buildTokenChip(
-                                    'CELL(Idx, Field)',
-                                    'CELL(',
+                                    'NTH LATEST(Idx)',
+                                    'NTH_LATEST(2, ',
                                     Colors.orange.withOpacity(0.1),
                                     Colors.orange.shade700,
                                   ),
+                                  _buildTokenChip(
+                                    'NTH OLDEST(Idx)',
+                                    'NTH_OLDEST(2, ',
+                                    Colors.orange.withOpacity(0.1),
+                                    Colors.orange.shade700,
+                                  ),
+                                  // ----------------------------------
                                   _buildTokenChip(
                                     'Close Bracket ")"',
                                     ')',
@@ -1211,7 +1215,6 @@ class _VisualFormulaEditorSheetState
                   flex: 2,
                   child: ModernBoxyButton(
                     onPressed: () {
-                      // --- NEW: FORM & FORMULA VALIDATION EXECUTION ---
                       final isFormValid =
                           _formKey.currentState?.validate() ?? true;
                       final hasTokens = _tokens.isNotEmpty;
