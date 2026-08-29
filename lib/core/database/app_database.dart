@@ -37,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMPED TO VERSION 25 ---
   @override
-  int get schemaVersion => 38;
+  int get schemaVersion => 39;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -138,6 +138,13 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 38) {
         await m.createTable(netWorthRecords); // <-- 3. ADD THIS MIGRATION
+      }
+      if (from < 39) {
+        // --- NEW MIGRATION FOR EXCEL SUMMARY WIDGET ---
+        await m.addColumn(
+          smartTrackerTemplates,
+          smartTrackerTemplates.summaryWidgetJson,
+        );
       }
     },
   );

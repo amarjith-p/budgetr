@@ -191,8 +191,9 @@ class InvestmentLogs extends Table {
 class SmartTrackerTemplates extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
-  // We store the dynamic form fields as a JSON string
   TextColumn get schemaJson => text()();
+  // --- NEW: Stores the custom dashboard layout ---
+  TextColumn get summaryWidgetJson => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 
   @override

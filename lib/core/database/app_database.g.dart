@@ -7036,6 +7036,18 @@ class $SmartTrackerTemplatesTable extends SmartTrackerTemplates
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _summaryWidgetJsonMeta = const VerificationMeta(
+    'summaryWidgetJson',
+  );
+  @override
+  late final GeneratedColumn<String> summaryWidgetJson =
+      GeneratedColumn<String>(
+        'summary_widget_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -7048,7 +7060,13 @@ class $SmartTrackerTemplatesTable extends SmartTrackerTemplates
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, schemaJson, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    schemaJson,
+    summaryWidgetJson,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -7082,6 +7100,15 @@ class $SmartTrackerTemplatesTable extends SmartTrackerTemplates
     } else if (isInserting) {
       context.missing(_schemaJsonMeta);
     }
+    if (data.containsKey('summary_widget_json')) {
+      context.handle(
+        _summaryWidgetJsonMeta,
+        summaryWidgetJson.isAcceptableOrUnknown(
+          data['summary_widget_json']!,
+          _summaryWidgetJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -7111,6 +7138,10 @@ class $SmartTrackerTemplatesTable extends SmartTrackerTemplates
         DriftSqlType.string,
         data['${effectivePrefix}schema_json'],
       )!,
+      summaryWidgetJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}summary_widget_json'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -7129,11 +7160,13 @@ class SmartTrackerTemplate extends DataClass
   final String id;
   final String name;
   final String schemaJson;
+  final String? summaryWidgetJson;
   final DateTime createdAt;
   const SmartTrackerTemplate({
     required this.id,
     required this.name,
     required this.schemaJson,
+    this.summaryWidgetJson,
     required this.createdAt,
   });
   @override
@@ -7142,6 +7175,9 @@ class SmartTrackerTemplate extends DataClass
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['schema_json'] = Variable<String>(schemaJson);
+    if (!nullToAbsent || summaryWidgetJson != null) {
+      map['summary_widget_json'] = Variable<String>(summaryWidgetJson);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -7151,6 +7187,9 @@ class SmartTrackerTemplate extends DataClass
       id: Value(id),
       name: Value(name),
       schemaJson: Value(schemaJson),
+      summaryWidgetJson: summaryWidgetJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(summaryWidgetJson),
       createdAt: Value(createdAt),
     );
   }
@@ -7164,6 +7203,9 @@ class SmartTrackerTemplate extends DataClass
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       schemaJson: serializer.fromJson<String>(json['schemaJson']),
+      summaryWidgetJson: serializer.fromJson<String?>(
+        json['summaryWidgetJson'],
+      ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -7174,6 +7216,7 @@ class SmartTrackerTemplate extends DataClass
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'schemaJson': serializer.toJson<String>(schemaJson),
+      'summaryWidgetJson': serializer.toJson<String?>(summaryWidgetJson),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -7182,11 +7225,15 @@ class SmartTrackerTemplate extends DataClass
     String? id,
     String? name,
     String? schemaJson,
+    Value<String?> summaryWidgetJson = const Value.absent(),
     DateTime? createdAt,
   }) => SmartTrackerTemplate(
     id: id ?? this.id,
     name: name ?? this.name,
     schemaJson: schemaJson ?? this.schemaJson,
+    summaryWidgetJson: summaryWidgetJson.present
+        ? summaryWidgetJson.value
+        : this.summaryWidgetJson,
     createdAt: createdAt ?? this.createdAt,
   );
   SmartTrackerTemplate copyWithCompanion(SmartTrackerTemplatesCompanion data) {
@@ -7196,6 +7243,9 @@ class SmartTrackerTemplate extends DataClass
       schemaJson: data.schemaJson.present
           ? data.schemaJson.value
           : this.schemaJson,
+      summaryWidgetJson: data.summaryWidgetJson.present
+          ? data.summaryWidgetJson.value
+          : this.summaryWidgetJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -7206,13 +7256,15 @@ class SmartTrackerTemplate extends DataClass
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('schemaJson: $schemaJson, ')
+          ..write('summaryWidgetJson: $summaryWidgetJson, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, schemaJson, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, schemaJson, summaryWidgetJson, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -7220,6 +7272,7 @@ class SmartTrackerTemplate extends DataClass
           other.id == this.id &&
           other.name == this.name &&
           other.schemaJson == this.schemaJson &&
+          other.summaryWidgetJson == this.summaryWidgetJson &&
           other.createdAt == this.createdAt);
 }
 
@@ -7228,12 +7281,14 @@ class SmartTrackerTemplatesCompanion
   final Value<String> id;
   final Value<String> name;
   final Value<String> schemaJson;
+  final Value<String?> summaryWidgetJson;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const SmartTrackerTemplatesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.schemaJson = const Value.absent(),
+    this.summaryWidgetJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -7241,6 +7296,7 @@ class SmartTrackerTemplatesCompanion
     required String id,
     required String name,
     required String schemaJson,
+    this.summaryWidgetJson = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -7251,6 +7307,7 @@ class SmartTrackerTemplatesCompanion
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? schemaJson,
+    Expression<String>? summaryWidgetJson,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -7258,6 +7315,7 @@ class SmartTrackerTemplatesCompanion
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (schemaJson != null) 'schema_json': schemaJson,
+      if (summaryWidgetJson != null) 'summary_widget_json': summaryWidgetJson,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -7267,6 +7325,7 @@ class SmartTrackerTemplatesCompanion
     Value<String>? id,
     Value<String>? name,
     Value<String>? schemaJson,
+    Value<String?>? summaryWidgetJson,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -7274,6 +7333,7 @@ class SmartTrackerTemplatesCompanion
       id: id ?? this.id,
       name: name ?? this.name,
       schemaJson: schemaJson ?? this.schemaJson,
+      summaryWidgetJson: summaryWidgetJson ?? this.summaryWidgetJson,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -7291,6 +7351,9 @@ class SmartTrackerTemplatesCompanion
     if (schemaJson.present) {
       map['schema_json'] = Variable<String>(schemaJson.value);
     }
+    if (summaryWidgetJson.present) {
+      map['summary_widget_json'] = Variable<String>(summaryWidgetJson.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -7306,6 +7369,7 @@ class SmartTrackerTemplatesCompanion
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('schemaJson: $schemaJson, ')
+          ..write('summaryWidgetJson: $summaryWidgetJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -17655,6 +17719,7 @@ typedef $$SmartTrackerTemplatesTableCreateCompanionBuilder =
       required String id,
       required String name,
       required String schemaJson,
+      Value<String?> summaryWidgetJson,
       required DateTime createdAt,
       Value<int> rowid,
     });
@@ -17663,6 +17728,7 @@ typedef $$SmartTrackerTemplatesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String> schemaJson,
+      Value<String?> summaryWidgetJson,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -17688,6 +17754,11 @@ class $$SmartTrackerTemplatesTableFilterComposer
 
   ColumnFilters<String> get schemaJson => $composableBuilder(
     column: $table.schemaJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summaryWidgetJson => $composableBuilder(
+    column: $table.summaryWidgetJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17721,6 +17792,11 @@ class $$SmartTrackerTemplatesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get summaryWidgetJson => $composableBuilder(
+    column: $table.summaryWidgetJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -17744,6 +17820,11 @@ class $$SmartTrackerTemplatesTableAnnotationComposer
 
   GeneratedColumn<String> get schemaJson => $composableBuilder(
     column: $table.schemaJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get summaryWidgetJson => $composableBuilder(
+    column: $table.summaryWidgetJson,
     builder: (column) => column,
   );
 
@@ -17800,12 +17881,14 @@ class $$SmartTrackerTemplatesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> schemaJson = const Value.absent(),
+                Value<String?> summaryWidgetJson = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SmartTrackerTemplatesCompanion(
                 id: id,
                 name: name,
                 schemaJson: schemaJson,
+                summaryWidgetJson: summaryWidgetJson,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -17814,12 +17897,14 @@ class $$SmartTrackerTemplatesTableTableManager
                 required String id,
                 required String name,
                 required String schemaJson,
+                Value<String?> summaryWidgetJson = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => SmartTrackerTemplatesCompanion.insert(
                 id: id,
                 name: name,
                 schemaJson: schemaJson,
+                summaryWidgetJson: summaryWidgetJson,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

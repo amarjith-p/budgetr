@@ -1,4 +1,5 @@
 // lib/features/smart_trackers/views/smart_tracker_detail_page.dart
+import 'package:budgetr/features/smart_trackers/views/summary_builder/smart_tracker_summary_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,6 +68,7 @@ class SmartTrackerDetailPage extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              SmartTrackerSummaryCard(template: liveTemplate),
               Expanded(
                 child: SmartTrackerTable(
                   template: liveTemplate,

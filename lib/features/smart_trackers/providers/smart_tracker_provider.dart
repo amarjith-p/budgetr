@@ -227,6 +227,27 @@ class SmartTrackerActionNotifier extends Notifier<void> {
       }
     }
   }
+
+  // --- NEW: SAVE SUMMARY WIDGET LAYOUT ---
+  Future<bool> saveSummaryLayout(
+    String templateId,
+    String summaryWidgetJson,
+  ) async {
+    try {
+      final template = await (_db.select(
+        _db.smartTrackerTemplates,
+      )..where((t) => t.id.equals(templateId))).getSingle();
+
+      await _db
+          .update(_db.smartTrackerTemplates)
+          .replace(
+            template.copyWith(summaryWidgetJson: Value(summaryWidgetJson)),
+          );
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 }
 
 final smartTrackerActionProvider =
