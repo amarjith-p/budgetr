@@ -158,25 +158,50 @@ class NotificationParserService {
 
   Future<void> processNotification(ServiceNotificationEvent event) async {
     try {
+      // 1. IGNORE DISMISSALS: Stops ghost triggers when user clears their phone's notification tray
+      if (event.hasRemoved ?? false) {
+        return;
+      }
+
       final String title = event.title ?? '';
       final String content = event.content ?? '';
       final String fullText = '$title $content'.trim();
       final String packageName = event.packageName ?? 'unknown';
 
       if (packageName.contains('android.system') ||
-          packageName.contains('whatsapp'))
+          packageName.contains('whatsapp')) {
         return;
+      }
 
-      final String hashData =
-          '$fullText|${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}';
+      // 2. BULLETPROOF HASH: Includes the OS-level event.id.
+      // This ensures that interacting with the SAME notification is blocked as a duplicate,
+      // but receiving a NEW notification with the EXACT SAME text is allowed through.
+      final String hashData = '${event.id}|$packageName|$fullText';
       final String txHash = sha256.convert(utf8.encode(hashData)).toString();
 
       final prefs = await SharedPreferences.getInstance();
-      List<String> processedHashes =
-          prefs.getStringList('smart_inbox_hashes') ?? [];
 
-      if (processedHashes.contains(txHash)) {
-        debugPrint("Duplicate notification detected and dropped: $txHash");
+      // 3. SLIDING WINDOW: Track hashes with a timestamp
+      List<String> rawHashes =
+          prefs.getStringList('smart_inbox_dedup_v3') ?? [];
+      final now = DateTime.now();
+
+      // Clean up hashes older than 48 hours to keep the app lightweight
+      rawHashes.removeWhere((item) {
+        final parts = item.split(':');
+        if (parts.length != 2) return true;
+        final timestamp = int.tryParse(parts[1]);
+        if (timestamp == null) return true;
+        final time = DateTime.fromMillisecondsSinceEpoch(timestamp);
+        return now.difference(time).inHours > 48;
+      });
+
+      // If we already have this exact Android Notification ID + Text combo, drop it.
+      bool isDuplicate = rawHashes.any((item) => item.startsWith('$txHash:'));
+
+      if (isDuplicate) {
+        debugPrint("Ghost notification interaction detected and dropped.");
+        await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
         return;
       }
 
@@ -189,11 +214,9 @@ class NotificationParserService {
         return;
       }
 
-      processedHashes.add(txHash);
-      if (processedHashes.length > 500) {
-        processedHashes = processedHashes.sublist(processedHashes.length - 500);
-      }
-      await prefs.setStringList('smart_inbox_hashes', processedHashes);
+      // Add the new unique hash to our tracking list
+      rawHashes.add('$txHash:${now.millisecondsSinceEpoch}');
+      await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
 
       final txDate = DateTime.now();
 
