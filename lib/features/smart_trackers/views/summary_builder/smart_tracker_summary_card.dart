@@ -1,3 +1,4 @@
+// lib/features/smart_trackers/components/smart_tracker_summary_card.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,15 +18,58 @@ class SmartTrackerSummaryCard extends ConsumerWidget {
   const SmartTrackerSummaryCard({Key? key, required this.template})
     : super(key: key);
 
+  // --- NEW: Helper to evaluate conditional formatting ---
+  Color _resolveColor(
+    String valueStr,
+    String? defaultHex,
+    List<ConditionalFormatRule>? rules,
+    ThemeData theme,
+  ) {
+    Color baseColor = defaultHex != null
+        ? Color(int.parse(defaultHex.replaceAll('#', '0xFF')))
+        : theme.colorScheme.onSurface;
+
+    if (rules == null || rules.isEmpty) return baseColor;
+
+    final val = double.tryParse(valueStr);
+    if (val == null) return baseColor;
+
+    for (var rule in rules) {
+      bool match = false;
+      switch (rule.operator) {
+        case '>':
+          match = val > rule.value;
+          break;
+        case '<':
+          match = val < rule.value;
+          break;
+        case '>=':
+          match = val >= rule.value;
+          break;
+        case '<=':
+          match = val <= rule.value;
+          break;
+        case '==':
+          match = val == rule.value;
+          break;
+      }
+      if (match) {
+        return Color(int.parse(rule.colorHex.replaceAll('#', '0xFF')));
+      }
+    }
+    return baseColor;
+  }
+
   Widget _buildSubMetric(
     String label,
     String value,
     String format,
-    Color? color,
+    String? defaultHex,
+    List<ConditionalFormatRule>? rules,
     String? customSymbol,
     ThemeData theme,
   ) {
-    Color finalColor = color ?? theme.colorScheme.onSurface;
+    Color finalColor = _resolveColor(value, defaultHex, rules, theme);
     Widget displayWidget;
 
     if (value == 'Err' || value == '-') {
@@ -41,7 +85,6 @@ class SmartTrackerSummaryCard extends ConsumerWidget {
       final val = double.tryParse(value) ?? 0.0;
       final sign = val < 0 ? '-' : '';
       final sym = customSymbol ?? '₹';
-      // --- FIX: RichText to reduce stroke weight on the currency symbol ---
       displayWidget = RichText(
         text: TextSpan(
           children: [
@@ -198,9 +241,12 @@ class SmartTrackerSummaryCard extends ConsumerWidget {
       );
     }
 
-    Color displayColor = config.mainMetric?.colorHex != null
-        ? Color(int.parse(config.mainMetric!.colorHex!.replaceAll('#', '0xFF')))
-        : theme.colorScheme.onSurface;
+    Color displayColor = _resolveColor(
+      mainVal,
+      config.mainMetric?.colorHex,
+      config.mainMetric?.conditionalColors,
+      theme,
+    );
 
     return Container(
       margin: const EdgeInsets.all(DesignTokens.spacingMd),
@@ -258,7 +304,6 @@ class SmartTrackerSummaryCard extends ConsumerWidget {
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: config.mainMetric!.formatAs == 'currency'
-                  // --- FIX: RichText to reduce stroke weight on the currency symbol ---
                   ? RichText(
                       text: TextSpan(
                         children: [
@@ -333,20 +378,14 @@ class SmartTrackerSummaryCard extends ConsumerWidget {
                         records,
                         fields,
                       );
-                      Color? cColor = metric.colorHex != null
-                          ? Color(
-                              int.parse(
-                                metric.colorHex!.replaceAll('#', '0xFF'),
-                              ),
-                            )
-                          : null;
 
                       Widget col = Expanded(
                         child: _buildSubMetric(
                           metric.label,
                           val,
                           metric.formatAs,
-                          cColor,
+                          metric.colorHex,
+                          metric.conditionalColors,
                           metric.currencySymbol,
                           theme,
                         ),

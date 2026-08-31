@@ -1,4 +1,30 @@
+// lib/features/smart_trackers/models/summary_card_model.dart
 import 'dart:convert';
+
+class ConditionalFormatRule {
+  final String operator; // '>', '<', '>=', '<=', '=='
+  final double value;
+  final String colorHex;
+
+  ConditionalFormatRule({
+    required this.operator,
+    required this.value,
+    required this.colorHex,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'operator': operator,
+    'value': value,
+    'colorHex': colorHex,
+  };
+
+  factory ConditionalFormatRule.fromJson(Map<String, dynamic> json) =>
+      ConditionalFormatRule(
+        operator: json['operator'] ?? '>',
+        value: (json['value'] as num).toDouble(),
+        colorHex: json['colorHex'] ?? '#FFFFFF',
+      );
+}
 
 class SmartSummaryMetric {
   final String id;
@@ -6,7 +32,8 @@ class SmartSummaryMetric {
   final String formula;
   final String formatAs; // 'currency', 'percentage', 'number', 'text'
   final String? colorHex;
-  final String? currencySymbol; // <-- NEW
+  final String? currencySymbol;
+  final List<ConditionalFormatRule>? conditionalColors; // <-- NEW
 
   SmartSummaryMetric({
     required this.id,
@@ -14,7 +41,8 @@ class SmartSummaryMetric {
     required this.formula,
     required this.formatAs,
     this.colorHex,
-    this.currencySymbol, // <-- NEW
+    this.currencySymbol,
+    this.conditionalColors, // <-- NEW
   });
 
   Map<String, dynamic> toJson() => {
@@ -23,7 +51,10 @@ class SmartSummaryMetric {
     'formula': formula,
     'formatAs': formatAs,
     'colorHex': colorHex,
-    'currencySymbol': currencySymbol, // <-- NEW
+    'currencySymbol': currencySymbol,
+    'conditionalColors': conditionalColors
+        ?.map((r) => r.toJson())
+        .toList(), // <-- NEW
   };
 
   factory SmartSummaryMetric.fromJson(Map<String, dynamic> json) =>
@@ -33,7 +64,10 @@ class SmartSummaryMetric {
         formula: json['formula'],
         formatAs: json['formatAs'] ?? 'text',
         colorHex: json['colorHex'],
-        currencySymbol: json['currencySymbol'], // <-- NEW
+        currencySymbol: json['currencySymbol'],
+        conditionalColors: (json['conditionalColors'] as List<dynamic>?)
+            ?.map((e) => ConditionalFormatRule.fromJson(e))
+            .toList(), // <-- NEW
       );
 }
 

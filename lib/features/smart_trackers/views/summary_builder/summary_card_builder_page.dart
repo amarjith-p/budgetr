@@ -10,7 +10,6 @@ import '../../../../core/components/modern_app_bar.dart';
 import '../../../../core/components/modern_boxy_button.dart';
 import '../../../../core/components/modern_boxy_input.dart';
 import '../../../../core/components/modern_boxy_toggle.dart';
-import '../../../../core/components/currency_text.dart';
 import '../../../../core/components/confirmation_bottom_sheet.dart';
 import '../../../../core/theme/design_tokens.dart';
 
@@ -423,7 +422,7 @@ class _SummaryCardBuilderPageState
   }
 }
 
-/// ============================================================================
+// ============================================================================
 // --- PROFESSIONAL TOKEN-BASED VISUAL FORMULA EDITOR (NO TYPING) ---
 // ============================================================================
 class _VisualFormulaEditorSheet extends ConsumerStatefulWidget {
@@ -458,6 +457,9 @@ class _VisualFormulaEditorSheetState
   String _currencySymbol = '₹';
   int _toolboxIndex = 0;
 
+  // --- NEW: STATE FOR CONDITIONAL RULES ---
+  List<ConditionalFormatRule> _conditionalRules = [];
+
   final List<String> _colors = [
     '#2EC4B6',
     '#E71D36',
@@ -481,6 +483,9 @@ class _VisualFormulaEditorSheetState
       _format = widget.existingMetric!.formatAs;
       _colorHex = widget.existingMetric!.colorHex ?? '#2EC4B6';
       _currencySymbol = widget.existingMetric!.currencySymbol ?? '₹';
+      _conditionalRules = List.from(
+        widget.existingMetric!.conditionalColors ?? [],
+      );
 
       if (widget.existingMetric!.formula.isNotEmpty) {
         _tokens = [widget.existingMetric!.formula];
@@ -521,7 +526,6 @@ class _VisualFormulaEditorSheetState
     });
   }
 
-  // --- NEW: Dynamic Input Dialog for NTH Row ---
   Future<void> _promptForNthRow(bool isLatest) async {
     HapticFeedback.selectionClick();
     final theme = Theme.of(context);
@@ -607,6 +611,202 @@ class _VisualFormulaEditorSheetState
     }
   }
 
+  // --- NEW: Dynamic Input Dialog for Conditional Formatting ---
+  Future<void> _promptForCondition() async {
+    HapticFeedback.selectionClick();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    String op = '>';
+    final valCtrl = TextEditingController();
+    String cHex = '#E71D36'; // Default Red
+
+    final result = await showDialog<ConditionalFormatRule>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Dialog(
+            backgroundColor: theme.scaffoldBackgroundColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add Conditional Color',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Operator Dropdown
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withOpacity(isDark ? 0.3 : 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: theme.dividerColor),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: op,
+                        isExpanded: true,
+                        dropdownColor: theme.colorScheme.surface,
+                        items: ['>', '<', '>=', '<=', '=='].map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(
+                              "If value is $value",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (newOp) {
+                          setModalState(() => op = newOp!);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Value Input
+                  ModernBoxyInput(
+                    controller: valCtrl,
+                    labelText: 'Target Value',
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                      signed: true,
+                    ),
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Color Picker
+                  Text(
+                    'THEN SET COLOR TO',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.primary,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: _colors.map((hex) {
+                        final isSelected = cHex == hex;
+                        final color = Color(
+                          int.parse(hex.replaceAll('#', '0xFF')),
+                        );
+                        return GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setModalState(() => cHex = hex);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.only(right: 12),
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected ? color : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                            child: CircleAvatar(
+                              backgroundColor: color,
+                              radius: 16,
+                              child: isSelected
+                                  ? Icon(
+                                      Icons.check,
+                                      size: 16,
+                                      color: hex == '#FFFFFF'
+                                          ? Colors.black
+                                          : Colors.white,
+                                    )
+                                  : null,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Actions
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(
+                          'CANCEL',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          final val = double.tryParse(valCtrl.text.trim());
+                          if (val != null) {
+                            Navigator.pop(
+                              ctx,
+                              ConditionalFormatRule(
+                                operator: op,
+                                value: val,
+                                colorHex: cHex,
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text(
+                          'ADD RULE',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    if (result != null) {
+      setState(() => _conditionalRules.add(result));
+    }
+  }
+
   String get _currentFormula => _tokens.join('');
 
   Widget _buildLivePreview(List<SmartTrackerRecord> records, ThemeData theme) {
@@ -617,7 +817,37 @@ class _VisualFormulaEditorSheetState
       widget.fields,
     );
 
-    final cColor = Color(int.parse(_colorHex.replaceAll('#', '0xFF')));
+    // --- RE-EVALUATE COLOR IN REAL-TIME IF IT MATCHES RULES ---
+    Color cColor = Color(int.parse(_colorHex.replaceAll('#', '0xFF')));
+    final parsedLiveResult = double.tryParse(liveResult);
+
+    if (parsedLiveResult != null && _conditionalRules.isNotEmpty) {
+      for (var rule in _conditionalRules) {
+        bool match = false;
+        switch (rule.operator) {
+          case '>':
+            match = parsedLiveResult > rule.value;
+            break;
+          case '<':
+            match = parsedLiveResult < rule.value;
+            break;
+          case '>=':
+            match = parsedLiveResult >= rule.value;
+            break;
+          case '<=':
+            match = parsedLiveResult <= rule.value;
+            break;
+          case '==':
+            match = parsedLiveResult == rule.value;
+            break;
+        }
+        if (match) {
+          cColor = Color(int.parse(rule.colorHex.replaceAll('#', '0xFF')));
+          break; // Stop at first match
+        }
+      }
+    }
+
     final displayLabel = _labelCtrl.text.isEmpty
         ? 'METRIC LABEL'
         : _labelCtrl.text.toUpperCase();
@@ -983,7 +1213,6 @@ class _VisualFormulaEditorSheetState
                                     Colors.green.withOpacity(0.1),
                                     Colors.green,
                                   ),
-                                  // --- NEW CHIPS IMPLEMENTED HERE ---
                                   ActionChip(
                                     label: Text(
                                       'NTH LATEST(n)',
@@ -1038,7 +1267,6 @@ class _VisualFormulaEditorSheetState
                                     ),
                                     onPressed: () => _promptForNthRow(false),
                                   ),
-                                  // ----------------------------------
                                   _buildTokenChip(
                                     'Close Bracket ")"',
                                     ')',
@@ -1262,6 +1490,16 @@ class _VisualFormulaEditorSheetState
                     ],
 
                     const SizedBox(height: 16),
+                    Text(
+                      'DEFAULT COLOR',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.primary,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
@@ -1307,6 +1545,128 @@ class _VisualFormulaEditorSheetState
                         }).toList(),
                       ),
                     ),
+
+                    // --- NEW: CONDITIONAL COLORS SECTION ---
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'CONDITIONAL COLORS (Optional)',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: theme.colorScheme.primary,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: _promptForCondition,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withOpacity(
+                                0.15,
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.add_rounded,
+                                  color: theme.colorScheme.primary,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'ADD RULE',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (_conditionalRules.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: theme.dividerColor),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Apply different colors based on the final value.',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    else
+                      ..._conditionalRules.map((rule) {
+                        final color = Color(
+                          int.parse(rule.colorHex.replaceAll('#', '0xFF')),
+                        );
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: theme.dividerColor),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: color,
+                                    radius: 8,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'If value ${rule.operator} ${rule.value}',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  setState(
+                                    () => _conditionalRules.remove(rule),
+                                  );
+                                },
+                                child: Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 18,
+                                  color: theme.colorScheme.error,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -1367,6 +1727,9 @@ class _VisualFormulaEditorSheetState
                           currencySymbol: _format == 'currency'
                               ? _currencySymbol
                               : null,
+                          conditionalColors: _conditionalRules.isNotEmpty
+                              ? _conditionalRules
+                              : null, // <-- SAVED
                         ),
                       );
                       Navigator.pop(context);
