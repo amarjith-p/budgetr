@@ -9,8 +9,8 @@ import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_boxy_button.dart';
 import '../../../core/components/modern_boxy_input.dart';
 import '../../../core/components/global_selection_sheet.dart';
-import '../../../core/components/inline_calculator_pad.dart'; // <-- IMPORTED CUSTOM KEYBOARD
-import '../../../core/components/custom_snackbars.dart'; // <-- NEW: For manual validations
+import '../../../core/components/inline_calculator_pad.dart';
+import '../../../core/components/custom_snackbars.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../models/tracker_field_model.dart';
 import '../providers/smart_tracker_provider.dart';
@@ -86,6 +86,21 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
         }
       } else if (field.type == TrackerFieldType.toggle) {
         _formData[field.id] = existingData[field.id] == true;
+      } else if (field.type == TrackerFieldType.date) {
+        // --- NEW: Explicit handling for Date Fields ---
+        DateTime initialDate = DateTime.now();
+        if (widget.existingRecord != null &&
+            existingData[field.id] != null &&
+            existingData[field.id].toString().isNotEmpty) {
+          initialDate =
+              DateTime.tryParse(existingData[field.id].toString()) ??
+              DateTime.now();
+        }
+        _formData[field.id] = initialDate.toIso8601String();
+        _controllers[field.id] = TextEditingController(
+          text: DateFormat('dd MMM yyyy').format(initialDate),
+        );
+        _controllers[field.id]!.addListener(_recalculateFormulas);
       } else {
         final val = existingData[field.id]?.toString() ?? '';
         _formData[field.id] = val;
@@ -209,9 +224,17 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
     _closeAllKeyboards();
     HapticFeedback.lightImpact();
 
+    // --- NEW: Open date picker to the currently selected date ---
+    DateTime initialDate = DateTime.now();
+    if (_formData[fieldId] != null &&
+        _formData[fieldId].toString().isNotEmpty) {
+      initialDate =
+          DateTime.tryParse(_formData[fieldId].toString()) ?? DateTime.now();
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: initialDate,
       firstDate: DateTime(1900),
       lastDate: DateTime(2200),
     );
@@ -228,7 +251,6 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   Future<void> _submit() async {
     _closeAllKeyboards();
 
-    // --- NEW: MANUAL VALIDATION FOR NON-FORMFIELD TYPES ---
     for (var field in _fields) {
       if (field.isMandatory) {
         if (field.type == TrackerFieldType.radio) {
@@ -286,7 +308,6 @@ class _SmartTrackerEntryPageState extends ConsumerState<SmartTrackerEntryPage> {
   Widget _buildDynamicField(TrackerField field, ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
 
-    // Construct label with visual mandatory indicator if needed
     final displayLabel =
         field.isMandatory &&
             field.type != TrackerFieldType.serialNo &&
