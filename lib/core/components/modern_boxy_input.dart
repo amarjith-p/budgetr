@@ -1,3 +1,4 @@
+// lib/core/components/modern_boxy_input.dart
 import 'package:flutter/material.dart';
 
 class ModernBoxyInput extends StatefulWidget {
@@ -10,7 +11,8 @@ class ModernBoxyInput extends StatefulWidget {
   final bool readOnly;
   final bool enabled;
   final bool obscureText;
-  final int maxLines; // --- NEW PARAMETER ---
+  final int maxLines;
+  final bool autofocus; // --- NEW PARAMETER ---
   final VoidCallback? onTap;
   final String? Function(String?)? validator;
   final FocusNode? focusNode;
@@ -28,7 +30,8 @@ class ModernBoxyInput extends StatefulWidget {
     this.readOnly = false,
     this.enabled = true,
     this.obscureText = false,
-    this.maxLines = 1, // --- DEFAULT TO 1 ---
+    this.maxLines = 1,
+    this.autofocus = false, // --- DEFAULT TO FALSE ---
     this.onTap,
     this.validator,
     this.focusNode,
@@ -79,7 +82,8 @@ class _ModernBoxyInputState extends State<ModernBoxyInput> {
       readOnly: widget.readOnly,
       enabled: widget.enabled,
       obscureText: widget.obscureText,
-      maxLines: widget.maxLines, // --- PASS MAXLINES ---
+      maxLines: widget.maxLines,
+      autofocus: widget.autofocus, // --- PASS AUTOFOCUS ---
       onTap: widget.onTap,
       validator: widget.validator,
       textInputAction: widget.textInputAction,

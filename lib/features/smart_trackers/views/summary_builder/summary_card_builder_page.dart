@@ -423,7 +423,7 @@ class _SummaryCardBuilderPageState
   }
 }
 
-// ============================================================================
+/// ============================================================================
 // --- PROFESSIONAL TOKEN-BASED VISUAL FORMULA EDITOR (NO TYPING) ---
 // ============================================================================
 class _VisualFormulaEditorSheet extends ConsumerStatefulWidget {
@@ -519,6 +519,92 @@ class _VisualFormulaEditorSheetState
       _tokens.clear();
       _hasFormulaError = true;
     });
+  }
+
+  // --- NEW: Dynamic Input Dialog for NTH Row ---
+  Future<void> _promptForNthRow(bool isLatest) async {
+    HapticFeedback.selectionClick();
+    final theme = Theme.of(context);
+    final ctrl = TextEditingController(text: '2');
+
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isLatest ? 'Nth Latest Row' : 'Nth Oldest Row',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Enter the row number you want to fetch (e.g., 3 for the 3rd row).',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ModernBoxyInput(
+                controller: ctrl,
+                labelText: 'Row Number (N)',
+                keyboardType: TextInputType.number,
+                autofocus: true,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(
+                      'CANCEL',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: () {
+                      final val = int.tryParse(ctrl.text.trim());
+                      Navigator.pop(ctx, val);
+                    },
+                    child: const Text(
+                      'ADD TO FORMULA',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (result != null && result > 0) {
+      final funcName = isLatest ? 'NTH_LATEST' : 'NTH_OLDEST';
+      _appendToken('$funcName($result, ');
+    }
   }
 
   String get _currentFormula => _tokens.join('');
@@ -898,17 +984,59 @@ class _VisualFormulaEditorSheetState
                                     Colors.green,
                                   ),
                                   // --- NEW CHIPS IMPLEMENTED HERE ---
-                                  _buildTokenChip(
-                                    'NTH LATEST(Idx)',
-                                    'NTH_LATEST(2, ',
-                                    Colors.orange.withOpacity(0.1),
-                                    Colors.orange.shade700,
+                                  ActionChip(
+                                    label: Text(
+                                      'NTH LATEST(n)',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.orange.shade700,
+                                      ),
+                                    ),
+                                    backgroundColor: Colors.orange.withOpacity(
+                                      0.1,
+                                    ),
+                                    side: BorderSide(
+                                      color: Colors.orange.shade700.withOpacity(
+                                        0.3,
+                                      ),
+                                      width: 1,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 8,
+                                    ),
+                                    onPressed: () => _promptForNthRow(true),
                                   ),
-                                  _buildTokenChip(
-                                    'NTH OLDEST(Idx)',
-                                    'NTH_OLDEST(2, ',
-                                    Colors.orange.withOpacity(0.1),
-                                    Colors.orange.shade700,
+                                  ActionChip(
+                                    label: Text(
+                                      'NTH OLDEST(n)',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.orange.shade700,
+                                      ),
+                                    ),
+                                    backgroundColor: Colors.orange.withOpacity(
+                                      0.1,
+                                    ),
+                                    side: BorderSide(
+                                      color: Colors.orange.shade700.withOpacity(
+                                        0.3,
+                                      ),
+                                      width: 1,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 8,
+                                    ),
+                                    onPressed: () => _promptForNthRow(false),
                                   ),
                                   // ----------------------------------
                                   _buildTokenChip(
