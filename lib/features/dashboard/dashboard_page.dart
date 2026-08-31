@@ -10,6 +10,7 @@ import 'package:budgetr/features/trips/views/trip_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart'; // <-- ADDED FOR DATE/TIME FORMATTING
 import '../../core/theme/app_theme.dart';
 import '../../core/components/modern_app_bar.dart';
 import '../../core/components/currency_text.dart';
@@ -306,7 +307,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           _lastPressedAt = currentTime;
           HapticFeedback.lightImpact();
 
-          // Uses the custom snackbar class per your requirements
           CustomSnackbars.showSuccess(
             context,
             message: 'Press back again to exit',
@@ -692,6 +692,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                       icon: Icons.add_rounded,
                                       height: double.infinity,
                                       color: darkTileColor,
+                                      topLeftContent:
+                                          const _LiveClockWidget(), // <-- Added here
                                       onTap: () {
                                         Navigator.push(
                                           context,
@@ -1323,6 +1325,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     bool verticalText = false,
     bool swapPositions = false,
     Color? iconColor,
+    Widget? topLeftContent, // <-- Added Parameter
   }) {
     return Material(
       color: color,
@@ -1337,6 +1340,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
               return Stack(
                 children: [
+                  // --- Added Widget to Top Left ---
+                  if (topLeftContent != null)
+                    Positioned(
+                      top: isSmall ? 8.0 : 12.0,
+                      left: isSmall ? 8.0 : 12.0,
+                      child: topLeftContent,
+                    ),
                   Positioned(
                     top: swapPositions ? null : (isSmall ? 8.0 : 10.0),
                     bottom: swapPositions ? (isSmall ? 8.0 : 10.0) : null,
@@ -1474,6 +1484,63 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// --- NEW WIDGET FOR LIVE CLOCK ---
+class _LiveClockWidget extends StatefulWidget {
+  const _LiveClockWidget({Key? key}) : super(key: key);
+
+  @override
+  State<_LiveClockWidget> createState() => _LiveClockWidgetState();
+}
+
+class _LiveClockWidgetState extends State<_LiveClockWidget> {
+  late Stream<DateTime> _clockStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _clockStream = Stream.periodic(
+      const Duration(seconds: 1),
+      (_) => DateTime.now(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<DateTime>(
+      stream: _clockStream,
+      initialData: DateTime.now(),
+      builder: (context, snapshot) {
+        final time = snapshot.data!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              DateFormat('EEE, dd MMM yyyy').format(time).toUpperCase(),
+              style: const TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.w700,
+                color: Colors.white70,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              DateFormat('hh:mm:ss a').format(time),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
