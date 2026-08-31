@@ -1,5 +1,4 @@
 // lib/features/dashboard/dashboard_page.dart
-import 'package:budgetr/core/components/custom_snackbars.dart';
 import 'package:budgetr/features/backup/views/backup_page.dart';
 import 'package:budgetr/features/debts/views/debt_dashboard_page.dart';
 import 'package:budgetr/features/developer/views/developer_support_page.dart';
@@ -28,6 +27,9 @@ import '../investments/providers/investment_provider.dart';
 import '../notifications/components/notification_bell_widget.dart';
 import '../automation/views/automation_dashboard_page.dart';
 
+// --- BUDGET PROVIDER IMPORT ---
+import '../budgets/providers/budget_provider.dart';
+
 // --- SMART INBOX IMPORTS ---
 import '../automation/views/smart_inbox_page.dart';
 import '../automation/providers/smart_inbox_provider.dart';
@@ -45,11 +47,12 @@ import '../debts/providers/debt_provider.dart';
 // --- NET WORTH IMPORT ---
 import '../net_worth/providers/net_worth_provider.dart';
 
-// --- NEW BACKUP IMPORTS ---
+// --- BACKUP IMPORTS ---
 import 'package:share_plus/share_plus.dart';
 import '../backup/services/backup_service.dart';
 import '../backup/providers/backup_reminder_provider.dart';
 import '../../core/components/futuristic_loader.dart';
+import '../../core/components/custom_snackbars.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -57,18 +60,14 @@ class DashboardPage extends ConsumerWidget {
   Future<void> _handleQuickBackup(BuildContext context, WidgetRef ref) async {
     HapticFeedback.selectionClick();
 
-    // 1. Capture the root navigator state BEFORE the async gap
-    // to prevent popping the wrong route later.
     final navigator = Navigator.of(context, rootNavigator: true);
 
-    // Show FuturisticLoader Overlay
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.85),
       barrierDismissible: false,
       builder: (_) => const PopScope(
-        canPop:
-            false, // <-- FIX: Prevents hardware back button stack corruption
+        canPop: false,
         child: Material(
           color: Colors.transparent,
           child: Center(
@@ -78,12 +77,10 @@ class DashboardPage extends ConsumerWidget {
       ),
     );
 
-    // Call existing service
     final result = await ref
         .read(backupServiceProvider)
         .exportDatabaseExternal();
 
-    // Safely close loader using the captured root navigator
     navigator.pop();
 
     if (result != null && result.startsWith('ERROR:')) {
@@ -94,14 +91,10 @@ class DashboardPage extends ConsumerWidget {
         );
       }
     } else if (result != null) {
-      // Fire share prompt and CAPTURE the user's action
       final shareResult = await Share.shareXFiles([
         XFile(result),
       ], subject: 'FinStack 360 Daily Backup');
 
-      // --- FIX: THE GHOST BACKUP BUG ---
-      // Only reset the warning clock if the user ACTUALLY completed the share.
-      // If they dismiss/cancel the share sheet, the warning icon remains active.
       if (shareResult.status == ShareResultStatus.success) {
         await ref.read(backupReminderProvider.notifier).recordBackup();
 
@@ -174,6 +167,56 @@ class DashboardPage extends ConsumerWidget {
     final bucketsAsync = ref.watch(bucketsStreamProvider);
     final int liveBucketsCount = bucketsAsync.asData?.value.length ?? 0;
 
+    // --- LIVE BUDGET MATH ---
+    final budgetAsync = ref.watch(monthlyBudgetStreamProvider);
+    final currentBudget = budgetAsync.asData?.value;
+    double totalBudget = 0.0;
+    double budgetedSpend = 0.0;
+    final now = DateTime.now();
+
+    if (currentBudget != null) {
+      totalBudget =
+          currentBudget.salaryIncome +
+          currentBudget.extraIncome -
+          currentBudget.deductions;
+
+      if (currentBudget.isClosed) {
+        budgetedSpend =
+            (currentBudget.closedTotalSpent ?? 0.0) -
+            (currentBudget.closedOutOfBucket ?? 0.0);
+      } else {
+        final allTxs = ref.watch(allTransactionsProvider).asData?.value ?? [];
+        for (var txData in allTxs) {
+          final tx = txData.transaction;
+          if (tx.date.year == now.year && tx.date.month == now.month) {
+            if (tx.type == 'Expense') {
+              bool isLoanFee =
+                  tx.subCategory == 'Loan Interest' ||
+                  tx.subCategory == 'Tax on Interest' ||
+                  tx.subCategory == 'Bank Charges on Loan';
+              if (!isLoanFee && tx.bucketId != null && tx.bucketId != -1) {
+                budgetedSpend += tx.amount;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    double budgetProgress = totalBudget > 0
+        ? (budgetedSpend / totalBudget)
+        : 0.0;
+
+    // --- DYNAMIC COLOR THRESHOLDS ---
+    Color progressColor;
+    if (budgetProgress > 1.0) {
+      progressColor = Colors.redAccent.shade700;
+    } else if (budgetProgress >= 0.75) {
+      progressColor = Colors.orange.shade800;
+    } else {
+      progressColor = Colors.green.shade700;
+    }
+
     final investmentsAsync = ref.watch(investmentsStreamProvider);
     final rawInvestments = investmentsAsync.asData?.value ?? [];
 
@@ -201,7 +244,6 @@ class DashboardPage extends ConsumerWidget {
     final remindersAsync = ref.watch(allRemindersProvider);
     final dismissedReminders = ref.watch(dismissedRemindersProvider);
     final rawReminders = remindersAsync.asData?.value ?? [];
-    final now = DateTime.now();
 
     final triggeredReminders = rawReminders.where((r) {
       if (dismissedReminders.contains(r.id)) return false;
@@ -211,11 +253,9 @@ class DashboardPage extends ConsumerWidget {
       return now.isAfter(triggerDate) || now.isAtSameMomentAs(triggerDate);
     }).toList();
 
-    // --- SMART INBOX LIVE COUNT ---
     final stagedTxsAsync = ref.watch(stagedTransactionsProvider);
     final int stagedCount = stagedTxsAsync.asData?.value.length ?? 0;
 
-    // --- DEBT MODULE (PERSON-TO-PERSON) ---
     final debtsAsync = ref.watch(allDebtsProvider);
     final rawDebts = debtsAsync.asData?.value ?? [];
 
@@ -235,16 +275,13 @@ class DashboardPage extends ConsumerWidget {
 
     final double netDebtBalance = totalLent - totalBorrowed;
 
-    // --- LIVE NET WORTH MATH ---
     final netWorthAsync = ref.watch(netWorthMetricsProvider);
     final double liveNetWorth = netWorthAsync.asData?.value.netWorth ?? 0.0;
     final bool isNwPositive = liveNetWorth >= 0;
 
-    // --- WATCH THE BACKUP REMINDER PROVIDER ---
     final bool isBackupDue = ref.watch(backupReminderProvider);
 
     final bool hasBanner = triggeredReminders.isNotEmpty;
-    // Scale down internal elements if the tiles shrink to prevent overflow
     final double barScale = hasBanner ? 0.6 : 1.0;
 
     return Scaffold(
@@ -279,7 +316,6 @@ class DashboardPage extends ConsumerWidget {
           ),
         ),
         actions: [
-          // --- NEW: BACKUP WARNING ICON ---
           if (isBackupDue)
             IconButton(
               icon: const Icon(
@@ -289,8 +325,6 @@ class DashboardPage extends ConsumerWidget {
               tooltip: 'Backup Overdue',
               onPressed: () => _handleQuickBackup(context, ref),
             ),
-
-          // --- SMART INBOX ENTRY POINT WITH BADGE ---
           IconButton(
             icon: Badge(
               isLabelVisible: stagedCount > 0,
@@ -317,7 +351,6 @@ class DashboardPage extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // --- POPUP BANNERS FOR TRIGGERED REMINDERS ---
             if (hasBanner)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 0),
@@ -336,7 +369,6 @@ class DashboardPage extends ConsumerWidget {
                 ),
               ),
 
-            // --- FIXED FULL SCREEN GRID ---
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -348,7 +380,7 @@ class DashboardPage extends ConsumerWidget {
                   children: [
                     // --- ROW 1: Money Tracker (Left) & Dynamic 2x2 Grid (Right) ---
                     Expanded(
-                      flex: 2, // Double height relative to the other rows
+                      flex: 2,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -389,16 +421,112 @@ class DashboardPage extends ConsumerWidget {
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
                                         children: [
-                                          const Row(
+                                          Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
                                             children: [
-                                              Icon(
+                                              const Icon(
                                                 Icons
-                                                    .account_balance_wallet_rounded,
+                                                    .account_balance_wallet_outlined,
                                                 color: Colors.black,
                                               ),
-                                              Icon(
+                                              // --- BUDGET PROGRESS VISUALIZER IN TOP ROW ---
+                                              if (totalBudget > 0)
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 5.0,
+                                                        ),
+                                                    child: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .stretch,
+                                                      children: [
+                                                        // 1. Spend % directly above
+                                                        Text(
+                                                          '${(budgetProgress * 100).toStringAsFixed(2)}%',
+                                                          textAlign:
+                                                              TextAlign.right,
+                                                          style: TextStyle(
+                                                            fontSize: 7,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color:
+                                                                progressColor,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 4,
+                                                        ),
+                                                        // 2. Progress Bar
+                                                        Container(
+                                                          height: 4,
+                                                          width:
+                                                              double.infinity,
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.black
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  2,
+                                                                ),
+                                                          ),
+                                                          child: FractionallySizedBox(
+                                                            alignment: Alignment
+                                                                .centerLeft,
+                                                            widthFactor:
+                                                                budgetProgress
+                                                                    .clamp(
+                                                                      0.0,
+                                                                      1.0,
+                                                                    ),
+                                                            child: Container(
+                                                              decoration: BoxDecoration(
+                                                                color:
+                                                                    progressColor,
+                                                                borderRadius:
+                                                                    BorderRadius.circular(
+                                                                      2,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 4,
+                                                        ),
+                                                        // 3. Spend amount directly below (FittedBox to prevent overflow)
+                                                        FittedBox(
+                                                          fit: BoxFit.scaleDown,
+                                                          alignment: Alignment
+                                                              .centerRight,
+                                                          child: Text(
+                                                            '₹${CurrencyFormatter.format(budgetedSpend)} / ₹${CurrencyFormatter.format(totalBudget)}',
+                                                            style:
+                                                                const TextStyle(
+                                                                  fontSize: 7,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  color: Colors
+                                                                      .black54,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                )
+                                              else
+                                                const Spacer(),
+                                              const Icon(
                                                 Icons.arrow_forward_rounded,
                                                 color: Colors.black,
                                                 size: 18,
@@ -443,6 +571,7 @@ class DashboardPage extends ConsumerWidget {
                                               SizedBox(
                                                 height: hasBanner ? 8 : 16,
                                               ),
+                                              // --- ORIGINAL VERTICAL BARS ---
                                               Row(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.end,
@@ -515,8 +644,7 @@ class DashboardPage extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Expanded(
-                                  flex:
-                                      70, // 70% height proportional to the row
+                                  flex: 70,
                                   child: _buildMetroTile(
                                     title: 'ADD TRANSACTION',
                                     icon: Icons.add_rounded,
@@ -877,7 +1005,7 @@ class DashboardPage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Expanded(
-                            flex: 6, // 60% Width for custom metric layout
+                            flex: 6, // 60% Width
                             child: _buildWideMetroTile(
                               title: 'NET WORTH',
                               icon: Icons.diamond_rounded,
@@ -945,7 +1073,6 @@ class DashboardPage extends ConsumerWidget {
                           ),
                           const SizedBox(width: tileGap),
 
-                          // --- UPDATED LIVE NET WORTH TILE ---
                           Expanded(
                             flex: 4, // 40% Width
                             child: _buildWideMetroTile(
@@ -970,8 +1097,7 @@ class DashboardPage extends ConsumerWidget {
                                     fit: BoxFit.scaleDown,
                                     alignment: Alignment.centerRight,
                                     child: CurrencyText(
-                                      amount: netDebtBalance
-                                          .abs(), // Uses Debt Module Balance
+                                      amount: netDebtBalance.abs(),
                                       sign: netDebtBalance < 0
                                           ? ' -₹ '
                                           : (netDebtBalance > 0
@@ -1036,7 +1162,6 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  // --- RENDER DASHBOARD REMINDER BANNER ---
   Widget _buildReminderBanner(
     BuildContext context,
     WidgetRef ref,
@@ -1125,7 +1250,18 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  // --- METRO UI TILE ENGINE ---
+  // --- RESTORED EXACT ORIGINAL IMPLEMENTATION ---
+  Widget _buildFlatBar(double height, bool useDarkColor) {
+    return Container(
+      margin: const EdgeInsets.only(right: 6),
+      width: 12,
+      height: height,
+      color: useDarkColor
+          ? Colors.black.withOpacity(0.2)
+          : Colors.white.withOpacity(0.2),
+    );
+  }
+
   Widget _buildMetroTile({
     required String title,
     required IconData icon,
@@ -1287,17 +1423,6 @@ class DashboardPage extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildFlatBar(double height, bool useDarkColor) {
-    return Container(
-      margin: const EdgeInsets.only(right: 6),
-      width: 12,
-      height: height,
-      color: useDarkColor
-          ? Colors.black.withOpacity(0.2)
-          : Colors.white.withOpacity(0.2),
     );
   }
 }
