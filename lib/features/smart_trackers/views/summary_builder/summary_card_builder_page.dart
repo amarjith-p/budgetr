@@ -457,21 +457,7 @@ class _VisualFormulaEditorSheetState
   String _currencySymbol = '₹';
   int _toolboxIndex = 0;
 
-  // --- NEW: STATE FOR CONDITIONAL RULES ---
   List<ConditionalFormatRule> _conditionalRules = [];
-
-  final List<String> _colors = [
-    '#2EC4B6',
-    '#E71D36',
-    '#FF9F1C',
-    '#FFFFFF',
-    '#011627',
-    '#4361EE',
-    '#7209B7',
-    '#F72585',
-    '#2ECC71',
-    '#FFFFFF',
-  ];
 
   final List<String> _symbols = ['₹', '\$', '€', '£', '¥'];
 
@@ -565,7 +551,6 @@ class _VisualFormulaEditorSheetState
                 autofocus: true,
               ),
               const SizedBox(height: 24),
-              // --- FIX: Replaced raw Row/ElevatedButton with Expanded + ModernBoxyButton ---
               Row(
                 children: [
                   Expanded(
@@ -600,6 +585,7 @@ class _VisualFormulaEditorSheetState
     }
   }
 
+  // --- REPLACED: Color Picker for Conditional Formatting ---
   Future<void> _promptForCondition() async {
     HapticFeedback.selectionClick();
     final theme = Theme.of(context);
@@ -607,7 +593,7 @@ class _VisualFormulaEditorSheetState
 
     String op = '>';
     final valCtrl = TextEditingController();
-    String cHex = '#E71D36'; // Default Red
+    String cHex = '#E71D36';
 
     final result = await showDialog<ConditionalFormatRule>(
       context: context,
@@ -633,7 +619,6 @@ class _VisualFormulaEditorSheetState
                   ),
                   const SizedBox(height: 16),
 
-                  // Operator Dropdown
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -670,7 +655,6 @@ class _VisualFormulaEditorSheetState
                   ),
                   const SizedBox(height: 16),
 
-                  // Value Input
                   ModernBoxyInput(
                     controller: valCtrl,
                     labelText: 'Target Value',
@@ -682,7 +666,6 @@ class _VisualFormulaEditorSheetState
                   ),
                   const SizedBox(height: 24),
 
-                  // Color Picker
                   Text(
                     'THEN SET COLOR TO',
                     style: TextStyle(
@@ -693,52 +676,58 @@ class _VisualFormulaEditorSheetState
                     ),
                   ),
                   const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    child: Row(
-                      children: _colors.map((hex) {
-                        final isSelected = cHex == hex;
-                        final color = Color(
-                          int.parse(hex.replaceAll('#', '0xFF')),
-                        );
-                        return GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setModalState(() => cHex = hex);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.only(right: 12),
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected ? color : Colors.transparent,
-                                width: 2,
-                              ),
+
+                  // NEW CUSTOM COLOR BUTTON IN DIALOG
+                  GestureDetector(
+                    onTap: () async {
+                      HapticFeedback.selectionClick();
+                      final hex = await _CustomColorPickerSheet.show(
+                        context,
+                        cHex,
+                      );
+                      if (hex != null) {
+                        setModalState(() => cHex = hex);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: theme.dividerColor),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Color(
+                              int.parse(cHex.replaceAll('#', '0xFF')),
                             ),
-                            child: CircleAvatar(
-                              backgroundColor: color,
-                              radius: 16,
-                              child: isSelected
-                                  ? Icon(
-                                      Icons.check,
-                                      size: 16,
-                                      color: hex == '#FFFFFF'
-                                          ? Colors.black
-                                          : Colors.white,
-                                    )
-                                  : null,
+                            radius: 12,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Select Custom Color',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
-                        );
-                      }).toList(),
+                          const Spacer(),
+                          Icon(
+                            Icons.colorize_rounded,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
 
-                  // --- FIX: Replaced raw Row/ElevatedButton with Expanded + ModernBoxyButton ---
                   Row(
                     children: [
                       Expanded(
@@ -793,7 +782,6 @@ class _VisualFormulaEditorSheetState
       widget.fields,
     );
 
-    // --- RE-EVALUATE COLOR IN REAL-TIME IF IT MATCHES RULES ---
     Color cColor = Color(int.parse(_colorHex.replaceAll('#', '0xFF')));
     final parsedLiveResult = double.tryParse(liveResult);
 
@@ -819,7 +807,7 @@ class _VisualFormulaEditorSheetState
         }
         if (match) {
           cColor = Color(int.parse(rule.colorHex.replaceAll('#', '0xFF')));
-          break; // Stop at first match
+          break;
         }
       }
     }
@@ -1476,53 +1464,56 @@ class _VisualFormulaEditorSheetState
                       ),
                     ),
                     const SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      child: Row(
-                        children: _colors.map((hex) {
-                          final isSelected = _colorHex == hex;
-                          final color = Color(
-                            int.parse(hex.replaceAll('#', '0xFF')),
-                          );
-                          return GestureDetector(
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setState(() => _colorHex = hex);
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              margin: const EdgeInsets.only(right: 12),
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected
-                                      ? color
-                                      : Colors.transparent,
-                                  width: 2,
-                                ),
+                    // --- REPLACED: Custom Color Picker Button ---
+                    GestureDetector(
+                      onTap: () async {
+                        HapticFeedback.selectionClick();
+                        final hex = await _CustomColorPickerSheet.show(
+                          context,
+                          _colorHex,
+                        );
+                        if (hex != null && mounted) {
+                          setState(() => _colorHex = hex);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: theme.dividerColor),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: Color(
+                                int.parse(_colorHex.replaceAll('#', '0xFF')),
                               ),
-                              child: CircleAvatar(
-                                backgroundColor: color,
-                                radius: 18,
-                                child: isSelected
-                                    ? Icon(
-                                        Icons.check,
-                                        size: 18,
-                                        color: hex == '#FFFFFF'
-                                            ? Colors.black
-                                            : Colors.white,
-                                      )
-                                    : null,
+                              radius: 12,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Select Custom Color',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: theme.colorScheme.onSurface,
                               ),
                             ),
-                          );
-                        }).toList(),
+                            const Spacer(),
+                            Icon(
+                              Icons.colorize_rounded,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 
-                    // --- NEW: CONDITIONAL COLORS SECTION ---
                     const SizedBox(height: 32),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1705,7 +1696,7 @@ class _VisualFormulaEditorSheetState
                               : null,
                           conditionalColors: _conditionalRules.isNotEmpty
                               ? _conditionalRules
-                              : null, // <-- SAVED
+                              : null,
                         ),
                       );
                       Navigator.pop(context);
@@ -1715,6 +1706,327 @@ class _VisualFormulaEditorSheetState
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// --- NEW NATIVE 2D PURE COLOR PICKER (NO DEPENDENCIES) ---
+// ============================================================================
+class _CustomColorPickerSheet extends StatefulWidget {
+  final String initialHex;
+  const _CustomColorPickerSheet({required this.initialHex});
+
+  static Future<String?> show(BuildContext context, String initialHex) {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _CustomColorPickerSheet(initialHex: initialHex),
+    );
+  }
+
+  @override
+  State<_CustomColorPickerSheet> createState() =>
+      _CustomColorPickerSheetState();
+}
+
+class _CustomColorPickerSheetState extends State<_CustomColorPickerSheet> {
+  late HSVColor _hsvColor;
+
+  @override
+  void initState() {
+    super.initState();
+    String hex = widget.initialHex.replaceAll('#', '').toUpperCase();
+    if (hex.length == 6) hex = 'FF$hex';
+    final c = Color(int.parse(hex, radix: 16));
+    _hsvColor = HSVColor.fromColor(c);
+  }
+
+  void _onSVChange(Offset localPosition, Size size) {
+    double s = (localPosition.dx / size.width).clamp(0.0, 1.0);
+    double v = 1.0 - (localPosition.dy / size.height).clamp(0.0, 1.0);
+    setState(() {
+      _hsvColor = _hsvColor.withSaturation(s).withValue(v);
+    });
+  }
+
+  void _onHueChange(Offset localPosition, Size size) {
+    double h = (localPosition.dx / size.width).clamp(0.0, 1.0) * 360.0;
+    setState(() {
+      _hsvColor = _hsvColor.withHue(h);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    final currentColor = _hsvColor.toColor();
+    final rgbHex = (currentColor.value & 0xFFFFFF)
+        .toRadixString(16)
+        .padLeft(6, '0')
+        .toUpperCase();
+    final hexString = '#$rgbHex';
+
+    // Rainbow gradient colors for the Hue slider
+    final List<Color> hueColors = [
+      const HSVColor.fromAHSV(1.0, 0.0, 1.0, 1.0).toColor(),
+      const HSVColor.fromAHSV(1.0, 60.0, 1.0, 1.0).toColor(),
+      const HSVColor.fromAHSV(1.0, 120.0, 1.0, 1.0).toColor(),
+      const HSVColor.fromAHSV(1.0, 180.0, 1.0, 1.0).toColor(),
+      const HSVColor.fromAHSV(1.0, 240.0, 1.0, 1.0).toColor(),
+      const HSVColor.fromAHSV(1.0, 300.0, 1.0, 1.0).toColor(),
+      const HSVColor.fromAHSV(1.0, 360.0, 1.0, 1.0).toColor(),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: bottomInset + 24,
+        left: 24,
+        right: 24,
+        top: 12,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: theme.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Header
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: currentColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: theme.dividerColor.withOpacity(0.5),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: currentColor.withOpacity(0.4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Custom Color',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    Text(
+                      hexString,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // 1. Saturation & Value 2D Canvas (The Shade Picker)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final double width = constraints.maxWidth;
+              const double height = 220.0;
+              final double x = _hsvColor.saturation * width;
+              final double y = (1.0 - _hsvColor.value) * height;
+
+              return GestureDetector(
+                onPanUpdate: (details) =>
+                    _onSVChange(details.localPosition, Size(width, height)),
+                onTapDown: (details) =>
+                    _onSVChange(details.localPosition, Size(width, height)),
+                child: Container(
+                  width: width,
+                  height: height,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: HSVColor.fromAHSV(
+                      1.0,
+                      _hsvColor.hue,
+                      1.0,
+                      1.0,
+                    ).toColor(),
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // White gradient (Saturation)
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: const LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [Colors.white, Colors.transparent],
+                          ),
+                        ),
+                      ),
+                      // Black gradient (Value/Brightness)
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.black],
+                          ),
+                        ),
+                      ),
+                      // The Draggable Thumb
+                      Positioned(
+                        left: x - 12,
+                        top: y - 12,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: currentColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.4),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 24),
+
+          // 2. Hue Slider (The Color Family Bar)
+          Text(
+            'COLOR FAMILY (HUE)',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: theme.colorScheme.primary,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final double width = constraints.maxWidth;
+              const double height = 36.0;
+              final double x = (_hsvColor.hue / 360.0) * width;
+
+              return GestureDetector(
+                onPanUpdate: (details) =>
+                    _onHueChange(details.localPosition, Size(width, height)),
+                onTapDown: (details) =>
+                    _onHueChange(details.localPosition, Size(width, height)),
+                child: Container(
+                  width: width,
+                  height: height,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: LinearGradient(colors: hueColors),
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: x - 16,
+                        top: 2,
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: HSVColor.fromAHSV(
+                              1.0,
+                              _hsvColor.hue,
+                              1.0,
+                              1.0,
+                            ).toColor(),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 32),
+
+          // Action Buttons
+          Row(
+            children: [
+              Expanded(
+                child: ModernBoxyButton(
+                  onPressed: () => Navigator.pop(context),
+                  label: 'CANCEL',
+                  isOutlined: true,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 2,
+                child: ModernBoxyButton(
+                  onPressed: () => Navigator.pop(context, hexString),
+                  label: 'APPLY COLOR',
+                ),
+              ),
+            ],
           ),
         ],
       ),
