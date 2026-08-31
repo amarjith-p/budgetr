@@ -1,4 +1,5 @@
 // lib/features/dashboard/dashboard_page.dart
+import 'package:budgetr/core/components/custom_snackbars.dart';
 import 'package:budgetr/features/backup/views/backup_page.dart';
 import 'package:budgetr/features/debts/views/debt_dashboard_page.dart';
 import 'package:budgetr/features/developer/views/developer_support_page.dart';
@@ -56,15 +57,23 @@ class DashboardPage extends ConsumerWidget {
   Future<void> _handleQuickBackup(BuildContext context, WidgetRef ref) async {
     HapticFeedback.selectionClick();
 
+    // 1. Capture the root navigator state BEFORE the async gap
+    // to prevent popping the wrong route later.
+    final navigator = Navigator.of(context, rootNavigator: true);
+
     // Show FuturisticLoader Overlay
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.85),
       barrierDismissible: false,
-      builder: (_) => const Material(
-        color: Colors.transparent,
-        child: Center(
-          child: FuturisticLoader(size: 80, label: "PREPARING BACKUP..."),
+      builder: (_) => const PopScope(
+        canPop:
+            false, // <-- FIX: Prevents hardware back button stack corruption
+        child: Material(
+          color: Colors.transparent,
+          child: Center(
+            child: FuturisticLoader(size: 80, label: "PREPARING BACKUP..."),
+          ),
         ),
       ),
     );
@@ -74,22 +83,43 @@ class DashboardPage extends ConsumerWidget {
         .read(backupServiceProvider)
         .exportDatabaseExternal();
 
-    if (context.mounted) Navigator.pop(context); // Close loader
+    // Safely close loader using the captured root navigator
+    navigator.pop();
 
     if (result != null && result.startsWith('ERROR:')) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result.replaceFirst('ERROR: ', ''))),
+        CustomSnackbars.showError(
+          context,
+          message: result.replaceFirst('ERROR: ', ''),
         );
       }
     } else if (result != null) {
-      // Fire share prompt so user can select Drive/Email
-      await Share.shareXFiles([
+      // Fire share prompt and CAPTURE the user's action
+      final shareResult = await Share.shareXFiles([
         XFile(result),
       ], subject: 'FinStack 360 Daily Backup');
 
-      // Reset the 24-hour clock and clear active warnings
-      await ref.read(backupReminderProvider.notifier).recordBackup();
+      // --- FIX: THE GHOST BACKUP BUG ---
+      // Only reset the warning clock if the user ACTUALLY completed the share.
+      // If they dismiss/cancel the share sheet, the warning icon remains active.
+      if (shareResult.status == ShareResultStatus.success) {
+        await ref.read(backupReminderProvider.notifier).recordBackup();
+
+        if (context.mounted) {
+          CustomSnackbars.showSuccess(
+            context,
+            message: 'Backup secured successfully.',
+          );
+        }
+      } else if (shareResult.status == ShareResultStatus.dismissed) {
+        if (context.mounted) {
+          CustomSnackbars.showError(
+            context,
+            message:
+                'Backup cancelled. Please complete the backup to stay safe.',
+          );
+        }
+      }
     }
   }
 
