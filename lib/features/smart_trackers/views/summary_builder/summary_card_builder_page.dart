@@ -1,5 +1,6 @@
 // lib/features/smart_trackers/views/summary_builder/summary_card_builder_page.dart
 import 'dart:convert';
+import 'package:budgetr/core/components/global_selection_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -586,30 +587,59 @@ class _VisualFormulaEditorSheetState
   }
 
   // --- REPLACED: Color Picker for Conditional Formatting ---
+  // --- REPLACED: Conditional Formatting Bottom Sheet & Global Selection ---
   Future<void> _promptForCondition() async {
     HapticFeedback.selectionClick();
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     String op = '>';
     final valCtrl = TextEditingController();
-    String cHex = '#E71D36';
+    String cHex = '#E71D36'; // Default Red
 
-    final result = await showDialog<ConditionalFormatRule>(
+    final result = await showModalBottomSheet<ConditionalFormatRule>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor:
+          Colors.transparent, // Ensures the custom shape corner radius shows
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
-          return Dialog(
-            backgroundColor: theme.scaffoldBackgroundColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+          final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+
+          return Container(
+            decoration: BoxDecoration(
+              color: theme.scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(DesignTokens.radiusLg ?? 16),
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.only(
+              bottom: bottomInset + DesignTokens.spacingLg,
+              left: DesignTokens.spacingLg,
+              right: DesignTokens.spacingLg,
+              top: DesignTokens.spacingSm,
+            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // --- STANDARD DRAG HANDLE ---
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(
+                        bottom: DesignTokens.spacingLg,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.dividerColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+
                   Text(
                     'Add Conditional Color',
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -617,44 +647,74 @@ class _VisualFormulaEditorSheetState
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
+                  // --- GLOBAL SELECTION SHEET TRIGGER ---
+                  Text(
+                    'CONDITION',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.primary,
+                      letterSpacing: 1.5,
                     ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest
-                          .withOpacity(isDark ? 0.3 : 0.5),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: theme.dividerColor),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: op,
-                        isExpanded: true,
-                        dropdownColor: theme.colorScheme.surface,
-                        items: ['>', '<', '>=', '<=', '=='].map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(
-                              "If value is $value",
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: theme.colorScheme.onSurface,
-                              ),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () async {
+                      HapticFeedback.selectionClick();
+                      final selectedOp = await GlobalSelectionSheet.showSimple(
+                        context: context,
+                        title: 'Select Operator',
+                        items: ['>', '<', '>=', '<=', '=='],
+                        selectedValue: op,
+                      );
+                      if (selectedOp != null) {
+                        setModalState(() => op = selectedOp);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: theme.dividerColor),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            'If value is ',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
-                          );
-                        }).toList(),
-                        onChanged: (newOp) {
-                          setModalState(() => op = newOp!);
-                        },
+                          ),
+                          Text(
+                            op,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 14,
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withOpacity(0.5),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
 
+                  // --- VALUE INPUT ---
                   ModernBoxyInput(
                     controller: valCtrl,
                     labelText: 'Target Value',
@@ -662,10 +722,12 @@ class _VisualFormulaEditorSheetState
                       decimal: true,
                       signed: true,
                     ),
-                    autofocus: true,
+                    autofocus:
+                        true, // Will trigger bottomInset to expand seamlessly
                   ),
                   const SizedBox(height: 24),
 
+                  // --- CUSTOM COLOR PICKER TRIGGER ---
                   Text(
                     'THEN SET COLOR TO',
                     style: TextStyle(
@@ -676,11 +738,11 @@ class _VisualFormulaEditorSheetState
                     ),
                   ),
                   const SizedBox(height: 8),
-
-                  // NEW CUSTOM COLOR BUTTON IN DIALOG
                   GestureDetector(
                     onTap: () async {
                       HapticFeedback.selectionClick();
+                      // Temporarily drop focus so the keyboard slides away gracefully
+                      FocusScope.of(context).unfocus();
                       final hex = await _CustomColorPickerSheet.show(
                         context,
                         cHex,
@@ -726,8 +788,9 @@ class _VisualFormulaEditorSheetState
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
+                  // --- MODERN BOXY BUTTONS ---
                   Row(
                     children: [
                       Expanded(
@@ -737,7 +800,7 @@ class _VisualFormulaEditorSheetState
                           isOutlined: true,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 16),
                       Expanded(
                         flex: 2,
                         child: ModernBoxyButton(
