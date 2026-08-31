@@ -565,36 +565,25 @@ class _VisualFormulaEditorSheetState
                 autofocus: true,
               ),
               const SizedBox(height: 24),
+              // --- FIX: Replaced raw Row/ElevatedButton with Expanded + ModernBoxyButton ---
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(
-                      'CANCEL',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                  Expanded(
+                    child: ModernBoxyButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      label: 'CANCEL',
+                      isOutlined: true,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: theme.colorScheme.onPrimary,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onPressed: () {
-                      final val = int.tryParse(ctrl.text.trim());
-                      Navigator.pop(ctx, val);
-                    },
-                    child: const Text(
-                      'ADD TO FORMULA',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                  Expanded(
+                    flex: 2,
+                    child: ModernBoxyButton(
+                      onPressed: () {
+                        final val = int.tryParse(ctrl.text.trim());
+                        Navigator.pop(ctx, val);
+                      },
+                      label: 'ADD TO FORMULA',
                     ),
                   ),
                 ],
@@ -611,7 +600,6 @@ class _VisualFormulaEditorSheetState
     }
   }
 
-  // --- NEW: Dynamic Input Dialog for Conditional Formatting ---
   Future<void> _promptForCondition() async {
     HapticFeedback.selectionClick();
     final theme = Theme.of(context);
@@ -750,46 +738,34 @@ class _VisualFormulaEditorSheetState
                   ),
                   const SizedBox(height: 24),
 
-                  // Actions
+                  // --- FIX: Replaced raw Row/ElevatedButton with Expanded + ModernBoxyButton ---
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: Text(
-                          'CANCEL',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                      Expanded(
+                        child: ModernBoxyButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          label: 'CANCEL',
+                          isOutlined: true,
                         ),
                       ),
                       const SizedBox(width: 8),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: theme.colorScheme.onPrimary,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () {
-                          final val = double.tryParse(valCtrl.text.trim());
-                          if (val != null) {
-                            Navigator.pop(
-                              ctx,
-                              ConditionalFormatRule(
-                                operator: op,
-                                value: val,
-                                colorHex: cHex,
-                              ),
-                            );
-                          }
-                        },
-                        child: const Text(
-                          'ADD RULE',
-                          style: TextStyle(fontWeight: FontWeight.w800),
+                      Expanded(
+                        flex: 2,
+                        child: ModernBoxyButton(
+                          onPressed: () {
+                            final val = double.tryParse(valCtrl.text.trim());
+                            if (val != null) {
+                              Navigator.pop(
+                                ctx,
+                                ConditionalFormatRule(
+                                  operator: op,
+                                  value: val,
+                                  colorHex: cHex,
+                                ),
+                              );
+                            }
+                          },
+                          label: 'ADD RULE',
                         ),
                       ),
                     ],
