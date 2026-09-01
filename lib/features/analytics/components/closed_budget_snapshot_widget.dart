@@ -55,7 +55,11 @@ class ClosedBudgetSnapshotWidget extends ConsumerStatefulWidget {
 
 class _ClosedBudgetSnapshotWidgetState
     extends ConsumerState<ClosedBudgetSnapshotWidget> {
-  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  // --- FIX: Default to Last Month natively ---
+  DateTime _selectedMonth = DateTime(
+    DateTime.now().year,
+    DateTime.now().month - 1,
+  );
 
   // --- MODERN MONTH/YEAR PICKER DIALOG ---
   Future<void> _pickMonthYear() async {
@@ -209,7 +213,6 @@ class _ClosedBudgetSnapshotWidgetState
     ThemeData theme, {
     bool isDeduction = false,
   }) {
-    // Convert deduction amounts to negative so CurrencyText handles the sign logic natively
     final displayAmount = (isDeduction && amount > 0) ? -amount : amount;
     final isNegative = displayAmount < 0;
 
@@ -262,7 +265,6 @@ class _ClosedBudgetSnapshotWidgetState
     final isDark = theme.brightness == Brightness.dark;
     final snapshotAsync = ref.watch(_snapshotForMonthProvider(_selectedMonth));
 
-    // Chart Colors for Clustered Bar
     final allocatedColor = Colors.green.shade600;
     final spentColor = theme.colorScheme.error.withOpacity(0.9);
 
@@ -284,7 +286,6 @@ class _ClosedBudgetSnapshotWidgetState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- HEADER & MONTH SELECTOR ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -350,7 +351,6 @@ class _ClosedBudgetSnapshotWidgetState
           ),
           const SizedBox(height: 16),
 
-          // --- CONTENT RENDERER ---
           snapshotAsync.when(
             loading: () => const SizedBox(
               height: 250,
@@ -380,22 +380,17 @@ class _ClosedBudgetSnapshotWidgetState
 
               final buckets = _parseBuckets(snapshot);
 
-              // Calculate Max Y for Chart scaling
               double maxY = 0;
               for (var b in buckets) {
                 final highest = max(b.allocated, b.spent);
                 if (highest > maxY) maxY = highest;
               }
-              maxY = maxY > 0
-                  ? maxY * 1.15
-                  : 1000; // 15% padding above highest bar
+              maxY = maxY > 0 ? maxY * 1.15 : 1000;
 
-              // Ensure we display at least 4 Y-axis values
               double yInterval = maxY > 0 ? (maxY / 4) : 250.0;
 
               return Column(
                 children: [
-                  // --- 3x2 PERFECT GRID WITH VERTICAL DIVIDERS ---
                   IntrinsicHeight(
                     child: Row(
                       children: [
@@ -479,7 +474,6 @@ class _ClosedBudgetSnapshotWidgetState
                     child: Divider(height: 1),
                   ),
 
-                  // --- CHART: LEGEND ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -490,7 +484,6 @@ class _ClosedBudgetSnapshotWidgetState
                   ),
                   const SizedBox(height: 24),
 
-                  // --- CHART: CLUSTERED BAR ---
                   if (buckets.isEmpty)
                     const SizedBox(
                       height: 200,
@@ -513,7 +506,6 @@ class _ClosedBudgetSnapshotWidgetState
                               getTooltipItem: (group, groupIndex, rod, rodIndex) {
                                 final b = buckets[groupIndex];
 
-                                // Calculate Saved vs Overspent
                                 final savedAmount = b.allocated - b.spent;
                                 final bool isSaved = savedAmount >= 0;
                                 final String savedLabel = isSaved
@@ -549,7 +541,6 @@ class _ClosedBudgetSnapshotWidgetState
                                         color: Colors.blueGrey.shade100,
                                       ),
                                     ),
-                                    // NEW: Added Saved / Overspent indicator
                                     TextSpan(
                                       text:
                                           '$savedLabel: ₹ ${CurrencyFormatter.format(savedAmount.abs())}',
@@ -576,8 +567,7 @@ class _ClosedBudgetSnapshotWidgetState
                               sideTitles: SideTitles(
                                 showTitles: true,
                                 reservedSize: 40,
-                                interval:
-                                    yInterval, // <-- Ensures at least 4 Y-Axis Values
+                                interval: yInterval,
                                 getTitlesWidget: (value, meta) {
                                   if (value == 0 || value == maxY)
                                     return const SizedBox.shrink();
@@ -605,7 +595,6 @@ class _ClosedBudgetSnapshotWidgetState
                                   if (value < 0 || value >= buckets.length)
                                     return const SizedBox.shrink();
 
-                                  // --- EXTRACT FIRST 3 CHARACTERS ---
                                   String rawName = buckets[value.toInt()].name;
                                   String shortName = rawName.length > 3
                                       ? rawName.substring(0, 3)
@@ -631,8 +620,7 @@ class _ClosedBudgetSnapshotWidgetState
                           gridData: FlGridData(
                             show: true,
                             drawVerticalLine: false,
-                            horizontalInterval:
-                                yInterval, // Matches the Y-Axis labels
+                            horizontalInterval: yInterval,
                             getDrawingHorizontalLine: (value) => FlLine(
                               color: theme.dividerColor.withOpacity(0.5),
                               strokeWidth: 1,
