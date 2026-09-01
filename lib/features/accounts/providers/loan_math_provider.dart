@@ -29,19 +29,20 @@ final loanTotalOutstandingProvider = Provider.family
       }
 
       double? taxAmount = account.totalTaxPayable;
-      double? bankChargesAmount = account.bankCharges; // <-- NEW
+      double? bankChargesAmount = account.bankCharges;
 
       double interestPaid = 0.0;
       double taxPaid = 0.0;
-      double chargesPaid = 0.0; // <-- NEW
+      double chargesPaid = 0.0;
 
       for (final item in transactions) {
         if (item.transaction.subCategory == 'Loan Interest') {
           interestPaid += item.transaction.amount;
         } else if (item.transaction.subCategory == 'Tax on Interest') {
           taxPaid += item.transaction.amount;
-        } else if (item.transaction.subCategory == 'Bank Charges') {
-          chargesPaid += item.transaction.amount; // <-- NEW
+        } else if (item.transaction.subCategory == 'Bank Charges on Loan' ||
+            item.transaction.subCategory == 'Bank Charges') {
+          chargesPaid += item.transaction.amount;
         }
       }
 
@@ -54,7 +55,7 @@ final loanTotalOutstandingProvider = Provider.family
 
       double remainingCharges = 0.0;
       if (bankChargesAmount != null) {
-        remainingCharges = bankChargesAmount - chargesPaid; // <-- NEW
+        remainingCharges = bankChargesAmount - chargesPaid;
       }
 
       return currentBalance +
