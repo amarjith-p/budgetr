@@ -174,7 +174,6 @@ class _NetWorthReconciliationPageState
       _focusNodes[controller]!.requestFocus();
     }
 
-    // Ensure the field scrolls perfectly into the center of the viewport
     Future.delayed(const Duration(milliseconds: 150), () {
       final context = _focusNodes[controller]?.context;
       if (context != null && mounted) {
@@ -204,7 +203,6 @@ class _NetWorthReconciliationPageState
     if (currentIndex >= 0 && currentIndex < _orderedCalcCtrls.length - 1) {
       _openCalculatorFor(_orderedCalcCtrls[currentIndex + 1]);
     } else {
-      // Reached the end of numerical inputs, jump to Notes
       _closeCalculatorSafely();
       _notesFocus.requestFocus();
       SystemChannels.textInput.invokeMethod('TextInput.show');
@@ -462,7 +460,6 @@ class _NetWorthReconciliationPageState
             }
           }
 
-          // Build Transparency Note
           if (t.type == 'Expense') {
             _rolledBackNetFlow -= t.amount;
             detailStr +=
@@ -511,13 +508,16 @@ class _NetWorthReconciliationPageState
           for (var d in loanTxsData) {
             final t = d.transaction;
             if (t.date.isAfter(endOfMonth)) {
+              _rolledBackTxCount++;
+              final subCatLabel = t.subCategory ?? 'Payment';
+              // FIX: Ensure ALL future loan transactions (Principal, Interest, Tax, Charges) appear in the Audit Trail
+              _omittedTxDetails.add(
+                '${DateFormat('dd MMM').format(t.date)}: Loan $subCatLabel of ${CurrencyFormatter.format(t.amount)} for ${acc.name}',
+              );
+
               final amt = _computeRollback(t, acc.id);
               if (amt != 0) {
                 loanRollback += amt;
-                _rolledBackTxCount++;
-                _omittedTxDetails.add(
-                  '${DateFormat('dd MMM').format(t.date)}: Rolled back ${CurrencyFormatter.format(t.amount)} for Loan ${acc.name}',
-                );
               }
             }
           }
@@ -615,7 +615,6 @@ class _NetWorthReconciliationPageState
               .toList();
           pastLogs.sort((a, b) => a.date.compareTo(b.date));
 
-          // FIX: Smart Deduplication safeguard for older databases where initial amount and deposit log mirrored each other
           if (pastLogs.isNotEmpty &&
               pastLogs.first.type == 'Deposit' &&
               pastLogs.first.amount == inv.initialAmount &&
@@ -625,8 +624,7 @@ class _NetWorthReconciliationPageState
                 .inHours
                 .abs();
             if (diff < 24) {
-              historicalVal =
-                  0.0; // The deposit log will naturally add the initial amount
+              historicalVal = 0.0;
             }
           }
 
@@ -649,7 +647,6 @@ class _NetWorthReconciliationPageState
           }
         }
 
-        // FIX: Investment Savings Accounts explicitly drop to default (Other Investments) to prevent visual combining with Tracker Accounts
         switch (inv.type) {
           case 'Mutual Fund':
             mf += historicalVal;
@@ -751,10 +748,6 @@ class _NetWorthReconciliationPageState
 
     try {
       final txs = await ref.read(allTransactionsProvider.future);
-      final accounts = await ref.read(accountsStreamProvider.future);
-
-      bool isLoanAcc(String id) =>
-          accounts.any((a) => a.id == id && a.type == 'Loan');
 
       final monthTxs = txs.where(
         (t) =>
@@ -767,26 +760,20 @@ class _NetWorthReconciliationPageState
       for (var data in monthTxs) {
         final tx = data.transaction;
 
-        if (isLoanAcc(tx.accountId)) continue;
-
         if (tx.type == 'Income') {
           tInc += tx.amount;
           if (tx.subCategory == 'Non-Calculated Income') ncInc += tx.amount;
         } else if (tx.type == 'Expense') {
-          bool isLoanTx = tx.id.startsWith('LOAN_TX_');
           tExp += tx.amount;
 
           if (tx.subCategory == 'Non-Calculated Expenses') {
             ncExp += tx.amount;
           }
 
-          if (!isLoanTx) {
-            // FIX: Identical match to monthly_budget_transactions_page.dart out-of-bucket logic
-            if (tx.bucketId == null || tx.bucketId == -1) {
-              outBucket += tx.amount;
-            } else {
-              bExp += tx.amount;
-            }
+          if (tx.bucketId == null || tx.bucketId == -1) {
+            outBucket += tx.amount;
+          } else {
+            bExp += tx.amount;
           }
         }
       }
@@ -1009,7 +996,7 @@ class _NetWorthReconciliationPageState
               controller: ctrl1,
               focusNode: _focusNodes[ctrl1],
               labelText: label1,
-              readOnly: true,
+              readOnly: true, // Hide native keyboard
               onTap: () => _openCalculatorFor(ctrl1),
             ),
           ),
@@ -1019,7 +1006,7 @@ class _NetWorthReconciliationPageState
               controller: ctrl2,
               focusNode: _focusNodes[ctrl2],
               labelText: label2,
-              readOnly: true,
+              readOnly: true, // Hide native keyboard
               onTap: () => _openCalculatorFor(ctrl2),
             ),
           ),
@@ -1216,6 +1203,7 @@ class _NetWorthReconciliationPageState
     final theme = Theme.of(context);
     final actionState = ref.watch(netWorthRecordActionProvider);
 
+    // Keep providers alive so data doesn't dispose while user is acting
     ref.watch(accountsStreamProvider);
     ref.watch(investmentsStreamProvider);
     ref.watch(allInvestmentLogsStreamProvider);
@@ -1229,6 +1217,7 @@ class _NetWorthReconciliationPageState
         subtitle: 'MONTHLY SNAPSHOT',
         leadingIcon: Icons.close_rounded,
       ),
+      // --- STICKY BOTTOM NAVIGATION BAR ---
       bottomNavigationBar: SafeArea(
         child: Container(
           padding: const EdgeInsets.all(DesignTokens.spacingLg),
@@ -1260,6 +1249,7 @@ class _NetWorthReconciliationPageState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // --- MODERN RECONCILIATION PERIOD PICKER ---
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -1328,6 +1318,7 @@ class _NetWorthReconciliationPageState
                           ),
                           const SizedBox(height: 24),
 
+                          // --- NET WORTH SECTION ---
                           _buildActionBanner(
                             label: 'Auto-Compute Balances',
                             icon: Icons.account_balance_wallet_rounded,
@@ -1409,6 +1400,7 @@ class _NetWorthReconciliationPageState
                           ),
                           const SizedBox(height: 24),
 
+                          // --- CASHFLOW SECTION ---
                           _buildActionBanner(
                             label: 'Auto-Fetch Monthly Cashflow',
                             icon: Icons.sync_rounded,
@@ -1448,6 +1440,7 @@ class _NetWorthReconciliationPageState
                                     _openCalculatorFor(_cfOutOfBucketCtrl),
                               ),
 
+                              // Inline Calculation Button
                               Padding(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16.0,
@@ -1471,6 +1464,7 @@ class _NetWorthReconciliationPageState
                             ],
                           ),
 
+                          // --- METADATA SECTION ---
                           _buildSectionCard(
                             title: 'Metadata',
                             accentColor: theme.colorScheme.onSurfaceVariant,
@@ -1494,6 +1488,7 @@ class _NetWorthReconciliationPageState
             ),
           ),
 
+          // --- DOCKED CALCULATOR AT BOTTOM ---
           if (_activeCalcController != null)
             InlineCalculatorPad(
               key: ValueKey(_activeCalcController.hashCode),
