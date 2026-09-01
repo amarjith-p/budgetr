@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/theme/design_tokens.dart';
-import '../../../../core/components/currency_text.dart';
 import '../../models/summary_card_model.dart';
 import '../../models/tracker_field_model.dart';
 import '../../providers/smart_tracker_provider.dart';
@@ -18,7 +17,6 @@ class SmartTrackerSummaryCard extends ConsumerWidget {
   const SmartTrackerSummaryCard({Key? key, required this.template})
     : super(key: key);
 
-  // --- NEW: Helper to evaluate conditional formatting ---
   Color _resolveColor(
     String valueStr,
     String? defaultHex,
@@ -53,6 +51,7 @@ class SmartTrackerSummaryCard extends ConsumerWidget {
           match = val == rule.value;
           break;
       }
+
       if (match) {
         return Color(int.parse(rule.colorHex.replaceAll('#', '0xFF')));
       }
@@ -85,6 +84,7 @@ class SmartTrackerSummaryCard extends ConsumerWidget {
       final val = double.tryParse(value) ?? 0.0;
       final sign = val < 0 ? '-' : '';
       final sym = customSymbol ?? '₹';
+
       displayWidget = RichText(
         text: TextSpan(
           children: [
@@ -182,21 +182,8 @@ class SmartTrackerSummaryCard extends ConsumerWidget {
     final List<dynamic> decodedSchema = jsonDecode(liveTemplate.schemaJson);
     final fields = decodedSchema.map((e) => TrackerField.fromJson(e)).toList();
 
-    // 1. Evaluate Main Metric
-    String mainVal = '-';
-    double mainNum = 0.0;
-    if (config.mainMetric != null && records.isNotEmpty) {
-      mainVal = SummaryFormulaEngine.evaluate(
-        config.mainMetric!.formula,
-        config.mainMetric!.formatAs,
-        records,
-        fields,
-      );
-      mainNum = double.tryParse(mainVal) ?? 0.0;
-    }
-
-    // 2. Default Empty State
-    if (config.mainMetric == null && config.subMetrics.isEmpty) {
+    // Default Empty State
+    if (config.mainMetrics.isEmpty && config.subMetrics.isEmpty) {
       return GestureDetector(
         onTap: () {
           HapticFeedback.selectionClick();
@@ -240,13 +227,6 @@ class SmartTrackerSummaryCard extends ConsumerWidget {
         ),
       );
     }
-
-    Color displayColor = _resolveColor(
-      mainVal,
-      config.mainMetric?.colorHex,
-      config.mainMetric?.conditionalColors,
-      theme,
-    );
 
     return Container(
       margin: const EdgeInsets.all(DesignTokens.spacingMd),
@@ -298,65 +278,144 @@ class SmartTrackerSummaryCard extends ConsumerWidget {
             ],
           ),
 
-          if (config.mainMetric != null) ...[
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: config.mainMetric!.formatAs == 'currency'
-                  ? RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text:
-                                '${mainNum < 0 ? '-' : ''}${config.mainMetric!.currencySymbol ?? '₹'} ',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: displayColor.withOpacity(0.8),
-                            ),
+          if (config.mainMetrics.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            IntrinsicHeight(
+              child: Row(
+                children: config.mainMetrics
+                    .asMap()
+                    .entries
+                    .map((entry) {
+                      final metric = entry.value;
+
+                      String mainVal = '-';
+                      double mainNum = 0.0;
+                      if (records.isNotEmpty) {
+                        mainVal = SummaryFormulaEngine.evaluate(
+                          metric.formula,
+                          metric.formatAs,
+                          records,
+                          fields,
+                        );
+                        mainNum = double.tryParse(mainVal) ?? 0.0;
+                      }
+
+                      Color displayColor = _resolveColor(
+                        mainVal,
+                        metric.colorHex,
+                        metric.conditionalColors,
+                        theme,
+                      );
+
+                      Widget displayWidget;
+
+                      if (mainVal == 'Err' || mainVal == '-') {
+                        displayWidget = Text(
+                          mainVal,
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: displayColor,
+                            letterSpacing: -0.5,
                           ),
-                          TextSpan(
-                            text: mainNum.abs().toStringAsFixed(2),
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w900,
-                              color: displayColor,
-                              letterSpacing: -0.5,
-                            ),
+                        );
+                      } else if (metric.formatAs == 'currency') {
+                        final sign = mainNum < 0 ? '-' : '';
+                        displayWidget = RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: '$sign${metric.currencySymbol ?? '₹'} ',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: displayColor.withOpacity(0.8),
+                                ),
+                              ),
+                              TextSpan(
+                                text: mainNum.abs().toStringAsFixed(2),
+                                style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  color: displayColor,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    )
-                  : config.mainMetric!.formatAs == 'number'
-                  ? Text(
-                      mainNum.toInt().toString(),
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: displayColor,
-                        letterSpacing: -0.5,
-                      ),
-                    )
-                  : config.mainMetric!.formatAs == 'percentage'
-                  ? Text(
-                      '${mainNum.toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: displayColor,
-                        letterSpacing: -0.5,
-                      ),
-                    )
-                  : Text(
-                      mainVal,
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: displayColor,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
+                        );
+                      } else if (metric.formatAs == 'number') {
+                        displayWidget = Text(
+                          mainNum.toInt().toString(),
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: displayColor,
+                            letterSpacing: -0.5,
+                          ),
+                        );
+                      } else if (metric.formatAs == 'percentage') {
+                        displayWidget = Text(
+                          '${mainNum.toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: displayColor,
+                            letterSpacing: -0.5,
+                          ),
+                        );
+                      } else {
+                        displayWidget = Text(
+                          mainVal,
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: displayColor,
+                            letterSpacing: -0.5,
+                          ),
+                        );
+                      }
+
+                      Widget col = Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (config.mainMetrics.length > 1) ...[
+                              Text(
+                                metric.label.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.5,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                            ],
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: displayWidget,
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (entry.key < config.mainMetrics.length - 1) {
+                        return [
+                          col,
+                          VerticalDivider(
+                            width: 24,
+                            thickness: 1,
+                            color: theme.dividerColor,
+                          ),
+                        ];
+                      }
+                      return [col];
+                    })
+                    .expand((x) => x)
+                    .toList(),
+              ),
             ),
           ],
 

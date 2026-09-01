@@ -15,6 +15,8 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/database/app_database.dart';
 import '../models/tracker_field_model.dart';
+import '../models/summary_card_model.dart';
+import '../utils/summary_formula_engine.dart';
 
 class SmartTrackerExportResult {
   final String publicPath;
@@ -57,6 +59,36 @@ class SmartTrackerExportService {
     } catch (e) {
       return value.toString();
     }
+  }
+
+  // Helper to evaluate Summary Metrics for Export
+  String _evaluateMetric(
+    SmartSummaryMetric metric,
+    List<SmartTrackerRecord> records,
+    List<TrackerField> fields, {
+    bool forCsv = false,
+  }) {
+    final val = SummaryFormulaEngine.evaluate(
+      metric.formula,
+      metric.formatAs,
+      records,
+      fields,
+    );
+
+    if (val == 'Err' || val == '-') return val;
+
+    final numVal = double.tryParse(val) ?? 0.0;
+    if (metric.formatAs == 'currency') {
+      final sign = numVal < 0 ? '-' : '';
+      if (forCsv) return '$sign${numVal.abs().toStringAsFixed(2)}';
+      return '$sign${metric.currencySymbol ?? ''} ${numVal.abs().toStringAsFixed(2)}'
+          .trim();
+    } else if (metric.formatAs == 'number') {
+      return numVal.toInt().toString();
+    } else if (metric.formatAs == 'percentage') {
+      return '${numVal.toStringAsFixed(1)}%';
+    }
+    return val;
   }
 
   // --- NEW: CALCULATE FOOTER AGGREGATES ---
@@ -189,6 +221,26 @@ class SmartTrackerExportService {
     rows.add(['Total Records:', records.length.toString()]);
     rows.add([]);
 
+    // --- DASHBOARD METRICS INJECTION ---
+    final config = SmartSummaryCardConfig.parse(template.summaryWidgetJson);
+    if (config.mainMetrics.isNotEmpty || config.subMetrics.isNotEmpty) {
+      rows.add(['--- DASHBOARD SUMMARY ---']);
+      rows.add([config.title.toUpperCase()]);
+      for (var metric in config.mainMetrics) {
+        rows.add([
+          '${metric.label.toUpperCase()}:',
+          _evaluateMetric(metric, records, fields, forCsv: true),
+        ]);
+      }
+      for (var metric in config.subMetrics) {
+        rows.add([
+          '${metric.label.toUpperCase()}:',
+          _evaluateMetric(metric, records, fields, forCsv: true),
+        ]);
+      }
+      rows.add([]);
+    }
+
     rows.add(fields.map((f) => f.name.toUpperCase()).toList());
 
     for (var record in records) {
@@ -288,6 +340,103 @@ class SmartTrackerExportService {
       tableData.add(footerRow);
     }
 
+    // --- DASHBOARD METRICS INJECTION ---
+    final config = SmartSummaryCardConfig.parse(template.summaryWidgetJson);
+    pw.Widget? summaryBlock;
+
+    if (config.mainMetrics.isNotEmpty || config.subMetrics.isNotEmpty) {
+      summaryBlock = pw.Container(
+        margin: const pw.EdgeInsets.only(bottom: 24),
+        padding: const pw.EdgeInsets.all(16),
+        decoration: pw.BoxDecoration(
+          color: PdfColor.fromInt(0xFFF8FAFC),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+          border: pw.Border.all(color: PdfColors.grey300),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              config.title.toUpperCase(),
+              style: pw.TextStyle(
+                font: boldFont,
+                fontSize: 10,
+                color: PdfColors.grey700,
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            if (config.mainMetrics.isNotEmpty)
+              pw.Row(
+                children: config.mainMetrics.map((m) {
+                  return pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          m.label.toUpperCase(),
+                          style: pw.TextStyle(
+                            font: boldFont,
+                            fontSize: 8,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          _evaluateMetric(m, records, fields),
+                          style: pw.TextStyle(
+                            font: boldFont,
+                            fontSize: 16,
+                            color: PdfColor.fromInt(0xFF1E1E1E),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            if (config.mainMetrics.isNotEmpty && config.subMetrics.isNotEmpty)
+              pw.Container(
+                margin: const pw.EdgeInsets.symmetric(vertical: 12),
+                decoration: const pw.BoxDecoration(
+                  border: pw.Border(
+                    bottom: pw.BorderSide(color: PdfColors.grey300),
+                  ),
+                ),
+              ),
+            if (config.subMetrics.isNotEmpty)
+              pw.Row(
+                children: config.subMetrics.map((m) {
+                  return pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          m.label.toUpperCase(),
+                          style: pw.TextStyle(
+                            font: boldFont,
+                            fontSize: 8,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          _evaluateMetric(m, records, fields),
+                          style: pw.TextStyle(
+                            font: boldFont,
+                            fontSize: 12,
+                            color: PdfColor.fromInt(0xFF1E1E1E),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+          ],
+        ),
+      );
+    }
+
     pdf.addPage(
       pw.MultiPage(
         pageTheme: pageTheme,
@@ -363,6 +512,7 @@ class SmartTrackerExportService {
         },
         build: (pw.Context context) {
           return [
+            if (summaryBlock != null) summaryBlock,
             pw.TableHelper.fromTextArray(
               headers: tableHeaders,
               data: tableData,

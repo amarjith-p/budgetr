@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-
 import '../../../../core/database/app_database.dart';
 import '../../../../core/components/modern_app_bar.dart';
 import '../../../../core/components/modern_boxy_button.dart';
@@ -13,7 +12,6 @@ import '../../../../core/components/modern_boxy_input.dart';
 import '../../../../core/components/modern_boxy_toggle.dart';
 import '../../../../core/components/confirmation_bottom_sheet.dart';
 import '../../../../core/theme/design_tokens.dart';
-
 import '../../models/summary_card_model.dart';
 import '../../models/tracker_field_model.dart';
 import '../../providers/smart_tracker_provider.dart';
@@ -21,6 +19,7 @@ import '../../utils/summary_formula_engine.dart';
 
 class SummaryCardBuilderPage extends ConsumerStatefulWidget {
   final SmartTrackerTemplate template;
+
   const SummaryCardBuilderPage({Key? key, required this.template})
     : super(key: key);
 
@@ -40,6 +39,7 @@ class _SummaryCardBuilderPageState
     super.initState();
     _config = SmartSummaryCardConfig.parse(widget.template.summaryWidgetJson);
     _titleCtrl.text = _config.title;
+
     final List<dynamic> decodedSchema = jsonDecode(widget.template.schemaJson);
     _fields = decodedSchema.map((e) => TrackerField.fromJson(e)).toList();
   }
@@ -64,9 +64,20 @@ class _SummaryCardBuilderPageState
         onSave: (newMetric) {
           setState(() {
             if (isMain) {
+              List<SmartSummaryMetric> newMains = List.from(
+                _config.mainMetrics,
+              );
+              if (existingMetric != null) {
+                final idx = newMains.indexWhere(
+                  (m) => m.id == existingMetric.id,
+                );
+                newMains[idx] = newMetric;
+              } else {
+                newMains.add(newMetric);
+              }
               _config = SmartSummaryCardConfig(
                 title: _titleCtrl.text,
-                mainMetric: newMetric,
+                mainMetrics: newMains,
                 subMetrics: _config.subMetrics,
               );
             } else {
@@ -81,7 +92,7 @@ class _SummaryCardBuilderPageState
               }
               _config = SmartSummaryCardConfig(
                 title: _titleCtrl.text,
-                mainMetric: _config.mainMetric,
+                mainMetrics: _config.mainMetrics,
                 subMetrics: newSubs,
               );
             }
@@ -97,13 +108,15 @@ class _SummaryCardBuilderPageState
       title: _titleCtrl.text.trim().isEmpty
           ? 'SUMMARY'
           : _titleCtrl.text.trim(),
-      mainMetric: _config.mainMetric,
+      mainMetrics: _config.mainMetrics,
       subMetrics: _config.subMetrics,
     );
+
     final jsonStr = jsonEncode(_config.toJson());
     await ref
         .read(smartTrackerActionProvider.notifier)
         .saveSummaryLayout(widget.template.id, jsonStr);
+
     if (mounted) Navigator.pop(context);
   }
 
@@ -216,13 +229,23 @@ class _SummaryCardBuilderPageState
                 HapticFeedback.lightImpact();
                 setState(() {
                   if (isMain) {
+                    final newMains = List<SmartSummaryMetric>.from(
+                      _config.mainMetrics,
+                    )..removeWhere((m) => m.id == metric.id);
                     _config = SmartSummaryCardConfig(
                       title: _titleCtrl.text,
-                      mainMetric: null,
+                      mainMetrics: newMains,
                       subMetrics: _config.subMetrics,
                     );
                   } else {
-                    _config.subMetrics.remove(metric);
+                    final newSubs = List<SmartSummaryMetric>.from(
+                      _config.subMetrics,
+                    )..removeWhere((m) => m.id == metric.id);
+                    _config = SmartSummaryCardConfig(
+                      title: _titleCtrl.text,
+                      mainMetrics: _config.mainMetrics,
+                      subMetrics: newSubs,
+                    );
                   }
                 });
               },
@@ -262,18 +285,55 @@ class _SummaryCardBuilderPageState
                 ),
                 const SizedBox(height: 32),
 
-                // --- MAIN METRIC SECTION ---
-                Text(
-                  'MAIN METRIC',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: theme.colorScheme.primary,
-                    letterSpacing: 1.5,
-                  ),
+                // --- MAIN METRICS SECTION (Max 2) ---
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'MAIN METRICS (${_config.mainMetrics.length}/2)',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.primary,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    if (_config.mainMetrics.length < 2)
+                      GestureDetector(
+                        onTap: () => _openVisualEditor(null, true),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.add_rounded,
+                                color: theme.colorScheme.primary,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'ADD',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 12),
-                if (_config.mainMetric == null)
+                if (_config.mainMetrics.isEmpty)
                   GestureDetector(
                     onTap: () => _openVisualEditor(null, true),
                     child: Container(
@@ -308,7 +368,9 @@ class _SummaryCardBuilderPageState
                     ),
                   )
                 else
-                  _buildMetricTile(_config.mainMetric!, theme, true),
+                  ..._config.mainMetrics.map(
+                    (mm) => _buildMetricTile(mm, theme, true),
+                  ),
 
                 const SizedBox(height: 32),
 
@@ -385,7 +447,6 @@ class _SummaryCardBuilderPageState
               ],
             ),
           ),
-
           // --- ROUNDED FULL WIDTH ACTION BUTTON ---
           Container(
             padding: EdgeInsets.only(
@@ -457,7 +518,6 @@ class _VisualFormulaEditorSheetState
   String _colorHex = '#2EC4B6';
   String _currencySymbol = '₹';
   int _toolboxIndex = 0;
-
   List<ConditionalFormatRule> _conditionalRules = [];
 
   final List<String> _symbols = ['₹', '\$', '€', '£', '¥'];
@@ -473,11 +533,11 @@ class _VisualFormulaEditorSheetState
       _conditionalRules = List.from(
         widget.existingMetric!.conditionalColors ?? [],
       );
-
       if (widget.existingMetric!.formula.isNotEmpty) {
         _tokens = [widget.existingMetric!.formula];
       }
     }
+
     _labelCtrl.addListener(() => setState(() {}));
   }
 
@@ -586,12 +646,9 @@ class _VisualFormulaEditorSheetState
     }
   }
 
-  // --- REPLACED: Color Picker for Conditional Formatting ---
-  // --- REPLACED: Conditional Formatting Bottom Sheet & Global Selection ---
   Future<void> _promptForCondition() async {
     HapticFeedback.selectionClick();
     final theme = Theme.of(context);
-
     String op = '>';
     final valCtrl = TextEditingController();
     String cHex = '#E71D36'; // Default Red
@@ -605,7 +662,6 @@ class _VisualFormulaEditorSheetState
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
           final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
-
           return Container(
             decoration: BoxDecoration(
               color: theme.scaffoldBackgroundColor,
@@ -639,7 +695,6 @@ class _VisualFormulaEditorSheetState
                       ),
                     ),
                   ),
-
                   Text(
                     'Add Conditional Color',
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -844,10 +899,9 @@ class _VisualFormulaEditorSheetState
       records,
       widget.fields,
     );
-
     Color cColor = Color(int.parse(_colorHex.replaceAll('#', '0xFF')));
-    final parsedLiveResult = double.tryParse(liveResult);
 
+    final parsedLiveResult = double.tryParse(liveResult);
     if (parsedLiveResult != null && _conditionalRules.isNotEmpty) {
       for (var rule in _conditionalRules) {
         bool match = false;
@@ -1052,7 +1106,6 @@ class _VisualFormulaEditorSheetState
             ),
           ),
           const SizedBox(height: 16),
-
           Expanded(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -1064,7 +1117,6 @@ class _VisualFormulaEditorSheetState
                   children: [
                     _buildLivePreview(records, theme),
                     const SizedBox(height: 24),
-
                     ModernBoxyInput(
                       controller: _labelCtrl,
                       labelText: 'Metric Label (e.g. TOTAL RETURN)',
@@ -1073,7 +1125,6 @@ class _VisualFormulaEditorSheetState
                           : null,
                     ),
                     const SizedBox(height: 16),
-
                     Text(
                       'FORMULA / VALUE',
                       style: TextStyle(
@@ -1150,14 +1201,12 @@ class _VisualFormulaEditorSheetState
                         ),
                       ),
                     const SizedBox(height: 24),
-
                     ModernBoxyToggle(
                       labels: const ['Data Fields', 'Functions', 'Numpad'],
                       selectedIndex: _toolboxIndex,
                       onSelected: (i) => setState(() => _toolboxIndex = i),
                     ),
                     const SizedBox(height: 16),
-
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
                       child: Container(
@@ -1429,9 +1478,7 @@ class _VisualFormulaEditorSheetState
                               ),
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
                     Text(
                       'APPEARANCE',
                       style: TextStyle(
@@ -1461,7 +1508,6 @@ class _VisualFormulaEditorSheetState
                         });
                       },
                     ),
-
                     if (_format == 'currency') ...[
                       const SizedBox(height: 16),
                       Text(
@@ -1515,7 +1561,6 @@ class _VisualFormulaEditorSheetState
                         }).toList(),
                       ),
                     ],
-
                     const SizedBox(height: 16),
                     Text(
                       'DEFAULT COLOR',
@@ -1527,7 +1572,6 @@ class _VisualFormulaEditorSheetState
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // --- REPLACED: Custom Color Picker Button ---
                     GestureDetector(
                       onTap: () async {
                         HapticFeedback.selectionClick();
@@ -1576,7 +1620,6 @@ class _VisualFormulaEditorSheetState
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 32),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1703,7 +1746,6 @@ class _VisualFormulaEditorSheetState
               ),
             ),
           ),
-
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
@@ -1781,6 +1823,7 @@ class _VisualFormulaEditorSheetState
 // ============================================================================
 class _CustomColorPickerSheet extends StatefulWidget {
   final String initialHex;
+
   const _CustomColorPickerSheet({required this.initialHex});
 
   static Future<String?> show(BuildContext context, String initialHex) {
@@ -1874,7 +1917,6 @@ class _CustomColorPickerSheetState extends State<_CustomColorPickerSheet> {
               ),
             ),
           ),
-
           // Header
           Row(
             children: [
@@ -1922,7 +1964,6 @@ class _CustomColorPickerSheetState extends State<_CustomColorPickerSheet> {
               ),
             ],
           ),
-
           const SizedBox(height: 24),
 
           // 1. Saturation & Value 2D Canvas (The Shade Picker)
@@ -1930,6 +1971,7 @@ class _CustomColorPickerSheetState extends State<_CustomColorPickerSheet> {
             builder: (context, constraints) {
               final double width = constraints.maxWidth;
               const double height = 220.0;
+
               final double x = _hsvColor.saturation * width;
               final double y = (1.0 - _hsvColor.value) * height;
 
@@ -2002,7 +2044,6 @@ class _CustomColorPickerSheetState extends State<_CustomColorPickerSheet> {
               );
             },
           ),
-
           const SizedBox(height: 24),
 
           // 2. Hue Slider (The Color Family Bar)
@@ -2020,6 +2061,7 @@ class _CustomColorPickerSheetState extends State<_CustomColorPickerSheet> {
             builder: (context, constraints) {
               final double width = constraints.maxWidth;
               const double height = 36.0;
+
               final double x = (_hsvColor.hue / 360.0) * width;
 
               return GestureDetector(
@@ -2068,7 +2110,6 @@ class _CustomColorPickerSheetState extends State<_CustomColorPickerSheet> {
               );
             },
           ),
-
           const SizedBox(height: 32),
 
           // Action Buttons
