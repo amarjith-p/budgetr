@@ -177,9 +177,25 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
     if (picked != null) {
       setState(() {
         if (isStart) {
-          _startDate = picked;
+          // FIX: Preserve exact time component to prevent sorting instability
+          _startDate = DateTime(
+            picked.year,
+            picked.month,
+            picked.day,
+            _startDate.hour,
+            _startDate.minute,
+            _startDate.second,
+          );
         } else {
-          _endDate = picked;
+          final baseTime = _endDate ?? DateTime.now();
+          _endDate = DateTime(
+            picked.year,
+            picked.month,
+            picked.day,
+            baseTime.hour,
+            baseTime.minute,
+            baseTime.second,
+          );
         }
       });
     }

@@ -76,17 +76,20 @@ class _InvestmentDashboardPageState
 
   void _sortInvestments(List<Investment> list) {
     if (_currentSort == InvestmentSortOption.groupByType) return;
-
     list.sort((a, b) {
       switch (_currentSort) {
         case InvestmentSortOption.highestValue:
-          return b.currentValue.compareTo(a.currentValue);
+          int cmp = b.currentValue.compareTo(a.currentValue);
+          return cmp == 0 ? a.name.compareTo(b.name) : cmp;
         case InvestmentSortOption.lowestValue:
-          return a.currentValue.compareTo(b.currentValue);
+          int cmp = a.currentValue.compareTo(b.currentValue);
+          return cmp == 0 ? a.name.compareTo(b.name) : cmp;
         case InvestmentSortOption.newest:
-          return b.startDate.compareTo(a.startDate);
+          int cmp = b.startDate.compareTo(a.startDate);
+          return cmp == 0 ? a.name.compareTo(b.name) : cmp;
         case InvestmentSortOption.oldest:
-          return a.startDate.compareTo(b.startDate);
+          int cmp = a.startDate.compareTo(b.startDate);
+          return cmp == 0 ? a.name.compareTo(b.name) : cmp;
         case InvestmentSortOption.highestReturn:
           final aRet = a.initialAmount > 0
               ? ((a.currentValue - a.initialAmount) / a.initialAmount)
@@ -94,7 +97,8 @@ class _InvestmentDashboardPageState
           final bRet = b.initialAmount > 0
               ? ((b.currentValue - b.initialAmount) / b.initialAmount)
               : 0.0;
-          return bRet.compareTo(aRet);
+          int cmp = bRet.compareTo(aRet);
+          return cmp == 0 ? a.name.compareTo(b.name) : cmp;
         case InvestmentSortOption.lowestReturn:
           final aRet = a.initialAmount > 0
               ? ((a.currentValue - a.initialAmount) / a.initialAmount)
@@ -102,7 +106,8 @@ class _InvestmentDashboardPageState
           final bRet = b.initialAmount > 0
               ? ((b.currentValue - b.initialAmount) / b.initialAmount)
               : 0.0;
-          return aRet.compareTo(bRet);
+          int cmp = aRet.compareTo(bRet);
+          return cmp == 0 ? a.name.compareTo(b.name) : cmp;
         case InvestmentSortOption.nameAZ:
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
         default:

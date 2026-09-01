@@ -59,7 +59,18 @@ class _InvestmentCloseBottomSheetState
       firstDate: widget.investment.startDate,
       lastDate: DateTime.now(),
     );
-    if (picked != null && mounted) setState(() => _closeDate = picked);
+    if (picked != null && mounted) {
+      setState(
+        () => _closeDate = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          _closeDate.hour,
+          _closeDate.minute,
+          _closeDate.second,
+        ),
+      );
+    }
   }
 
   Future<void> _submit() async {

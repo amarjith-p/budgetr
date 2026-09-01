@@ -12,6 +12,10 @@ class InvestmentService {
   Stream<List<Investment>> watchInvestments() {
     return (_db.select(_db.investments)..orderBy([
           (t) => OrderingTerm(expression: t.startDate, mode: OrderingMode.desc),
+          (t) => OrderingTerm(
+            expression: t.name,
+            mode: OrderingMode.asc,
+          ), // Fallback
         ]))
         .watch();
   }
@@ -71,12 +75,15 @@ class InvestmentService {
       await dbMutation();
 
       // 3. Fetch the new timeline chronologically
+      // 3. Fetch the new timeline chronologically
       final newLogs =
           await (_db.select(_db.investmentLogs)
                 ..where((t) => t.investmentId.equals(investmentId))
                 ..orderBy([
                   (t) =>
                       OrderingTerm(expression: t.date, mode: OrderingMode.asc),
+                  // FIX: Fallback to ID so chronological processing is strictly deterministic
+                  (t) => OrderingTerm(expression: t.id, mode: OrderingMode.asc),
                 ]))
               .get();
 

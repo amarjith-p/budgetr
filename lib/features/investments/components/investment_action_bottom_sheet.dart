@@ -136,7 +136,18 @@ class _InvestmentActionBottomSheetState
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     );
-    if (picked != null && mounted) setState(() => _selectedDate = picked);
+    if (picked != null && mounted) {
+      setState(
+        () => _selectedDate = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          _selectedDate.hour,
+          _selectedDate.minute,
+          _selectedDate.second,
+        ),
+      );
+    }
     _amountFocus.requestFocus();
   }
 
