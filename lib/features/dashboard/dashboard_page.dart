@@ -207,10 +207,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           if (tx.date.year == now.year && tx.date.month == now.month) {
             if (tx.type == 'Expense') {
               bool isLoanTx = tx.id.startsWith('LOAN_TX_');
-              bool isNonCalc = tx.subCategory == 'Non-Calculated Expenses';
+              // bool isNonCalc = tx.subCategory == 'Non-Calculated Expenses';
 
               if (!isLoanTx &&
-                  !isNonCalc &&
+                  // !isNonCalc &&
                   tx.bucketId != null &&
                   tx.bucketId != -1) {
                 budgetedSpend += tx.amount;
