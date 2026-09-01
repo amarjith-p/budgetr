@@ -10,7 +10,7 @@ import 'package:budgetr/features/trips/views/trip_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart'; // <-- ADDED FOR DATE/TIME FORMATTING
+import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/components/modern_app_bar.dart';
 import '../../core/components/currency_text.dart';
@@ -28,10 +28,10 @@ import '../investments/providers/investment_provider.dart';
 import '../notifications/components/notification_bell_widget.dart';
 import '../automation/views/automation_dashboard_page.dart';
 
-// --- BUDGET PROVIDER IMPORT ---
+// --- BUDGET PROVIDER IMPORTS ---
+import '../../../core/database/app_database.dart';
 import '../budgets/providers/budget_provider.dart';
 
-// --- SMART INBOX IMPORTS ---
 import '../automation/views/smart_inbox_page.dart';
 import '../automation/providers/smart_inbox_provider.dart';
 
@@ -39,21 +39,28 @@ import '../trips/providers/trip_provider.dart';
 import '../reminders/views/reminder_dashboard_page.dart';
 import '../reminders/providers/reminder_provider.dart';
 
-// --- SECURE VAULT IMPORT ---
 import '../secure_vault/views/vault_auth_page.dart';
 
-// --- DEBT IMPORT ---
 import '../debts/providers/debt_provider.dart';
 
-// --- NET WORTH IMPORT ---
 import '../net_worth/providers/net_worth_provider.dart';
 
-// --- BACKUP IMPORTS ---
 import 'package:share_plus/share_plus.dart';
 import '../backup/services/backup_service.dart';
 import '../backup/providers/backup_reminder_provider.dart';
 import '../../core/components/futuristic_loader.dart';
 import '../../core/components/custom_snackbars.dart';
+
+// --- NEW: STRICT LOCAL PROVIDER ---
+// This ensures the dashboard NEVER travels back in time when the user explores old budgets elsewhere
+final _dashboardBudgetProvider = StreamProvider.autoDispose<MonthlyBudget?>((
+  ref,
+) {
+  final now = DateTime.now();
+  return ref
+      .watch(budgetServiceProvider)
+      .watchBudgetForMonth(now.month, now.year);
+});
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -175,8 +182,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final bucketsAsync = ref.watch(bucketsStreamProvider);
     final int liveBucketsCount = bucketsAsync.asData?.value.length ?? 0;
 
-    // --- LIVE BUDGET MATH ---
-    final budgetAsync = ref.watch(monthlyBudgetStreamProvider);
+    // --- LIVE BUDGET MATH (NOW LOCKED STRICTLY TO CURRENT MONTH) ---
+    final budgetAsync = ref.watch(_dashboardBudgetProvider);
     final currentBudget = budgetAsync.asData?.value;
     double totalBudget = 0.0;
     double budgetedSpend = 0.0;
@@ -196,13 +203,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         final allTxs = ref.watch(allTransactionsProvider).asData?.value ?? [];
         for (var txData in allTxs) {
           final tx = txData.transaction;
+          // Confined absolutely to the actual real-world month
           if (tx.date.year == now.year && tx.date.month == now.month) {
             if (tx.type == 'Expense') {
-              bool isLoanFee =
-                  tx.subCategory == 'Loan Interest' ||
-                  tx.subCategory == 'Tax on Interest' ||
-                  tx.subCategory == 'Bank Charges on Loan';
-              if (!isLoanFee && tx.bucketId != null && tx.bucketId != -1) {
+              bool isLoanTx = tx.id.startsWith('LOAN_TX_');
+              bool isNonCalc = tx.subCategory == 'Non-Calculated Expenses';
+
+              if (!isLoanTx &&
+                  !isNonCalc &&
+                  tx.bucketId != null &&
+                  tx.bucketId != -1) {
                 budgetedSpend += tx.amount;
               }
             }
@@ -692,8 +702,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                       icon: Icons.add_rounded,
                                       height: double.infinity,
                                       color: darkTileColor,
-                                      topLeftContent:
-                                          const _LiveClockWidget(), // <-- Added here
+                                      topLeftContent: const _LiveClockWidget(),
                                       onTap: () {
                                         Navigator.push(
                                           context,
@@ -1303,7 +1312,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
   }
 
-  // --- RESTORED EXACT ORIGINAL IMPLEMENTATION ---
   Widget _buildFlatBar(double height, bool useDarkColor) {
     return Container(
       margin: const EdgeInsets.only(right: 6),
@@ -1325,7 +1333,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     bool verticalText = false,
     bool swapPositions = false,
     Color? iconColor,
-    Widget? topLeftContent, // <-- Added Parameter
+    Widget? topLeftContent,
   }) {
     return Material(
       color: color,
@@ -1340,7 +1348,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
               return Stack(
                 children: [
-                  // --- Added Widget to Top Left ---
                   if (topLeftContent != null)
                     Positioned(
                       top: isSmall ? 8.0 : 12.0,
@@ -1488,7 +1495,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 }
 
-// --- NEW WIDGET FOR LIVE CLOCK ---
 class _LiveClockWidget extends StatefulWidget {
   const _LiveClockWidget({Key? key}) : super(key: key);
 
