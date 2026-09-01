@@ -1,7 +1,8 @@
-// lib/features/investments/components/investment_close_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/modern_boxy_input.dart';
@@ -34,6 +35,7 @@ class _InvestmentCloseBottomSheetState
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _amountCtrl;
   late TextEditingController _reasonCtrl;
+
   DateTime _closeDate = DateTime.now();
 
   @override
@@ -78,7 +80,6 @@ class _InvestmentCloseBottomSheetState
       HapticFeedback.heavyImpact();
       return;
     }
-
     final amount = double.tryParse(_amountCtrl.text.trim());
     if (amount == null || amount < 0) {
       HapticFeedback.heavyImpact();
@@ -86,7 +87,6 @@ class _InvestmentCloseBottomSheetState
     }
 
     HapticFeedback.selectionClick();
-
     final success = await ref
         .read(investmentActionProvider.notifier)
         .closeInvestment(
@@ -97,7 +97,7 @@ class _InvestmentCloseBottomSheetState
         );
 
     if (success && mounted) {
-      Navigator.pop(context); // Close the sheet
+      Navigator.pop(context);
     }
   }
 
@@ -198,8 +198,7 @@ class _InvestmentCloseBottomSheetState
                 child: AbsorbPointer(
                   child: ModernBoxyInput(
                     controller: TextEditingController(
-                      text:
-                          '${_closeDate.day}/${_closeDate.month}/${_closeDate.year}',
+                      text: DateFormat('dd MMM yyyy').format(_closeDate),
                     ),
                     labelText: 'Date of Closure',
                     suffixIcon: const Icon(

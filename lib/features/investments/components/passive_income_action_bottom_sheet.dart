@@ -1,7 +1,8 @@
-// lib/features/investments/components/passive_income_action_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/modern_boxy_button.dart';
@@ -52,7 +53,7 @@ class _PassiveIncomeActionBottomSheetState
   final _amountCtrl = TextEditingController();
   final _amountFocus = FocusNode();
   DateTime _selectedDate = DateTime.now();
-  int _typeIndex = 0; // 0 = Dividend, 1 = Interest
+  int _typeIndex = 0;
 
   @override
   void initState() {
@@ -62,10 +63,12 @@ class _PassiveIncomeActionBottomSheetState
       _selectedDate = widget.existingLog!.date;
       _typeIndex = widget.existingLog!.type == 'Dividend' ? 0 : 1;
     }
+
     _amountFocus.addListener(() {
       if (_amountFocus.hasFocus)
         SystemChannels.textInput.invokeMethod('TextInput.hide');
     });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _amountFocus.requestFocus();
     });
@@ -84,7 +87,6 @@ class _PassiveIncomeActionBottomSheetState
       if (cursorPosition < 0) cursorPosition = _amountCtrl.text.length;
       String currentText = _amountCtrl.text;
 
-      // --- FIXED: Explicitly catch '⌫' and other backspace variations ---
       if (key.toUpperCase() == 'C') {
         _amountCtrl.clear();
       } else if (key == '⌫' ||
@@ -133,7 +135,18 @@ class _PassiveIncomeActionBottomSheetState
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     );
-    if (picked != null && mounted) setState(() => _selectedDate = picked);
+    if (picked != null && mounted) {
+      setState(
+        () => _selectedDate = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          _selectedDate.hour,
+          _selectedDate.minute,
+          _selectedDate.second,
+        ),
+      );
+    }
     _amountFocus.requestFocus();
   }
 
@@ -167,6 +180,7 @@ class _PassiveIncomeActionBottomSheetState
             date: _selectedDate,
           );
     }
+
     if (success && mounted) Navigator.pop(context);
   }
 
@@ -175,6 +189,7 @@ class _PassiveIncomeActionBottomSheetState
     final theme = Theme.of(context);
     final actionState = ref.watch(investmentActionProvider);
     final Color activeColor = Colors.amber.shade600;
+
     final double calcHeight = MediaQuery.of(context).size.height * 0.35;
 
     return Padding(
@@ -343,7 +358,7 @@ class _PassiveIncomeActionBottomSheetState
                                 ],
                               ),
                               Text(
-                                '${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}',
+                                DateFormat('dd MMM yyyy').format(_selectedDate),
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 13,

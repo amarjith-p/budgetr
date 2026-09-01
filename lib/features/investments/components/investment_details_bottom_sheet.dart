@@ -1,5 +1,6 @@
-// lib/features/investments/components/investment_details_bottom_sheet.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/currency_text.dart';
@@ -22,7 +23,7 @@ class InvestmentDetailsBottomSheet extends StatelessWidget {
 
   String _formatDate(DateTime? date) {
     if (date == null) return '--';
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    return DateFormat('dd MMM yyyy').format(date);
   }
 
   Widget _buildDetailBlock(
@@ -109,7 +110,6 @@ class InvestmentDetailsBottomSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- STANDARD DRAG HANDLE ---
             Center(
               child: Container(
                 width: 40,
@@ -134,8 +134,6 @@ class InvestmentDetailsBottomSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Divider(height: 1),
-
-            // --- FLEXIBLE PREVENTS OVERFLOW ---
             Flexible(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -374,9 +372,7 @@ class InvestmentDetailsBottomSheet extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
-                            child: SizedBox.shrink(),
-                          ), // Empty spacer for alignment
+                          const Expanded(child: SizedBox.shrink()),
                         ],
                       ),
                       const Padding(

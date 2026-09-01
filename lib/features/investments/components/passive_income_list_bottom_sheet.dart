@@ -1,8 +1,9 @@
-// lib/features/investments/components/passive_income_list_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:intl/intl.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/currency_text.dart';
@@ -114,7 +115,6 @@ class PassiveIncomeListBottomSheet extends ConsumerWidget {
                         ],
                       ),
                     ),
-
                     if (!isClosed)
                       Container(
                         decoration: BoxDecoration(
@@ -150,7 +150,6 @@ class PassiveIncomeListBottomSheet extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               const Divider(height: 1),
-
               Expanded(
                 child: logsAsync.when(
                   loading: () =>
@@ -162,10 +161,7 @@ class PassiveIncomeListBottomSheet extends ConsumerWidget {
                           (l) => l.type == 'Dividend' || l.type == 'Interest',
                         )
                         .toList();
-                    passiveLogs.sort(
-                      (a, b) => b.date.compareTo(a.date),
-                    ); // Newest first
-
+                    passiveLogs.sort((a, b) => b.date.compareTo(a.date));
                     if (passiveLogs.isEmpty) {
                       return Center(
                         child: Text(
@@ -177,7 +173,6 @@ class PassiveIncomeListBottomSheet extends ConsumerWidget {
                         ),
                       );
                     }
-
                     return ListView.separated(
                       controller: scrollController,
                       physics: const BouncingScrollPhysics(),
@@ -186,7 +181,6 @@ class PassiveIncomeListBottomSheet extends ConsumerWidget {
                         vertical: 16,
                       ),
                       itemCount: passiveLogs.length,
-                      // --- REDUCED SPACING BETWEEN CARDS FROM 12 TO 6 ---
                       separatorBuilder: (_, __) => const SizedBox(height: 6),
                       itemBuilder: (context, index) {
                         final log = passiveLogs[index];
@@ -234,7 +228,9 @@ class PassiveIncomeListBottomSheet extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '${log.date.day.toString().padLeft(2, '0')}/${log.date.month.toString().padLeft(2, '0')}/${log.date.year}',
+                                      DateFormat(
+                                        'dd MMM yyyy',
+                                      ).format(log.date),
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,

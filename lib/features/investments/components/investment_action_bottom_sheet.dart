@@ -1,7 +1,8 @@
-// lib/features/investments/components/investment_action_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/modern_boxy_button.dart';
@@ -13,7 +14,7 @@ import '../providers/investment_provider.dart';
 class InvestmentActionBottomSheet extends ConsumerStatefulWidget {
   final Investment investment;
   final bool isUpdateMode;
-  final InvestmentLog? existingLog; // --- NEW: Supports Editing ---
+  final InvestmentLog? existingLog;
 
   const InvestmentActionBottomSheet({
     Key? key,
@@ -51,7 +52,6 @@ class _InvestmentActionBottomSheetState
   final _formKey = GlobalKey<FormState>();
   final _amountCtrl = TextEditingController();
   final _amountFocus = FocusNode();
-
   DateTime _selectedDate = DateTime.now();
   int _typeIndex = 0;
   String? _errorMessage;
@@ -59,19 +59,15 @@ class _InvestmentActionBottomSheetState
   @override
   void initState() {
     super.initState();
-
-    // Pre-fill if editing
     if (widget.existingLog != null) {
       _amountCtrl.text = widget.existingLog!.amount.toStringAsFixed(2);
       _selectedDate = widget.existingLog!.date;
       _typeIndex = widget.existingLog!.type == 'Deposit' ? 0 : 1;
     }
-
     _amountFocus.addListener(() {
       if (_amountFocus.hasFocus)
         SystemChannels.textInput.invokeMethod('TextInput.hide');
     });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _amountFocus.requestFocus();
     });
@@ -153,7 +149,6 @@ class _InvestmentActionBottomSheetState
 
   Future<void> _submit() async {
     if (_amountCtrl.text.isEmpty) return;
-
     final amount =
         double.tryParse(BodmasCalculator.evaluate(_amountCtrl.text)) ?? 0.0;
     if (amount <= 0) return;
@@ -173,10 +168,9 @@ class _InvestmentActionBottomSheetState
     final type = widget.isUpdateMode
         ? 'Update'
         : (_typeIndex == 0 ? 'Deposit' : 'Withdrawal');
-
     bool success;
+
     if (widget.existingLog != null) {
-      // Execute Edit
       success = await ref
           .read(investmentActionProvider.notifier)
           .editInvestmentActivity(
@@ -187,7 +181,6 @@ class _InvestmentActionBottomSheetState
             ),
           );
     } else {
-      // Execute Add
       success = await ref
           .read(investmentActionProvider.notifier)
           .logInvestmentActivity(
@@ -209,7 +202,6 @@ class _InvestmentActionBottomSheetState
     final Color activeColor = widget.isUpdateMode
         ? theme.colorScheme.primary
         : (_typeIndex == 0 ? Colors.green : theme.colorScheme.error);
-
     final String actionLabel = widget.isUpdateMode
         ? (widget.existingLog != null
               ? 'Edit Value Update'
@@ -217,7 +209,6 @@ class _InvestmentActionBottomSheetState
         : (widget.existingLog != null
               ? 'Edit Transaction'
               : (_typeIndex == 0 ? 'Add Deposit' : 'Record Withdrawal'));
-
     final IconData actionIcon = widget.isUpdateMode
         ? Icons.sync_rounded
         : (_typeIndex == 0
@@ -267,7 +258,6 @@ class _InvestmentActionBottomSheetState
                           ),
                         ),
                       ),
-
                       if (!widget.isUpdateMode) ...[
                         ModernBoxyToggle(
                           labels: const ['Deposit', 'Withdrawal'],
@@ -283,7 +273,6 @@ class _InvestmentActionBottomSheetState
                         ),
                         const SizedBox(height: 16),
                       ],
-
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         padding: const EdgeInsets.all(20),
@@ -356,7 +345,6 @@ class _InvestmentActionBottomSheetState
                           ],
                         ),
                       ),
-
                       GestureDetector(
                         onTap: _pickDate,
                         child: Container(
@@ -392,7 +380,7 @@ class _InvestmentActionBottomSheetState
                                 ],
                               ),
                               Text(
-                                '${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}',
+                                DateFormat('dd MMM yyyy').format(_selectedDate),
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 13,
@@ -403,7 +391,6 @@ class _InvestmentActionBottomSheetState
                           ),
                         ),
                       ),
-
                       if (_errorMessage != null) ...[
                         const SizedBox(height: 16),
                         Container(

@@ -1,12 +1,12 @@
-// lib/features/investments/components/investment_log_card.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/currency_text.dart';
 import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
-import '../../../core/constants/date_time_constants.dart';
 import '../../../core/database/app_database.dart';
 import '../providers/investment_provider.dart';
 import 'investment_action_bottom_sheet.dart';
@@ -75,8 +75,6 @@ class InvestmentLogCard extends ConsumerWidget {
     final Color deltaColor = isPositiveDelta
         ? Colors.green
         : theme.colorScheme.error;
-    final String expandedDate =
-        '${log.date.day.toString().padLeft(2, '0')} ${DateTimeConstants.fullMonths[log.date.month - 1]} ${log.date.year}, ${DateTimeConstants.shortDays[log.date.weekday - 1]}';
 
     return BoxySlidableCard(
       key: ValueKey(log.id),
@@ -112,7 +110,7 @@ class InvestmentLogCard extends ConsumerWidget {
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 2.0),
             child: Text(
-              '${log.date.day.toString().padLeft(2, '0')} ${DateTimeConstants.shortMonths[log.date.month - 1]}',
+              DateFormat('dd MMM yyyy').format(log.date),
               style: TextStyle(
                 fontSize: 11,
                 color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
@@ -123,13 +121,12 @@ class InvestmentLogCard extends ConsumerWidget {
           trailing: ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.35,
-            ), // Forces shrinking if too large
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 1. Transaction Amount (Regular Color, Largest)
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
@@ -149,8 +146,6 @@ class InvestmentLogCard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-
-                // 2. Resulting Balance (Medium)
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
@@ -180,8 +175,6 @@ class InvestmentLogCard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-
-                // 3. Change Delta (Smallest)
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
@@ -241,7 +234,7 @@ class InvestmentLogCard extends ConsumerWidget {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            expandedDate,
+                            DateFormat('dd MMM yyyy').format(log.date),
                             style: TextStyle(
                               fontSize: 12,
                               color: theme.colorScheme.onSurfaceVariant,

@@ -1,8 +1,9 @@
-// lib/features/investments/components/investment_activity_ledger.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:intl/intl.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/currency_text.dart';
@@ -14,7 +15,6 @@ class _EnrichedLog {
   final InvestmentLog log;
   final double delta;
   final double balanceAfter;
-
   _EnrichedLog(this.log, this.delta, this.balanceAfter);
 }
 
@@ -79,7 +79,6 @@ class InvestmentActivityLedger extends ConsumerWidget {
               ),
           ],
         ),
-
         logsAsync.when(
           loading: () => const Padding(
             padding: EdgeInsets.all(24),
@@ -87,11 +86,9 @@ class InvestmentActivityLedger extends ConsumerWidget {
           ),
           error: (e, _) => Center(child: Text('Error: $e')),
           data: (allLogs) {
-            // --- NEW: FILTER OUT PASSIVE INCOME LOGS ---
             final logs = allLogs
                 .where((l) => l.type != 'Dividend' && l.type != 'Interest')
                 .toList();
-
             if (logs.isEmpty) {
               return Center(
                 child: Padding(
@@ -112,6 +109,7 @@ class InvestmentActivityLedger extends ConsumerWidget {
               if (log.type == 'Deposit') netInvestmentsInLogs += log.amount;
               if (log.type == 'Withdrawal') netInvestmentsInLogs -= log.amount;
             }
+
             double startBal = investment.initialAmount - netInvestmentsInLogs;
             if (startBal < 0) startBal = 0.0;
 
@@ -123,7 +121,6 @@ class InvestmentActivityLedger extends ConsumerWidget {
 
             for (final log in sortedLogs) {
               double delta = 0.0;
-
               if (log.type == 'Deposit') {
                 delta = log.amount;
                 runningBalance += delta;
@@ -134,7 +131,6 @@ class InvestmentActivityLedger extends ConsumerWidget {
                 delta = log.amount - runningBalance;
                 runningBalance = log.amount;
               }
-
               enrichedLogs.insert(0, _EnrichedLog(log, delta, runningBalance));
             }
 
@@ -216,7 +212,7 @@ class InvestmentActivityLedger extends ConsumerWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${log.date.day.toString().padLeft(2, '0')}/${log.date.month.toString().padLeft(2, '0')}/${log.date.year}',
+                                DateFormat('dd MMM yyyy').format(log.date),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,

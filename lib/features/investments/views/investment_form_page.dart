@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:intl/intl.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/modern_app_bar.dart';
@@ -13,7 +15,6 @@ import '../providers/investment_provider.dart';
 
 class InvestmentFormPage extends ConsumerStatefulWidget {
   final Investment? existingInvestment;
-
   const InvestmentFormPage({Key? key, this.existingInvestment})
     : super(key: key);
 
@@ -50,7 +51,6 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
   final _purposeCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
 
-  // --- NEW: FOCUS NODES FOR ENTER-TO-NEXT ---
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _providerFocus = FocusNode();
   final FocusNode _urlFocus = FocusNode();
@@ -97,8 +97,6 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
   @override
   void initState() {
     super.initState();
-
-    // Smooth scrolling listener for all focus nodes
     for (var node in _allFocusNodes) {
       node.addListener(() {
         if (node.hasFocus) {
@@ -158,12 +156,9 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
     _linkedBankCtrl.dispose();
     _purposeCtrl.dispose();
     _notesCtrl.dispose();
-
-    // Dispose Focus Nodes safely
     for (var node in _allFocusNodes) {
       node.dispose();
     }
-
     super.dispose();
   }
 
@@ -177,7 +172,6 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
     if (picked != null) {
       setState(() {
         if (isStart) {
-          // FIX: Preserve exact time component to prevent sorting instability
           _startDate = DateTime(
             picked.year,
             picked.month,
@@ -218,13 +212,11 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
       return;
     }
     HapticFeedback.selectionClick();
-
     final isEdit = widget.existingInvestment != null;
     final String id = isEdit
         ? widget.existingInvestment!.id
         : const Uuid().v4();
 
-    // STRICTLY OMIT `initialAmount` and `currentValue` HERE
     final entry = InvestmentsCompanion(
       id: drift.Value(id),
       name: drift.Value(_nameCtrl.text.trim()),
@@ -253,7 +245,6 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
           isEdit: isEdit,
           initialDeposit: isEdit ? null : double.parse(_initialAmtCtrl.text),
         );
-
     if (success && mounted) Navigator.pop(context);
   }
 
@@ -277,9 +268,9 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
     final theme = Theme.of(context);
     final actionState = ref.watch(investmentActionProvider);
     final isEdit = widget.existingInvestment != null;
-
     final investmentsList =
         ref.watch(investmentsStreamProvider).asData?.value ?? [];
+
     final List<String> existingTags = investmentsList
         .map((e) => e.specialTag ?? '')
         .where((tag) => tag.isNotEmpty)
@@ -343,9 +334,7 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                 controller: _urlCtrl,
                 focusNode: _urlFocus,
                 textInputAction: TextInputAction.next,
-                onFieldSubmitted: (_) => FocusScope.of(
-                  context,
-                ).nextFocus(), // Drops into Autocomplete
+                onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                 labelText: 'Provider Website URL (For Icon)',
               ),
               const SizedBox(height: 12),
@@ -376,7 +365,7 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                         focusNode: focusNode,
                         textInputAction: TextInputAction.next,
                         onFieldSubmitted: (_) {
-                          onFieldSubmitted(); // Call internal Autocomplete submit
+                          onFieldSubmitted();
                           FocusScope.of(context).requestFocus(
                             isEdit ? _targetAmtFocus : _initialAmtFocus,
                           );
@@ -440,8 +429,6 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
               ),
 
               _buildHeader('FINANCIALS', theme),
-
-              // --- UPGRADED PROFESSIONAL WARNING BANNER ---
               if (isEdit)
                 Container(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -530,6 +517,7 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                 ],
               ),
               const SizedBox(height: 12),
+
               Row(
                 children: [
                   Expanded(
@@ -538,8 +526,7 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                       child: AbsorbPointer(
                         child: ModernBoxyInput(
                           controller: TextEditingController(
-                            text:
-                                '${_startDate.day}/${_startDate.month}/${_startDate.year}',
+                            text: DateFormat('dd MMM yyyy').format(_startDate),
                           ),
                           labelText: 'Start Date',
                           suffixIcon: const Icon(
@@ -558,7 +545,7 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                         child: ModernBoxyInput(
                           controller: TextEditingController(
                             text: _endDate != null
-                                ? '${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
+                                ? DateFormat('dd MMM yyyy').format(_endDate!)
                                 : '',
                           ),
                           labelText: 'Expected End Date',
@@ -573,6 +560,7 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                 ],
               ),
               const SizedBox(height: 12),
+
               ModernBoxyInput(
                 controller: _expectedReturnCtrl,
                 focusNode: _expectedReturnFocus,
@@ -677,8 +665,8 @@ class _InvestmentFormPageState extends ConsumerState<InvestmentFormPage> {
                 onFieldSubmitted: (_) => _submit(),
                 labelText: 'Notes',
               ),
-
               const SizedBox(height: 40),
+
               ModernBoxyButton(
                 onPressed: _submit,
                 label: isEdit ? 'SAVE CHANGES' : 'SAVE INVESTMENT',
