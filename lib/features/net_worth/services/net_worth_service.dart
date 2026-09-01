@@ -17,10 +17,12 @@ class NetWorthService {
   }
 
   Future<void> addNetWorthRecord(NetWorthRecordsCompanion entry) async {
-    // Inject UUID and current timestamp
+    // Inject UUID and conditionally inject the current timestamp
     final finalEntry = entry.copyWith(
       id: Value(_uuid.v4()),
-      recordedAt: Value(DateTime.now()),
+      recordedAt: entry.recordedAt.present
+          ? entry.recordedAt
+          : Value(DateTime.now()),
     );
     await _db.into(_db.netWorthRecords).insert(finalEntry);
   }

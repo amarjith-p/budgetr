@@ -191,7 +191,7 @@ class _MonthlyBudgetTransactionsPageState
                                       ),
                                     ),
                                     Text(
-                                      '₹${outOfBucketTotal.toStringAsFixed(0)} Total',
+                                      '₹${outOfBucketTotal.toStringAsFixed(2)} Total',
                                       style: TextStyle(
                                         fontWeight: FontWeight.w700,
                                         fontSize: 11,
