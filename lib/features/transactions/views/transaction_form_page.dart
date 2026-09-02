@@ -6,6 +6,7 @@ import 'package:drift/drift.dart' show BooleanExpressionOperators;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // <-- IMPORT ADDED FOR PREFS CHECK
 import '../../../core/database/app_database.dart' hide Column, Table;
 import '../../../core/database/database_provider.dart' as db_prov;
 import '../../../core/theme/design_tokens.dart';
@@ -52,7 +53,6 @@ class TransactionFormPage extends ConsumerStatefulWidget {
   final bool isClone;
   final bool isSplit;
 
-  // --- ADDITIVE TOUCH: Initial Date Seed ---
   final DateTime? initialDate;
 
   const TransactionFormPage({
@@ -128,7 +128,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   void initState() {
     super.initState();
 
-    // --- ADDITIVE TOUCH: Use injected initialDate but preserve CURRENT time ---
     final now = DateTime.now();
     if (widget.initialDate != null) {
       _selectedDateTime = DateTime(
@@ -257,10 +256,23 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   Future<void> _fetchLocation() async {
     FocusScope.of(context).unfocus();
 
-    final pref = ref.read(locationSettingsProvider);
-    LocationPreference activePref = pref;
+    LocationPreference activePref = ref.read(locationSettingsProvider);
 
-    if (pref == LocationPreference.ask) {
+    // --- FIX: Bypass StateNotifier's async _init() race condition ---
+    // If the provider still says 'ask', we explicitly check SharedPreferences
+    // to guarantee we don't ignore a saved 'map' or 'current' preference.
+    if (activePref == LocationPreference.ask) {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString('location_pref');
+      if (stored != null) {
+        activePref = LocationPreference.values.firstWhere(
+          (e) => e.name == stored,
+          orElse: () => LocationPreference.ask,
+        );
+      }
+    }
+
+    if (activePref == LocationPreference.ask) {
       HapticFeedback.lightImpact();
       final choice = await GlobalSelectionSheet.showSimple(
         context: context,
@@ -270,6 +282,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       );
 
       if (choice == null) return;
+
+      // Assign the choice for this specific action, but DO NOT save it to the provider,
+      // because the user's global setting is to 'ask' every time.
       activePref = choice == 'Choose on Map'
           ? LocationPreference.map
           : LocationPreference.current;
@@ -278,7 +293,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     if (activePref == LocationPreference.map) {
       final result = await Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const LocationMapPickerPage()),
+        MaterialPageRoute(
+          builder: (_) => LocationMapPickerPage(
+            initialLatitude: _latitude,
+            initialLongitude: _longitude,
+            initialLocationName: _locationName,
+          ),
+        ),
       );
 
       if (result != null && result is Map<String, dynamic>) {

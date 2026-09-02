@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:geocoding/geocoding.dart';
+
 import '../../../core/components/modern_app_bar.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/utils/location_helper.dart';
@@ -15,7 +16,17 @@ import '../../../core/components/futuristic_loader.dart';
 import '../providers/transaction_provider.dart';
 
 class LocationMapPickerPage extends ConsumerStatefulWidget {
-  const LocationMapPickerPage({Key? key}) : super(key: key);
+  // --- FIX: Added initial parameters so we can load saved locations ---
+  final double? initialLatitude;
+  final double? initialLongitude;
+  final String? initialLocationName;
+
+  const LocationMapPickerPage({
+    Key? key,
+    this.initialLatitude,
+    this.initialLongitude,
+    this.initialLocationName,
+  }) : super(key: key);
 
   @override
   ConsumerState<LocationMapPickerPage> createState() =>
@@ -33,6 +44,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
   List<dynamic> _searchResults = [];
   Timer? _searchDebounce;
   Timer? _addressDebounce;
+
   String? _selectedPoiName;
   String _currentAddress = 'Locating...';
   bool _isFetchingAddress = true;
@@ -41,7 +53,16 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
   @override
   void initState() {
     super.initState();
-    _initDeviceLocation();
+    // --- FIX: Check for saved location data before invoking GPS ---
+    if (widget.initialLatitude != null && widget.initialLongitude != null) {
+      _center = LatLng(widget.initialLatitude!, widget.initialLongitude!);
+      _currentAddress = widget.initialLocationName ?? 'Saved Location';
+      _selectedPoiName = widget.initialLocationName;
+      _isLoadingLoc = false;
+      _isFetchingAddress = false;
+    } else {
+      _initDeviceLocation();
+    }
   }
 
   Future<void> _initDeviceLocation() async {
@@ -85,11 +106,13 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
 
   void _onSearchChanged(String query) {
     if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+
     _searchDebounce = Timer(const Duration(milliseconds: 600), () async {
       if (query.trim().isEmpty) {
         setState(() => _searchResults = []);
         return;
       }
+
       final pos = _mapController.camera.center;
       final left = pos.longitude - 0.5;
       final right = pos.longitude + 0.5;
@@ -99,6 +122,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=jsonv2&addressdetails=1&limit=8&countrycodes=in&viewbox=$left,$top,$right,$bottom&bounded=0',
       );
+
       try {
         final response = await http.get(
           url,
@@ -143,18 +167,21 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
     final pos = LatLng(lat, lon);
 
     _mapController.move(pos, 18.0);
+
     setState(() {
       _selectedPoiName = result['name'];
       _isAddressManuallyEdited = false;
       _searchResults = [];
       _searchCtrl.clear();
     });
+
     _debounceAddressFetch();
   }
 
   void _debounceAddressFetch() {
     if (_isAddressManuallyEdited) return;
     if (_addressDebounce?.isActive ?? false) _addressDebounce!.cancel();
+
     setState(() => _isFetchingAddress = true);
     _addressDebounce = Timer(const Duration(milliseconds: 600), () async {
       final pos = _mapController.camera.center;
@@ -172,6 +199,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
       }
       return;
     }
+
     String resolvedName = '';
     try {
       final url = Uri.parse(
@@ -202,6 +230,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
         }
       }
     } catch (_) {}
+
     if (resolvedName.isEmpty) {
       try {
         List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -215,6 +244,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
               s.isNotEmpty &&
               !s.contains('+') &&
               !s.toLowerCase().contains('unnamed');
+
           if (isValid(place.name) &&
               !RegExp(r'^[0-9]+$').hasMatch(place.name!)) {
             resolvedName = place.name!;
@@ -228,6 +258,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
         }
       } catch (_) {}
     }
+
     if (mounted) {
       setState(() {
         _currentAddress = resolvedName.isNotEmpty
@@ -240,7 +271,6 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
 
   void _editLocationNameManually() {
     HapticFeedback.lightImpact();
-
     final allTxs = ref.read(allTransactionsProvider).asData?.value ?? [];
     final Map<String, LatLng> pastLocations = {};
 
@@ -269,8 +299,6 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final query = editCtrl.text.trim().toLowerCase();
-
-            // --- CHANGED: Now taking only the last 6 locations ---
             final List<String> suggestions = pastLocations.keys
                 .where((name) => name.toLowerCase().contains(query))
                 .take(6)
@@ -356,7 +384,6 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                         Navigator.pop(ctx);
                       },
                     ),
-
                     if (suggestions.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       Text(
@@ -395,24 +422,19 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                             ),
                             onPressed: () {
                               HapticFeedback.selectionClick();
-
                               final LatLng savedPos =
                                   pastLocations[suggestion]!;
-
                               _mapController.move(savedPos, 18.0);
-
                               setState(() {
                                 _currentAddress = suggestion;
                                 _isAddressManuallyEdited = true;
                               });
-
                               Navigator.pop(ctx);
                             },
                           );
                         }).toList(),
                       ),
                     ],
-
                     const SizedBox(height: 24),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -528,6 +550,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                     ),
                   ],
                 ),
+
                 // 2. Fixed Center Pin
                 IgnorePointer(
                   child: Center(
@@ -550,6 +573,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                     ),
                   ),
                 ),
+
                 // 3. Search Bar & Dropdown
                 Positioned(
                   top: DesignTokens.spacingMd,
@@ -661,6 +685,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                     ],
                   ),
                 ),
+
                 // 4. Current Location FAB
                 Positioned(
                   bottom:
@@ -691,6 +716,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                     ),
                   ),
                 ),
+
                 // 5. Consolidated Address & Done Button Card
                 Positioned(
                   bottom:
@@ -778,6 +804,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                           color: theme.dividerColor.withOpacity(0.3),
                         ), // Separator
                         const SizedBox(width: 12),
+
                         // Right Side: Done Button
                         InkWell(
                           onTap: _isFetchingAddress ? null : _confirmLocation,
