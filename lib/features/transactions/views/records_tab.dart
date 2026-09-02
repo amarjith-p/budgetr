@@ -1,8 +1,10 @@
+// lib/features/transactions/views/records_tab.dart
 import 'dart:ui';
 import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:budgetr/core/components/premium_empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/theme/design_tokens.dart';
 import '../providers/transaction_provider.dart';
 import '../providers/transaction_filter_provider.dart';
@@ -10,11 +12,29 @@ import '../components/transaction_card.dart';
 import '../components/active_filter_banner.dart';
 import '../../accounts/providers/account_provider.dart';
 
-class RecordsTab extends ConsumerWidget {
+// --- NEW SEARCH & SUMMARY COMPONENTS ---
+import '../components/records_search_bar.dart';
+import '../components/records_smart_summary_card.dart';
+
+class RecordsTab extends ConsumerStatefulWidget {
   const RecordsTab({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RecordsTab> createState() => _RecordsTabState();
+}
+
+class _RecordsTabState extends ConsumerState<RecordsTab> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(allTransactionsProvider);
     final filterState = ref.watch(transactionFilterProvider('GLOBAL'));
     final accountsAsync = ref.watch(accountsStreamProvider);
@@ -45,6 +65,7 @@ class RecordsTab extends ConsumerWidget {
           }
 
           final rawAccounts = accountsAsync.asData?.value ?? [];
+
           double currentGlobalBalance = rawAccounts
               .where((a) => a.type != 'Loan')
               .fold(0.0, (sum, acc) => sum + acc.balance);
@@ -104,11 +125,49 @@ class RecordsTab extends ConsumerWidget {
             globalClosingBalances[t.id] = runningBal;
           }
 
+          // 1. APPLY BASE FILTERS
           final filteredRecords = TransactionFilterHelper.applyForRecords(
             validTransactions,
             filterState,
           );
 
+          // 2. APPLY TEXT SEARCH
+          final q = _searchQuery.trim().toLowerCase();
+          final searchedRecords = filteredRecords.where((record) {
+            if (q.isEmpty) return true;
+            final tx = record.data.transaction;
+
+            final catName =
+                (tx.categoryName ??
+                        record.data.category?.name ??
+                        'Uncategorized')
+                    .toLowerCase();
+            final subCatName = (tx.subCategory ?? '').toLowerCase();
+            final accName = record.data.account.name.toLowerCase();
+
+            // --- NEW: Added provider name (e.g. HDFC, SBI) to search ---
+            final accProvider = record.data.account.providerName.toLowerCase();
+
+            final notes = (tx.notes ?? '').toLowerCase();
+            final locationName = (tx.locationName ?? '').toLowerCase();
+
+            // --- NEW: Added bucket name to search ---
+            final bucketName = (tx.bucketName ?? record.data.bucket?.name ?? '')
+                .toLowerCase();
+
+            final amountStr = tx.amount.toString();
+
+            return catName.contains(q) ||
+                subCatName.contains(q) ||
+                accName.contains(q) ||
+                accProvider.contains(q) ||
+                notes.contains(q) ||
+                locationName.contains(q) ||
+                bucketName.contains(q) ||
+                amountStr.contains(q);
+          }).toList();
+
+          // 3. GROUP RESULTS
           final groupedRecords = <String, List<RecordItem>>{};
           const fullMonths = [
             'January',
@@ -125,7 +184,7 @@ class RecordsTab extends ConsumerWidget {
             'December',
           ];
 
-          for (var record in filteredRecords) {
+          for (var record in searchedRecords) {
             final tx = record.data.transaction;
             final groupKey = '${fullMonths[tx.date.month - 1]} ${tx.date.year}';
             groupedRecords.putIfAbsent(groupKey, () => []).add(record);
@@ -134,6 +193,44 @@ class RecordsTab extends ConsumerWidget {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
+              // --- SEARCH BAR ---
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    DesignTokens.spacingMd,
+                    DesignTokens.spacingMd,
+                    DesignTokens.spacingMd,
+                    0,
+                  ),
+                  child: RecordsSearchBar(
+                    controller: _searchCtrl,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    onClear: () {
+                      _searchCtrl.clear();
+                      setState(() => _searchQuery = '');
+                      FocusScope.of(context).unfocus();
+                    },
+                  ),
+                ),
+              ),
+
+              // --- SMART SUMMARY CARD ---
+              if (filterState.isActive || _searchQuery.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      DesignTokens.spacingMd,
+                      DesignTokens.spacingMd,
+                      DesignTokens.spacingMd,
+                      0,
+                    ),
+                    child: RecordsSmartSummaryCard(
+                      searchedRecords: searchedRecords,
+                    ),
+                  ),
+                ),
+
+              // --- ACTIVE FILTER BANNER ---
               if (filterState.isActive)
                 SliverToBoxAdapter(
                   child: ActiveFilterBanner(
@@ -152,12 +249,12 @@ class RecordsTab extends ConsumerWidget {
                 child: SizedBox(height: DesignTokens.spacingMd),
               ),
 
-              if (filteredRecords.isEmpty)
+              if (searchedRecords.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: Center(
                     child: Text(
-                      'No results match your filters.',
+                      'No results match your search or filters.',
                       style: TextStyle(
                         color: theme.colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.bold,
@@ -205,6 +302,7 @@ class RecordsTab extends ConsumerWidget {
                     ],
                   );
                 }).toList(),
+
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );
@@ -248,8 +346,10 @@ class _StickyGlobalMonthHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   double get maxExtent => 40.0;
+
   @override
   double get minExtent => 40.0;
+
   @override
   bool shouldRebuild(covariant _StickyGlobalMonthHeaderDelegate oldDelegate) =>
       title != oldDelegate.title;
