@@ -52,6 +52,9 @@ class TransactionFormPage extends ConsumerStatefulWidget {
   final bool isClone;
   final bool isSplit;
 
+  // --- ADDITIVE TOUCH: Initial Date Seed ---
+  final DateTime? initialDate;
+
   const TransactionFormPage({
     Key? key,
     this.existingTransaction,
@@ -59,6 +62,7 @@ class TransactionFormPage extends ConsumerStatefulWidget {
     this.preSelectedAccountId,
     this.isClone = false,
     this.isSplit = false,
+    this.initialDate,
   }) : super(key: key);
 
   @override
@@ -75,7 +79,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   bool _isSettlementVerified = false;
   late TextEditingController _amountController;
   late TextEditingController _notesCtrl;
-  DateTime _selectedDateTime = DateTime.now();
+  late DateTime _selectedDateTime;
 
   String? _selectedAccountId;
   String? _selectedToAccountId;
@@ -123,6 +127,21 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   @override
   void initState() {
     super.initState();
+
+    // --- ADDITIVE TOUCH: Use injected initialDate but preserve CURRENT time ---
+    final now = DateTime.now();
+    if (widget.initialDate != null) {
+      _selectedDateTime = DateTime(
+        widget.initialDate!.year,
+        widget.initialDate!.month,
+        widget.initialDate!.day,
+        now.hour,
+        now.minute,
+      );
+    } else {
+      _selectedDateTime = now;
+    }
+
     final txDetails = widget.existingTransaction;
     final stagedTx = widget.stagedTransaction;
 

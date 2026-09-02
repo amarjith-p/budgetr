@@ -1,4 +1,3 @@
-// features/money_tracker/views/money_tracker_base_page.dart
 import 'package:budgetr/features/analytics/components/closed_budget_snapshot_widget.dart';
 import 'package:budgetr/features/analytics/providers/pinned_widgets_provider.dart';
 import 'package:budgetr/features/budgets/views/budget_management_tab.dart';
@@ -29,6 +28,9 @@ import '../../analytics/components/budget_simulator_widget.dart';
 import '../../analytics/components/credit_tracker_widget.dart';
 
 import '../../insights/views/insights_tab.dart';
+
+// --- HEATMAP ADDITION ---
+import '../../heatmap/components/heatmap_appbar_icon.dart';
 
 class MoneyTrackerBasePage extends ConsumerWidget {
   const MoneyTrackerBasePage({Key? key}) : super(key: key);
@@ -83,6 +85,7 @@ class MoneyTrackerBasePage extends ConsumerWidget {
       'Finance Health',
     ];
 
+    Widget? trailingWidget;
     IconData? trailingIcon;
     VoidCallback? onTrailingPressed;
 
@@ -90,7 +93,10 @@ class MoneyTrackerBasePage extends ConsumerWidget {
     Color? extraIconColor;
     VoidCallback? onExtraTrailingPressed;
 
-    if (currentIndex == 1) {
+    if (currentIndex == 0) {
+      // --- HEATMAP INJECTION ---
+      trailingWidget = const HeatmapAppbarIcon();
+    } else if (currentIndex == 1) {
       trailingIcon = globalFilterState.isActive
           ? Icons.filter_alt_rounded
           : Icons.filter_alt_outlined;
@@ -127,7 +133,6 @@ class MoneyTrackerBasePage extends ConsumerWidget {
         );
       };
     } else if (currentIndex == 5) {
-      // --- EXPORT BUTTON DELEGATED TO THE MASTER APPBAR ---
       trailingIcon = Icons.ios_share_rounded;
       onTrailingPressed = () {
         HapticFeedback.lightImpact();
@@ -142,6 +147,7 @@ class MoneyTrackerBasePage extends ConsumerWidget {
         subtitle: tabSubtitles[currentIndex],
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.maybePop(context),
+        trailingWidget: trailingWidget,
         trailingIcon: trailingIcon,
         onTrailingPressed: onTrailingPressed,
         extraTrailingIcon: extraTrailingIcon,

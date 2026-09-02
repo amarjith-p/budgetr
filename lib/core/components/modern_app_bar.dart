@@ -17,6 +17,9 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   final VoidCallback? onTitleLongPress;
 
+  // --- ADDITIVE TOUCH: Optional custom trailing widget ---
+  final Widget? trailingWidget;
+
   const ModernAppBar({
     Key? key,
     required this.title,
@@ -29,6 +32,7 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onExtraTrailingPressed,
     this.extraIconColor,
     this.onTitleLongPress,
+    this.trailingWidget,
   }) : super(key: key);
 
   @override
@@ -107,7 +111,9 @@ class ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
               const SizedBox(width: 8),
             ],
 
-            if (trailingIcon != null)
+            if (trailingWidget != null)
+              trailingWidget!
+            else if (trailingIcon != null)
               _GlassIconButton(
                 icon: trailingIcon!,
                 onTap: onTrailingPressed,
