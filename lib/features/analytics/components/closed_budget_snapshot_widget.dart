@@ -380,6 +380,12 @@ class _ClosedBudgetSnapshotWidgetState
 
               final buckets = _parseBuckets(snapshot);
 
+              // --- NEW: Calculate Total Spend of that month's budget ---
+              final double totalBudgetSpent = buckets.fold(
+                0.0,
+                (sum, b) => sum + b.spent,
+              );
+
               double maxY = 0;
               for (var b in buckets) {
                 final highest = max(b.allocated, b.spent);
@@ -447,10 +453,13 @@ class _ClosedBudgetSnapshotWidgetState
                           width: 24,
                         ),
                         Expanded(
+                          // --- CHANGED: Displays Total Budgeted Spend ---
                           child: _buildMetric(
-                            'Effective',
-                            snapshot.effectiveIncome,
+                            'Budget Spent',
+                            totalBudgetSpent,
                             theme,
+                            isDeduction:
+                                true, // Ensures it renders in red like an expense
                           ),
                         ),
                         VerticalDivider(
