@@ -168,15 +168,18 @@ class NotificationParserService {
       final String fullText = '$title $content'.trim();
       final String packageName = event.packageName ?? 'unknown';
 
+      // <-- ADDED: Explicitly ignore FinStack 360 / Budgetr to prevent self-looping
       if (packageName.contains('android.system') ||
-          packageName.contains('whatsapp')) {
+          packageName.contains('whatsapp') ||
+          packageName.contains('budgetr') ||
+          packageName == 'com.example.budgetr') {
         return;
       }
 
-      // 2. BULLETPROOF HASH: Includes the OS-level event.id.
-      // This ensures that interacting with the SAME notification is blocked as a duplicate,
-      // but receiving a NEW notification with the EXACT SAME text is allowed through.
-      final String hashData = '${event.id}|$packageName|$fullText';
+      // 2. BULLETPROOF HASH:
+      // <-- CHANGED: Removed event.id. OS SMS apps change event.id when grouping messages.
+      // Hashing just the package + text ensures rapid-fire OS duplicates are caught.
+      final String hashData = '$packageName|$fullText';
       final String txHash = sha256.convert(utf8.encode(hashData)).toString();
 
       final prefs = await SharedPreferences.getInstance();
@@ -186,17 +189,18 @@ class NotificationParserService {
           prefs.getStringList('smart_inbox_dedup_v3') ?? [];
       final now = DateTime.now();
 
-      // Clean up hashes older than 48 hours to keep the app lightweight
+      // <-- CHANGED: Clean up hashes older than 5 minutes (down from 48 hours).
+      // Blocks rapid-fire OS duplicates, but allows genuine identical transactions later.
       rawHashes.removeWhere((item) {
         final parts = item.split(':');
         if (parts.length != 2) return true;
         final timestamp = int.tryParse(parts[1]);
         if (timestamp == null) return true;
         final time = DateTime.fromMillisecondsSinceEpoch(timestamp);
-        return now.difference(time).inHours > 48;
+        return now.difference(time).inMinutes > 5;
       });
 
-      // If we already have this exact Android Notification ID + Text combo, drop it.
+      // If we already have this exact Android Notification Text combo in the last 5 mins, drop it.
       bool isDuplicate = rawHashes.any((item) => item.startsWith('$txHash:'));
 
       if (isDuplicate) {

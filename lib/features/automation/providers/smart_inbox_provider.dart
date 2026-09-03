@@ -32,6 +32,7 @@ final parserRulesProvider = StreamProvider.autoDispose<List<ParserRule>>((ref) {
 
 class SmartInboxActionNotifier extends AsyncNotifier<void> {
   StreamSubscription? _subscription;
+  bool _isListening = false; // <-- ADDED: Prevents overlapping listeners
   final _uuid = const Uuid();
 
   @override
@@ -61,6 +62,10 @@ class SmartInboxActionNotifier extends AsyncNotifier<void> {
     if (await Permission.ignoreBatteryOptimizations.isDenied) {
       await Permission.ignoreBatteryOptimizations.request();
     }
+
+    // <-- ADDED: Bail out if we are already actively listening
+    if (_isListening) return;
+    _isListening = true;
 
     _subscription?.cancel();
     _subscription = NotificationListenerService.notificationsStream.listen((
@@ -151,7 +156,6 @@ class SmartInboxActionNotifier extends AsyncNotifier<void> {
         );
   }
 
-  // --- NEW: EDIT RULE METHOD ---
   Future<void> editCustomRule({
     required String id,
     required String name,
