@@ -37,8 +37,9 @@ class NotificationParserService {
     caseSensitive: false,
   );
 
+  // --- FIX 1: Removed 'vpa' from expense keywords ---
   static final RegExp _defaultExpenseKeywords = RegExp(
-    r'\b(debited|paid|spent|sent|transferred|deducted|vpa)\b',
+    r'\b(debited|paid|spent|sent|transferred|deducted)\b',
     caseSensitive: false,
   );
 
@@ -67,11 +68,6 @@ class NotificationParserService {
   Future<ParsedNotificationResult?> testParseText(String fullText) async {
     if (fullText.trim().isEmpty) return null;
 
-    // =========================================================================
-    // 1. ISOLATED CODE BLOCK: OMIT / IGNORE RULES
-    // Checked first, before anything else, so promotional texts without amounts
-    // are correctly caught and omitted by the system.
-    // =========================================================================
     final ignoreRules =
         await (_db.select(_db.parserRules)..where(
               (r) => r.isActive.equals(true) & r.targetType.equals('Ignore'),
@@ -90,9 +86,7 @@ class NotificationParserService {
         }
       } catch (_) {}
     }
-    // =========================================================================
 
-    // 2. EXTRACT AMOUNT
     final amountMatch = _amountRegex.firstMatch(fullText);
     if (amountMatch == null) return null;
 
@@ -108,7 +102,6 @@ class NotificationParserService {
     final merchant = merchantMatch?.group(1)?.trim();
     final refNo = refMatch?.group(1);
 
-    // 3. CHECK ACTIVE CUSTOM RULES (Priority over Default Universal Rules)
     final customRules =
         await (_db.select(_db.parserRules)..where(
               (r) =>
@@ -132,7 +125,6 @@ class NotificationParserService {
       } catch (_) {}
     }
 
-    // 4. FALLBACK TO UNIVERSAL DEFAULT RULES
     if (_defaultExpenseKeywords.hasMatch(fullText)) {
       return ParsedNotificationResult(
         amount: amount,
@@ -158,7 +150,6 @@ class NotificationParserService {
 
   Future<void> processNotification(ServiceNotificationEvent event) async {
     try {
-      // 1. IGNORE DISMISSALS: Stops ghost triggers when user clears their phone's notification tray
       if (event.hasRemoved ?? false) {
         return;
       }
@@ -168,7 +159,6 @@ class NotificationParserService {
       final String fullText = '$title $content'.trim();
       final String packageName = event.packageName ?? 'unknown';
 
-      // <-- ADDED: Explicitly ignore FinStack 360 / Budgetr to prevent self-looping
       if (packageName.contains('android.system') ||
           packageName.contains('whatsapp') ||
           packageName.contains('budgetr') ||
@@ -176,21 +166,15 @@ class NotificationParserService {
         return;
       }
 
-      // 2. BULLETPROOF HASH:
-      // <-- CHANGED: Removed event.id. OS SMS apps change event.id when grouping messages.
-      // Hashing just the package + text ensures rapid-fire OS duplicates are caught.
       final String hashData = '$packageName|$fullText';
       final String txHash = sha256.convert(utf8.encode(hashData)).toString();
 
       final prefs = await SharedPreferences.getInstance();
 
-      // 3. SLIDING WINDOW: Track hashes with a timestamp
       List<String> rawHashes =
           prefs.getStringList('smart_inbox_dedup_v3') ?? [];
       final now = DateTime.now();
 
-      // <-- CHANGED: Clean up hashes older than 5 minutes (down from 48 hours).
-      // Blocks rapid-fire OS duplicates, but allows genuine identical transactions later.
       rawHashes.removeWhere((item) {
         final parts = item.split(':');
         if (parts.length != 2) return true;
@@ -200,7 +184,6 @@ class NotificationParserService {
         return now.difference(time).inMinutes > 5;
       });
 
-      // If we already have this exact Android Notification Text combo in the last 5 mins, drop it.
       bool isDuplicate = rawHashes.any((item) => item.startsWith('$txHash:'));
 
       if (isDuplicate) {
@@ -212,13 +195,39 @@ class NotificationParserService {
       final parsed = await testParseText(fullText);
       if (parsed == null) return;
 
-      // --- ABORT IF IT TRIGGERED THE OMIT/IGNORE RULE ---
       if (parsed.type == 'Ignore') {
         debugPrint("Notification deliberately omitted by custom rule.");
         return;
       }
 
-      // Add the new unique hash to our tracking list
+      // --- FIX 2: SEMANTIC DEDUPLICATION (APP vs SMS) ---
+      // Checks if an unapproved transaction with the exact same amount and type
+      // arrived in the last 5 minutes.
+      final recentStaged =
+          await (_db.select(_db.stagedTransactions)
+                ..where((t) => t.isApproved.equals(false))
+                ..where((t) => t.extractedAmount.equals(parsed.amount))
+                ..where((t) => t.inferredType.equals(parsed.type)))
+              .get();
+
+      bool isSemanticDuplicate = false;
+      for (var staged in recentStaged) {
+        if (now.difference(staged.date).inMinutes < 1) {
+          isSemanticDuplicate = true;
+          break;
+        }
+      }
+
+      if (isSemanticDuplicate) {
+        debugPrint(
+          "Semantic duplicate dropped: Same amount and type logged recently.",
+        );
+        rawHashes.add('$txHash:${now.millisecondsSinceEpoch}');
+        await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
+        return;
+      }
+      // --------------------------------------------------
+
       rawHashes.add('$txHash:${now.millisecondsSinceEpoch}');
       await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
 

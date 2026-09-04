@@ -102,7 +102,7 @@ class NotificationManagerScreen extends ConsumerWidget {
           if (settings.enableNotifications) ...[
             const SizedBox(height: DesignTokens.spacingXl),
 
-            // --- NEW: SYSTEM SECURITY ---
+            // --- SYSTEM SECURITY ---
             _buildSectionHeader('SYSTEM SECURITY', theme),
             const SizedBox(height: 8),
             _buildBoxySettingsGroup(
@@ -117,6 +117,27 @@ class NotificationManagerScreen extends ConsumerWidget {
                       .read(notificationSettingsProvider.notifier)
                       .updateSettings(
                         settings.copyWith(backupReminderEnabled: val),
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DesignTokens.spacingXl),
+
+            // --- NEW: AUTOMATION ---
+            _buildSectionHeader('AUTOMATION', theme),
+            const SizedBox(height: 8),
+            _buildBoxySettingsGroup(
+              context,
+              children: [
+                _buildBoxyToggleRow(
+                  context,
+                  title: 'Smart Inbox Push Alerts',
+                  subtitle: 'Push notification when a log is auto-captured',
+                  value: settings.smartInboxPushEnabled,
+                  onChanged: (val) => ref
+                      .read(notificationSettingsProvider.notifier)
+                      .updateSettings(
+                        settings.copyWith(smartInboxPushEnabled: val),
                       ),
                 ),
               ],

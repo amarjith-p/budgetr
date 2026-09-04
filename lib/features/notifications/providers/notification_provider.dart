@@ -14,7 +14,8 @@ import '../../backup/providers/backup_reminder_provider.dart';
 
 class NotificationSettings {
   final bool enableNotifications;
-  final bool backupReminderEnabled; // <-- NEW
+  final bool backupReminderEnabled;
+  final bool smartInboxPushEnabled; // <-- NEW
 
   // Credit Card Settings
   final int ccAlertHour;
@@ -35,7 +36,8 @@ class NotificationSettings {
 
   NotificationSettings({
     this.enableNotifications = true,
-    this.backupReminderEnabled = true, // <-- NEW
+    this.backupReminderEnabled = true,
+    this.smartInboxPushEnabled = true, // <-- NEW
     this.ccAlertHour = 9,
     this.ccAlertMinute = 0,
     this.notifyOnBillDate = true,
@@ -53,7 +55,8 @@ class NotificationSettings {
 
   NotificationSettings copyWith({
     bool? enableNotifications,
-    bool? backupReminderEnabled, // <-- NEW
+    bool? backupReminderEnabled,
+    bool? smartInboxPushEnabled, // <-- NEW
     int? ccAlertHour,
     int? ccAlertMinute,
     bool? notifyOnBillDate,
@@ -71,7 +74,9 @@ class NotificationSettings {
     return NotificationSettings(
       enableNotifications: enableNotifications ?? this.enableNotifications,
       backupReminderEnabled:
-          backupReminderEnabled ?? this.backupReminderEnabled, // <-- NEW
+          backupReminderEnabled ?? this.backupReminderEnabled,
+      smartInboxPushEnabled:
+          smartInboxPushEnabled ?? this.smartInboxPushEnabled, // <-- NEW
       ccAlertHour: ccAlertHour ?? this.ccAlertHour,
       ccAlertMinute: ccAlertMinute ?? this.ccAlertMinute,
       notifyOnBillDate: notifyOnBillDate ?? this.notifyOnBillDate,
@@ -100,8 +105,9 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
     final prefs = await SharedPreferences.getInstance();
     state = NotificationSettings(
       enableNotifications: prefs.getBool('enableNotifications') ?? true,
-      backupReminderEnabled:
-          prefs.getBool('backupReminderEnabled') ?? true, // <-- NEW
+      backupReminderEnabled: prefs.getBool('backupReminderEnabled') ?? true,
+      smartInboxPushEnabled:
+          prefs.getBool('smartInboxPushEnabled') ?? true, // <-- NEW
       ccAlertHour: prefs.getInt('ccAlertHour') ?? 9,
       ccAlertMinute: prefs.getInt('ccAlertMinute') ?? 0,
       notifyOnBillDate: prefs.getBool('notifyOnBillDate') ?? true,
@@ -125,6 +131,10 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
     await prefs.setBool(
       'backupReminderEnabled',
       newSettings.backupReminderEnabled,
+    );
+    await prefs.setBool(
+      'smartInboxPushEnabled',
+      newSettings.smartInboxPushEnabled,
     ); // <-- NEW
     await prefs.setInt('ccAlertHour', newSettings.ccAlertHour);
     await prefs.setInt('ccAlertMinute', newSettings.ccAlertMinute);
