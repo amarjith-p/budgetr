@@ -37,7 +37,6 @@ class NotificationParserService {
     caseSensitive: false,
   );
 
-  // --- FIX 1: Removed 'vpa' from expense keywords ---
   static final RegExp _defaultExpenseKeywords = RegExp(
     r'\b(debited|paid|spent|sent|transferred|deducted)\b',
     caseSensitive: false,
@@ -200,19 +199,33 @@ class NotificationParserService {
         return;
       }
 
-      // --- FIX 2: SEMANTIC DEDUPLICATION (APP vs SMS) ---
-      // Checks if an unapproved transaction with the exact same amount and type
-      // arrived in the last 5 minutes.
+      // --- FIX 1: BULLETPROOF SEMANTIC DEDUPLICATION (APP vs SMS) ---
+      // Fetch recent staged transactions (last 10 minutes) directly to avoid Drift floating-point quirks
+      final tenMinutesAgo = now.subtract(const Duration(minutes: 10));
       final recentStaged =
           await (_db.select(_db.stagedTransactions)
                 ..where((t) => t.isApproved.equals(false))
-                ..where((t) => t.extractedAmount.equals(parsed.amount))
-                ..where((t) => t.inferredType.equals(parsed.type)))
+                ..where((t) => t.date.isBiggerOrEqualValue(tenMinutesAgo)))
               .get();
 
       bool isSemanticDuplicate = false;
       for (var staged in recentStaged) {
-        if (now.difference(staged.date).inMinutes < 1) {
+        // 1. Exact Reference Number Match (100% guarantee it's a duplicate)
+        if (parsed.referenceNo != null &&
+            parsed.referenceNo!.isNotEmpty &&
+            staged.referenceNo == parsed.referenceNo) {
+          isSemanticDuplicate = true;
+          break;
+        }
+
+        // 2. Amount, Type, and Time Window Match (Handles SMS vs App pushes that lack ref numbers)
+        final timeDiffMinutes = now.difference(staged.date).inMinutes.abs();
+        final amountDifference = (staged.extractedAmount - parsed.amount).abs();
+
+        // If the amount is identical (within 1 paisa), type matches, and it arrived within 5 minutes
+        if (amountDifference < 0.01 &&
+            staged.inferredType == parsed.type &&
+            timeDiffMinutes <= 5) {
           isSemanticDuplicate = true;
           break;
         }
@@ -220,7 +233,7 @@ class NotificationParserService {
 
       if (isSemanticDuplicate) {
         debugPrint(
-          "Semantic duplicate dropped: Same amount and type logged recently.",
+          "Semantic duplicate dropped: Same amount and type logged within 5 mins, or matching Ref No.",
         );
         rawHashes.add('$txHash:${now.millisecondsSinceEpoch}');
         await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
@@ -279,17 +292,25 @@ class NotificationParserService {
             ),
           );
 
-      final String sign = parsed.type == 'Expense' ? '-' : '+';
-      final String alertTitle = 'New Transaction Detected';
-      final String bodyText =
-          '$sign ₹${parsed.amount} via $sourceName. Tap to review and approve.';
+      // --- FIX 2: RESPECT THE SMART INBOX PUSH TOGGLE ---
+      final bool pushEnabled = prefs.getBool('smartInboxPushEnabled') ?? true;
+      final bool masterEnabled = prefs.getBool('enableNotifications') ?? true;
 
-      NotificationService.instance.scheduleNotification(
-        id: DateTime.now().millisecond,
-        title: alertTitle,
-        body: bodyText,
-        scheduledDate: DateTime.now().add(const Duration(seconds: 1)),
-      );
+      if (pushEnabled && masterEnabled) {
+        final String sign = parsed.type == 'Expense' ? '-' : '+';
+        final String alertTitle = 'New Transaction Detected';
+        final String bodyText =
+            '$sign ₹${parsed.amount} via $sourceName. Tap to review and approve.';
+
+        NotificationService.instance.scheduleNotification(
+          id: DateTime.now().millisecond,
+          title: alertTitle,
+          body: bodyText,
+          scheduledDate: DateTime.now().add(const Duration(seconds: 1)),
+        );
+      } else {
+        debugPrint("Smart Inbox Push disabled in settings. Skipping alert.");
+      }
     } catch (e) {
       debugPrint("Notification Parser Error: $e");
     }
