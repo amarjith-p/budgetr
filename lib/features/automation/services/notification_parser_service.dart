@@ -48,12 +48,12 @@ class NotificationParserService {
   );
 
   static final RegExp _accountRegex = RegExp(
-    r'(?:a/c|acct|card|ending with|ending in|xx|x)\s*([0-9]{3,4})',
+    r'(?:a/c|acct|card|ending with|ending in|x+|\*+)\s*[-:]?\s*[\(\*]?\s*([0-9]{3,4})\)?',
     caseSensitive: false,
   );
 
   static final RegExp _merchantRegex = RegExp(
-    r'(?:to|at|vpa|info|for)\s+([A-Za-z0-9\s&.\-@]{3,25})(?:\s+on|\s+ref|\s+upi|\s+avl|\.|$)',
+    r'(?:to|at|vpa|info|for|from|sent to|paid to)\s+([A-Za-z0-9\s&.\-@]{3,25})(?:\s+on|\s+ref|\s+upi|\s+avl|\.|$)',
     caseSensitive: false,
   );
 

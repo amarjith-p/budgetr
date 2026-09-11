@@ -95,7 +95,11 @@ class AccountTransactionsPage extends ConsumerWidget {
             } else if (t.type == 'Expense') {
               totalNetImpact -= t.amount;
             } else if (t.type == 'Transfer') {
-              if (t.accountId == liveAccount.id) {
+              if (t.toAccountId == 'EXTERNAL_IN') {
+                totalNetImpact += t.amount;
+              } else if (t.toAccountId == 'EXTERNAL_OUT') {
+                totalNetImpact -= t.amount;
+              } else if (t.accountId == liveAccount.id) {
                 totalNetImpact -= t.amount;
               } else if (t.toAccountId == liveAccount.id) {
                 totalNetImpact += t.amount;
@@ -113,7 +117,11 @@ class AccountTransactionsPage extends ConsumerWidget {
             } else if (t.type == 'Expense') {
               runningBal -= t.amount;
             } else if (t.type == 'Transfer') {
-              if (t.accountId == liveAccount.id) {
+              if (t.toAccountId == 'EXTERNAL_IN') {
+                runningBal += t.amount;
+              } else if (t.toAccountId == 'EXTERNAL_OUT') {
+                runningBal -= t.amount;
+              } else if (t.accountId == liveAccount.id) {
                 runningBal -= t.amount;
               } else if (t.toAccountId == liveAccount.id) {
                 runningBal += t.amount;

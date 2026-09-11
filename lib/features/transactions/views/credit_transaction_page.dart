@@ -163,7 +163,8 @@ class CreditTransactionPage extends ConsumerWidget {
         final t = tx.transaction;
         bool isIncoming =
             t.type == 'Income' ||
-            (t.type == 'Transfer' && t.toAccountId == liveAccount.id);
+            (t.type == 'Transfer' && t.toAccountId == liveAccount.id) ||
+            (t.type == 'Transfer' && t.toAccountId == 'EXTERNAL_IN');
 
         // --- FIX: USE IMMUTABLE SNAPSHOT ---
         final catName = t.categoryName ?? tx.category?.name ?? '';
@@ -250,7 +251,11 @@ class CreditTransactionPage extends ConsumerWidget {
             } else if (t.type == 'Expense') {
               totalNetImpact -= t.amount;
             } else if (t.type == 'Transfer') {
-              if (t.accountId == liveAccount.id) {
+              if (t.toAccountId == 'EXTERNAL_IN') {
+                totalNetImpact += t.amount;
+              } else if (t.toAccountId == 'EXTERNAL_OUT') {
+                totalNetImpact -= t.amount;
+              } else if (t.accountId == liveAccount.id) {
                 totalNetImpact -= t.amount;
               } else if (t.toAccountId == liveAccount.id) {
                 totalNetImpact += t.amount;
@@ -267,7 +272,11 @@ class CreditTransactionPage extends ConsumerWidget {
             } else if (t.type == 'Expense') {
               runningBal -= t.amount;
             } else if (t.type == 'Transfer') {
-              if (t.accountId == liveAccount.id) {
+              if (t.toAccountId == 'EXTERNAL_IN') {
+                runningBal += t.amount;
+              } else if (t.toAccountId == 'EXTERNAL_OUT') {
+                runningBal -= t.amount;
+              } else if (t.accountId == liveAccount.id) {
                 runningBal -= t.amount;
               } else if (t.toAccountId == liveAccount.id) {
                 runningBal += t.amount;
@@ -475,13 +484,20 @@ class _CreditSummaryCard extends StatelessWidget {
 
     for (var tx in allTransactions) {
       final t = tx.transaction;
+      bool isExpense = t.type == 'Expense';
+      bool isPayment = t.type == 'Income';
 
-      bool isExpense =
-          t.type == 'Expense' ||
-          (t.type == 'Transfer' && t.accountId == account.id);
-      bool isPayment =
-          t.type == 'Income' ||
-          (t.type == 'Transfer' && t.toAccountId == account.id);
+      // --- FIX: HANDLE EXTERNAL TRANSFERS CORRECTLY ---
+      if (t.type == 'Transfer') {
+        if (t.toAccountId == 'EXTERNAL_IN') {
+          isPayment = true;
+        } else if (t.toAccountId == 'EXTERNAL_OUT') {
+          isExpense = true;
+        } else {
+          isExpense = t.accountId == account.id;
+          isPayment = t.toAccountId == account.id;
+        }
+      }
 
       // --- FIX: USE IMMUTABLE SNAPSHOT ---
       final catName = t.categoryName ?? tx.category?.name ?? '';
