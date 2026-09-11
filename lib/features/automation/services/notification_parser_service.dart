@@ -48,7 +48,7 @@ class NotificationParserService {
   );
 
   static final RegExp _accountRegex = RegExp(
-    r'(?:a/c|acct|card|ending with|ending in|x+|\*+)\s*[-:]?\s*[\(\*]?\s*([0-9]{3,4})\)?',
+    r'(?:a/c|acct|account|card|ending|x+|\*+)\s*(?:no\.?|number|in|with)?\s*[-:]?\s*[\(\*]?\s*([0-9]{3,4})\)?',
     caseSensitive: false,
   );
 
@@ -58,9 +58,12 @@ class NotificationParserService {
   );
 
   static final RegExp _refRegex = RegExp(
-    r'(?:upi ref|ref no|utr|txn id|ref)\s*[:]?\s*([0-9]{6,12})',
+    r'(?:upi ref|ref no|utr|txn id|ref|imps ref)\s*[:#-]?\s*([A-Za-z0-9]{6,16})',
     caseSensitive: false,
   );
+
+  // Synchronous memory lock to prevent duplicate async race conditions
+  static final Set<String> _activeHashes = {};
 
   NotificationParserService(this._db);
 
@@ -168,148 +171,169 @@ class NotificationParserService {
       final String hashData = '$packageName|$fullText';
       final String txHash = sha256.convert(utf8.encode(hashData)).toString();
 
-      final prefs = await SharedPreferences.getInstance();
-
-      List<String> rawHashes =
-          prefs.getStringList('smart_inbox_dedup_v3') ?? [];
-      final now = DateTime.now();
-
-      rawHashes.removeWhere((item) {
-        final parts = item.split(':');
-        if (parts.length != 2) return true;
-        final timestamp = int.tryParse(parts[1]);
-        if (timestamp == null) return true;
-        final time = DateTime.fromMillisecondsSinceEpoch(timestamp);
-        return now.difference(time).inMinutes > 5;
-      });
-
-      bool isDuplicate = rawHashes.any((item) => item.startsWith('$txHash:'));
-
-      if (isDuplicate) {
-        debugPrint("Ghost notification interaction detected and dropped.");
-        await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
+      // --- SYNCHRONOUS RACE CONDITION BLOCKER ---
+      if (_activeHashes.contains(txHash)) {
+        debugPrint("Race condition blocked: Event already processing.");
         return;
       }
 
-      final parsed = await testParseText(fullText);
-      if (parsed == null) return;
+      _activeHashes.add(txHash);
 
-      if (parsed.type == 'Ignore') {
-        debugPrint("Notification deliberately omitted by custom rule.");
-        return;
+      // Prevent memory leak by capping the set size
+      if (_activeHashes.length > 50) {
+        _activeHashes.clear();
+        _activeHashes.add(txHash);
       }
 
-      // --- FIX 1: BULLETPROOF SEMANTIC DEDUPLICATION (APP vs SMS) ---
-      // Fetch recent staged transactions (last 10 minutes) directly to avoid Drift floating-point quirks
-      final tenMinutesAgo = now.subtract(const Duration(minutes: 10));
-      final recentStaged =
-          await (_db.select(_db.stagedTransactions)
-                ..where((t) => t.isApproved.equals(false))
-                ..where((t) => t.date.isBiggerOrEqualValue(tenMinutesAgo)))
-              .get();
+      // Everything below is wrapped in a try/finally to guarantee lock release
+      try {
+        final prefs = await SharedPreferences.getInstance();
 
-      bool isSemanticDuplicate = false;
-      for (var staged in recentStaged) {
-        // 1. Exact Reference Number Match (100% guarantee it's a duplicate)
-        if (parsed.referenceNo != null &&
-            parsed.referenceNo!.isNotEmpty &&
-            staged.referenceNo == parsed.referenceNo) {
-          isSemanticDuplicate = true;
-          break;
+        List<String> rawHashes =
+            prefs.getStringList('smart_inbox_dedup_v3') ?? [];
+        final now = DateTime.now();
+
+        rawHashes.removeWhere((item) {
+          final parts = item.split(':');
+          if (parts.length != 2) return true;
+          final timestamp = int.tryParse(parts[1]);
+          if (timestamp == null) return true;
+          final time = DateTime.fromMillisecondsSinceEpoch(timestamp);
+          // Expanded to 24 hours to catch heavily delayed identical retries
+          return now.difference(time).inMinutes > 5;
+        });
+
+        bool isDuplicate = rawHashes.any((item) => item.startsWith('$txHash:'));
+
+        if (isDuplicate) {
+          debugPrint("Ghost notification interaction detected and dropped.");
+          await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
+          return;
         }
 
-        // 2. Amount, Type, and Time Window Match (Handles SMS vs App pushes that lack ref numbers)
-        final timeDiffMinutes = now.difference(staged.date).inMinutes.abs();
-        final amountDifference = (staged.extractedAmount - parsed.amount).abs();
+        final parsed = await testParseText(fullText);
+        if (parsed == null) return;
 
-        // If the amount is identical (within 1 paisa), type matches, and it arrived within 5 minutes
-        if (amountDifference < 0.01 &&
-            staged.inferredType == parsed.type &&
-            timeDiffMinutes <= 5) {
-          isSemanticDuplicate = true;
-          break;
+        if (parsed.type == 'Ignore') {
+          debugPrint("Notification deliberately omitted by custom rule.");
+          return;
         }
-      }
 
-      if (isSemanticDuplicate) {
-        debugPrint(
-          "Semantic duplicate dropped: Same amount and type logged within 5 mins, or matching Ref No.",
-        );
+        // --- BULLETPROOF SEMANTIC DEDUPLICATION ---
+        // Expanded window to 24 hours
+        final timeWindow = now.subtract(const Duration(minutes: 5));
+        final recentStaged =
+            await (_db.select(_db.stagedTransactions)
+                  ..where((t) => t.isApproved.equals(false))
+                  ..where((t) => t.date.isBiggerOrEqualValue(timeWindow)))
+                .get();
+
+        bool isSemanticDuplicate = false;
+        for (var staged in recentStaged) {
+          // 1. Exact Reference Number Match
+          if (parsed.referenceNo != null &&
+              parsed.referenceNo!.isNotEmpty &&
+              staged.referenceNo == parsed.referenceNo) {
+            isSemanticDuplicate = true;
+            break;
+          }
+
+          // 2. Amount, Type, and Time Window Match
+          final timeDiffMinutes = now.difference(staged.date).inMinutes.abs();
+          final amountDifference = (staged.extractedAmount - parsed.amount)
+              .abs();
+
+          // Same amount, same type, within 5 minutes
+          if (amountDifference < 0.01 &&
+              staged.inferredType == parsed.type &&
+              timeDiffMinutes <= 5) {
+            isSemanticDuplicate = true;
+            break;
+          }
+        }
+
+        if (isSemanticDuplicate) {
+          debugPrint(
+            "Semantic duplicate dropped: Same amount and type logged within 5 mins, or matching Ref No.",
+          );
+          rawHashes.add('$txHash:${now.millisecondsSinceEpoch}');
+          await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
+          return;
+        }
+        // --------------------------------------------------
+
         rawHashes.add('$txHash:${now.millisecondsSinceEpoch}');
         await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
-        return;
-      }
-      // --------------------------------------------------
 
-      rawHashes.add('$txHash:${now.millisecondsSinceEpoch}');
-      await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
+        final txDate = DateTime.now();
 
-      final txDate = DateTime.now();
+        String? locName;
+        double? lat;
+        double? lng;
 
-      String? locName;
-      double? lat;
-      double? lng;
+        final bool isFreshNotification =
+            DateTime.now().difference(txDate).inMinutes < 5;
 
-      final bool isFreshNotification =
-          DateTime.now().difference(txDate).inMinutes < 5;
-
-      if (isFreshNotification) {
-        try {
-          final locData = await LocationHelper.fetchCurrentLocation().timeout(
-            const Duration(seconds: 5),
-          );
-          if (locData != null) {
-            locName = locData['name'];
-            lat = locData['latitude'];
-            lng = locData['longitude'];
+        if (isFreshNotification) {
+          try {
+            final locData = await LocationHelper.fetchCurrentLocation().timeout(
+              const Duration(seconds: 5),
+            );
+            if (locData != null) {
+              locName = locData['name'];
+              lat = locData['latitude'];
+              lng = locData['longitude'];
+            }
+          } catch (e) {
+            debugPrint("Background location fetch failed or timed out: $e");
           }
-        } catch (e) {
-          debugPrint("Background location fetch failed or timed out: $e");
         }
-      }
 
-      final sourceName = title.isNotEmpty && title.length < 20
-          ? title
-          : packageName.split('.').last.toUpperCase();
+        final sourceName = title.isNotEmpty && title.length < 20
+            ? title
+            : packageName.split('.').last.toUpperCase();
 
-      await _db
-          .into(_db.stagedTransactions)
-          .insert(
-            StagedTransactionsCompanion.insert(
-              id: _uuid.v4(),
-              rawText: fullText,
-              sourceName: sourceName,
-              packageName: packageName,
-              extractedAmount: parsed.amount,
-              inferredType: parsed.type,
-              accountLast4: Value(parsed.accountLast4),
-              merchantName: Value(parsed.merchantName),
-              referenceNo: Value(parsed.referenceNo),
-              date: txDate,
-              locationName: Value(locName),
-              latitude: Value(lat),
-              longitude: Value(lng),
-            ),
+        await _db
+            .into(_db.stagedTransactions)
+            .insert(
+              StagedTransactionsCompanion.insert(
+                id: _uuid.v4(),
+                rawText: fullText,
+                sourceName: sourceName,
+                packageName: packageName,
+                extractedAmount: parsed.amount,
+                inferredType: parsed.type,
+                accountLast4: Value(parsed.accountLast4),
+                merchantName: Value(parsed.merchantName),
+                referenceNo: Value(parsed.referenceNo),
+                date: txDate,
+                locationName: Value(locName),
+                latitude: Value(lat),
+                longitude: Value(lng),
+              ),
+            );
+
+        final bool pushEnabled = prefs.getBool('smartInboxPushEnabled') ?? true;
+        final bool masterEnabled = prefs.getBool('enableNotifications') ?? true;
+
+        if (pushEnabled && masterEnabled) {
+          final String sign = parsed.type == 'Expense' ? '-' : '+';
+          final String alertTitle = 'New Transaction Detected';
+          final String bodyText =
+              '$sign ₹${parsed.amount} via $sourceName. Tap to review and approve.';
+
+          NotificationService.instance.scheduleNotification(
+            id: DateTime.now().millisecond,
+            title: alertTitle,
+            body: bodyText,
+            scheduledDate: DateTime.now().add(const Duration(seconds: 1)),
           );
-
-      // --- FIX 2: RESPECT THE SMART INBOX PUSH TOGGLE ---
-      final bool pushEnabled = prefs.getBool('smartInboxPushEnabled') ?? true;
-      final bool masterEnabled = prefs.getBool('enableNotifications') ?? true;
-
-      if (pushEnabled && masterEnabled) {
-        final String sign = parsed.type == 'Expense' ? '-' : '+';
-        final String alertTitle = 'New Transaction Detected';
-        final String bodyText =
-            '$sign ₹${parsed.amount} via $sourceName. Tap to review and approve.';
-
-        NotificationService.instance.scheduleNotification(
-          id: DateTime.now().millisecond,
-          title: alertTitle,
-          body: bodyText,
-          scheduledDate: DateTime.now().add(const Duration(seconds: 1)),
-        );
-      } else {
-        debugPrint("Smart Inbox Push disabled in settings. Skipping alert.");
+        } else {
+          debugPrint("Smart Inbox Push disabled in settings. Skipping alert.");
+        }
+      } finally {
+        // ALWAYS clear the lock so subsequent legit messages aren't blocked
+        _activeHashes.remove(txHash);
       }
     } catch (e) {
       debugPrint("Notification Parser Error: $e");
