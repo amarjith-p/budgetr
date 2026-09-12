@@ -10,6 +10,7 @@ import '../../../core/components/theme_switcher_card.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../notifications/views/notification_manager_screen.dart';
 import '../../auth/auth_state.dart';
+import 'factory_reset_page.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -39,166 +40,192 @@ class SettingsPage extends ConsumerWidget {
         subtitle: 'APP CONFIGURATION',
         leadingIcon: Icons.arrow_back_rounded,
       ),
-      body: ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(DesignTokens.spacingLg),
-        children: [
-          // --- FULL WIDTH: THEME ---
-          _buildSectionTitle('APPEARANCE', theme),
-          const SizedBox(height: 12),
-          const ThemeSwitcherCard(),
-
-          const SizedBox(height: 24),
-
-          // --- 2-COLUMN BENTO GRID: SECURITY ---
-          _buildSectionTitle('SECURITY', theme),
-          const SizedBox(height: 12),
-          Row(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          // ClampingScrollPhysics removes the bounce.
+          // If it fits on the screen, it acts completely static.
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.all(DesignTokens.spacingLg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: _buildBentoToggleCard(
-                  context,
-                  title: 'App Lock',
-                  subtitle: 'Require PIN',
-                  icon: Icons.lock_outline_rounded,
-                  iconColor: const Color(0xFFE71D36),
-                  value: securitySettings.appLockEnabled,
-                  onChanged: (val) => ref
-                      .read(securitySettingsProvider.notifier)
-                      .toggleAppLock(val),
-                ),
+              // --- FULL WIDTH: THEME ---
+              _buildSectionTitle('APPEARANCE', theme),
+              const SizedBox(height: 8),
+              const ThemeSwitcherCard(),
+
+              const SizedBox(height: 20),
+
+              // --- 2-COLUMN BENTO GRID: SECURITY ---
+              _buildSectionTitle('SECURITY', theme),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildBentoToggleCard(
+                      context,
+                      title: 'App Lock',
+                      subtitle: 'Require PIN',
+                      icon: Icons.lock_outline_rounded,
+                      iconColor: const Color(0xFFE71D36),
+                      value: securitySettings.appLockEnabled,
+                      onChanged: (val) => ref
+                          .read(securitySettingsProvider.notifier)
+                          .toggleAppLock(val),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildBentoToggleCard(
+                      context,
+                      title: 'Biometrics',
+                      subtitle: 'Face/Touch ID',
+                      icon: Icons.fingerprint_rounded,
+                      iconColor: const Color(0xFF2EC4B6),
+                      value: securitySettings.biometricsEnabled,
+                      onChanged: securitySettings.appLockEnabled
+                          ? (val) => ref
+                                .read(securitySettingsProvider.notifier)
+                                .toggleBiometrics(val)
+                          : null,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildBentoToggleCard(
-                  context,
-                  title: 'Biometrics',
-                  subtitle: 'Face/Touch ID',
-                  icon: Icons.fingerprint_rounded,
-                  iconColor: const Color(0xFF2EC4B6),
-                  value: securitySettings.biometricsEnabled,
-                  onChanged: securitySettings.appLockEnabled
-                      ? (val) => ref
-                            .read(securitySettingsProvider.notifier)
-                            .toggleBiometrics(val)
-                      : null,
-                ),
+
+              const SizedBox(height: 20),
+
+              // --- FULL WIDTH BENTO: PREFERENCES ---
+              _buildSectionTitle('SYSTEM', theme),
+              const SizedBox(height: 8),
+              _buildBentoActionCard(
+                context,
+                icon: Icons.share_location_rounded,
+                title: 'Location Capture',
+                subtitle: locationPref == LocationPreference.current
+                    ? 'Using GPS'
+                    : (locationPref == LocationPreference.map
+                          ? 'Choosing on map'
+                          : 'Asking each time'),
+                onTap: () async {
+                  HapticFeedback.selectionClick();
+
+                  final items = const [
+                    'Use current GPS location',
+                    'Always choose on map',
+                    'Ask each time',
+                  ];
+                  final currentSelection = getLocationPrefString(locationPref);
+
+                  final result = await GlobalSelectionSheet.show<String>(
+                    context: context,
+                    title: 'Location Capture Method',
+                    builder: (sheetContext, scrollController) =>
+                        ListView.separated(
+                          controller: scrollController,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: items.length,
+                          separatorBuilder: (context, index) => Divider(
+                            height: 1,
+                            color: theme.dividerColor.withOpacity(0.3),
+                            indent: 24,
+                            endIndent: 24,
+                          ),
+                          itemBuilder: (context, index) {
+                            final item = items[index];
+                            final isSelected = currentSelection == item;
+
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 4,
+                              ),
+                              title: Text(
+                                item,
+                                style: TextStyle(
+                                  fontWeight: isSelected
+                                      ? FontWeight.w900
+                                      : FontWeight.w600,
+                                  fontSize: 15,
+                                  color: isSelected
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              trailing: Icon(
+                                isSelected
+                                    ? Icons.radio_button_checked_rounded
+                                    : Icons.radio_button_off_rounded,
+                                size: 20,
+                                color: isSelected
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurfaceVariant
+                                          .withOpacity(0.5),
+                              ),
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                Navigator.pop(sheetContext, item);
+                              },
+                            );
+                          },
+                        ),
+                  );
+
+                  if (result != null) {
+                    final notifier = ref.read(
+                      locationSettingsProvider.notifier,
+                    );
+                    if (result == 'Use current GPS location') {
+                      notifier.updatePreference(LocationPreference.current);
+                    } else if (result == 'Always choose on map') {
+                      notifier.updatePreference(LocationPreference.map);
+                    } else {
+                      notifier.updatePreference(LocationPreference.ask);
+                    }
+                  }
+                },
+              ),
+
+              const SizedBox(height: 12),
+
+              _buildBentoActionCard(
+                context,
+                icon: Icons.notifications_active_rounded,
+                title: 'Notification Center',
+                subtitle: 'Manage Notification alerts',
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationManagerScreen(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // --- DANGER ZONE ---
+              _buildSectionTitle('DANGER ZONE', theme),
+              const SizedBox(height: 8),
+              _buildBentoActionCard(
+                context,
+                icon: Icons.warning_amber_rounded,
+                title: 'Factory Reset',
+                subtitle: 'Permanently erase all app data',
+                iconColor: theme.colorScheme.error,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FactoryResetPage()),
+                  );
+                },
               ),
             ],
           ),
-
-          const SizedBox(height: 24),
-
-          // --- FULL WIDTH BENTO: PREFERENCES ---
-          _buildSectionTitle('SYSTEM', theme),
-          const SizedBox(height: 12),
-          _buildBentoActionCard(
-            context,
-            icon: Icons.share_location_rounded,
-            title: 'Location Capture',
-            subtitle: locationPref == LocationPreference.current
-                ? 'Using GPS'
-                : (locationPref == LocationPreference.map
-                      ? 'Choosing on map'
-                      : 'Asking each time'),
-            onTap: () async {
-              HapticFeedback.selectionClick();
-
-              final items = const [
-                'Use current GPS location',
-                'Always choose on map',
-                'Ask each time',
-              ];
-              final currentSelection = getLocationPrefString(locationPref);
-
-              // Using the base .show() method to inject custom Radio Button UI
-              final result = await GlobalSelectionSheet.show<String>(
-                context: context,
-                title: 'Location Capture Method',
-                builder: (sheetContext, scrollController) => ListView.separated(
-                  controller: scrollController,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: items.length,
-                  separatorBuilder: (context, index) => Divider(
-                    height: 1,
-                    color: theme.dividerColor.withOpacity(0.3),
-                    indent: 24,
-                    endIndent: 24,
-                  ),
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final isSelected = currentSelection == item;
-
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 4,
-                      ),
-                      title: Text(
-                        item,
-                        style: TextStyle(
-                          fontWeight: isSelected
-                              ? FontWeight.w900
-                              : FontWeight.w600,
-                          fontSize: 15,
-                          color: isSelected
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface,
-                        ),
-                      ),
-                      trailing: Icon(
-                        isSelected
-                            ? Icons.radio_button_checked_rounded
-                            : Icons.radio_button_off_rounded,
-                        size: 20,
-                        color: isSelected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant.withOpacity(
-                                0.5,
-                              ),
-                      ),
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        Navigator.pop(sheetContext, item);
-                      },
-                    );
-                  },
-                ),
-              );
-
-              if (result != null) {
-                final notifier = ref.read(locationSettingsProvider.notifier);
-                if (result == 'Use current GPS location') {
-                  notifier.updatePreference(LocationPreference.current);
-                } else if (result == 'Always choose on map') {
-                  notifier.updatePreference(LocationPreference.map);
-                } else {
-                  notifier.updatePreference(LocationPreference.ask);
-                }
-              }
-            },
-          ),
-
-          const SizedBox(height: 16),
-
-          _buildBentoActionCard(
-            context,
-            icon: Icons.notifications_active_rounded,
-            title: 'Notification Center',
-            subtitle: 'Manage Notification alerts',
-            onTap: () {
-              HapticFeedback.selectionClick();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const NotificationManagerScreen(),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(height: 40),
-        ],
+        ),
       ),
     );
   }
@@ -218,7 +245,6 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  // --- SQUARE BENTO CARD (Used for Toggles) ---
   Widget _buildBentoToggleCard(
     BuildContext context, {
     required String title,
@@ -233,7 +259,7 @@ class SettingsPage extends ConsumerWidget {
     final isEnabled = onChanged != null;
 
     return Container(
-      height: 140, // Fixed height for square-ish bento blocks
+      height: 120, // Reduced from 140 to tighten the layout
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
@@ -263,7 +289,7 @@ class SettingsPage extends ConsumerWidget {
                   color: iconColor.withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: iconColor, size: 24),
+                child: Icon(icon, color: iconColor, size: 22),
               ),
               Transform.scale(
                 scale: 0.8,
@@ -298,7 +324,7 @@ class SettingsPage extends ConsumerWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: TextStyle(
@@ -318,16 +344,17 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  // --- RECTANGULAR BENTO CARD (Used for Actions/Navigation) ---
   Widget _buildBentoActionCard(
     BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    Color? iconColor,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final displayColor = iconColor ?? theme.colorScheme.primary;
 
     return Container(
       decoration: BoxDecoration(
@@ -349,19 +376,19 @@ class SettingsPage extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          highlightColor: theme.colorScheme.primary.withOpacity(0.05),
-          splashColor: theme.colorScheme.primary.withOpacity(0.1),
+          highlightColor: displayColor.withOpacity(0.05),
+          splashColor: displayColor.withOpacity(0.1),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16), // Reduced padding from 20 to 16
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: displayColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: theme.colorScheme.primary, size: 24),
+                  child: Icon(icon, color: displayColor, size: 22),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -377,7 +404,7 @@ class SettingsPage extends ConsumerWidget {
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         subtitle,
                         style: TextStyle(

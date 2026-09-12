@@ -114,7 +114,7 @@ class CategoryService {
         'Gifts Purchased',
         'Sports Equipment',
         'Stationery',
-        'Jewelry',
+        'Jewellery',
         'Personal Items',
         'Mobile/Accessories',
         'Toiletries',

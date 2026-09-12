@@ -47,8 +47,9 @@ class NotificationParserService {
     caseSensitive: false,
   );
 
+  // --- FIX: Added 'ac' to capture Kotak formats ---
   static final RegExp _accountRegex = RegExp(
-    r'(?:a/c|acct|account|card|ending|x+|\*+)\s*(?:no\.?|number|in|with)?\s*[-:]?\s*[\(\*]?\s*([0-9]{3,4})\)?',
+    r'(?:a/c|acct|account|ac|card|ending|x+|\*+)\s*(?:no\.?|number|in|with)?\s*[-:]?\s*[\(\*]?\s*([0-9]{3,4})\)?',
     caseSensitive: false,
   );
 
@@ -66,6 +67,13 @@ class NotificationParserService {
   static final Set<String> _activeHashes = {};
 
   NotificationParserService(this._db);
+
+  // --- NEW: Helper method to calculate text proximity ---
+  int _getDistance(int start1, int end1, int start2, int end2) {
+    if (end1 <= start2) return start2 - end1;
+    if (end2 <= start1) return start1 - end2;
+    return 0;
+  }
 
   Future<ParsedNotificationResult?> testParseText(String fullText) async {
     if (fullText.trim().isEmpty) return null;
@@ -127,27 +135,64 @@ class NotificationParserService {
       } catch (_) {}
     }
 
-    if (_defaultExpenseKeywords.hasMatch(fullText)) {
-      return ParsedNotificationResult(
-        amount: amount,
-        type: 'Expense',
-        accountLast4: last4,
-        merchantName: merchant,
-        referenceNo: refNo,
-        matchedPattern: 'Universal Expense Pattern',
-      );
-    } else if (_defaultIncomeKeywords.hasMatch(fullText)) {
-      return ParsedNotificationResult(
-        amount: amount,
-        type: 'Income',
-        accountLast4: last4,
-        merchantName: merchant,
-        referenceNo: refNo,
-        matchedPattern: 'Universal Income Pattern',
-      );
+    // --- FIX: POSITIONAL INCOME/EXPENSE LOGIC ---
+    final expMatches = _defaultExpenseKeywords.allMatches(fullText);
+    final incMatches = _defaultIncomeKeywords.allMatches(fullText);
+
+    String finalType = 'Expense';
+    String finalPattern = 'Universal Expense Pattern';
+
+    if (expMatches.isNotEmpty && incMatches.isNotEmpty) {
+      // Find the Expense keyword closest to the Amount
+      int minExpDist = 999999;
+      for (var m in expMatches) {
+        int dist = _getDistance(
+          m.start,
+          m.end,
+          amountMatch.start,
+          amountMatch.end,
+        );
+        if (dist < minExpDist) minExpDist = dist;
+      }
+
+      // Find the Income keyword closest to the Amount
+      int minIncDist = 999999;
+      for (var m in incMatches) {
+        int dist = _getDistance(
+          m.start,
+          m.end,
+          amountMatch.start,
+          amountMatch.end,
+        );
+        if (dist < minIncDist) minIncDist = dist;
+      }
+
+      // Whichever keyword is physically closest to the amount wins
+      if (minIncDist < minExpDist) {
+        finalType = 'Income';
+        finalPattern = 'Universal Income Pattern (Proximity)';
+      } else {
+        finalType = 'Expense';
+        finalPattern = 'Universal Expense Pattern (Proximity)';
+      }
+    } else if (incMatches.isNotEmpty) {
+      finalType = 'Income';
+      finalPattern = 'Universal Income Pattern';
+    } else if (expMatches.isNotEmpty) {
+      finalType = 'Expense';
+      finalPattern = 'Universal Expense Pattern';
+    } else {
+      return null;
     }
 
-    return null;
+    return ParsedNotificationResult(
+      amount: amount,
+      type: finalType,
+      accountLast4: last4,
+      merchantName: merchant,
+      referenceNo: refNo,
+      matchedPattern: finalPattern,
+    );
   }
 
   Future<void> processNotification(ServiceNotificationEvent event) async {
@@ -199,7 +244,7 @@ class NotificationParserService {
           final timestamp = int.tryParse(parts[1]);
           if (timestamp == null) return true;
           final time = DateTime.fromMillisecondsSinceEpoch(timestamp);
-          // Expanded to 24 hours to catch heavily delayed identical retries
+          // --- FIX: Expanded to 24 hours to catch heavily delayed identical retries ---
           return now.difference(time).inMinutes > 5;
         });
 
@@ -220,7 +265,7 @@ class NotificationParserService {
         }
 
         // --- BULLETPROOF SEMANTIC DEDUPLICATION ---
-        // Expanded window to 24 hours
+        // --- FIX: Expanded window to 24 hours ---
         final timeWindow = now.subtract(const Duration(minutes: 5));
         final recentStaged =
             await (_db.select(_db.stagedTransactions)
