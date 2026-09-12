@@ -6,7 +6,7 @@ import 'package:drift/drift.dart' show BooleanExpressionOperators;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // <-- IMPORT ADDED FOR PREFS CHECK
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/database/app_database.dart' hide Column, Table;
 import '../../../core/database/database_provider.dart' as db_prov;
 import '../../../core/theme/design_tokens.dart';
@@ -23,11 +23,7 @@ import '../../../core/components/futuristic_loader.dart';
 import '../../accounts/providers/account_provider.dart';
 import '../../category_manager/providers/category_provider.dart';
 import '../providers/transaction_provider.dart';
-
-// --- IMPORT FOR SMART INBOX ---
 import '../../automation/providers/smart_inbox_provider.dart';
-
-// --- IMPORTS FOR LOCATION PICKER ---
 import '../../settings/providers/location_settings_provider.dart';
 import 'location_map_picker_page.dart';
 
@@ -52,7 +48,6 @@ class TransactionFormPage extends ConsumerStatefulWidget {
   final String? preSelectedAccountId;
   final bool isClone;
   final bool isSplit;
-
   final DateTime? initialDate;
 
   const TransactionFormPage({
@@ -73,26 +68,25 @@ class TransactionFormPage extends ConsumerStatefulWidget {
 class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   int _typeIndex = 0;
   final List<String> _types = ['Expense', 'Income', 'Transfer'];
+
   String _expression = '';
   String _liveResult = '0.00';
   bool _isSpillover = false;
   bool _isSettlementVerified = false;
+
   late TextEditingController _amountController;
   late TextEditingController _notesCtrl;
   late DateTime _selectedDateTime;
-
   String? _selectedAccountId;
   String? _selectedToAccountId;
   String? _selectedCategoryId;
   String? _selectedSubCategory;
   int? _selectedBucketId;
   String? _historicalBucketName;
-
   String? _historicalCategoryName;
   int? _historicalCategoryIcon;
 
   bool _showValidationErrors = false;
-
   String? _locationName;
   double? _latitude;
   double? _longitude;
@@ -127,7 +121,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   @override
   void initState() {
     super.initState();
-
     final now = DateTime.now();
     if (widget.initialDate != null) {
       _selectedDateTime = DateTime(
@@ -145,7 +138,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final stagedTx = widget.stagedTransaction;
 
     String initialAmount = '';
-
     if (txDetails != null && !widget.isSplit) {
       initialAmount = txDetails.transaction.amount.toStringAsFixed(2);
     } else if (stagedTx != null) {
@@ -155,7 +147,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     _amountController = TextEditingController(text: initialAmount);
     _expression = initialAmount;
     _liveResult = initialAmount.isEmpty ? '0.00' : initialAmount;
-
     _loanPrinCtrl = TextEditingController();
     _loanIntCtrl = TextEditingController();
     _loanTaxCtrl = TextEditingController();
@@ -170,7 +161,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           ? false
           : tx.isSettlementVerified;
       _notesCtrl = TextEditingController(text: tx.notes ?? '');
-
       _selectedCategoryId = widget.isSplit ? null : tx.categoryId;
       _historicalCategoryName = widget.isSplit
           ? null
@@ -180,9 +170,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           : (tx.categoryIcon ??
                 txDetails.category?.iconCode ??
                 Icons.help_outline.codePoint);
-
       _selectedSubCategory = widget.isSplit ? null : tx.subCategory;
-
       _locationName = tx.locationName;
       _latitude = tx.latitude;
       _longitude = tx.longitude;
@@ -201,7 +189,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       } else {
         _selectedAccountId = tx.accountId;
       }
-
       _selectedBucketId = tx.bucketId ?? -1;
       _historicalBucketName = tx.bucketName ?? txDetails.bucket?.name;
     } else if (stagedTx != null) {
@@ -211,14 +198,20 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       _notesCtrl = TextEditingController(
         text: stagedTx.merchantName ?? stagedTx.sourceName,
       );
-
       _locationName = stagedTx.locationName;
       _latitude = stagedTx.latitude;
       _longitude = stagedTx.longitude;
 
+      // --- SMART WATERFALL ACCOUNT MATCHING ---
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final rawAccounts =
             ref.read(accountsStreamProvider).asData?.value ?? [];
+
+        if (rawAccounts.isEmpty) return;
+
+        bool foundMatch = false;
+
+        // 1. Try matching by Last 4 Digits
         if (stagedTx.accountLast4 != null &&
             stagedTx.accountLast4!.isNotEmpty) {
           final match = rawAccounts
@@ -226,14 +219,55 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               .firstOrNull;
           if (match != null) {
             setState(() => _selectedAccountId = match.id);
-            return;
+            foundMatch = true;
           }
         }
-        final defaultAcc = rawAccounts
-            .where((a) => a.type != 'Loan')
-            .firstOrNull;
-        if (defaultAcc != null && _selectedAccountId == null) {
-          setState(() => _selectedAccountId = defaultAcc.id);
+
+        // 2. Fallback to Provider/Bank Name if digits are missing (e.g. SPAY)
+        if (!foundMatch) {
+          final textLower = stagedTx.rawText.toLowerCase();
+          final matchesByBank = rawAccounts.where((a) {
+            final prov = a.providerName.toLowerCase();
+            if (prov.isEmpty) return false;
+            final mainBankWord = prov.split(' ').first;
+            return mainBankWord.length > 2 && textLower.contains(mainBankWord);
+          }).toList();
+
+          if (matchesByBank.isNotEmpty) {
+            // Smart Tie-Breaker: If the SMS is an Income, prefer Assets over Credit Cards
+            if (stagedTx.inferredType == 'Income') {
+              final assetMatch = matchesByBank
+                  .where((a) => a.type != 'Credit Cards' && a.type != 'Loan')
+                  .firstOrNull;
+              if (assetMatch != null) {
+                setState(() => _selectedAccountId = assetMatch.id);
+                foundMatch = true;
+              }
+            }
+
+            // If it's an expense, or we didn't find an asset match, pick the first matched provider
+            if (!foundMatch) {
+              setState(() => _selectedAccountId = matchesByBank.first.id);
+              foundMatch = true;
+            }
+          }
+        }
+
+        // 3. Ultimate Default (Prefer Asset accounts over Credit Cards to prevent random CC picks)
+        if (!foundMatch) {
+          final defaultAsset = rawAccounts
+              .where((a) => a.type != 'Loan' && a.type != 'Credit Cards')
+              .firstOrNull;
+          if (defaultAsset != null) {
+            setState(() => _selectedAccountId = defaultAsset.id);
+          } else {
+            final defaultAny = rawAccounts
+                .where((a) => a.type != 'Loan')
+                .firstOrNull;
+            if (defaultAny != null) {
+              setState(() => _selectedAccountId = defaultAny.id);
+            }
+          }
         }
       });
     } else {
@@ -258,9 +292,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
     LocationPreference activePref = ref.read(locationSettingsProvider);
 
-    // --- FIX: Bypass StateNotifier's async _init() race condition ---
-    // If the provider still says 'ask', we explicitly check SharedPreferences
-    // to guarantee we don't ignore a saved 'map' or 'current' preference.
     if (activePref == LocationPreference.ask) {
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getString('location_pref');
@@ -283,8 +314,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
       if (choice == null) return;
 
-      // Assign the choice for this specific action, but DO NOT save it to the provider,
-      // because the user's global setting is to 'ask' every time.
       activePref = choice == 'Choose on Map'
           ? LocationPreference.map
           : LocationPreference.current;
@@ -373,6 +402,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
       int cursorPosition = targetCtrl.selection.baseOffset;
       if (cursorPosition < 0) cursorPosition = targetCtrl.text.length;
+
       String currentText = targetCtrl.text;
 
       if (key == 'C') {
@@ -574,12 +604,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         ),
       );
     }
+
     return children;
   }
 
   Future<void> _pickAccount(bool isToAccount, List<Account> rawAccounts) async {
     final theme = Theme.of(context);
-
     List<Account> availableAccounts = List.from(rawAccounts);
 
     if (!isToAccount) {
@@ -635,7 +665,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               selectedId,
               theme,
             ),
-
             if (assets.isNotEmpty &&
                 (creditCards.isNotEmpty || loans.isNotEmpty || showExternal))
               Divider(
@@ -643,7 +672,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 thickness: 4,
                 color: theme.dividerColor.withOpacity(0.05),
               ),
-
             ..._buildAccountGroup(
               ctx,
               creditCards,
@@ -652,14 +680,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               selectedId,
               theme,
             ),
-
             if (creditCards.isNotEmpty && (loans.isNotEmpty || showExternal))
               Divider(
                 height: 12,
                 thickness: 4,
                 color: theme.dividerColor.withOpacity(0.05),
               ),
-
             ..._buildAccountGroup(
               ctx,
               loans,
@@ -668,14 +694,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               selectedId,
               theme,
             ),
-
             if (loans.isNotEmpty && showExternal)
               Divider(
                 height: 12,
                 thickness: 4,
                 color: theme.dividerColor.withOpacity(0.05),
               ),
-
             if (showExternal) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
@@ -777,12 +801,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     TransactionCategoryModel? selectedCatMatch,
   ) async {
     final items = activeCategories.map((c) => c.name).toList();
+
     final selected = await GlobalSelectionSheet.showSimple(
       context: context,
       title: 'Select Category',
       items: items,
       selectedValue: selectedCatMatch?.name ?? _historicalCategoryName ?? '',
     );
+
     if (selected != null && mounted) {
       setState(() {
         _selectedCategoryId = activeCategories
@@ -796,12 +822,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
   Future<void> _pickSubCategory(List<String> activeSubCategories) async {
     if (activeSubCategories.isEmpty) return;
+
     final selected = await GlobalSelectionSheet.showSimple(
       context: context,
       title: 'Select Subcategory',
       items: activeSubCategories,
       selectedValue: _selectedSubCategory ?? '',
     );
+
     if (selected != null && mounted) {
       setState(() {
         _selectedSubCategory = selected;
@@ -814,12 +842,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     _BucketItem? selectedBucketMatch,
   ) async {
     final items = bucketItems.map((b) => b.name).toList();
+
     final selected = await GlobalSelectionSheet.showSimple(
       context: context,
       title: 'Assign to Bucket',
       items: items,
       selectedValue: selectedBucketMatch?.name ?? '',
     );
+
     if (selected != null && mounted) {
       setState(() {
         _selectedBucketId = bucketItems
@@ -843,7 +873,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     List<String> getSmartSuggestions() {
       final cat = (selectedCatMatch?.name ?? _historicalCategoryName ?? '')
           .toLowerCase();
-
       if (_typeIndex == 0) {
         if (cat.contains('food') ||
             cat.contains('dining') ||
@@ -1050,11 +1079,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                   .toList();
             }
 
-            // --- CHANGED: Now taking only the last 6 note suggestions ---
             suggestions = suggestions.take(6).toList();
 
             final theme = Theme.of(context);
-
             return Container(
               decoration: BoxDecoration(
                 color: theme.scaffoldBackgroundColor,
@@ -1273,6 +1300,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           ) ??
           0.0;
 
+      final total = p + i + t + f;
+
       final String? finalBucketName = _resolveBucketName(
         activeBucketItems,
         _selectedBucketId,
@@ -1309,7 +1338,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             latitude: _latitude,
             longitude: _longitude,
           );
-
       if (success && mounted) {
         if (widget.stagedTransaction != null) {
           await ref
@@ -1326,7 +1354,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final isIncome = _typeIndex == 1;
     final isTransfer = _typeIndex == 2;
     final isLoanRep = _isLoanRepayment;
-
     final hasDanglingOperator =
         _expression.isNotEmpty &&
         ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
@@ -1371,7 +1398,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     }
 
     String? finalCategoryId = _selectedCategoryId;
-
     final selectedCatMatch = rawCategories
         .where((c) => c.id == _selectedCategoryId)
         .firstOrNull;
@@ -1427,10 +1453,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           cancelText: 'NO, NORMAL',
           onConfirm: () {},
         );
+
         if (isRepayment == true) {
           final repaymentCat = rawCategories
               .where((c) => c.name == 'Repayment' && c.type == 'Income')
               .firstOrNull;
+
           if (repaymentCat != null) {
             finalCategoryId = repaymentCat.id;
             finalCategoryName = repaymentCat.name;
@@ -1518,7 +1546,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     return text;
   }
 
-  // --- MODIFIED TO SUPPORT ONCLEAR FOR REMOVING LOCATION ---
   Widget _buildTableCell(
     String label,
     String? value,
@@ -1526,7 +1553,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     VoidCallback? onTap,
     bool isError, {
     bool isActive = false,
-    VoidCallback? onClear, // <-- NEW
+    VoidCallback? onClear,
   }) {
     final theme = Theme.of(context);
     final hasValue =
@@ -1710,6 +1737,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         false,
       ),
     );
+
     cells.add(
       _buildTableCell(
         isTransfer ? 'FROM ACCOUNT' : 'ACCOUNT',
@@ -1750,6 +1778,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               !isLoanRep,
         ),
       );
+
       if (activeSubCategories.isNotEmpty ||
           _selectedSubCategory != null ||
           isLoanRep) {
@@ -1763,6 +1792,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           ),
         );
       }
+
       if (!isIncome) {
         cells.add(
           _buildTableCell(
@@ -1791,7 +1821,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       ),
     );
 
-    // --- UPDATED LOCATION CELL WITH onClear CALLBACK ---
     cells.add(
       _buildTableCell(
         'LOCATION',
@@ -1836,6 +1865,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         false,
       ),
     );
+
     cells.add(
       _buildTableCell(
         'FROM ACCOUNT',
@@ -1845,6 +1875,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         _showValidationErrors && _selectedAccountId == null,
       ),
     );
+
     cells.add(
       _buildTableCell(
         'TO LOAN ACCOUNT',
@@ -1865,6 +1896,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         isActive: _activeCalcController == _loanPrinCtrl,
       ),
     );
+
     cells.add(
       _buildTableCell(
         'INTEREST (₹)',
@@ -1875,6 +1907,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         isActive: _activeCalcController == _loanIntCtrl,
       ),
     );
+
     cells.add(
       _buildTableCell(
         'TAX (₹)',
@@ -1885,6 +1918,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         isActive: _activeCalcController == _loanTaxCtrl,
       ),
     );
+
     cells.add(
       _buildTableCell(
         'BANK CHARGES (₹)',
@@ -1927,7 +1961,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       ),
     );
 
-    // --- UPDATED LOCATION CELL WITH onClear CALLBACK ---
     cells.add(
       _buildTableCell(
         'LOCATION',
@@ -1955,19 +1988,17 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
     final isExpense = _typeIndex == 0;
     final isLoanRep = _isLoanRepayment;
     final isToLoan = _isToLoanMode();
-
     final txColor = TransactionColors.getTypeColor(_types[_typeIndex], theme);
+
     final amountVal = double.tryParse(_liveResult) ?? 0.0;
     final origAmount = widget.existingTransaction?.transaction.amount ?? 0.0;
     final hasDanglingOperator =
         _expression.isNotEmpty &&
         ['+', '-', '×', '÷'].contains(_expression[_expression.length - 1]);
     final isOverSplit = widget.isSplit && amountVal >= origAmount;
-
     final hasAmountError =
         _showValidationErrors &&
         (amountVal <= 0 || hasDanglingOperator || isOverSplit);
@@ -1979,12 +2010,11 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     if (hasDanglingOperator) errorMsg = 'Incomplete mathematical expression';
     if (isOverSplit)
       errorMsg =
-          'Split amount must be less than original (₹${CurrencyFormatter.format(origAmount)})';
+          'Split amount must be less than original (₹ ${CurrencyFormatter.format(origAmount)})';
 
     final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
     final rawCategories =
         ref.watch(categoriesStreamProvider).asData?.value ?? [];
-
     final allTxs = ref.watch(allTransactionsProvider).asData?.value ?? [];
 
     final budgetDate = DateTime(
@@ -2029,6 +2059,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           }
         } catch (e) {}
       }
+
       if (isEditingExisting &&
           _selectedBucketId != null &&
           _selectedBucketId != -1) {
@@ -2069,7 +2100,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final displayToAccName = _selectedToAccountId == 'EXTERNAL'
         ? 'External Account'
         : selectedToAccMatch?.name;
-
     final selectedBucketMatch = bucketItems
         .where((b) => b.id == _selectedBucketId)
         .firstOrNull;
@@ -2126,7 +2156,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         trailingIcon: Icons.done_all_rounded,
         onTrailingPressed: () => _submit(bucketItems),
       ),
-      // --- WRAPPED BODY IN A STACK TO SHOW FUTURISTIC LOADER OVERLAY ---
       body: Stack(
         children: [
           SafeArea(
@@ -2148,12 +2177,11 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                               onSelected: (index) => setState(() {
                                 final oldIndex = _typeIndex;
                                 _typeIndex = index;
-
                                 _selectedCategoryId = null;
                                 _historicalCategoryName = null;
                                 _selectedSubCategory = null;
-
                                 if (index == 1) _selectedBucketId = null;
+
                                 if (oldIndex == 2 && index != 2) {
                                   _selectedAccountId = null;
                                   _selectedToAccountId = null;
@@ -2185,7 +2213,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 8.0),
                                     child: Text(
-                                      'SPLITTING FROM ₹${CurrencyFormatter.format(origAmount)}',
+                                      'SPLITTING FROM ₹ ${CurrencyFormatter.format(origAmount)}',
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w900,
@@ -2194,7 +2222,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                       ),
                                     ),
                                   ),
-
                                 AnimatedCrossFade(
                                   duration: const Duration(milliseconds: 250),
                                   crossFadeState: isToLoan
@@ -2307,7 +2334,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                     ),
                                   ),
                                 ),
-
                                 if (_expression.isNotEmpty &&
                                     _expression != _liveResult &&
                                     !hasAmountError &&
@@ -2387,7 +2413,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                     ),
                                   ),
                                 ),
-
                               Container(
                                 margin: const EdgeInsets.fromLTRB(
                                   16,
@@ -2444,8 +2469,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               ],
             ),
           ),
-
-          // --- NEW: FUTURISTIC LOADER OVERLAY DURING GPS FETCH ---
           if (_isFetchingLoc)
             Container(
               color: Colors.black.withOpacity(isDark ? 0.6 : 0.3),

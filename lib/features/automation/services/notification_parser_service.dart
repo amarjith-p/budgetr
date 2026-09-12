@@ -47,14 +47,14 @@ class NotificationParserService {
     caseSensitive: false,
   );
 
-  // --- FIX: Added 'ac' to capture Kotak formats ---
   static final RegExp _accountRegex = RegExp(
     r'(?:a/c|acct|account|ac|card|ending|x+|\*+)\s*(?:no\.?|number|in|with)?\s*[-:]?\s*[\(\*]?\s*([0-9]{3,4})\)?',
     caseSensitive: false,
   );
 
+  // --- FIX 1: Removed '.' from allowed chars and added 'amount', 'to', 'from', ',' as boundaries ---
   static final RegExp _merchantRegex = RegExp(
-    r'(?:to|at|vpa|info|for|from|sent to|paid to)\s+([A-Za-z0-9\s&.\-@]{3,25})(?:\s+on|\s+ref|\s+upi|\s+avl|\.|$)',
+    r'(?:to|at|vpa|info|for|from|sent to|paid to)\s+([A-Za-z0-9\s&\-@]{3,25}?)(?:\s+on|\s+ref|\s+upi|\s+avl|\s+by|\s+via|\s+in|\s+a/c|\s+acct|\s+card|\s+amount|\s+to|\s+from|\.|\,|$)',
     caseSensitive: false,
   );
 
@@ -68,7 +68,7 @@ class NotificationParserService {
 
   NotificationParserService(this._db);
 
-  // --- NEW: Helper method to calculate text proximity ---
+  // Helper method to calculate text proximity
   int _getDistance(int start1, int end1, int start2, int end2) {
     if (end1 <= start2) return start2 - end1;
     if (end2 <= start1) return start1 - end2;
@@ -105,12 +105,28 @@ class NotificationParserService {
     if (amount == null || amount <= 0) return null;
 
     final accMatch = _accountRegex.firstMatch(fullText);
-    final merchantMatch = _merchantRegex.firstMatch(fullText);
     final refMatch = _refRegex.firstMatch(fullText);
 
     final last4 = accMatch?.group(1);
-    final merchant = merchantMatch?.group(1)?.trim();
     final refNo = refMatch?.group(1);
+
+    // --- FIX 2: SMART MERCHANT FILTERING ---
+    String? merchant;
+    final merchantMatches = _merchantRegex.allMatches(fullText);
+    for (final m in merchantMatches) {
+      final text = m.group(1)?.trim();
+      if (text != null && text.isNotEmpty) {
+        // Intelligently ignore matches that look like a masked account number (e.g., "XX3302", "**123")
+        final isMaskedAccount = RegExp(
+          r'^(?:x+|\*+)?\d+$',
+          caseSensitive: false,
+        ).hasMatch(text);
+        if (!isMaskedAccount) {
+          merchant = text;
+          break; // Successfully found a valid human/merchant name!
+        }
+      }
+    }
 
     final customRules =
         await (_db.select(_db.parserRules)..where(
@@ -135,7 +151,6 @@ class NotificationParserService {
       } catch (_) {}
     }
 
-    // --- FIX: POSITIONAL INCOME/EXPENSE LOGIC ---
     final expMatches = _defaultExpenseKeywords.allMatches(fullText);
     final incMatches = _defaultIncomeKeywords.allMatches(fullText);
 
@@ -143,7 +158,6 @@ class NotificationParserService {
     String finalPattern = 'Universal Expense Pattern';
 
     if (expMatches.isNotEmpty && incMatches.isNotEmpty) {
-      // Find the Expense keyword closest to the Amount
       int minExpDist = 999999;
       for (var m in expMatches) {
         int dist = _getDistance(
@@ -155,7 +169,6 @@ class NotificationParserService {
         if (dist < minExpDist) minExpDist = dist;
       }
 
-      // Find the Income keyword closest to the Amount
       int minIncDist = 999999;
       for (var m in incMatches) {
         int dist = _getDistance(
@@ -167,7 +180,6 @@ class NotificationParserService {
         if (dist < minIncDist) minIncDist = dist;
       }
 
-      // Whichever keyword is physically closest to the amount wins
       if (minIncDist < minExpDist) {
         finalType = 'Income';
         finalPattern = 'Universal Income Pattern (Proximity)';
@@ -216,7 +228,6 @@ class NotificationParserService {
       final String hashData = '$packageName|$fullText';
       final String txHash = sha256.convert(utf8.encode(hashData)).toString();
 
-      // --- SYNCHRONOUS RACE CONDITION BLOCKER ---
       if (_activeHashes.contains(txHash)) {
         debugPrint("Race condition blocked: Event already processing.");
         return;
@@ -224,13 +235,11 @@ class NotificationParserService {
 
       _activeHashes.add(txHash);
 
-      // Prevent memory leak by capping the set size
       if (_activeHashes.length > 50) {
         _activeHashes.clear();
         _activeHashes.add(txHash);
       }
 
-      // Everything below is wrapped in a try/finally to guarantee lock release
       try {
         final prefs = await SharedPreferences.getInstance();
 
@@ -244,8 +253,7 @@ class NotificationParserService {
           final timestamp = int.tryParse(parts[1]);
           if (timestamp == null) return true;
           final time = DateTime.fromMillisecondsSinceEpoch(timestamp);
-          // --- FIX: Expanded to 24 hours to catch heavily delayed identical retries ---
-          return now.difference(time).inMinutes > 5;
+          return now.difference(time).inHours > 24;
         });
 
         bool isDuplicate = rawHashes.any((item) => item.startsWith('$txHash:'));
@@ -264,9 +272,7 @@ class NotificationParserService {
           return;
         }
 
-        // --- BULLETPROOF SEMANTIC DEDUPLICATION ---
-        // --- FIX: Expanded window to 24 hours ---
-        final timeWindow = now.subtract(const Duration(minutes: 5));
+        final timeWindow = now.subtract(const Duration(hours: 24));
         final recentStaged =
             await (_db.select(_db.stagedTransactions)
                   ..where((t) => t.isApproved.equals(false))
@@ -275,7 +281,6 @@ class NotificationParserService {
 
         bool isSemanticDuplicate = false;
         for (var staged in recentStaged) {
-          // 1. Exact Reference Number Match
           if (parsed.referenceNo != null &&
               parsed.referenceNo!.isNotEmpty &&
               staged.referenceNo == parsed.referenceNo) {
@@ -283,12 +288,10 @@ class NotificationParserService {
             break;
           }
 
-          // 2. Amount, Type, and Time Window Match
           final timeDiffMinutes = now.difference(staged.date).inMinutes.abs();
           final amountDifference = (staged.extractedAmount - parsed.amount)
               .abs();
 
-          // Same amount, same type, within 5 minutes
           if (amountDifference < 0.01 &&
               staged.inferredType == parsed.type &&
               timeDiffMinutes <= 5) {
@@ -305,7 +308,6 @@ class NotificationParserService {
           await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
           return;
         }
-        // --------------------------------------------------
 
         rawHashes.add('$txHash:${now.millisecondsSinceEpoch}');
         await prefs.setStringList('smart_inbox_dedup_v3', rawHashes);
@@ -377,7 +379,6 @@ class NotificationParserService {
           debugPrint("Smart Inbox Push disabled in settings. Skipping alert.");
         }
       } finally {
-        // ALWAYS clear the lock so subsequent legit messages aren't blocked
         _activeHashes.remove(txHash);
       }
     } catch (e) {
