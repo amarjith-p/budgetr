@@ -23,8 +23,6 @@ class BalanceTrendWidget extends ConsumerStatefulWidget {
 
 class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
   String _accountFilterId = 'ALL';
-
-  // MATCH THE NEW DEFAULT
   TrendTimeframe _timeframe = TrendTimeframe.currentMonth;
 
   DateTime? _customStart;
@@ -116,20 +114,41 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
               0.0,
               (sum, acc) => sum + acc.balance,
             );
+
+            // --- FIX 1: PERFECT MATHEMATICAL REVERSE FOR ALL EXTERNAL TRANSFER TYPES ---
             double totalImpact = 0.0;
 
             for (var txData in transactions) {
               final t = txData.transaction;
-              bool fromTarget = targetIds.contains(t.accountId);
-              bool toTarget = targetIds.contains(t.toAccountId);
+              bool sourceInTarget = targetIds.contains(t.accountId);
+              bool destInTarget = t.toAccountId != null
+                  ? targetIds.contains(t.toAccountId)
+                  : false;
 
-              if (t.type == 'Income' && fromTarget) {
+              bool isLoanFee =
+                  t.subCategory == 'Loan Interest' ||
+                  t.subCategory == 'Tax on Interest' ||
+                  t.subCategory == 'Bank Charges on Loan';
+
+              if (t.type == 'Income' && sourceInTarget) {
                 totalImpact += t.amount;
-              } else if (t.type == 'Expense' && fromTarget) {
+              } else if (t.type == 'Expense' && sourceInTarget && !isLoanFee) {
                 totalImpact -= t.amount;
               } else if (t.type == 'Transfer') {
-                if (fromTarget && !toTarget) totalImpact -= t.amount;
-                if (!fromTarget && toTarget) totalImpact += t.amount;
+                if (sourceInTarget) {
+                  if (t.toAccountId == 'EXTERNAL_IN') {
+                    totalImpact += t.amount;
+                  } else if (t.toAccountId == 'EXTERNAL_OUT') {
+                    totalImpact -= t.amount;
+                  } else {
+                    totalImpact -= t.amount;
+                  }
+                }
+                if (destInTarget &&
+                    t.toAccountId != null &&
+                    !t.toAccountId!.startsWith('EXTERNAL')) {
+                  totalImpact += t.amount;
+                }
               }
             }
 
@@ -175,7 +194,6 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
                     now.day,
                   ).subtract(const Duration(days: 29));
                   break;
-
                 case TrendTimeframe.currentMonth:
                   start = DateTime(now.year, now.month, 1);
                   break;
@@ -185,7 +203,6 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
                   start = DateTime(targetYear, targetMonth, 1);
                   end = DateTime(targetYear, targetMonth + 1, 0, 23, 59, 59);
                   break;
-
                 case TrendTimeframe.year:
                   start = DateTime(
                     now.year,
@@ -236,18 +253,40 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
 
             while (!pointer.isAfter(end)) {
               if (txByDate.containsKey(pointer)) {
+                // --- FIX 2: PERFECT FORWARD PROGRESSION ---
                 for (var txData in txByDate[pointer]!) {
                   final t = txData.transaction;
-                  bool fromTarget = targetIds.contains(t.accountId);
-                  bool toTarget = targetIds.contains(t.toAccountId);
+                  bool sourceInTarget = targetIds.contains(t.accountId);
+                  bool destInTarget = t.toAccountId != null
+                      ? targetIds.contains(t.toAccountId)
+                      : false;
 
-                  if (t.type == 'Income' && fromTarget) {
+                  bool isLoanFee =
+                      t.subCategory == 'Loan Interest' ||
+                      t.subCategory == 'Tax on Interest' ||
+                      t.subCategory == 'Bank Charges on Loan';
+
+                  if (t.type == 'Income' && sourceInTarget) {
                     runningBal += t.amount;
-                  } else if (t.type == 'Expense' && fromTarget) {
+                  } else if (t.type == 'Expense' &&
+                      sourceInTarget &&
+                      !isLoanFee) {
                     runningBal -= t.amount;
                   } else if (t.type == 'Transfer') {
-                    if (fromTarget && !toTarget) runningBal -= t.amount;
-                    if (!fromTarget && toTarget) runningBal += t.amount;
+                    if (sourceInTarget) {
+                      if (t.toAccountId == 'EXTERNAL_IN') {
+                        runningBal += t.amount;
+                      } else if (t.toAccountId == 'EXTERNAL_OUT') {
+                        runningBal -= t.amount;
+                      } else {
+                        runningBal -= t.amount;
+                      }
+                    }
+                    if (destInTarget &&
+                        t.toAccountId != null &&
+                        !t.toAccountId!.startsWith('EXTERNAL')) {
+                      runningBal += t.amount;
+                    }
                   }
                 }
               }
@@ -257,7 +296,9 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
                 if (runningBal > highestBal) highestBal = runningBal;
                 if (runningBal < lowestBal) lowestBal = runningBal;
               }
-              pointer = pointer.add(const Duration(days: 1));
+
+              // DST safe date increment
+              pointer = DateTime(pointer.year, pointer.month, pointer.day + 1);
             }
 
             final points = plotData.values.toList();
@@ -272,6 +313,7 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
                 _accountFilterId == 'CREDIT' ||
                 (targetAccounts.isNotEmpty &&
                     targetAccounts.every((a) => a.type == 'Credit Cards'));
+
             Color trendColor = isLiabilityView
                 ? Colors.redAccent.shade400
                 : Colors.lightBlue.shade400;
@@ -340,7 +382,6 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
                           ),
                         ],
                       ),
-
                       AnalyticsAccountSelectorPill(
                         label: dropdownLabel,
                         onTap: () => AnalyticsAccountSelectionSheet.show(
@@ -354,15 +395,12 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
                     ],
                   ),
                   const SizedBox(height: 12),
-
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: CurrencyText(
                       amount: currentTotalBalance.abs(),
-                      sign: currentTotalBalance < 0 || isLiabilityView
-                          ? '-₹ '
-                          : '₹ ',
+                      sign: currentTotalBalance < 0 ? '-₹ ' : '₹ ',
                       amountStyle: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w900,
@@ -377,9 +415,7 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onLongPressStart: (details) {
@@ -409,15 +445,12 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
                           startDateText: _formatShortDate(start),
                           endDateText: _formatShortDate(end),
                           touchX: _touchX,
-                          isLiabilityView:
-                              isLiabilityView, // <-- Passed into painter
+                          isLiabilityView: isLiabilityView,
                         ),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   AnalyticsTimeframeSelector(
                     selectedTimeframe: _timeframe,
                     onSelected: (type) => setState(() => _timeframe = type),
@@ -462,14 +495,12 @@ class _BoxyGridChartPainter extends CustomPainter {
     required this.isLiabilityView,
   });
 
-  // --- REPLICATES CurrencyText STYLING FOR AXIS LABELS ---
   TextPainter _getAxisLabelPainter(double value, TextStyle baseStyle) {
     final absVal = value.abs();
-    final sign = (value < 0 || isLiabilityView) ? '-₹ ' : '₹ ';
+    final sign = value < 0 ? '-₹ ' : '₹ ';
     String amountStr;
     String suffix = '';
 
-    // Enforce 2 decimal digits across the board
     if (absVal >= 1000000) {
       amountStr = (absVal / 1000000).toStringAsFixed(2);
       suffix = 'M';
@@ -647,12 +678,11 @@ class _BoxyGridChartPainter extends CustomPainter {
       canvas.drawCircle(p, 2.0, Paint()..color = Colors.white);
 
       final rawVal = data[closestIndex];
-      final signStr = (rawVal < 0 || isLiabilityView) ? '-₹ ' : '₹ ';
+      final signStr = rawVal < 0 ? '-₹ ' : '₹ ';
 
       final dateStr =
           '${dates[closestIndex].day} ${DateTimeConstants.shortMonths[dates[closestIndex].month - 1]}';
 
-      // --- REPLICATES CurrencyText IN TOOLTIP ---
       final valuePainter = TextPainter(
         text: TextSpan(
           children: [
@@ -665,7 +695,6 @@ class _BoxyGridChartPainter extends CustomPainter {
               ),
             ),
             TextSpan(
-              // Using CurrencyFormatter to safely format exactly to 2 decimals with commas
               text: CurrencyFormatter.format(rawVal.abs()),
               style: const TextStyle(
                 color: Colors.white,
@@ -709,7 +738,6 @@ class _BoxyGridChartPainter extends CustomPainter {
       canvas.drawShadow(Path()..addRRect(rect), Colors.black, 4, false);
       canvas.drawRRect(rect, Paint()..color = Colors.grey.shade900);
 
-      // Centers text inside the tooltip
       final valXOffset = (ttWidth - valuePainter.width) / 2;
       final dateXOffset = (ttWidth - datePainter.width) / 2;
 

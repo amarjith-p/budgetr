@@ -52,9 +52,9 @@ class NotificationParserService {
     caseSensitive: false,
   );
 
-  // --- FIX 1: Removed '.' from allowed chars and added 'amount', 'to', 'from', ',' as boundaries ---
+  // --- FIX: Group 1 now captures the prefix. Added 'using' as a stopping boundary ---
   static final RegExp _merchantRegex = RegExp(
-    r'(?:to|at|vpa|info|for|from|sent to|paid to)\s+([A-Za-z0-9\s&\-@]{3,25}?)(?:\s+on|\s+ref|\s+upi|\s+avl|\s+by|\s+via|\s+in|\s+a/c|\s+acct|\s+card|\s+amount|\s+to|\s+from|\.|\,|$)',
+    r'(sent to|paid to|to|at|vpa|info|for|from)\s+([A-Za-z0-9\s&\-@]{3,25}?)(?:\s+on|\s+ref|\s+upi|\s+using|\s+avl|\s+by|\s+via|\s+in|\s+a/c|\s+acct|\s+card|\s+amount|\s+to|\s+from|\.|\,|$)',
     caseSensitive: false,
   );
 
@@ -110,47 +110,7 @@ class NotificationParserService {
     final last4 = accMatch?.group(1);
     final refNo = refMatch?.group(1);
 
-    // --- FIX 2: SMART MERCHANT FILTERING ---
-    String? merchant;
-    final merchantMatches = _merchantRegex.allMatches(fullText);
-    for (final m in merchantMatches) {
-      final text = m.group(1)?.trim();
-      if (text != null && text.isNotEmpty) {
-        // Intelligently ignore matches that look like a masked account number (e.g., "XX3302", "**123")
-        final isMaskedAccount = RegExp(
-          r'^(?:x+|\*+)?\d+$',
-          caseSensitive: false,
-        ).hasMatch(text);
-        if (!isMaskedAccount) {
-          merchant = text;
-          break; // Successfully found a valid human/merchant name!
-        }
-      }
-    }
-
-    final customRules =
-        await (_db.select(_db.parserRules)..where(
-              (r) =>
-                  r.isActive.equals(true) & r.targetType.isNotValue('Ignore'),
-            ))
-            .get();
-
-    for (var rule in customRules) {
-      try {
-        final keywordRegex = RegExp(rule.regexPattern, caseSensitive: false);
-        if (keywordRegex.hasMatch(fullText)) {
-          return ParsedNotificationResult(
-            amount: amount,
-            type: rule.targetType,
-            accountLast4: last4,
-            merchantName: merchant,
-            referenceNo: refNo,
-            matchedPattern: 'Custom Rule: ${rule.name}',
-          );
-        }
-      } catch (_) {}
-    }
-
+    // --- FIX: DETERMINE INCOME/EXPENSE FIRST ---
     final expMatches = _defaultExpenseKeywords.allMatches(fullText);
     final incMatches = _defaultIncomeKeywords.allMatches(fullText);
 
@@ -195,6 +155,66 @@ class NotificationParserService {
       finalPattern = 'Universal Expense Pattern';
     } else {
       return null;
+    }
+
+    // --- NEW: CONTEXT-AWARE SMART MERCHANT FILTERING ---
+    String? merchant;
+    String? fallbackMerchant;
+    final merchantMatches = _merchantRegex.allMatches(fullText);
+
+    final expensePrefixes = ['to', 'at', 'paid to', 'sent to', 'vpa', 'for'];
+    final incomePrefixes = ['from', 'by'];
+
+    for (final m in merchantMatches) {
+      final prefix = m.group(1)?.toLowerCase().trim() ?? '';
+      final text = m.group(2)?.trim();
+
+      if (text != null && text.isNotEmpty) {
+        // Intelligently ignore matches that look like a masked account number
+        final isMaskedAccount = RegExp(
+          r'^(?:x+|\*+)?\d+$',
+          caseSensitive: false,
+        ).hasMatch(text);
+
+        if (!isMaskedAccount) {
+          if (finalType == 'Expense' && expensePrefixes.contains(prefix)) {
+            merchant = text; // Perfect expense match found
+            break;
+          } else if (finalType == 'Income' && incomePrefixes.contains(prefix)) {
+            merchant = text; // Perfect income match found
+            break;
+          } else {
+            fallbackMerchant ??=
+                text; // Save first valid match as fallback just in case
+          }
+        }
+      }
+    }
+
+    // Apply the perfectly matched merchant, or the fallback if context failed
+    merchant ??= fallbackMerchant;
+
+    final customRules =
+        await (_db.select(_db.parserRules)..where(
+              (r) =>
+                  r.isActive.equals(true) & r.targetType.isNotValue('Ignore'),
+            ))
+            .get();
+
+    for (var rule in customRules) {
+      try {
+        final keywordRegex = RegExp(rule.regexPattern, caseSensitive: false);
+        if (keywordRegex.hasMatch(fullText)) {
+          return ParsedNotificationResult(
+            amount: amount,
+            type: rule.targetType,
+            accountLast4: last4,
+            merchantName: merchant,
+            referenceNo: refNo,
+            matchedPattern: 'Custom Rule: ${rule.name}',
+          );
+        }
+      } catch (_) {}
     }
 
     return ParsedNotificationResult(
