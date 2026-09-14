@@ -30,7 +30,12 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
   if (selectedBucketsState == null ||
       !txsAsync.hasValue ||
       !bucketsAsync.hasValue) {
-    return const HeatmapData(days: [], includedBudget: 0.0, advices: []);
+    return const HeatmapData(
+      days: [],
+      includedBudget: 0.0,
+      projectedTotal: 0.0,
+      advices: [],
+    );
   }
 
   final allBuckets = bucketsAsync.value ?? [];
@@ -44,7 +49,12 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
   }
 
   if (selectedBuckets.isEmpty) {
-    return const HeatmapData(days: [], includedBudget: 0.0, advices: []);
+    return const HeatmapData(
+      days: [],
+      includedBudget: 0.0,
+      projectedTotal: 0.0,
+      advices: [],
+    );
   }
 
   final now = DateTime.now();
@@ -54,10 +64,26 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
       (month.year == now.year && month.month < now.month);
 
   final int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
-  int daysElapsed = isCurrentMonth ? now.day : (isPastMonth ? daysInMonth : 1);
-  int daysLeft = isCurrentMonth
-      ? (daysInMonth - now.day + 1)
-      : (isPastMonth ? 0 : daysInMonth);
+
+  // --- BULLETPROOF TIME CALCULATION (Down to the minute/second) ---
+  double exactDaysElapsed = 1.0;
+  double exactDaysLeft = 0.0;
+
+  if (isCurrentMonth) {
+    // Current day fraction: e.g. 12:00 PM = 0.5 days.
+    double todayFraction =
+        (now.hour / 24.0) + (now.minute / 1440.0) + (now.second / 86400.0);
+    exactDaysElapsed = (now.day - 1) + todayFraction;
+    if (exactDaysElapsed <= 0.001)
+      exactDaysElapsed = 0.001; // Avoid division by zero at exact midnight
+    exactDaysLeft = daysInMonth.toDouble() - exactDaysElapsed;
+  } else if (isPastMonth) {
+    exactDaysElapsed = daysInMonth.toDouble();
+    exactDaysLeft = 0.0;
+  } else {
+    exactDaysElapsed = 0.001;
+    exactDaysLeft = daysInMonth.toDouble();
+  }
 
   // --- 1. CALCULATE BUCKET-LEVEL METRICS & OVERALL BUDGET ---
   double includedBudget = 0.0;
@@ -85,7 +111,7 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
     } catch (_) {}
   }
 
-  // --- 2. CALCULATE HISTORICAL TRENDS (Trailing 60 Days) ---
+  // --- 2. CALCULATE HISTORICAL TRENDS & MONTH TOTAL ---
   final sixtyDaysAgo = now.subtract(const Duration(days: 60));
   double trailingTotalSpend = 0.0;
   double weekendSpend = 0.0;
@@ -95,11 +121,10 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
 
   for (int i = 0; i < 60; i++) {
     final d = now.subtract(Duration(days: i));
-    if (d.weekday == DateTime.saturday || d.weekday == DateTime.sunday) {
+    if (d.weekday == DateTime.saturday || d.weekday == DateTime.sunday)
       weekendDaysCount++;
-    } else {
+    else
       weekdayDaysCount++;
-    }
   }
 
   double monthTotal = 0.0;
@@ -130,27 +155,50 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
   double historicalDailyBurn = trailingTotalSpend / 60.0;
   if (historicalDailyBurn <= 0) historicalDailyBurn = 500.0;
 
-  // --- 3. CALCULATE UPCOMING FIXED COSTS ---
+  double currentBurnRate = isPastMonth
+      ? (monthTotal / daysInMonth)
+      : (monthTotal / exactDaysElapsed);
+  double projectedTotal = currentBurnRate * daysInMonth.toDouble();
+
+  // --- 3. BULLETPROOF UPCOMING FIXED COSTS ---
+  // Loops through occurrences exactly to catch weekly/daily multiple triggers
   double upcomingBills = 0.0;
   if (isCurrentMonth) {
+    final endOfMonth = DateTime(now.year, now.month, daysInMonth, 23, 59, 59);
     for (var rule in rules) {
       if (rule.isActive &&
           rule.amount != null &&
           rule.transactionType == 'Expense') {
-        if (rule.nextExecutionDate.year == now.year &&
-            rule.nextExecutionDate.month == now.month &&
-            rule.nextExecutionDate.isAfter(now)) {
-          if (rule.bucketId == null ||
-              rule.bucketId == -1 ||
-              selectedBuckets.contains(rule.bucketId)) {
-            upcomingBills += rule.amount!;
+        if (rule.bucketId == null ||
+            rule.bucketId == -1 ||
+            selectedBuckets.contains(rule.bucketId)) {
+          DateTime pointer = rule.nextExecutionDate;
+          int simulatedExecs = rule.currentExecutionCount;
+
+          while (pointer.isBefore(endOfMonth) ||
+              pointer.isAtSameMomentAs(endOfMonth)) {
+            if (pointer.isAfter(now)) {
+              upcomingBills += rule.amount!;
+            }
+            simulatedExecs++;
+            if (rule.maxExecutions != null &&
+                simulatedExecs >= rule.maxExecutions!)
+              break;
+            if (rule.endDate != null && pointer.isAfter(rule.endDate!)) break;
+
+            pointer = ScheduleHelper.calculateNextDate(
+              pointer,
+              rule.repetitionSchedule,
+              rule.repetitionInterval,
+              rule.advancedSchedule,
+            );
           }
         }
       }
     }
   }
 
-  // --- 4. BUILD PACING AGGREGATES ---
+  // --- 4. BUILD PACING AGGREGATES FOR GRID ---
   List<DaySpendSummary> result = [];
   double spentSoFar = 0.0;
 
@@ -211,16 +259,14 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
   }
 
   // =========================================================
-  // --- 5. AI MULTI-ADVICE ENGINE (ALL SCENARIOS DECOUPLED) ---
+  // --- 5. AI MULTI-ADVICE ENGINE (MINUTE-PERFECT SCENARIOS) ---
   // =========================================================
   List<HeatmapAdvice> activeAdvices = [];
 
   if (includedBudget > 0 && isCurrentMonth) {
-    double currentBurnRate = monthTotal / daysElapsed;
     double trueRemainingBudget = (includedBudget - monthTotal) - upcomingBills;
-    double projectedTotal = currentBurnRate * daysInMonth;
 
-    // 0. Budget Blown (Critical Stop)
+    // SCENARIO 0: Budget Blown (Critical Stop)
     if (monthTotal >= includedBudget) {
       activeAdvices.add(
         HeatmapAdvice(
@@ -231,14 +277,15 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
         ),
       );
     } else {
-      // SCENARIO 1: Zero-Day Prediction (Runway)
+      // SCENARIO 1: Zero-Day Prediction (Exact Minute Runway)
       if (currentBurnRate > 0) {
-        int daysRunway = ((includedBudget - monthTotal) / currentBurnRate)
-            .floor();
-        if (daysRunway < daysLeft) {
-          DateTime zeroDate = now.add(Duration(days: daysRunway));
-          String formattedDate = DateFormat('MMM do').format(zeroDate);
-          double neededPace = (includedBudget - monthTotal) / daysLeft;
+        double daysRunway = (includedBudget - monthTotal) / currentBurnRate;
+        if (daysRunway < exactDaysLeft) {
+          int minutesRunway = (daysRunway * 1440).toInt();
+          DateTime zeroDate = now.add(Duration(minutes: minutesRunway));
+          String formattedDate = DateFormat('MMM do, h:mm a').format(zeroDate);
+
+          double neededPace = (includedBudget - monthTotal) / exactDaysLeft;
 
           activeAdvices.add(
             HeatmapAdvice(
@@ -253,7 +300,7 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
 
       // SCENARIO 2: Upcoming Fixed Cost Shock
       if (upcomingBills > 0 &&
-          trueRemainingBudget < (currentBurnRate * daysLeft)) {
+          trueRemainingBudget < (currentBurnRate * exactDaysLeft)) {
         activeAdvices.add(
           HeatmapAdvice(
             text:
@@ -264,28 +311,28 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
         );
       }
 
-      // SCENARIO 3: Bucket Bleed Detection
-      if ((daysElapsed / daysInMonth) < 0.8) {
-        bucketSpends.forEach((id, spent) {
-          double limit = bucketLimits[id] ?? 0.0;
-          if (limit > 0) {
-            double exhaustion = spent / limit;
-            if (exhaustion > 0.85) {
-              activeAdvices.add(
-                HeatmapAdvice(
-                  text:
-                      "Bucket Bleed: Your '${bucketNames[id]}' bucket is ${(exhaustion * 100).toInt()}% exhausted with $daysLeft days still left.",
-                  color: Colors.orangeAccent.shade700,
-                  icon: Icons.water_drop_outlined,
-                ),
-              );
-            }
+      // SCENARIO 3: Dynamic Bucket Bleed Detection
+      double expectedExhaustion = exactDaysElapsed / daysInMonth;
+      bucketSpends.forEach((id, spent) {
+        double limit = bucketLimits[id] ?? 0.0;
+        if (limit > 0) {
+          double exhaustion = spent / limit;
+          // If they used 30% more than the expected pace AND it's over half empty
+          if (exhaustion > expectedExhaustion * 1.3 && exhaustion > 0.5) {
+            activeAdvices.add(
+              HeatmapAdvice(
+                text:
+                    "Bucket Bleed: Your '${bucketNames[id]}' bucket is pacing dangerously fast (${(exhaustion * 100).toInt()}% exhausted).",
+                color: Colors.orangeAccent.shade700,
+                icon: Icons.water_drop_outlined,
+              ),
+            );
           }
-        });
-      }
+        }
+      });
 
       // SCENARIO 4: Historical Anomaly Alert
-      if (daysElapsed > 5 && currentBurnRate > historicalDailyBurn * 1.3) {
+      if (exactDaysElapsed > 5 && currentBurnRate > historicalDailyBurn * 1.3) {
         activeAdvices.add(
           HeatmapAdvice(
             text:
@@ -297,7 +344,7 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
       }
 
       // SCENARIO 5: End-of-Month Surplus Sweeping
-      if (daysLeft <= 5) {
+      if (exactDaysLeft <= 5.0) {
         double surplus = includedBudget - projectedTotal;
         if (surplus > (includedBudget * 0.05)) {
           activeAdvices.add(
@@ -311,7 +358,7 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
         }
       }
 
-      // SCENARIO 6: Weekend vs. Weekday Behavioral Pacing
+      // SCENARIO 6: Fractional Weekend vs. Weekday Behavioral Pacing
       double avgWeekend = weekendDaysCount > 0
           ? (weekendSpend / weekendDaysCount)
           : 0;
@@ -320,17 +367,27 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
           : 0;
 
       if (avgWeekend > (avgWeekday * 1.5) && trueRemainingBudget > 0) {
-        int weekendsLeft = 0;
-        int weekdaysLeft = 0;
-        for (int i = 0; i < daysLeft; i++) {
-          final d = now.add(Duration(days: i));
-          if (d.weekday == DateTime.saturday || d.weekday == DateTime.sunday) {
-            weekendsLeft++;
-          } else {
-            weekdaysLeft++;
-          }
+        // Exact fraction calculations
+        double exactWeekendsLeft = 0.0;
+        double exactWeekdaysLeft = 0.0;
+        double todayRemainingFraction =
+            1.0 - (now.hour / 24.0) - (now.minute / 1440.0);
+
+        if (now.weekday == DateTime.saturday || now.weekday == DateTime.sunday)
+          exactWeekendsLeft += todayRemainingFraction;
+        else
+          exactWeekdaysLeft += todayRemainingFraction;
+
+        for (int d = now.day + 1; d <= daysInMonth; d++) {
+          final temp = DateTime(now.year, now.month, d);
+          if (temp.weekday == DateTime.saturday ||
+              temp.weekday == DateTime.sunday)
+            exactWeekendsLeft += 1.0;
+          else
+            exactWeekdaysLeft += 1.0;
         }
-        double weight = weekdaysLeft + (1.5 * weekendsLeft);
+
+        double weight = exactWeekdaysLeft + (1.5 * exactWeekendsLeft);
         double weekdayTarget = weight > 0 ? trueRemainingBudget / weight : 0;
 
         activeAdvices.add(
@@ -345,7 +402,7 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
 
       // Default: Standard Pacing Baseline
       if (trueRemainingBudget > 0) {
-        double recDaily = trueRemainingBudget / daysLeft;
+        double recDaily = trueRemainingBudget / exactDaysLeft;
         activeAdvices.add(
           HeatmapAdvice(
             text:
@@ -391,6 +448,7 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
   return HeatmapData(
     days: result,
     includedBudget: includedBudget,
+    projectedTotal: projectedTotal,
     advices: activeAdvices,
   );
 });

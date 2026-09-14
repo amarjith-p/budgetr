@@ -27,11 +27,13 @@ class _HeatmapHeaderCardState extends ConsumerState<HeatmapHeaderCard> {
 
     final month = ref.watch(heatmapSelectedMonthProvider);
     final heatmapData = ref.watch(heatmapDailySpendProvider);
+
     final days = heatmapData.days;
     final includedBudget = heatmapData.includedBudget;
+    final projectedTotal =
+        heatmapData.projectedTotal; // Loaded directly with minute-precision
     final advices = heatmapData.advices;
 
-    // Safety bounds check if data changes
     if (_currentAdviceIndex >= advices.length) {
       _currentAdviceIndex = 0;
     }
@@ -39,27 +41,6 @@ class _HeatmapHeaderCardState extends ConsumerState<HeatmapHeaderCard> {
     double monthTotal = 0;
     for (var d in days) {
       monthTotal += d.totalSpend;
-    }
-
-    final int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
-    final now = DateTime.now();
-
-    final bool isCurrentMonth =
-        month.year == now.year && month.month == now.month;
-    final bool isPastMonth =
-        month.year < now.year ||
-        (month.year == now.year && month.month < now.month);
-
-    int daysElapsed = daysInMonth;
-    if (isCurrentMonth) {
-      daysElapsed = now.day;
-    } else if (!isPastMonth) {
-      daysElapsed = 1;
-    }
-
-    double projectedTotal = 0;
-    if (daysElapsed > 0) {
-      projectedTotal = (monthTotal / daysElapsed) * daysInMonth;
     }
 
     final currentAdvice = advices.isNotEmpty
@@ -239,19 +220,15 @@ class _HeatmapHeaderCardState extends ConsumerState<HeatmapHeaderCard> {
 
           if (currentAdvice != null) ...[
             const SizedBox(height: 12),
-
-            // --- DYNAMIC HEIGHT ADVICE SWIPER ---
             GestureDetector(
               onHorizontalDragEnd: (details) {
                 int velocity = details.primaryVelocity?.toInt() ?? 0;
                 if (velocity < -300) {
-                  // Swipe Left (Next)
                   if (_currentAdviceIndex < advices.length - 1) {
                     HapticFeedback.lightImpact();
                     setState(() => _currentAdviceIndex++);
                   }
                 } else if (velocity > 300) {
-                  // Swipe Right (Prev)
                   if (_currentAdviceIndex > 0) {
                     HapticFeedback.lightImpact();
                     setState(() => _currentAdviceIndex--);
@@ -318,7 +295,6 @@ class _HeatmapHeaderCardState extends ConsumerState<HeatmapHeaderCard> {
               ),
             ),
 
-            // --- DOT INDICATORS ---
             if (advices.length > 1)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),

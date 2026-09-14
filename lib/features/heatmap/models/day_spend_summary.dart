@@ -32,12 +32,14 @@ class HeatmapAdvice {
 class HeatmapData {
   final List<DaySpendSummary> days;
   final double includedBudget;
-  // --- FIX: Now holds multiple pieces of advice ---
+  final double
+  projectedTotal; // --- NEW: Centralized minute-accurate projection ---
   final List<HeatmapAdvice> advices;
 
   const HeatmapData({
     required this.days,
     required this.includedBudget,
+    required this.projectedTotal,
     required this.advices,
   });
 }
