@@ -1,4 +1,4 @@
-// features/accounts/views/accounts_tab.dart
+// lib/features/accounts/views/accounts_tab.dart
 import 'dart:ui';
 import 'package:budgetr/core/components/currency_text.dart';
 import 'package:budgetr/core/components/futuristic_loader.dart';
@@ -56,6 +56,7 @@ class AccountsTab extends ConsumerWidget {
         ),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (accounts) {
+          // --- VISUAL UI LISTS ---
           final creditCards = accounts
               .where((a) => a.type == 'Credit Cards')
               .toList();
@@ -69,23 +70,26 @@ class AccountsTab extends ConsumerWidget {
               .where((a) => a.type == 'Loan' && a.isClosed)
               .toList();
 
-          final totalBankBalance = bankAccounts.fold(
-            0.0,
-            (sum, acc) => sum + acc.balance,
-          );
-
+          // --- FIX 3: UNIVERSAL MATH STANDARD ---
+          // Calculates the global totals using the raw database list
+          double totalBankBalance = 0.0;
           double totalCreditBalance = 0.0;
-          for (var card in creditCards) {
-            totalCreditBalance += ref
-                .watch(creditCardMetricsProvider(card))
-                .totalOutstanding;
-          }
-
           double totalLoanOutstanding = 0.0;
-          for (var loan in activeLoans) {
-            totalLoanOutstanding += ref.watch(
-              loanTotalOutstandingProvider(loan),
-            );
+
+          for (var acc in accounts) {
+            if (acc.isClosed && acc.type != 'Loan') continue;
+
+            if (acc.type == 'Credit Cards') {
+              totalCreditBalance += ref
+                  .watch(creditCardMetricsProvider(acc))
+                  .totalOutstanding;
+            } else if (acc.type == 'Loan' && !acc.isClosed) {
+              totalLoanOutstanding += ref.watch(
+                loanTotalOutstandingProvider(acc),
+              );
+            } else if (acc.type != 'Credit Cards' && acc.type != 'Loan') {
+              totalBankBalance += acc.balance;
+            }
           }
 
           double customTotal = 0.0;
@@ -124,16 +128,14 @@ class AccountsTab extends ConsumerWidget {
                     theme: theme,
                   ),
                 ),
-
               SliverToBoxAdapter(
                 child: GlobalSummaryCard(
-                  assets: totalBankBalance, // Passes as positive
+                  assets: totalBankBalance,
                   liabilities: totalCreditBalance, // Naturally negative if owed
                   loans:
-                      -totalLoanOutstanding, // --- FIXED: FORCED NEGATIVE SO IT DEDUCTS CORRECTLY ---
+                      -totalLoanOutstanding, // Forced negative for calculation
                 ),
               ),
-
               if (bankAccounts.isNotEmpty) ...[
                 _buildSectionHeader(context, 'ACCOUNTS', totalBankBalance),
                 _buildList(
@@ -195,8 +197,8 @@ class AccountsTab extends ConsumerWidget {
 
   Widget _buildSectionHeader(BuildContext context, String title, double total) {
     final theme = Theme.of(context);
-    // --- FIXED: RESTORED THE RUPEE SYMBOLS ---
     final signText = total < 0 ? '- ₹ ' : (total > 0 ? '+ ₹ ' : '₹ ');
+
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -435,7 +437,6 @@ class _StickySelectionHeaderDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     final isDark = theme.brightness == Brightness.dark;
-    // --- FIXED: RESTORED THE RUPEE SYMBOLS ---
     final customSign = customTotal < 0
         ? '- ₹ '
         : (customTotal > 0 ? '+ ₹ ' : '₹ ');

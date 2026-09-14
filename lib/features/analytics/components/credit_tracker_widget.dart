@@ -1,3 +1,4 @@
+// features/analytics/components/credit_tracker_widget.dart
 import 'package:budgetr/core/components/futuristic_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,8 +10,8 @@ import '../../../core/constants/date_time_constants.dart';
 import '../../../core/database/app_database.dart';
 import '../../accounts/providers/account_provider.dart';
 import '../../transactions/providers/transaction_provider.dart';
+import '../../accounts/providers/credit_math_provider.dart';
 
-// --- LOCAL EXTENSIONS FOR CREDIT MATH ---
 extension _CreditTrackerAccountExt on Account {
   int get trackBillingDay => billDate ?? 15;
   int get trackDueDay => dueDate ?? 5;
@@ -44,7 +45,6 @@ extension _CreditTrackerAccountExt on Account {
 
 enum _SheetContext { billed, overdue, unbilled, paid }
 
-// --- DECOUPLED DATA CLASS ---
 class _CardStatusData {
   final Account account;
   final double billed;
@@ -173,7 +173,6 @@ class CreditTrackerWidget extends ConsumerWidget {
                                   ? '-₹ '
                                   : '₹ ';
 
-                              // --- INTELLIGENT CONTEXTUAL DATE LOGIC ---
                               DateTime relevantBillDate;
                               DateTime relevantDueDate;
                               int daysDiff;
@@ -212,15 +211,17 @@ class CreditTrackerWidget extends ConsumerWidget {
                                 relevantDueDate = c.currentDueDate;
                                 daysDiff = c.daysUntilDue;
 
-                                if (sheetContext == _SheetContext.overdue ||
+                                // --- FIX: Check paid context FIRST before overdue/negative day checks ---
+                                if (sheetContext == _SheetContext.paid) {
+                                  counterText = 'PAID IN FULL';
+                                  counterColor = Colors.green;
+                                  showCounter = true;
+                                } else if (sheetContext ==
+                                        _SheetContext.overdue ||
                                     daysDiff < 0) {
                                   counterText =
                                       'OVERDUE BY ${daysDiff.abs()} DAYS';
                                   counterColor = theme.colorScheme.error;
-                                  showCounter = true;
-                                } else if (sheetContext == _SheetContext.paid) {
-                                  counterText = 'PAID IN FULL';
-                                  counterColor = Colors.green;
                                   showCounter = true;
                                 } else {
                                   if (daysDiff == 0)
@@ -417,8 +418,6 @@ class CreditTrackerWidget extends ConsumerWidget {
                                         ),
                                       ],
                                     ),
-
-                                    // --- CONTEXTUAL DATES & COUNTER PILL ---
                                     Container(
                                       margin: const EdgeInsets.only(top: 16),
                                       padding: const EdgeInsets.symmetric(
@@ -661,19 +660,10 @@ class CreditTrackerWidget extends ConsumerWidget {
             double globalUnbilled = 0.0;
 
             for (var acc in creditAccounts) {
-              final txs = transactions
-                  .where(
-                    (t) =>
-                        t.transaction.accountId == acc.id ||
-                        t.transaction.toAccountId == acc.id,
-                  )
-                  .toList();
-
               int bDay = acc.trackBillingDay;
               int dDay = acc.trackDueDay;
               DateTime now = DateTime.now();
 
-              // 1. Calculate Current Cycle Dates
               DateTime lastStatementDate = DateTime(
                 now.year,
                 now.month,
@@ -714,7 +704,6 @@ class CreditTrackerWidget extends ConsumerWidget {
                 );
               }
 
-              // 2. Calculate NEXT Cycle Dates (For Unbilled Spends)
               DateTime nextStatementDate = DateTime(
                 lastStatementDate.year,
                 lastStatementDate.month + 1,
@@ -744,43 +733,11 @@ class CreditTrackerWidget extends ConsumerWidget {
                 );
               }
 
-              double historicalNet = 0;
-              double currentCycleNet = 0;
-              double paymentsSinceStatement = 0;
+              final metrics = ref.watch(creditCardMetricsProvider(acc));
+              final billed = metrics.billed;
+              final unbilled = metrics.unbilled;
+              final total = metrics.totalOutstanding;
 
-              for (var txData in txs) {
-                final t = txData.transaction;
-                bool isExpense =
-                    t.type == 'Expense' ||
-                    (t.type == 'Transfer' && t.accountId == acc.id);
-                bool isPayment =
-                    t.type == 'Income' ||
-                    (t.type == 'Transfer' && t.toAccountId == acc.id);
-                bool isRepayment = txData.category?.name == 'Repayment';
-
-                double netAmount = 0;
-                if (isExpense)
-                  netAmount = -t.amount;
-                else if (isPayment)
-                  netAmount = t.amount;
-
-                DateTime effectiveDate = acc.getTrackEffectiveDate(t);
-
-                if (effectiveDate.isAfter(lastStatementDate)) {
-                  if (isPayment && isRepayment)
-                    paymentsSinceStatement += netAmount;
-                  else
-                    currentCycleNet += netAmount;
-                } else {
-                  historicalNet += netAmount;
-                }
-              }
-
-              double billed = historicalNet + paymentsSinceStatement;
-              double unbilled = currentCycleNet;
-              double total = billed + unbilled;
-
-              // EXACT MIDNIGHT NORMALIZATION
               final today = DateTime(now.year, now.month, now.day);
               final dueDayOnly = DateTime(
                 currentDueDate.year,
@@ -791,6 +748,28 @@ class CreditTrackerWidget extends ConsumerWidget {
 
               globalBilled += billed;
               globalUnbilled += unbilled;
+
+              double historicalNet = 0.0;
+              final accTxs = transactions.where(
+                (t) =>
+                    t.transaction.accountId == acc.id ||
+                    t.transaction.toAccountId == acc.id,
+              );
+              for (var txData in accTxs) {
+                final t = txData.transaction;
+                bool isExpense =
+                    t.type == 'Expense' ||
+                    (t.type == 'Transfer' && t.accountId == acc.id);
+                bool isPayment =
+                    t.type == 'Income' ||
+                    (t.type == 'Transfer' && t.toAccountId == acc.id);
+                double netAmt = isExpense
+                    ? -t.amount
+                    : (isPayment ? t.amount : 0.0);
+                if (!acc.getTrackEffectiveDate(t).isAfter(lastStatementDate)) {
+                  historicalNet += netAmt;
+                }
+              }
 
               statuses.add(
                 _CardStatusData(
@@ -810,7 +789,6 @@ class CreditTrackerWidget extends ConsumerWidget {
 
             final totalOutstanding = globalBilled + globalUnbilled;
 
-            // STRICT DECOUPLED LOGIC LISTS
             final billedCards = statuses
                 .where((c) => c.billed < -0.01)
                 .toList();
@@ -847,7 +825,6 @@ class CreditTrackerWidget extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- HEADER ---
                   Row(
                     children: [
                       Container(
@@ -875,8 +852,6 @@ class CreditTrackerWidget extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // --- HERO MONEY SECTION ---
                   Text(
                     'TOTAL OUTSTANDING',
                     style: TextStyle(
@@ -905,7 +880,6 @@ class CreditTrackerWidget extends ConsumerWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -987,13 +961,10 @@ class CreditTrackerWidget extends ConsumerWidget {
                       ),
                     ],
                   ),
-
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16.0),
                     child: Divider(height: 1),
                   ),
-
-                  // --- 2x2 INTERACTIVE STATUS GRID ---
                   Row(
                     children: [
                       _buildGridCard(

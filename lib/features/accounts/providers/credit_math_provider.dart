@@ -1,3 +1,4 @@
+// lib/features/accounts/providers/credit_math_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../transactions/providers/transaction_provider.dart';
@@ -62,7 +63,6 @@ final creditCardMetricsProvider = Provider.family<CreditCardMetrics, Account>((
 
   final bDay = account.mathBillingDay;
   final dDay = account.mathDueDay;
-
   DateTime oldest = transactions.last.transaction.date;
   DateTime newest = transactions.first.transaction.date;
   DateTime now = DateTime.now();
@@ -72,8 +72,8 @@ final creditCardMetricsProvider = Provider.family<CreditCardMetrics, Account>((
   if (newest.day > bDay) {
     currentEnd = DateTime(newest.year, newest.month + 1, bDay, 23, 59, 59);
   }
-  DateTime pointerEnd = currentEnd;
 
+  DateTime pointerEnd = currentEnd;
   List<DateTime> cycleEnds = [];
   while (pointerEnd.isAfter(oldest) || pointerEnd.isAtSameMomentAs(oldest)) {
     cycleEnds.add(pointerEnd);
@@ -95,19 +95,31 @@ final creditCardMetricsProvider = Provider.family<CreditCardMetrics, Account>((
 
   for (var txData in transactions) {
     final t = txData.transaction;
-    bool isExpense =
-        t.type == 'Expense' ||
-        (t.type == 'Transfer' && t.accountId == account.id);
-    bool isPayment =
-        t.type == 'Income' ||
-        (t.type == 'Transfer' && t.toAccountId == account.id);
-    bool isRepayment = txData.category?.name == 'Repayment';
+
+    // --- FIX: ACCURATELY HANDLE EXTERNAL TRANSFERS & IMMUTABLE REPAYMENT SNAPSHOTS ---
+    bool isExpense = t.type == 'Expense';
+    bool isPayment = t.type == 'Income';
+
+    if (t.type == 'Transfer') {
+      if (t.toAccountId == 'EXTERNAL_IN') {
+        isPayment = true;
+      } else if (t.toAccountId == 'EXTERNAL_OUT') {
+        isExpense = true;
+      } else {
+        isExpense = t.accountId == account.id;
+        isPayment = t.toAccountId == account.id;
+      }
+    }
+
+    final catName = t.categoryName ?? txData.category?.name ?? '';
+    bool isRepayment = catName == 'Repayment';
 
     double netAmount = 0;
-    if (isExpense)
+    if (isExpense) {
       netAmount = -t.amount;
-    else if (isPayment)
+    } else if (isPayment) {
       netAmount = t.amount;
+    }
 
     DateTime effectiveDate = account.getMathEffectiveDate(t);
     if (lastStatementDate == null || effectiveDate.isAfter(lastStatementDate)) {

@@ -400,7 +400,12 @@ class _BalanceTrendWidgetState extends ConsumerState<BalanceTrendWidget> {
                     alignment: Alignment.centerLeft,
                     child: CurrencyText(
                       amount: currentTotalBalance.abs(),
-                      sign: currentTotalBalance < 0 ? '-₹ ' : '₹ ',
+                      // --- FIX: Respect surplus balances gracefully on credit views ---
+                      sign: currentTotalBalance < -0.01
+                          ? '-₹ '
+                          : (isLiabilityView && currentTotalBalance > 0.01
+                                ? '+₹ '
+                                : '₹ '),
                       amountStyle: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w900,

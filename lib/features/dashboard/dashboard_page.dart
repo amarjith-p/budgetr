@@ -11,15 +11,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../core/components/modern_app_bar.dart';
 import '../../core/components/currency_text.dart';
 import '../category_manager/views/category_manager_page.dart';
 import '../settings/views/settings_page.dart';
 import '../budget_buckets/views/budget_buckets_page.dart';
-
 import '../transactions/views/transaction_form_page.dart';
-
 import '../accounts/providers/account_provider.dart';
 import '../accounts/providers/credit_math_provider.dart';
 import '../accounts/providers/loan_math_provider.dart';
@@ -28,31 +27,22 @@ import '../investments/providers/investment_provider.dart';
 import '../notifications/components/notification_bell_widget.dart';
 import '../automation/views/automation_dashboard_page.dart';
 
-// --- BUDGET PROVIDER IMPORTS ---
 import '../../../core/database/app_database.dart';
 import '../budgets/providers/budget_provider.dart';
-
 import '../automation/views/smart_inbox_page.dart';
 import '../automation/providers/smart_inbox_provider.dart';
-
 import '../trips/providers/trip_provider.dart';
 import '../reminders/views/reminder_dashboard_page.dart';
 import '../reminders/providers/reminder_provider.dart';
-
 import '../secure_vault/views/vault_auth_page.dart';
-
 import '../debts/providers/debt_provider.dart';
-
 import '../net_worth/providers/net_worth_provider.dart';
-
 import 'package:share_plus/share_plus.dart';
 import '../backup/services/backup_service.dart';
 import '../backup/providers/backup_reminder_provider.dart';
 import '../../core/components/futuristic_loader.dart';
 import '../../core/components/custom_snackbars.dart';
 
-// --- NEW: STRICT LOCAL PROVIDER ---
-// This ensures the dashboard NEVER travels back in time when the user explores old budgets elsewhere
 final _dashboardBudgetProvider = StreamProvider.autoDispose<MonthlyBudget?>((
   ref,
 ) {
@@ -74,7 +64,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
   Future<void> _handleQuickBackup(BuildContext context, WidgetRef ref) async {
     HapticFeedback.selectionClick();
-
     final navigator = Navigator.of(context, rootNavigator: true);
 
     showDialog(
@@ -95,7 +84,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final result = await ref
         .read(backupServiceProvider)
         .exportDatabaseExternal();
-
     navigator.pop();
 
     if (result != null && result.startsWith('ERROR:')) {
@@ -112,7 +100,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
       if (shareResult.status == ShareResultStatus.success) {
         await ref.read(backupReminderProvider.notifier).recordBackup();
-
         if (context.mounted) {
           CustomSnackbars.showSuccess(
             context,
@@ -135,15 +122,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
     final valueStyle = theme.textTheme.titleLarge?.copyWith(
       fontWeight: FontWeight.w800,
       letterSpacing: -0.5,
       color: Colors.white,
     );
-
     const double tileGap = 2.0;
-
     final Color darkTileColor = isDark
         ? theme.colorScheme.surfaceContainerHighest
         : const Color(0xFF1E1E1E);
@@ -151,38 +135,38 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final accountsAsync = ref.watch(accountsStreamProvider);
     final rawAccounts = accountsAsync.asData?.value ?? [];
 
+    // --- FIX 1: UNIVERSAL MATH STANDARD ---
     double totalAssets = 0.0;
-    double totalLiabilities = 0.0;
+    double totalCreditDues = 0.0;
+    double totalLoans = 0.0;
     double allocatedFunds = 0.0;
 
     for (var acc in rawAccounts) {
+      if (acc.isClosed && acc.type != 'Loan') continue;
+
       if (acc.type == 'Credit Cards') {
-        final metrics = ref.watch(creditCardMetricsProvider(acc));
-        if (metrics.totalOutstanding < 0) {
-          totalLiabilities += metrics.totalOutstanding.abs();
-        }
+        totalCreditDues += ref
+            .watch(creditCardMetricsProvider(acc))
+            .totalOutstanding;
       } else if (acc.type == 'Loan' && !acc.isClosed) {
-        final out = ref.watch(loanTotalOutstandingProvider(acc));
-        if (out > 0) totalLiabilities += out;
+        totalLoans += ref.watch(loanTotalOutstandingProvider(acc));
       } else if (acc.type != 'Credit Cards' && acc.type != 'Loan') {
         totalAssets += acc.balance;
-
         if (acc.isCreditPayable) {
           allocatedFunds += (acc.balance > 0 ? acc.balance : 0.0);
         }
       }
     }
 
-    final double netBalance = totalAssets - totalLiabilities;
-    final String netSign = netBalance < 0 ? '-₹ ' : '₹ ';
-
+    final double totalLiabilities =
+        (totalCreditDues < 0 ? totalCreditDues.abs() : 0.0) + totalLoans;
+    final double netBalance = totalAssets + totalCreditDues - totalLoans;
     final double difference = allocatedFunds - totalLiabilities;
     final bool hasPayableShortage = difference < 0;
 
     final bucketsAsync = ref.watch(bucketsStreamProvider);
     final int liveBucketsCount = bucketsAsync.asData?.value.length ?? 0;
 
-    // --- LIVE BUDGET MATH (NOW LOCKED STRICTLY TO CURRENT MONTH) ---
     final budgetAsync = ref.watch(_dashboardBudgetProvider);
     final currentBudget = budgetAsync.asData?.value;
     double totalBudget = 0.0;
@@ -203,16 +187,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         final allTxs = ref.watch(allTransactionsProvider).asData?.value ?? [];
         for (var txData in allTxs) {
           final tx = txData.transaction;
-          // Confined absolutely to the actual real-world month
           if (tx.date.year == now.year && tx.date.month == now.month) {
             if (tx.type == 'Expense') {
               bool isLoanTx = tx.id.startsWith('LOAN_TX_');
-              // bool isNonCalc = tx.subCategory == 'Non-Calculated Expenses';
-
-              if (!isLoanTx &&
-                  // !isNonCalc &&
-                  tx.bucketId != null &&
-                  tx.bucketId != -1) {
+              if (!isLoanTx && tx.bucketId != null && tx.bucketId != -1) {
                 budgetedSpend += tx.amount;
               }
             }
@@ -225,7 +203,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         ? (budgetedSpend / totalBudget)
         : 0.0;
 
-    // --- DYNAMIC COLOR THRESHOLDS ---
     Color progressColor;
     if (budgetProgress > 1.0) {
       progressColor = Colors.redAccent.shade700;
@@ -237,7 +214,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
     final investmentsAsync = ref.watch(investmentsStreamProvider);
     final rawInvestments = investmentsAsync.asData?.value ?? [];
-
     double totalInvestmentValue = 0.0;
     double totalInvestedAmount = 0.0;
 
@@ -276,7 +252,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
     final debtsAsync = ref.watch(allDebtsProvider);
     final rawDebts = debtsAsync.asData?.value ?? [];
-
     double totalBorrowed = 0.0;
     double totalLent = 0.0;
 
@@ -292,21 +267,18 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     }
 
     final double netDebtBalance = totalLent - totalBorrowed;
-
     final netWorthAsync = ref.watch(netWorthMetricsProvider);
     final double liveNetWorth = netWorthAsync.asData?.value.netWorth ?? 0.0;
     final bool isNwPositive = liveNetWorth >= 0;
-
     final bool isBackupDue = ref.watch(backupReminderProvider);
 
     final bool hasBanner = triggeredReminders.isNotEmpty;
     final double barScale = hasBanner ? 0.6 : 1.0;
-
+    final String netSign = netBalance < 0 ? '-₹ ' : '₹ ';
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-
         final currentTime = DateTime.now();
         final maxDuration = const Duration(seconds: 2);
         final isWarning =
@@ -316,14 +288,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         if (isWarning) {
           _lastPressedAt = currentTime;
           HapticFeedback.lightImpact();
-
           CustomSnackbars.showSuccess(
             context,
             message: 'Press back again to exit',
           );
           return;
         }
-
         SystemNavigator.pop();
       },
       child: Scaffold(
@@ -412,7 +382,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         .toList(),
                   ),
                 ),
-
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -556,7 +525,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                                             alignment: Alignment
                                                                 .centerRight,
                                                             child: Text(
-                                                              '₹${CurrencyFormatter.format(budgetedSpend)} / ₹${CurrencyFormatter.format(totalBudget)}',
+                                                              '₹ ${CurrencyFormatter.format(budgetedSpend)} / ₹ ${CurrencyFormatter.format(totalBudget)}',
                                                               style: const TextStyle(
                                                                 fontSize: 7,
                                                                 fontWeight:
@@ -687,9 +656,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                 ),
                               ),
                             ),
-
                             const SizedBox(width: tileGap),
-
                             Expanded(
                               flex: 4,
                               child: Column(
@@ -820,9 +787,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: tileGap),
-
                       // --- ROW 2: INVESTMENT TRACKER ---
                       Expanded(
                         flex: 1,
@@ -890,9 +855,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: tileGap),
-
                       // --- ROW 3: Automation & Categories ---
                       Expanded(
                         flex: 1,
@@ -971,9 +934,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: tileGap),
-
                       // --- ROW 4: VAULT (60%) & SMART TRACKERS (40%) ---
                       Expanded(
                         flex: 1,
@@ -1053,7 +1014,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         ),
                       ),
                       const SizedBox(height: tileGap),
-
                       // --- ROW 5: DEBTS & NET WORTH ---
                       Expanded(
                         flex: 1,
@@ -1131,7 +1091,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                               ),
                             ),
                             const SizedBox(width: tileGap),
-
                             Expanded(
                               flex: 4, // 40% Width
                               child: _buildWideMetroTile(
@@ -1345,7 +1304,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final bool isSmall = constraints.maxHeight < 85;
-
               return Stack(
                 children: [
                   if (topLeftContent != null)
