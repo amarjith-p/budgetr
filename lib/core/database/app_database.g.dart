@@ -8292,6 +8292,39 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _endDateMeta = const VerificationMeta(
+    'endDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> endDate = GeneratedColumn<DateTime>(
+    'end_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _maxExecutionsMeta = const VerificationMeta(
+    'maxExecutions',
+  );
+  @override
+  late final GeneratedColumn<int> maxExecutions = GeneratedColumn<int>(
+    'max_executions',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _currentExecutionCountMeta =
+      const VerificationMeta('currentExecutionCount');
+  @override
+  late final GeneratedColumn<int> currentExecutionCount = GeneratedColumn<int>(
+    'current_execution_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _isAutomaticMeta = const VerificationMeta(
     'isAutomatic',
   );
@@ -8365,6 +8398,9 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
     advancedSchedule,
     startDate,
     occurrenceTime,
+    endDate,
+    maxExecutions,
+    currentExecutionCount,
     isAutomatic,
     lastExecutedDate,
     nextExecutionDate,
@@ -8533,6 +8569,30 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
     } else if (isInserting) {
       context.missing(_occurrenceTimeMeta);
     }
+    if (data.containsKey('end_date')) {
+      context.handle(
+        _endDateMeta,
+        endDate.isAcceptableOrUnknown(data['end_date']!, _endDateMeta),
+      );
+    }
+    if (data.containsKey('max_executions')) {
+      context.handle(
+        _maxExecutionsMeta,
+        maxExecutions.isAcceptableOrUnknown(
+          data['max_executions']!,
+          _maxExecutionsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('current_execution_count')) {
+      context.handle(
+        _currentExecutionCountMeta,
+        currentExecutionCount.isAcceptableOrUnknown(
+          data['current_execution_count']!,
+          _currentExecutionCountMeta,
+        ),
+      );
+    }
     if (data.containsKey('is_automatic')) {
       context.handle(
         _isAutomaticMeta,
@@ -8654,6 +8714,18 @@ class $RecurringTransactionRulesTable extends RecurringTransactionRules
         DriftSqlType.string,
         data['${effectivePrefix}occurrence_time'],
       )!,
+      endDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}end_date'],
+      ),
+      maxExecutions: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}max_executions'],
+      ),
+      currentExecutionCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}current_execution_count'],
+      )!,
       isAutomatic: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_automatic'],
@@ -8699,6 +8771,9 @@ class RecurringTransactionRule extends DataClass
   final String? advancedSchedule;
   final DateTime startDate;
   final String occurrenceTime;
+  final DateTime? endDate;
+  final int? maxExecutions;
+  final int currentExecutionCount;
   final bool isAutomatic;
   final DateTime? lastExecutedDate;
   final DateTime nextExecutionDate;
@@ -8722,6 +8797,9 @@ class RecurringTransactionRule extends DataClass
     this.advancedSchedule,
     required this.startDate,
     required this.occurrenceTime,
+    this.endDate,
+    this.maxExecutions,
+    required this.currentExecutionCount,
     required this.isAutomatic,
     this.lastExecutedDate,
     required this.nextExecutionDate,
@@ -8768,6 +8846,13 @@ class RecurringTransactionRule extends DataClass
     }
     map['start_date'] = Variable<DateTime>(startDate);
     map['occurrence_time'] = Variable<String>(occurrenceTime);
+    if (!nullToAbsent || endDate != null) {
+      map['end_date'] = Variable<DateTime>(endDate);
+    }
+    if (!nullToAbsent || maxExecutions != null) {
+      map['max_executions'] = Variable<int>(maxExecutions);
+    }
+    map['current_execution_count'] = Variable<int>(currentExecutionCount);
     map['is_automatic'] = Variable<bool>(isAutomatic);
     if (!nullToAbsent || lastExecutedDate != null) {
       map['last_executed_date'] = Variable<DateTime>(lastExecutedDate);
@@ -8817,6 +8902,13 @@ class RecurringTransactionRule extends DataClass
           : Value(advancedSchedule),
       startDate: Value(startDate),
       occurrenceTime: Value(occurrenceTime),
+      endDate: endDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endDate),
+      maxExecutions: maxExecutions == null && nullToAbsent
+          ? const Value.absent()
+          : Value(maxExecutions),
+      currentExecutionCount: Value(currentExecutionCount),
       isAutomatic: Value(isAutomatic),
       lastExecutedDate: lastExecutedDate == null && nullToAbsent
           ? const Value.absent()
@@ -8852,6 +8944,11 @@ class RecurringTransactionRule extends DataClass
       advancedSchedule: serializer.fromJson<String?>(json['advancedSchedule']),
       startDate: serializer.fromJson<DateTime>(json['startDate']),
       occurrenceTime: serializer.fromJson<String>(json['occurrenceTime']),
+      endDate: serializer.fromJson<DateTime?>(json['endDate']),
+      maxExecutions: serializer.fromJson<int?>(json['maxExecutions']),
+      currentExecutionCount: serializer.fromJson<int>(
+        json['currentExecutionCount'],
+      ),
       isAutomatic: serializer.fromJson<bool>(json['isAutomatic']),
       lastExecutedDate: serializer.fromJson<DateTime?>(
         json['lastExecutedDate'],
@@ -8884,6 +8981,9 @@ class RecurringTransactionRule extends DataClass
       'advancedSchedule': serializer.toJson<String?>(advancedSchedule),
       'startDate': serializer.toJson<DateTime>(startDate),
       'occurrenceTime': serializer.toJson<String>(occurrenceTime),
+      'endDate': serializer.toJson<DateTime?>(endDate),
+      'maxExecutions': serializer.toJson<int?>(maxExecutions),
+      'currentExecutionCount': serializer.toJson<int>(currentExecutionCount),
       'isAutomatic': serializer.toJson<bool>(isAutomatic),
       'lastExecutedDate': serializer.toJson<DateTime?>(lastExecutedDate),
       'nextExecutionDate': serializer.toJson<DateTime>(nextExecutionDate),
@@ -8910,6 +9010,9 @@ class RecurringTransactionRule extends DataClass
     Value<String?> advancedSchedule = const Value.absent(),
     DateTime? startDate,
     String? occurrenceTime,
+    Value<DateTime?> endDate = const Value.absent(),
+    Value<int?> maxExecutions = const Value.absent(),
+    int? currentExecutionCount,
     bool? isAutomatic,
     Value<DateTime?> lastExecutedDate = const Value.absent(),
     DateTime? nextExecutionDate,
@@ -8937,6 +9040,11 @@ class RecurringTransactionRule extends DataClass
         : this.advancedSchedule,
     startDate: startDate ?? this.startDate,
     occurrenceTime: occurrenceTime ?? this.occurrenceTime,
+    endDate: endDate.present ? endDate.value : this.endDate,
+    maxExecutions: maxExecutions.present
+        ? maxExecutions.value
+        : this.maxExecutions,
+    currentExecutionCount: currentExecutionCount ?? this.currentExecutionCount,
     isAutomatic: isAutomatic ?? this.isAutomatic,
     lastExecutedDate: lastExecutedDate.present
         ? lastExecutedDate.value
@@ -8990,6 +9098,13 @@ class RecurringTransactionRule extends DataClass
       occurrenceTime: data.occurrenceTime.present
           ? data.occurrenceTime.value
           : this.occurrenceTime,
+      endDate: data.endDate.present ? data.endDate.value : this.endDate,
+      maxExecutions: data.maxExecutions.present
+          ? data.maxExecutions.value
+          : this.maxExecutions,
+      currentExecutionCount: data.currentExecutionCount.present
+          ? data.currentExecutionCount.value
+          : this.currentExecutionCount,
       isAutomatic: data.isAutomatic.present
           ? data.isAutomatic.value
           : this.isAutomatic,
@@ -9024,6 +9139,9 @@ class RecurringTransactionRule extends DataClass
           ..write('advancedSchedule: $advancedSchedule, ')
           ..write('startDate: $startDate, ')
           ..write('occurrenceTime: $occurrenceTime, ')
+          ..write('endDate: $endDate, ')
+          ..write('maxExecutions: $maxExecutions, ')
+          ..write('currentExecutionCount: $currentExecutionCount, ')
           ..write('isAutomatic: $isAutomatic, ')
           ..write('lastExecutedDate: $lastExecutedDate, ')
           ..write('nextExecutionDate: $nextExecutionDate, ')
@@ -9052,6 +9170,9 @@ class RecurringTransactionRule extends DataClass
     advancedSchedule,
     startDate,
     occurrenceTime,
+    endDate,
+    maxExecutions,
+    currentExecutionCount,
     isAutomatic,
     lastExecutedDate,
     nextExecutionDate,
@@ -9079,6 +9200,9 @@ class RecurringTransactionRule extends DataClass
           other.advancedSchedule == this.advancedSchedule &&
           other.startDate == this.startDate &&
           other.occurrenceTime == this.occurrenceTime &&
+          other.endDate == this.endDate &&
+          other.maxExecutions == this.maxExecutions &&
+          other.currentExecutionCount == this.currentExecutionCount &&
           other.isAutomatic == this.isAutomatic &&
           other.lastExecutedDate == this.lastExecutedDate &&
           other.nextExecutionDate == this.nextExecutionDate &&
@@ -9105,6 +9229,9 @@ class RecurringTransactionRulesCompanion
   final Value<String?> advancedSchedule;
   final Value<DateTime> startDate;
   final Value<String> occurrenceTime;
+  final Value<DateTime?> endDate;
+  final Value<int?> maxExecutions;
+  final Value<int> currentExecutionCount;
   final Value<bool> isAutomatic;
   final Value<DateTime?> lastExecutedDate;
   final Value<DateTime> nextExecutionDate;
@@ -9129,6 +9256,9 @@ class RecurringTransactionRulesCompanion
     this.advancedSchedule = const Value.absent(),
     this.startDate = const Value.absent(),
     this.occurrenceTime = const Value.absent(),
+    this.endDate = const Value.absent(),
+    this.maxExecutions = const Value.absent(),
+    this.currentExecutionCount = const Value.absent(),
     this.isAutomatic = const Value.absent(),
     this.lastExecutedDate = const Value.absent(),
     this.nextExecutionDate = const Value.absent(),
@@ -9154,6 +9284,9 @@ class RecurringTransactionRulesCompanion
     this.advancedSchedule = const Value.absent(),
     required DateTime startDate,
     required String occurrenceTime,
+    this.endDate = const Value.absent(),
+    this.maxExecutions = const Value.absent(),
+    this.currentExecutionCount = const Value.absent(),
     required bool isAutomatic,
     this.lastExecutedDate = const Value.absent(),
     required DateTime nextExecutionDate,
@@ -9188,6 +9321,9 @@ class RecurringTransactionRulesCompanion
     Expression<String>? advancedSchedule,
     Expression<DateTime>? startDate,
     Expression<String>? occurrenceTime,
+    Expression<DateTime>? endDate,
+    Expression<int>? maxExecutions,
+    Expression<int>? currentExecutionCount,
     Expression<bool>? isAutomatic,
     Expression<DateTime>? lastExecutedDate,
     Expression<DateTime>? nextExecutionDate,
@@ -9213,6 +9349,10 @@ class RecurringTransactionRulesCompanion
       if (advancedSchedule != null) 'advanced_schedule': advancedSchedule,
       if (startDate != null) 'start_date': startDate,
       if (occurrenceTime != null) 'occurrence_time': occurrenceTime,
+      if (endDate != null) 'end_date': endDate,
+      if (maxExecutions != null) 'max_executions': maxExecutions,
+      if (currentExecutionCount != null)
+        'current_execution_count': currentExecutionCount,
       if (isAutomatic != null) 'is_automatic': isAutomatic,
       if (lastExecutedDate != null) 'last_executed_date': lastExecutedDate,
       if (nextExecutionDate != null) 'next_execution_date': nextExecutionDate,
@@ -9240,6 +9380,9 @@ class RecurringTransactionRulesCompanion
     Value<String?>? advancedSchedule,
     Value<DateTime>? startDate,
     Value<String>? occurrenceTime,
+    Value<DateTime?>? endDate,
+    Value<int?>? maxExecutions,
+    Value<int>? currentExecutionCount,
     Value<bool>? isAutomatic,
     Value<DateTime?>? lastExecutedDate,
     Value<DateTime>? nextExecutionDate,
@@ -9265,6 +9408,10 @@ class RecurringTransactionRulesCompanion
       advancedSchedule: advancedSchedule ?? this.advancedSchedule,
       startDate: startDate ?? this.startDate,
       occurrenceTime: occurrenceTime ?? this.occurrenceTime,
+      endDate: endDate ?? this.endDate,
+      maxExecutions: maxExecutions ?? this.maxExecutions,
+      currentExecutionCount:
+          currentExecutionCount ?? this.currentExecutionCount,
       isAutomatic: isAutomatic ?? this.isAutomatic,
       lastExecutedDate: lastExecutedDate ?? this.lastExecutedDate,
       nextExecutionDate: nextExecutionDate ?? this.nextExecutionDate,
@@ -9330,6 +9477,17 @@ class RecurringTransactionRulesCompanion
     if (occurrenceTime.present) {
       map['occurrence_time'] = Variable<String>(occurrenceTime.value);
     }
+    if (endDate.present) {
+      map['end_date'] = Variable<DateTime>(endDate.value);
+    }
+    if (maxExecutions.present) {
+      map['max_executions'] = Variable<int>(maxExecutions.value);
+    }
+    if (currentExecutionCount.present) {
+      map['current_execution_count'] = Variable<int>(
+        currentExecutionCount.value,
+      );
+    }
     if (isAutomatic.present) {
       map['is_automatic'] = Variable<bool>(isAutomatic.value);
     }
@@ -9369,6 +9527,9 @@ class RecurringTransactionRulesCompanion
           ..write('advancedSchedule: $advancedSchedule, ')
           ..write('startDate: $startDate, ')
           ..write('occurrenceTime: $occurrenceTime, ')
+          ..write('endDate: $endDate, ')
+          ..write('maxExecutions: $maxExecutions, ')
+          ..write('currentExecutionCount: $currentExecutionCount, ')
           ..write('isAutomatic: $isAutomatic, ')
           ..write('lastExecutedDate: $lastExecutedDate, ')
           ..write('nextExecutionDate: $nextExecutionDate, ')
@@ -18381,6 +18542,9 @@ typedef $$RecurringTransactionRulesTableCreateCompanionBuilder =
       Value<String?> advancedSchedule,
       required DateTime startDate,
       required String occurrenceTime,
+      Value<DateTime?> endDate,
+      Value<int?> maxExecutions,
+      Value<int> currentExecutionCount,
       required bool isAutomatic,
       Value<DateTime?> lastExecutedDate,
       required DateTime nextExecutionDate,
@@ -18407,6 +18571,9 @@ typedef $$RecurringTransactionRulesTableUpdateCompanionBuilder =
       Value<String?> advancedSchedule,
       Value<DateTime> startDate,
       Value<String> occurrenceTime,
+      Value<DateTime?> endDate,
+      Value<int?> maxExecutions,
+      Value<int> currentExecutionCount,
       Value<bool> isAutomatic,
       Value<DateTime?> lastExecutedDate,
       Value<DateTime> nextExecutionDate,
@@ -18510,6 +18677,21 @@ class $$RecurringTransactionRulesTableFilterComposer
 
   ColumnFilters<String> get occurrenceTime => $composableBuilder(
     column: $table.occurrenceTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endDate => $composableBuilder(
+    column: $table.endDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get maxExecutions => $composableBuilder(
+    column: $table.maxExecutions,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get currentExecutionCount => $composableBuilder(
+    column: $table.currentExecutionCount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18633,6 +18815,21 @@ class $$RecurringTransactionRulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get endDate => $composableBuilder(
+    column: $table.endDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get maxExecutions => $composableBuilder(
+    column: $table.maxExecutions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get currentExecutionCount => $composableBuilder(
+    column: $table.currentExecutionCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isAutomatic => $composableBuilder(
     column: $table.isAutomatic,
     builder: (column) => ColumnOrderings(column),
@@ -18741,6 +18938,19 @@ class $$RecurringTransactionRulesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<DateTime> get endDate =>
+      $composableBuilder(column: $table.endDate, builder: (column) => column);
+
+  GeneratedColumn<int> get maxExecutions => $composableBuilder(
+    column: $table.maxExecutions,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get currentExecutionCount => $composableBuilder(
+    column: $table.currentExecutionCount,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<bool> get isAutomatic => $composableBuilder(
     column: $table.isAutomatic,
     builder: (column) => column,
@@ -18824,6 +19034,9 @@ class $$RecurringTransactionRulesTableTableManager
                 Value<String?> advancedSchedule = const Value.absent(),
                 Value<DateTime> startDate = const Value.absent(),
                 Value<String> occurrenceTime = const Value.absent(),
+                Value<DateTime?> endDate = const Value.absent(),
+                Value<int?> maxExecutions = const Value.absent(),
+                Value<int> currentExecutionCount = const Value.absent(),
                 Value<bool> isAutomatic = const Value.absent(),
                 Value<DateTime?> lastExecutedDate = const Value.absent(),
                 Value<DateTime> nextExecutionDate = const Value.absent(),
@@ -18848,6 +19061,9 @@ class $$RecurringTransactionRulesTableTableManager
                 advancedSchedule: advancedSchedule,
                 startDate: startDate,
                 occurrenceTime: occurrenceTime,
+                endDate: endDate,
+                maxExecutions: maxExecutions,
+                currentExecutionCount: currentExecutionCount,
                 isAutomatic: isAutomatic,
                 lastExecutedDate: lastExecutedDate,
                 nextExecutionDate: nextExecutionDate,
@@ -18874,6 +19090,9 @@ class $$RecurringTransactionRulesTableTableManager
                 Value<String?> advancedSchedule = const Value.absent(),
                 required DateTime startDate,
                 required String occurrenceTime,
+                Value<DateTime?> endDate = const Value.absent(),
+                Value<int?> maxExecutions = const Value.absent(),
+                Value<int> currentExecutionCount = const Value.absent(),
                 required bool isAutomatic,
                 Value<DateTime?> lastExecutedDate = const Value.absent(),
                 required DateTime nextExecutionDate,
@@ -18898,6 +19117,9 @@ class $$RecurringTransactionRulesTableTableManager
                 advancedSchedule: advancedSchedule,
                 startDate: startDate,
                 occurrenceTime: occurrenceTime,
+                endDate: endDate,
+                maxExecutions: maxExecutions,
+                currentExecutionCount: currentExecutionCount,
                 isAutomatic: isAutomatic,
                 lastExecutedDate: lastExecutedDate,
                 nextExecutionDate: nextExecutionDate,

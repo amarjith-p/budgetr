@@ -1,8 +1,10 @@
+// lib/features/automation/views/automation_dashboard_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/theme/transaction_colors.dart';
@@ -12,6 +14,7 @@ import '../../../core/components/boxy_slidable_card.dart';
 import '../../../core/components/premium_empty_state.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../../../core/components/currency_text.dart';
+
 import '../providers/automation_provider.dart';
 import 'automation_rule_form_page.dart';
 import '../components/manual_rule_confirmation_sheet.dart';
@@ -99,261 +102,303 @@ class AutomationDashboardPage extends ConsumerWidget {
     RecurringTransactionRule rule,
     ThemeData theme,
     bool isDark,
-    bool isPending,
-  ) {
-    final txColor = TransactionColors.getTypeColor(rule.transactionType, theme);
+    bool isPending, {
+    bool isExpired = false, // --- NEW FLAG ---
+  }) {
+    // Mute the colors if expired
+    final txColor = isExpired
+        ? theme.colorScheme.onSurfaceVariant.withOpacity(0.5)
+        : TransactionColors.getTypeColor(rule.transactionType, theme);
+
     final bool hasWebsite =
         rule.serviceWebsite != null && rule.serviceWebsite!.trim().isNotEmpty;
     final String faviconUrl = hasWebsite
         ? 'https://www.google.com/s2/favicons?domain=${rule.serviceWebsite}&sz=128'
         : '';
 
+    // Determine the expiration reason string
+    String expiredText = 'Expired';
+    if (isExpired) {
+      if (rule.maxExecutions != null &&
+          rule.currentExecutionCount >= rule.maxExecutions!) {
+        expiredText =
+            'Expired: Limit Reached (${rule.currentExecutionCount}/${rule.maxExecutions})';
+      } else {
+        expiredText = 'Expired: End Date Reached';
+      }
+    }
+
     return Padding(
-      // --- UPDATED: Reduced spacing between cards by 50% ---
       padding: const EdgeInsets.only(bottom: DesignTokens.spacingXs),
-      child: BoxySlidableCard(
-        key: ValueKey(rule.id),
-        onEdit: () {
-          HapticFeedback.lightImpact();
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AutomationRuleFormPage(existingRule: rule),
+      child: Opacity(
+        opacity: isExpired ? 0.6 : 1.0, // Fade out expired cards slightly
+        child: BoxySlidableCard(
+          key: ValueKey(rule.id),
+          onEdit: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AutomationRuleFormPage(existingRule: rule),
+              ),
+            );
+          },
+          onDelete: () {
+            HapticFeedback.mediumImpact();
+            ConfirmationBottomSheet.show(
+              context,
+              title: 'Delete Rule?',
+              description:
+                  'Are you sure you want to stop automating "${rule.name}"?',
+              confirmText: 'DELETE',
+              isDestructive: true,
+              onConfirm: () => ref
+                  .read(automationActionProvider.notifier)
+                  .deleteRule(rule.id),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isExpired
+                  ? theme.colorScheme.surfaceContainerHighest.withOpacity(
+                      isDark ? 0.3 : 0.5,
+                    )
+                  : (isPending
+                        ? theme.colorScheme.errorContainer.withOpacity(
+                            isDark ? 0.2 : 0.4,
+                          )
+                        : theme.colorScheme.surface),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isPending && !isExpired
+                    ? theme.colorScheme.error.withOpacity(0.5)
+                    : theme.dividerColor,
+              ),
             ),
-          );
-        },
-        onDelete: () {
-          HapticFeedback.mediumImpact();
-          ConfirmationBottomSheet.show(
-            context,
-            title: 'Delete Rule?',
-            description:
-                'Are you sure you want to stop automating "${rule.name}"?',
-            confirmText: 'DELETE',
-            isDestructive: true,
-            onConfirm: () =>
-                ref.read(automationActionProvider.notifier).deleteRule(rule.id),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isPending
-                ? theme.colorScheme.errorContainer.withOpacity(
-                    isDark ? 0.2 : 0.4,
-                  )
-                : theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isPending
-                  ? theme.colorScheme.error.withOpacity(0.5)
-                  : theme.dividerColor,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    padding: hasWebsite
-                        ? EdgeInsets.zero
-                        : const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: isPending
-                          ? theme.colorScheme.error.withOpacity(0.15)
-                          : txColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: hasWebsite
-                        ? Image.network(
-                            faviconUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (ctx, err, st) => Icon(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      padding: hasWebsite
+                          ? EdgeInsets.zero
+                          : const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isPending && !isExpired
+                            ? theme.colorScheme.error.withOpacity(0.15)
+                            : txColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: hasWebsite
+                          ? Image.network(
+                              faviconUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (ctx, err, st) => Icon(
+                                Icons.autorenew_rounded,
+                                color: txColor,
+                                size: 22,
+                              ),
+                            )
+                          : Icon(
                               Icons.autorenew_rounded,
-                              color: txColor,
+                              color: isPending && !isExpired
+                                  ? theme.colorScheme.error
+                                  : txColor,
                               size: 22,
                             ),
-                          )
-                        : Icon(
-                            Icons.autorenew_rounded,
-                            color: isPending
-                                ? theme.colorScheme.error
-                                : txColor,
-                            size: 22,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  rule.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 15,
+                                    color: isExpired
+                                        ? theme.colorScheme.onSurfaceVariant
+                                        : theme.colorScheme.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (rule.amount != null)
+                                CurrencyText(
+                                  amount: rule.amount!,
+                                  amountStyle: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14,
+                                    color: isPending && !isExpired
+                                        ? theme.colorScheme.error
+                                        : txColor,
+                                  ),
+                                )
+                              else
+                                Text(
+                                  'VARIABLE',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 10,
+                                    color: isExpired
+                                        ? theme.colorScheme.onSurfaceVariant
+                                        : theme.colorScheme.primary,
+                                  ),
+                                ),
+                            ],
                           ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                rule.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 15,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_month_rounded,
+                                size: 12,
+                                color: isPending && !isExpired
+                                    ? theme.colorScheme.error
+                                    : theme.colorScheme.onSurfaceVariant,
                               ),
-                            ),
-                            if (rule.amount != null)
-                              CurrencyText(
-                                amount: rule.amount!,
-                                amountStyle: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 14,
-                                  color: isPending
-                                      ? theme.colorScheme.error
-                                      : txColor,
-                                ),
-                              )
-                            else
-                              Text(
-                                'VARIABLE',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 10,
-                                  color: theme.colorScheme.primary,
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  isExpired
+                                      ? expiredText
+                                      : (isPending
+                                            ? 'DUE: ${DateFormat('dd MMM yyyy, hh:mm a').format(rule.nextExecutionDate)}'
+                                            : 'Next: ${DateFormat('dd MMM yyyy, hh:mm a').format(rule.nextExecutionDate)}'),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isExpired
+                                        ? theme.colorScheme.onSurfaceVariant
+                                        : (isPending
+                                              ? theme.colorScheme.error
+                                              : theme
+                                                    .colorScheme
+                                                    .onSurfaceVariant),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                          ],
+                              if (!isPending && !isExpired)
+                                _CountdownBadge(
+                                  targetDate: rule.nextExecutionDate,
+                                  theme: theme,
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme
+                                      .colorScheme
+                                      .surfaceContainerHighest
+                                      .withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  rule.advancedSchedule != null &&
+                                          rule.advancedSchedule != 'Same Date'
+                                      ? '${rule.advancedSchedule}'
+                                      : 'Every ${rule.repetitionInterval} ${rule.repetitionSchedule}(s)',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isExpired
+                                      ? theme.dividerColor.withOpacity(0.5)
+                                      : (rule.isAutomatic
+                                            ? Colors.green.withOpacity(0.1)
+                                            : Colors.orangeAccent.withOpacity(
+                                                0.1,
+                                              )),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  rule.isAutomatic ? 'AUTO' : 'MANUAL',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                    color: isExpired
+                                        ? theme.colorScheme.onSurfaceVariant
+                                        : (rule.isAutomatic
+                                              ? Colors.green
+                                              : Colors.orangeAccent.shade700),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (isPending && !isExpired) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.error,
+                        foregroundColor: theme.colorScheme.onError,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_month_rounded,
-                              size: 12,
-                              color: isPending
-                                  ? theme.colorScheme.error
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                isPending
-                                    ? 'DUE: ${DateFormat('dd MMM yyyy, hh:mm a').format(rule.nextExecutionDate)}'
-                                    : 'Next: ${DateFormat('dd MMM yyyy, hh:mm a').format(rule.nextExecutionDate)}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: isPending
-                                      ? theme.colorScheme.error
-                                      : theme.colorScheme.onSurfaceVariant,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (!isPending)
-                              _CountdownBadge(
-                                targetDate: rule.nextExecutionDate,
-                                theme: theme,
-                              ),
-                          ],
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        final notifId =
+                            'manual_${rule.id}_${rule.nextExecutionDate.millisecondsSinceEpoch}';
+                        ManualRuleConfirmationSheet.show(
+                          context,
+                          ruleId: rule.id,
+                          expectedDateStr: rule.nextExecutionDate
+                              .toIso8601String(),
+                          notificationId: notifId,
+                        );
+                      },
+                      child: const Text(
+                        'EXECUTE PENDING TRANSACTION',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                          letterSpacing: 1.0,
                         ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.surfaceContainerHighest
-                                    .withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                rule.advancedSchedule != null &&
-                                        rule.advancedSchedule != 'Same Date'
-                                    ? '${rule.advancedSchedule}'
-                                    : 'Every ${rule.repetitionInterval} ${rule.repetitionSchedule}(s)',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w900,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: rule.isAutomatic
-                                    ? Colors.green.withOpacity(0.1)
-                                    : Colors.orangeAccent.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                rule.isAutomatic ? 'AUTO' : 'MANUAL',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w900,
-                                  color: rule.isAutomatic
-                                      ? Colors.green
-                                      : Colors.orangeAccent.shade700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ],
-              ),
-              if (isPending) ...[
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.error,
-                      foregroundColor: theme.colorScheme.onError,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      final notifId =
-                          'manual_${rule.id}_${rule.nextExecutionDate.millisecondsSinceEpoch}';
-                      ManualRuleConfirmationSheet.show(
-                        context,
-                        ruleId: rule.id,
-                        expectedDateStr: rule.nextExecutionDate
-                            .toIso8601String(),
-                        notificationId: notifId,
-                      );
-                    },
-                    child: const Text(
-                      'EXECUTE PENDING TRANSACTION',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ),
-                ),
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -398,7 +443,12 @@ class AutomationDashboardPage extends ConsumerWidget {
           }
 
           final now = DateTime.now();
-          final pendingRules = rules
+
+          // --- NEW: SPLIT LISTS EXPLICITLY ---
+          final expiredRules = rules.where((r) => !r.isActive).toList();
+          final activeRules = rules.where((r) => r.isActive).toList();
+
+          final pendingRules = activeRules
               .where(
                 (r) =>
                     (!r.isAutomatic || r.amount == null) &&
@@ -406,7 +456,8 @@ class AutomationDashboardPage extends ConsumerWidget {
                         r.nextExecutionDate.isAtSameMomentAs(now)),
               )
               .toList();
-          final upcomingRules = rules
+
+          final upcomingRules = activeRules
               .where((r) => !pendingRules.contains(r))
               .toList();
 
@@ -455,6 +506,7 @@ class AutomationDashboardPage extends ConsumerWidget {
                   ),
                 ),
               ],
+
               if (upcomingRules.isNotEmpty) ...[
                 SliverToBoxAdapter(
                   child: Padding(
@@ -487,6 +539,44 @@ class AutomationDashboardPage extends ConsumerWidget {
                   ),
                 ),
               ],
+
+              // --- NEW: RENDER EXPIRED RULES ---
+              if (expiredRules.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 32, 20, 8),
+                    child: Text(
+                      'EXPIRED RULES',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                          0.6,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => _buildRuleCard(
+                        context,
+                        ref,
+                        expiredRules[index],
+                        theme,
+                        isDark,
+                        false,
+                        isExpired: true,
+                      ),
+                      childCount: expiredRules.length,
+                    ),
+                  ),
+                ),
+              ],
+
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );

@@ -228,7 +228,7 @@ class RecurringTransactionRules extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
 
-  TextColumn get serviceWebsite => text().nullable()(); // NEW
+  TextColumn get serviceWebsite => text().nullable()();
   RealColumn get amount => real().nullable()();
 
   TextColumn get transactionType => text()();
@@ -244,10 +244,15 @@ class RecurringTransactionRules extends Table {
 
   TextColumn get repetitionSchedule => text()();
   IntColumn get repetitionInterval => integer()();
-  TextColumn get advancedSchedule =>
-      text().nullable()(); // NEW (e.g., "1st Monday")
+  TextColumn get advancedSchedule => text().nullable()();
   DateTimeColumn get startDate => dateTime()();
   TextColumn get occurrenceTime => text()();
+
+  // --- NEW: END CONDITION FIELDS ---
+  DateTimeColumn get endDate => dateTime().nullable()();
+  IntColumn get maxExecutions => integer().nullable()();
+  IntColumn get currentExecutionCount =>
+      integer().withDefault(const Constant(0))();
 
   BoolColumn get isAutomatic => boolean()();
   DateTimeColumn get lastExecutedDate => dateTime().nullable()();

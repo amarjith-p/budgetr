@@ -37,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMPED TO VERSION 25 ---
   @override
-  int get schemaVersion => 39;
+  int get schemaVersion => 40;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -144,6 +144,21 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(
           smartTrackerTemplates,
           smartTrackerTemplates.summaryWidgetJson,
+        );
+      }
+      if (from < 40) {
+        // --- ADDED NEW RECURRING RULE EXPIRATION COLUMNS ---
+        await m.addColumn(
+          recurringTransactionRules,
+          recurringTransactionRules.endDate,
+        );
+        await m.addColumn(
+          recurringTransactionRules,
+          recurringTransactionRules.maxExecutions,
+        );
+        await m.addColumn(
+          recurringTransactionRules,
+          recurringTransactionRules.currentExecutionCount,
         );
       }
     },

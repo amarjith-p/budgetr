@@ -109,7 +109,6 @@ class AutomationEngine {
   final AppDatabase _db;
   final TransactionService _txService;
   final InAppNotificationService _notifService;
-  final _uuid = const Uuid();
 
   AutomationEngine(this._db, this._txService, this._notifService);
 
@@ -118,9 +117,9 @@ class AutomationEngine {
     final now = DateTime.now();
 
     for (var rule in rules) {
+      // --- ABSOLUTE SAFEGUARD: EXPIRED RULES ARE COMPLETELY SKIPPED ---
       if (!rule.isActive) continue;
 
-      // --- 1. STRICT DEPENDENCY VALIDATION (Accounts & Categories) ---
       bool depsValid = true;
       String errorReason = 'a linked account was deleted.';
 
@@ -136,7 +135,6 @@ class AutomationEngine {
         if (toAcc == null) depsValid = false;
       }
 
-      // Check Category
       if (rule.categoryId != null) {
         final cat = await (_db.select(
           _db.transactionCategories,
@@ -168,10 +166,20 @@ class AutomationEngine {
       DateTime next = rule.nextExecutionDate;
       DateTime? lastExecuted = rule.lastExecutedDate;
       bool ruleUpdated = false;
+      bool isNowInactive = false;
+      int execCount = rule.currentExecutionCount;
 
       if (rule.isAutomatic && rule.amount != null) {
         while (next.isBefore(now) || next.isAtSameMomentAs(now)) {
-          // --- 2. DYNAMIC BUCKET RESOLUTION ---
+          if (rule.endDate != null && next.isAfter(rule.endDate!)) {
+            isNowInactive = true;
+            break;
+          }
+          if (rule.maxExecutions != null && execCount >= rule.maxExecutions!) {
+            isNowInactive = true;
+            break;
+          }
+
           int? resolvedBucketId = rule.bucketId;
           if (rule.bucketName != null && rule.bucketName != 'Out of Bucket') {
             final budget =
@@ -181,7 +189,7 @@ class AutomationEngine {
                     ))
                     .getSingleOrNull();
 
-            resolvedBucketId = null; // Default to 'Out of Bucket'
+            resolvedBucketId = null;
             if (budget != null && budget.bucketsSnapshot != null) {
               try {
                 final List<dynamic> decoded = jsonDecode(
@@ -207,7 +215,7 @@ class AutomationEngine {
             categoryName: rule.categoryName,
             categoryIcon: rule.categoryIcon,
             subCategory: rule.subCategory,
-            bucketId: resolvedBucketId, // Use dynamically resolved ID
+            bucketId: resolvedBucketId,
             bucketName: resolvedBucketId == null ? null : rule.bucketName,
             notes: 'Auto-logged by ${rule.name}',
           );
@@ -218,6 +226,8 @@ class AutomationEngine {
             body: '${rule.name} auto-logged successfully.',
             scheduledDate: next,
           );
+
+          execCount++;
           lastExecuted = next;
           next = ScheduleHelper.calculateNextDate(
             next,
@@ -226,9 +236,19 @@ class AutomationEngine {
             rule.advancedSchedule,
           );
           ruleUpdated = true;
+
+          if (rule.maxExecutions != null && execCount >= rule.maxExecutions!) {
+            isNowInactive = true;
+            break;
+          }
         }
       } else {
-        if (next.isBefore(now) || next.isAtSameMomentAs(now)) {
+        if (rule.endDate != null && next.isAfter(rule.endDate!)) {
+          isNowInactive = true;
+        } else if (rule.maxExecutions != null &&
+            execCount >= rule.maxExecutions!) {
+          isNowInactive = true;
+        } else if (next.isBefore(now) || next.isAtSameMomentAs(now)) {
           final payload = jsonEncode({
             "type": "manual_rule",
             "ruleId": rule.id,
@@ -248,13 +268,15 @@ class AutomationEngine {
         }
       }
 
-      if (ruleUpdated) {
+      if (ruleUpdated || isNowInactive) {
         await _db
             .update(_db.recurringTransactionRules)
             .replace(
               rule.copyWith(
                 nextExecutionDate: next,
                 lastExecutedDate: Value(lastExecuted),
+                currentExecutionCount: execCount,
+                isActive: !isNowInactive, // Auto-terminates here
               ),
             );
       }
@@ -262,7 +284,7 @@ class AutomationEngine {
       await _notifService.clearFutureNotifications(prefix: 'auto_${rule.id}');
       await _notifService.clearFutureNotifications(prefix: 'manual_${rule.id}');
 
-      if (next.isAfter(now)) {
+      if (next.isAfter(now) && !isNowInactive) {
         final isAuto = rule.isAutomatic && rule.amount != null;
         final title = isAuto
             ? 'Automation Executed'
@@ -324,9 +346,10 @@ final singleRecurringRuleProvider =
 final allRecurringRulesProvider =
     StreamProvider.autoDispose<List<RecurringTransactionRule>>((ref) {
       final db = ref.watch(databaseProvider);
-      return (db.select(
-        db.recurringTransactionRules,
-      )..orderBy([(t) => OrderingTerm.desc(t.nextExecutionDate)])).watch();
+      return (db.select(db.recurringTransactionRules)
+            // --- FIX: Restored fetching of ALL rules, so expired rules show on the dashboard ---
+            ..orderBy([(t) => OrderingTerm.desc(t.nextExecutionDate)]))
+          .watch();
     });
 
 class AutomationActionNotifier extends AsyncNotifier<void> {
@@ -350,6 +373,16 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
         _db.recurringTransactionRules,
       )..where((t) => t.id.equals(rule.id))).getSingle();
 
+      // --- ABSOLUTE SAFEGUARD: If rule is inactive/expired, throw instantly.
+      if (!currentRule.isActive) {
+        if (notificationId != null) {
+          await ref
+              .read(inAppNotificationActionProvider.notifier)
+              .markAsRead(notificationId);
+        }
+        throw Exception('This rule is expired and cannot be executed.');
+      }
+
       if (currentRule.nextExecutionDate.isAfter(executionDate)) {
         if (notificationId != null) {
           await ref
@@ -359,7 +392,16 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
         throw Exception('This transaction has already been executed.');
       }
 
-      // --- STRICT ACCOUNT PRE-VALIDATION ---
+      int execCount = currentRule.currentExecutionCount;
+      if (currentRule.endDate != null &&
+          executionDate.isAfter(currentRule.endDate!)) {
+        throw Exception('This rule has expired based on its End Date.');
+      }
+      if (currentRule.maxExecutions != null &&
+          execCount >= currentRule.maxExecutions!) {
+        throw Exception('This rule has reached its maximum execution count.');
+      }
+
       final acc = await (_db.select(
         _db.accounts,
       )..where((a) => a.id.equals(currentRule.accountId))).getSingleOrNull();
@@ -382,7 +424,6 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
         }
       }
 
-      // --- STRICT CATEGORY PRE-VALIDATION ---
       if (currentRule.categoryId != null) {
         final cat =
             await (_db.select(_db.transactionCategories)
@@ -395,7 +436,6 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
         }
       }
 
-      // --- DYNAMIC BUCKET RESOLUTION ---
       int? resolvedBucketId = currentRule.bucketId;
       if (currentRule.bucketName != null &&
           currentRule.bucketName != 'Out of Bucket') {
@@ -406,8 +446,7 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
                       b.year.equals(executionDate.year),
                 ))
                 .getSingleOrNull();
-
-        resolvedBucketId = null; // Default to 'Out of Bucket'
+        resolvedBucketId = null;
         if (budget != null && budget.bucketsSnapshot != null) {
           try {
             final List<dynamic> decoded = jsonDecode(budget.bucketsSnapshot!);
@@ -432,7 +471,7 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
         categoryName: currentRule.categoryName,
         categoryIcon: currentRule.categoryIcon,
         subCategory: currentRule.subCategory,
-        bucketId: resolvedBucketId, // Inject dynamic Bucket ID
+        bucketId: resolvedBucketId,
         bucketName: resolvedBucketId == null ? null : currentRule.bucketName,
         notes: 'Manually confirmed from ${currentRule.name}',
       );
@@ -444,12 +483,25 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
         currentRule.advancedSchedule,
       );
 
+      execCount++;
+      bool shouldDeactivate = false;
+      if (currentRule.maxExecutions != null &&
+          execCount >= currentRule.maxExecutions!) {
+        shouldDeactivate = true;
+      }
+      if (currentRule.endDate != null &&
+          nextDate.isAfter(currentRule.endDate!)) {
+        shouldDeactivate = true;
+      }
+
       await _db
           .update(_db.recurringTransactionRules)
           .replace(
             currentRule.copyWith(
               lastExecutedDate: Value(executionDate),
               nextExecutionDate: nextDate,
+              currentExecutionCount: execCount,
+              isActive: !shouldDeactivate,
             ),
           );
 
@@ -484,17 +536,34 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
     required DateTime startDate,
     required String occurrenceTime,
     required bool isAutomatic,
+    DateTime? endDate,
+    int? maxExecutions,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final timeParts = occurrenceTime.split(':');
-      final initialNextExecution = DateTime(
+      DateTime initialNextExecution = DateTime(
         startDate.year,
         startDate.month,
         startDate.day,
         int.parse(timeParts[0]),
         int.parse(timeParts[1]),
       );
+
+      final now = DateTime.now();
+      final isToday =
+          startDate.year == now.year &&
+          startDate.month == now.month &&
+          startDate.day == now.day;
+
+      if (isToday && initialNextExecution.isBefore(now)) {
+        initialNextExecution = ScheduleHelper.calculateNextDate(
+          initialNextExecution,
+          repetitionSchedule,
+          repetitionInterval,
+          advancedSchedule,
+        );
+      }
 
       if (existingId == null) {
         await _db
@@ -520,13 +589,29 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
                 startDate: startDate,
                 occurrenceTime: occurrenceTime,
                 isAutomatic: isAutomatic,
+                endDate: Value(endDate),
+                maxExecutions: Value(maxExecutions),
+                currentExecutionCount: const Value(0),
                 nextExecutionDate: initialNextExecution,
+                isActive: const Value(true), // Ensure it is active when created
               ),
             );
       } else {
         final existing = await (_db.select(
           _db.recurringTransactionRules,
         )..where((t) => t.id.equals(existingId))).getSingle();
+
+        // --- FIX: Reactivate rule if user edited the limits ---
+        bool shouldReactivate = false;
+        if (!existing.isActive) {
+          if (endDate != null && initialNextExecution.isBefore(endDate))
+            shouldReactivate = true;
+          if (maxExecutions != null &&
+              existing.currentExecutionCount < maxExecutions)
+            shouldReactivate = true;
+          if (endDate == null && maxExecutions == null) shouldReactivate = true;
+        }
+
         await _db
             .update(_db.recurringTransactionRules)
             .replace(
@@ -549,7 +634,10 @@ class AutomationActionNotifier extends AsyncNotifier<void> {
                 startDate: startDate,
                 occurrenceTime: occurrenceTime,
                 isAutomatic: isAutomatic,
+                endDate: Value(endDate),
+                maxExecutions: Value(maxExecutions),
                 nextExecutionDate: initialNextExecution,
+                isActive: shouldReactivate ? true : existing.isActive,
               ),
             );
       }

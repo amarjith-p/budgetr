@@ -1,3 +1,4 @@
+// lib/features/automation/views/automation_rule_form_page.dart
 import 'package:budgetr/core/models/transaction_category_model.dart';
 import 'package:budgetr/features/transactions/providers/transaction_provider.dart';
 import 'package:flutter/material.dart';
@@ -47,6 +48,7 @@ class _AutomationRuleFormPageState
   late TextEditingController _amountCtrl;
   late TextEditingController _intervalCtrl;
   late TextEditingController _websiteCtrl;
+  late TextEditingController _countCtrl; // NEW
 
   String? _selectedAccountId;
   String? _selectedToAccountId;
@@ -62,9 +64,12 @@ class _AutomationRuleFormPageState
   DateTime _startDate = DateTime.now();
   TimeOfDay _time = const TimeOfDay(hour: 9, minute: 0);
 
+  // NEW END CONDITION STATES
+  int _endConditionIndex = 0; // 0 = Never, 1 = On Date, 2 = After Count
+  DateTime? _endDate;
+
   bool _showCustomKeyboard = false;
   bool _showValidationErrors = false;
-
   String _expression = '';
   String _liveResult = '0.00';
 
@@ -114,6 +119,7 @@ class _AutomationRuleFormPageState
     _amountCtrl = TextEditingController();
     _intervalCtrl = TextEditingController(text: '1');
     _websiteCtrl = TextEditingController();
+    _countCtrl = TextEditingController();
 
     if (widget.existingRule != null) {
       final rule = widget.existingRule!;
@@ -152,6 +158,15 @@ class _AutomationRuleFormPageState
         );
       }
       _isAutomatic = rule.isAutomatic;
+
+      // SET END CONDITIONS IF EDITING
+      if (rule.endDate != null) {
+        _endConditionIndex = 1;
+        _endDate = rule.endDate;
+      } else if (rule.maxExecutions != null) {
+        _endConditionIndex = 2;
+        _countCtrl.text = rule.maxExecutions.toString();
+      }
     }
   }
 
@@ -161,6 +176,7 @@ class _AutomationRuleFormPageState
     _amountCtrl.dispose();
     _intervalCtrl.dispose();
     _websiteCtrl.dispose();
+    _countCtrl.dispose();
     super.dispose();
   }
 
@@ -169,7 +185,6 @@ class _AutomationRuleFormPageState
       int cursorPosition = _amountCtrl.selection.baseOffset;
       if (cursorPosition < 0) cursorPosition = _amountCtrl.text.length;
       String currentText = _amountCtrl.text;
-
       if (key == 'C') {
         _amountCtrl.clear();
         _expression = '';
@@ -227,7 +242,6 @@ class _AutomationRuleFormPageState
           );
         }
       }
-
       _expression = _amountCtrl.text;
       String rawResult = BodmasCalculator.evaluate(_expression);
       double? parsed = double.tryParse(rawResult);
@@ -342,7 +356,6 @@ class _AutomationRuleFormPageState
     _closeKeyboard();
     final theme = Theme.of(context);
     List<Account> availableAccounts = List.from(rawAccounts);
-
     if (isToAccount) {
       if (_selectedAccountId != null && _selectedAccountId != 'EXTERNAL') {
         availableAccounts = availableAccounts
@@ -358,7 +371,6 @@ class _AutomationRuleFormPageState
             .toList();
       }
     }
-
     final assets = availableAccounts
         .where((a) => a.type != 'Credit Cards' && a.type != 'Loan')
         .toList();
@@ -367,12 +379,10 @@ class _AutomationRuleFormPageState
         .toList();
     final loans = availableAccounts.where((a) => a.type == 'Loan').toList();
     final selectedId = isToAccount ? _selectedToAccountId : _selectedAccountId;
-
     bool showExternal = _typeIndex == 2;
     if (isToAccount && _selectedAccountId == 'EXTERNAL') showExternal = false;
     if (!isToAccount && _selectedToAccountId == 'EXTERNAL')
       showExternal = false;
-
     final selected = await GlobalSelectionSheet.show<String>(
       context: context,
       title: isToAccount ? 'Select Destination' : 'Select Account',
@@ -486,7 +496,6 @@ class _AutomationRuleFormPageState
         );
       },
     );
-
     if (selected != null && mounted) {
       setState(() {
         if (isToAccount) {
@@ -568,7 +577,6 @@ class _AutomationRuleFormPageState
     if (selected != null && mounted) setState(() => _schedule = selected);
   }
 
-  // --- FIXED: ADDED INTERVAL PICKER LOGIC ---
   Future<void> _pickInterval() async {
     _closeKeyboard();
     final items = List.generate(30, (index) => (index + 1).toString());
@@ -612,6 +620,51 @@ class _AutomationRuleFormPageState
     if (t != null && mounted) setState(() => _time = t);
   }
 
+  // --- NEW: Expiration Pickers ---
+  Future<void> _pickEndCondition() async {
+    _closeKeyboard();
+    final selected = await GlobalSelectionSheet.showSimple(
+      context: context,
+      title: 'End Condition',
+      items: const ['Never', 'On Date', 'After Count'],
+      selectedValue: _endConditionIndex == 0
+          ? 'Never'
+          : (_endConditionIndex == 1 ? 'On Date' : 'After Count'),
+    );
+    if (selected != null && mounted) {
+      setState(() {
+        if (selected == 'Never') _endConditionIndex = 0;
+        if (selected == 'On Date') _endConditionIndex = 1;
+        if (selected == 'After Count') _endConditionIndex = 2;
+      });
+    }
+  }
+
+  Future<void> _pickEndDate() async {
+    _closeKeyboard();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? _startDate.add(const Duration(days: 30)),
+      firstDate: _startDate,
+      lastDate: DateTime(2100),
+    );
+    if (date != null && mounted) setState(() => _endDate = date);
+  }
+
+  Future<void> _pickMaxCount() async {
+    _closeKeyboard();
+    final items = List.generate(120, (i) => (i + 1).toString());
+    final selected = await GlobalSelectionSheet.showSimple(
+      context: context,
+      title: 'Execution Limit',
+      items: items,
+      selectedValue: _countCtrl.text.isEmpty ? '12' : _countCtrl.text,
+    );
+    if (selected != null && mounted) {
+      setState(() => _countCtrl.text = selected);
+    }
+  }
+
   void _closeKeyboard() {
     FocusScope.of(context).unfocus();
     setState(() => _showCustomKeyboard = false);
@@ -625,23 +678,27 @@ class _AutomationRuleFormPageState
       BodmasCalculator.evaluate(_amountCtrl.text),
     );
     final intervalVal = int.tryParse(_intervalCtrl.text) ?? 1;
-
     final isTransfer = _typeIndex == 2;
     final isExpense = _typeIndex == 0;
+
+    final isDateMode = _endConditionIndex == 1;
+    final isCountMode = _endConditionIndex == 2;
+    final maxCountVal = int.tryParse(_countCtrl.text) ?? 0;
 
     if (intervalVal <= 0 ||
         (!_isVariableAmount && (amountVal == null || amountVal <= 0)) ||
         _selectedAccountId == null ||
         (isTransfer && _selectedToAccountId == null) ||
         (!isTransfer && _selectedCategoryId == null) ||
-        (isExpense && _selectedBucketId == null)) {
+        (isExpense && _selectedBucketId == null) ||
+        (isDateMode && _endDate == null) ||
+        (isCountMode && maxCountVal <= 0)) {
       setState(() => _showValidationErrors = true);
       HapticFeedback.heavyImpact();
       return;
     }
 
     HapticFeedback.selectionClick();
-
     final success = await ref
         .read(automationActionProvider.notifier)
         .saveRule(
@@ -667,6 +724,8 @@ class _AutomationRuleFormPageState
           occurrenceTime:
               '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}',
           isAutomatic: _isAutomatic,
+          endDate: isDateMode ? _endDate : null,
+          maxExecutions: isCountMode ? maxCountVal : null,
         );
 
     if (success && mounted) Navigator.pop(context);
@@ -674,7 +733,7 @@ class _AutomationRuleFormPageState
 
   Widget _buildProjectedSchedule(ThemeData theme) {
     List<DateTime> projections = [];
-    DateTime base = DateTime(
+    DateTime pointer = DateTime(
       _startDate.year,
       _startDate.month,
       _startDate.day,
@@ -682,14 +741,88 @@ class _AutomationRuleFormPageState
       _time.minute,
     );
 
-    for (int i = 0; i < 3; i++) {
-      base = ScheduleHelper.calculateNextDate(
-        base,
+    // Align pointer to the exact first execution just like the save logic does
+    final now = DateTime.now();
+    final isToday =
+        pointer.year == now.year &&
+        pointer.month == now.month &&
+        pointer.day == now.day;
+
+    if (isToday && pointer.isBefore(now)) {
+      pointer = ScheduleHelper.calculateNextDate(
+        pointer,
         _schedule,
         int.tryParse(_intervalCtrl.text) ?? 1,
         _advancedSchedule,
       );
-      projections.add(base);
+    }
+
+    // --- FIX: Constrain projections based on Execution Limit ---
+    int maxProjections = 3;
+    if (_endConditionIndex == 2) {
+      int limit = int.tryParse(_countCtrl.text) ?? 1;
+      int currentExecs = widget.existingRule?.currentExecutionCount ?? 0;
+      int remaining = limit - currentExecs;
+      maxProjections = remaining > 0 ? (remaining > 3 ? 3 : remaining) : 0;
+    }
+
+    for (int i = 0; i < maxProjections; i++) {
+      // --- FIX: Constrain projections based on End Date ---
+      if (_endConditionIndex == 1 && _endDate != null) {
+        DateTime purePointer = DateTime(
+          pointer.year,
+          pointer.month,
+          pointer.day,
+        );
+        DateTime pureEnd = DateTime(
+          _endDate!.year,
+          _endDate!.month,
+          _endDate!.day,
+        );
+        if (purePointer.isAfter(pureEnd)) break;
+      }
+
+      projections.add(pointer);
+
+      pointer = ScheduleHelper.calculateNextDate(
+        pointer,
+        _schedule,
+        int.tryParse(_intervalCtrl.text) ?? 1,
+        _advancedSchedule,
+      );
+    }
+
+    // --- FIX: Show warning if rule will expire immediately ---
+    if (projections.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.errorContainer.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: theme.colorScheme.error.withOpacity(0.5)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.event_busy_rounded,
+              size: 16,
+              color: theme.colorScheme.error,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'No upcoming executions. Rule will expire immediately based on these limits.',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return Container(
@@ -773,7 +906,6 @@ class _AutomationRuleFormPageState
   ) {
     final theme = Theme.of(context);
     final hasValue = value != null && value.isNotEmpty;
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -839,12 +971,10 @@ class _AutomationRuleFormPageState
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final txColor = TransactionColors.getTypeColor(_types[_typeIndex], theme);
-
     final rawAccounts = ref.watch(accountsStreamProvider).asData?.value ?? [];
     final rawCategories =
         ref.watch(categoriesStreamProvider).asData?.value ?? [];
     final rawBuckets = ref.watch(bucketsStreamProvider).asData?.value ?? [];
-
     final activeCategories = rawCategories
         .where((c) => c.type == _types[_typeIndex])
         .toList();
@@ -852,21 +982,18 @@ class _AutomationRuleFormPageState
         .where((c) => c.id == _selectedCategoryId)
         .firstOrNull;
     final activeSubCategories = selectedCatMatch?.subCategories ?? [];
-
     final selectedAccMatch = rawAccounts
         .where((a) => a.id == _selectedAccountId)
         .firstOrNull;
     final selectedToAccMatch = rawAccounts
         .where((a) => a.id == _selectedToAccountId)
         .firstOrNull;
-
     final displayAccName = _selectedAccountId == 'EXTERNAL'
         ? 'External Account'
         : selectedAccMatch?.name;
     final displayToAccName = _selectedToAccountId == 'EXTERNAL'
         ? 'External Account'
         : selectedToAccMatch?.name;
-
     final isTransfer = _typeIndex == 2;
     final isExpense = _typeIndex == 0;
 
@@ -889,7 +1016,6 @@ class _AutomationRuleFormPageState
         _pickSchedule,
         false,
       ),
-      // --- FIXED: ADDED _pickInterval to onTap ---
       _buildTableCell(
         'INTERVAL (COUNT)',
         _intervalCtrl.text,
@@ -919,6 +1045,35 @@ class _AutomationRuleFormPageState
         _pickTime,
         false,
       ),
+
+      // --- EXPIRATION CELLS ---
+      _buildTableCell(
+        'ENDS',
+        _endConditionIndex == 0
+            ? 'Never'
+            : (_endConditionIndex == 1 ? 'On Date' : 'After Count'),
+        Icons.event_busy_rounded,
+        _pickEndCondition,
+        false,
+      ),
+      if (_endConditionIndex == 1)
+        _buildTableCell(
+          'END DATE',
+          _endDate != null ? DateFormat('dd MMM yyyy').format(_endDate!) : null,
+          Icons.event_available_rounded,
+          _pickEndDate,
+          _showValidationErrors && _endDate == null,
+        )
+      else if (_endConditionIndex == 2)
+        _buildTableCell(
+          'EXECUTION LIMIT',
+          _countCtrl.text.isEmpty ? null : '${_countCtrl.text} Times',
+          Icons.numbers_rounded,
+          _pickMaxCount,
+          _showValidationErrors && (int.tryParse(_countCtrl.text) ?? 0) <= 0,
+        ),
+
+      // --- ACCOUNT CELLS ---
       _buildTableCell(
         isTransfer ? 'FROM ACCOUNT' : 'ACCOUNT',
         displayAccName,
@@ -971,6 +1126,8 @@ class _AutomationRuleFormPageState
         );
       }
     }
+
+    // Maintain even number of cells
     if (cells.length % 2 != 0) cells.add(const SizedBox.shrink());
 
     List<TableRow> tableRows = [];
@@ -1125,7 +1282,6 @@ class _AutomationRuleFormPageState
                           ),
                         ),
                       ),
-
                     Container(
                       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                       decoration: BoxDecoration(
@@ -1156,14 +1312,12 @@ class _AutomationRuleFormPageState
                         children: tableRows,
                       ),
                     ),
-
                     _buildProjectedSchedule(theme),
                     const SizedBox(height: 32),
                   ],
                 ),
               ),
             ),
-
             if (!_showCustomKeyboard)
               Container(
                 padding: const EdgeInsets.all(DesignTokens.spacingLg),
