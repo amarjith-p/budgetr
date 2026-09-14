@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/components/modern_app_bar.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../providers/notification_provider.dart';
@@ -41,6 +42,7 @@ class NotificationManagerScreen extends ConsumerWidget {
         );
       },
     );
+
     if (time != null) {
       if (isLoan) {
         ref
@@ -98,7 +100,6 @@ class NotificationManagerScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(DesignTokens.spacingLg),
         children: [
           _buildBoxyMasterToggle(context, ref, settings),
-
           if (settings.enableNotifications) ...[
             const SizedBox(height: DesignTokens.spacingXl),
 
@@ -123,7 +124,28 @@ class NotificationManagerScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DesignTokens.spacingXl),
 
-            // --- NEW: AUTOMATION ---
+            // --- ANALYTICS ---
+            _buildSectionHeader('ANALYTICS', theme),
+            const SizedBox(height: 8),
+            _buildBoxySettingsGroup(
+              context,
+              children: [
+                _buildBoxyToggleRow(
+                  context,
+                  title: 'Smart Pacing Advice',
+                  subtitle: 'Get actionable heatmap advice up to 3 times a day',
+                  value: settings.heatmapAlertsEnabled,
+                  onChanged: (val) => ref
+                      .read(notificationSettingsProvider.notifier)
+                      .updateSettings(
+                        settings.copyWith(heatmapAlertsEnabled: val),
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DesignTokens.spacingXl),
+
+            // --- AUTOMATION ---
             _buildSectionHeader('AUTOMATION', theme),
             const SizedBox(height: 8),
             _buildBoxySettingsGroup(
@@ -146,14 +168,11 @@ class NotificationManagerScreen extends ConsumerWidget {
 
             _buildSectionHeader('ACTIVE MODULES', theme),
             const SizedBox(height: 8),
-
             // --- CREDIT CARDS ---
             _buildCreditCardBoxyGroup(context, ref, settings, theme, isDark),
             const SizedBox(height: DesignTokens.spacingMd),
-
             // --- LOANS ---
             _buildLoanBoxyGroup(context, ref, settings, theme, isDark),
-
             const SizedBox(height: DesignTokens.spacingXl),
           ],
         ],
@@ -370,9 +389,7 @@ class NotificationManagerScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
                   _buildSectionHeader('CRITICAL ALERTS', theme),
                   const SizedBox(height: 8),
                   _buildBoxySettingsGroup(
@@ -403,9 +420,7 @@ class NotificationManagerScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 24),
-
                   _buildSectionHeader('ADVANCE WARNINGS', theme),
                   const SizedBox(height: 8),
                   _buildBoxySettingsGroup(
@@ -575,9 +590,7 @@ class NotificationManagerScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
                   _buildSectionHeader('CRITICAL ALERTS', theme),
                   const SizedBox(height: 8),
                   _buildBoxySettingsGroup(
@@ -596,9 +609,7 @@ class NotificationManagerScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 24),
-
                   _buildSectionHeader('ADVANCE WARNINGS', theme),
                   const SizedBox(height: 8),
                   _buildBoxySettingsGroup(

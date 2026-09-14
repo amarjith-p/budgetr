@@ -56,8 +56,9 @@ class _BackupPageState extends ConsumerState<BackupPage> {
         setState(() {
           _dbInfo = dbInfo;
           _latestBackup = latestBackup;
+          // UPDATE THIS TERNARY OPERATOR:
           _backupPath = Platform.isAndroid
-              ? 'Downloads/FinStack 360'
+              ? 'Downloads/FinStack 360/Backups'
               : 'App Documents/Backups';
         });
       }

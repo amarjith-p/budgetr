@@ -1,21 +1,27 @@
 // lib/features/notifications/providers/notification_provider.dart
-import 'package:budgetr/features/automation/providers/automation_provider.dart';
+import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/services/notification_service.dart';
 import '../../accounts/providers/account_provider.dart';
 import 'in_app_notification_provider.dart';
-
-// --- ADDED BACKUP REMINDER IMPORT ---
 import '../../backup/providers/backup_reminder_provider.dart';
+import '../../automation/providers/automation_provider.dart';
+
+// --- NEW IMPORTS FOR HEATMAP AI ---
+import '../../heatmap/providers/heatmap_daily_spend_provider.dart';
+import '../../heatmap/models/day_spend_summary.dart';
 
 class NotificationSettings {
   final bool enableNotifications;
   final bool backupReminderEnabled;
-  final bool smartInboxPushEnabled; // <-- NEW
+  final bool smartInboxPushEnabled;
+  final bool heatmapAlertsEnabled; // <-- NEW: Analytics Switch
 
   // Credit Card Settings
   final int ccAlertHour;
@@ -37,7 +43,8 @@ class NotificationSettings {
   NotificationSettings({
     this.enableNotifications = true,
     this.backupReminderEnabled = true,
-    this.smartInboxPushEnabled = true, // <-- NEW
+    this.smartInboxPushEnabled = true,
+    this.heatmapAlertsEnabled = true, // <-- NEW
     this.ccAlertHour = 9,
     this.ccAlertMinute = 0,
     this.notifyOnBillDate = true,
@@ -56,7 +63,8 @@ class NotificationSettings {
   NotificationSettings copyWith({
     bool? enableNotifications,
     bool? backupReminderEnabled,
-    bool? smartInboxPushEnabled, // <-- NEW
+    bool? smartInboxPushEnabled,
+    bool? heatmapAlertsEnabled, // <-- NEW
     int? ccAlertHour,
     int? ccAlertMinute,
     bool? notifyOnBillDate,
@@ -76,7 +84,9 @@ class NotificationSettings {
       backupReminderEnabled:
           backupReminderEnabled ?? this.backupReminderEnabled,
       smartInboxPushEnabled:
-          smartInboxPushEnabled ?? this.smartInboxPushEnabled, // <-- NEW
+          smartInboxPushEnabled ?? this.smartInboxPushEnabled,
+      heatmapAlertsEnabled:
+          heatmapAlertsEnabled ?? this.heatmapAlertsEnabled, // <-- NEW
       ccAlertHour: ccAlertHour ?? this.ccAlertHour,
       ccAlertMinute: ccAlertMinute ?? this.ccAlertMinute,
       notifyOnBillDate: notifyOnBillDate ?? this.notifyOnBillDate,
@@ -106,8 +116,9 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
     state = NotificationSettings(
       enableNotifications: prefs.getBool('enableNotifications') ?? true,
       backupReminderEnabled: prefs.getBool('backupReminderEnabled') ?? true,
-      smartInboxPushEnabled:
-          prefs.getBool('smartInboxPushEnabled') ?? true, // <-- NEW
+      smartInboxPushEnabled: prefs.getBool('smartInboxPushEnabled') ?? true,
+      heatmapAlertsEnabled:
+          prefs.getBool('heatmapAlertsEnabled') ?? true, // <-- NEW
       ccAlertHour: prefs.getInt('ccAlertHour') ?? 9,
       ccAlertMinute: prefs.getInt('ccAlertMinute') ?? 0,
       notifyOnBillDate: prefs.getBool('notifyOnBillDate') ?? true,
@@ -127,6 +138,7 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
   Future<void> updateSettings(NotificationSettings newSettings) async {
     state = newSettings;
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.setBool('enableNotifications', newSettings.enableNotifications);
     await prefs.setBool(
       'backupReminderEnabled',
@@ -135,7 +147,12 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
     await prefs.setBool(
       'smartInboxPushEnabled',
       newSettings.smartInboxPushEnabled,
+    );
+    await prefs.setBool(
+      'heatmapAlertsEnabled',
+      newSettings.heatmapAlertsEnabled,
     ); // <-- NEW
+
     await prefs.setInt('ccAlertHour', newSettings.ccAlertHour);
     await prefs.setInt('ccAlertMinute', newSettings.ccAlertMinute);
     await prefs.setBool('notifyOnBillDate', newSettings.notifyOnBillDate);
@@ -183,12 +200,120 @@ void initializeNotificationScheduler(WidgetRef ref) {
   ) {
     final accounts = ref.read(accountsStreamProvider).asData?.value ?? [];
     _scheduleNotificationsForAccounts(accounts, next, ref);
-
-    // --- NEW: Recalculate backup timer immediately if settings are toggled ---
     ref.read(backupReminderProvider.notifier).scheduleNextReminder();
+  });
+
+  // --- NEW: LISTEN TO HEATMAP AI IN THE BACKGROUND ---
+  // Every time transactions update, this provider evaluates the 6 AI Scenarios.
+  // The listener fires and dynamically overwrites the next available notification slot.
+  ref.listen<HeatmapData>(heatmapDailySpendProvider, (previous, next) {
+    _scheduleHeatmapAdvice(ref, next);
   });
 }
 
+// --- NEW: HEATMAP SCHEDULER LOGIC ---
+Future<void> _scheduleHeatmapAdvice(
+  WidgetRef ref,
+  HeatmapData heatmapData,
+) async {
+  final settings = ref.read(notificationSettingsProvider);
+  final service = NotificationService.instance;
+  final inAppService = ref.read(inAppNotificationServiceProvider);
+
+  // Hardcoded reservation IDs for our 3 daily heatmap slots
+  const int slot1Id = 200001;
+  const int slot2Id = 200002;
+  const int slot3Id = 200003;
+
+  if (!settings.enableNotifications ||
+      !settings.heatmapAlertsEnabled ||
+      heatmapData.advices.isEmpty) {
+    await service.cancelSpecific(slot1Id);
+    await service.cancelSpecific(slot2Id);
+    await service.cancelSpecific(slot3Id);
+    await inAppService.clearFutureNotifications(prefix: 'heatmap_');
+    return;
+  }
+
+  // Get the most urgent priority advice evaluated by the AI
+  final advice = heatmapData.advices.first;
+
+  // Suppress "No Buckets Selected" default advice from creating notifications
+  if (advice.text.contains("Assign categories to budget buckets")) return;
+
+  final now = DateTime.now();
+  DateTime target;
+  int targetSlotId;
+
+  // Determine the next chronological slot available for today
+  if (now.hour < 9) {
+    target = DateTime(now.year, now.month, now.day, 9, 0); // Morning Pacing
+    targetSlotId = slot1Id;
+  } else if (now.hour < 14) {
+    target = DateTime(now.year, now.month, now.day, 14, 0); // Mid-Day Pulse
+    targetSlotId = slot2Id;
+  } else if (now.hour < 19 || (now.hour == 19 && now.minute < 30)) {
+    target = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      19,
+      30,
+    ); // Evening Intercept
+    targetSlotId = slot3Id;
+  } else {
+    // If today's slots are exhausted, schedule for 9 AM tomorrow.
+    final tomorrow = now.add(const Duration(days: 1));
+    target = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9, 0);
+    targetSlotId = slot1Id;
+  }
+
+  // Avoid unnecessary OS/DB thrashing if the exact same message is already pending for this exact slot
+  final prefs = await SharedPreferences.getInstance();
+  final lastHash = prefs.getString('heatmap_last_hash');
+  final currentHash =
+      '${targetSlotId}_${target.toIso8601String()}_${advice.text}';
+  if (lastHash == currentHash) return;
+
+  await prefs.setString('heatmap_last_hash', currentHash);
+
+  // Clear any existing pending heatmap notifications to guarantee a maximum of 1 active at a time
+  await service.cancelSpecific(slot1Id);
+  await service.cancelSpecific(slot2Id);
+  await service.cancelSpecific(slot3Id);
+  await inAppService.clearFutureNotifications(prefix: 'heatmap_');
+
+  // Determine Title based on Color Priority
+  String title = 'Financial Insight';
+  if (advice.color == Colors.red.shade700) {
+    title = 'Critical Budget Alert 🛑';
+  } else if (advice.color == Colors.orangeAccent.shade700) {
+    title = 'Pacing Warning ⚠️';
+  } else if (advice.color == Colors.blue.shade600) {
+    title = 'Weekend Adjustment ⚖️';
+  } else {
+    title = 'Smart Pacing 💡';
+  }
+
+  // Schedule to Native OS Tray
+  await service.scheduleNotification(
+    id: targetSlotId,
+    title: title,
+    body: advice.text,
+    scheduledDate: target,
+  );
+
+  // Add to In-App Notification Center
+  await inAppService.saveNotification(
+    id: 'heatmap_$targetSlotId',
+    title: title,
+    body: advice.text,
+    scheduledDate: target,
+    payload: jsonEncode({"type": "heatmap_advice"}),
+  );
+}
+
+// ... Keep existing _scheduleNotificationsForAccounts unchanged below ...
 Future<void> _scheduleNotificationsForAccounts(
   List<Account> accounts,
   NotificationSettings settings,
@@ -196,10 +321,7 @@ Future<void> _scheduleNotificationsForAccounts(
 ) async {
   final service = NotificationService.instance;
 
-  // --- FIX 1: Use targeted cancellation instead of a global wipe ---
   await service.cancelAccountNotifications();
-
-  // Clear future in-app notifications to prevent duplicates
   await ref
       .read(inAppNotificationServiceProvider)
       .clearFutureNotifications(prefix: 'alert_');
@@ -219,7 +341,6 @@ Future<void> _scheduleNotificationsForAccounts(
     final now = DateTime.now();
     int maxDays = DateTime(now.year, now.month + 1, 0).day;
     int safeDay = targetDay > maxDays ? maxDays : targetDay;
-
     DateTime target = DateTime(now.year, now.month, safeDay, hour, minute);
 
     if (target.isBefore(now)) {
@@ -240,9 +361,7 @@ Future<void> _scheduleNotificationsForAccounts(
 
   void addEvent(DateTime triggerDate, String eventType, Account account) {
     if (triggerDate.isBefore(DateTime.now())) return;
-
     final formattedName = "${account.name} - ${account.providerName}";
-
     String dateKey =
         "${triggerDate.year}-${triggerDate.month.toString().padLeft(2, '0')}-${triggerDate.day.toString().padLeft(2, '0')} ${triggerDate.hour.toString().padLeft(2, '0')}:${triggerDate.minute.toString().padLeft(2, '0')}";
     String groupKey = "$dateKey|$eventType";
@@ -276,8 +395,8 @@ Future<void> _scheduleNotificationsForAccounts(
 
   for (var loan in activeLoans) {
     if (loan.emiDate == null) continue;
-
     final eDay = loan.emiDate!.day;
+
     final nextEmiDate = getNextTargetDate(
       eDay,
       settings.loanAlertHour,
@@ -293,12 +412,6 @@ Future<void> _scheduleNotificationsForAccounts(
       addEvent(nextEmiDate.subtract(const Duration(days: 5)), 'emi5', loan);
   }
 
-  // --- FIX 2: Shift starting ID to 100000 to prevent collisions ---
-  int notificationId = 100000;
-  int delaySeconds = 0;
-  final uuid = const Uuid();
-
-  // --- FIX 2: Use deterministic hash IDs and remove shifting delay timestamps ---
   for (var entry in groupedEvents.entries) {
     final groupKey = entry.key;
     final parts = groupKey.split('|');
@@ -310,8 +423,6 @@ Future<void> _scheduleNotificationsForAccounts(
     final dateParts = dtParts[0].split('-');
     final timeParts = dtParts[1].split(':');
 
-    // We no longer add arbitrary seconds to this date.
-    // Keeping it exactly on the minute ensures OS-level alarm overwrites work perfectly.
     final scheduledDate = DateTime(
       int.parse(dateParts[0]),
       int.parse(dateParts[1]),
@@ -320,15 +431,12 @@ Future<void> _scheduleNotificationsForAccounts(
       int.parse(timeParts[1]),
     );
 
-    // Create a 100% deterministic, repeatable ID based on the exact time and event type.
-    // This bounds the ID between 100000 and 189999 safely.
     final int notificationId = 100000 + (groupKey.hashCode.abs() % 90000);
 
     String title = '';
     String body = '';
-
     bool isPlural = accountNames.length > 1;
-    String bulletedList = accountNames.map((name) => '• $name').join('\n');
+    String bulletedList = accountNames.map((name) => '  $name').join('\n');
 
     switch (eventType) {
       case 'bill':

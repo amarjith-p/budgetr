@@ -44,9 +44,11 @@ class BackupService {
           'Storage permission denied. Cannot access the Downloads folder.',
         );
       }
-
       // Target the public Android Downloads folder directly
-      directory = Directory('/storage/emulated/0/Download/FinStack 360');
+      // UPDATE THIS LINE:
+      directory = Directory(
+        '/storage/emulated/0/Download/FinStack 360/Backups',
+      );
 
       if (!await directory.exists()) {
         await directory.create(recursive: true);
