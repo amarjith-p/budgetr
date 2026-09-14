@@ -3,6 +3,7 @@ import 'package:budgetr/features/transactions/views/transaction_form_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/theme/transaction_colors.dart';
 import '../../../core/components/currency_text.dart';
 import '../models/day_spend_summary.dart';
@@ -34,19 +35,20 @@ class HeatmapGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final days = ref.watch(heatmapDailySpendProvider);
+
+    // --- FIX: Unwrap .days here ---
+    final days = ref.watch(heatmapDailySpendProvider).days;
     final selectedDate = ref.watch(heatmapSelectedDateProvider);
 
     if (days.isEmpty) return const SizedBox.shrink();
 
     final firstDay = days.first.date;
-    final prefixDays = firstDay.weekday - 1; // Mon = 1, so offset = 0
+    final prefixDays = firstDay.weekday - 1;
     final totalCells = prefixDays + days.length;
     final today = DateTime.now();
 
     final weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-    // --- FIX: Increased Dark Mode contrast for 0 Spend cells ---
     final colorNoData = isDark
         ? Colors.white.withOpacity(0.12)
         : theme.dividerColor.withOpacity(0.5);
@@ -217,7 +219,7 @@ class HeatmapGrid extends ConsumerWidget {
               TransactionColors.income(theme).withOpacity(0.8),
               CurrencyText(
                 amount: t,
-                sign: '≤ ₹ ',
+                sign: '<  ',
                 amountStyle: legendTextStyle,
                 symbolStyle: legendTextStyle,
               ),
@@ -227,7 +229,7 @@ class HeatmapGrid extends ConsumerWidget {
               TransactionColors.transfer(theme).withOpacity(0.8),
               CurrencyText(
                 amount: t * 1.5,
-                sign: '≤ ₹ ',
+                sign: '<  ',
                 amountStyle: legendTextStyle,
                 symbolStyle: legendTextStyle,
               ),
@@ -237,7 +239,7 @@ class HeatmapGrid extends ConsumerWidget {
               TransactionColors.expense(theme).withOpacity(0.8),
               CurrencyText(
                 amount: t * 1.5,
-                sign: '> ₹ ',
+                sign: '>  ',
                 amountStyle: legendTextStyle,
                 symbolStyle: legendTextStyle,
               ),

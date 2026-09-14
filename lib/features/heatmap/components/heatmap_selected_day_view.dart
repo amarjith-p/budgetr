@@ -23,7 +23,9 @@ class HeatmapSelectedDayView extends ConsumerWidget {
     final theme = Theme.of(context);
     final allTxs = ref.watch(allTransactionsProvider).asData?.value ?? [];
 
-    final days = ref.read(heatmapDailySpendProvider);
+    // --- FIX: Unwrap .days here ---
+    final days = ref.read(heatmapDailySpendProvider).days;
+
     final summary = days
         .where(
           (d) =>
@@ -66,7 +68,6 @@ class HeatmapSelectedDayView extends ConsumerWidget {
                   if (summary != null)
                     Row(
                       children: [
-                        // --- FIX: Removed sign: '' so the default Rupee symbol displays ---
                         CurrencyText(
                           amount: summary.totalSpend,
                           amountStyle: TextStyle(
@@ -83,7 +84,6 @@ class HeatmapSelectedDayView extends ConsumerWidget {
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        // --- FIX: Native CurrencyText wrapper for the target ---
                         CurrencyText(
                           amount: summary.dailyTarget,
                           amountStyle: TextStyle(
