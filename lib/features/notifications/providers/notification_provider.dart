@@ -211,11 +211,13 @@ void initializeNotificationScheduler(WidgetRef ref) {
   ref.watch(notificationSchedulerProvider);
 }
 
+// --- HEATMAP RANDOMIZED SCHEDULER LOGIC ---
 Future<void> _scheduleHeatmapAdvice(Ref ref, HeatmapData heatmapData) async {
   final settings = ref.read(notificationSettingsProvider);
   final service = NotificationService.instance;
   final inAppService = ref.read(inAppNotificationServiceProvider);
 
+  // Hardcoded reservation IDs for our 3 daily heatmap slots
   const int slot1Id = 200001;
   const int slot2Id = 200002;
   const int slot3Id = 200003;
@@ -230,59 +232,133 @@ Future<void> _scheduleHeatmapAdvice(Ref ref, HeatmapData heatmapData) async {
     return;
   }
 
-  final advice = heatmapData.advices.first;
+  // --- 1. FILTER & DEDUPLICATE ADVICE ---
+  List<HeatmapAdvice> validAdvices = heatmapData.advices
+      .where((a) => !a.text.contains("Assign categories to budget buckets"))
+      .toList();
 
-  if (advice.text.contains("Assign categories to budget buckets")) return;
-
-  final now = DateTime.now();
-  DateTime target;
-  int targetSlotId;
-
-  if (now.hour < 9) {
-    target = DateTime(now.year, now.month, now.day, 9, 0);
-    targetSlotId = slot1Id;
-  } else if (now.hour < 14) {
-    target = DateTime(now.year, now.month, now.day, 14, 0);
-    targetSlotId = slot2Id;
-  } else if (now.hour < 19 || (now.hour == 19 && now.minute < 30)) {
-    target = DateTime(now.year, now.month, now.day, 19, 30);
-    targetSlotId = slot3Id;
-  } else {
-    final tomorrow = now.add(const Duration(days: 1));
-    target = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9, 0);
-    targetSlotId = slot1Id;
+  if (validAdvices.isEmpty) {
+    await service.cancelSpecific(slot1Id);
+    await service.cancelSpecific(slot2Id);
+    await service.cancelSpecific(slot3Id);
+    await inAppService.clearFutureNotifications(prefix: 'heatmap_');
+    return;
   }
 
+  // If the AI found specific behavioral insights, hide the generic baseline pacing text
+  if (validAdvices.length > 1) {
+    validAdvices.removeWhere(
+      (a) => a.text.contains("Monthly Pacing: Keep daily spends"),
+    );
+  }
+
+  // --- 2. PRIORITY SORTING & RANDOMIZATION ---
+  // Group by severity and shuffle within groups so multiple warnings don't get stale
+  final reds =
+      validAdvices.where((a) => a.color == Colors.red.shade700).toList()
+        ..shuffle();
+  final oranges =
+      validAdvices
+          .where((a) => a.color == Colors.orangeAccent.shade700)
+          .toList()
+        ..shuffle();
+  final others =
+      validAdvices
+          .where(
+            (a) =>
+                a.color != Colors.red.shade700 &&
+                a.color != Colors.orangeAccent.shade700,
+          )
+          .toList()
+        ..shuffle();
+
+  // Combine into a master list ordered by absolute priority
+  final prioritizedAdvices = [...reds, ...oranges, ...others];
+
+  // --- 3. GET THE NEXT 3 AVAILABLE TIME SLOTS ---
+  final now = DateTime.now();
+  List<Map<String, dynamic>> availableSlots = [];
+
+  // Find remaining slots for today
+  if (now.hour < 9)
+    availableSlots.add({
+      'id': slot1Id,
+      'time': DateTime(now.year, now.month, now.day, 9, 0),
+    });
+  if (now.hour < 14)
+    availableSlots.add({
+      'id': slot2Id,
+      'time': DateTime(now.year, now.month, now.day, 14, 0),
+    });
+  if (now.hour < 19 || (now.hour == 19 && now.minute < 30))
+    availableSlots.add({
+      'id': slot3Id,
+      'time': DateTime(now.year, now.month, now.day, 19, 30),
+    });
+
+  // Fill remaining capacity with tomorrow's slots to ensure a rolling 3-slot window
+  final tomorrow = now.add(const Duration(days: 1));
+  if (availableSlots.length < 3)
+    availableSlots.add({
+      'id': slot1Id,
+      'time': DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9, 0),
+    });
+  if (availableSlots.length < 3)
+    availableSlots.add({
+      'id': slot2Id,
+      'time': DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 14, 0),
+    });
+  if (availableSlots.length < 3)
+    availableSlots.add({
+      'id': slot3Id,
+      'time': DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 19, 30),
+    });
+
+  // --- 4. CLEANUP EXISTING ALARMS ---
   await service.cancelSpecific(slot1Id);
   await service.cancelSpecific(slot2Id);
   await service.cancelSpecific(slot3Id);
   await inAppService.clearFutureNotifications(prefix: 'heatmap_');
 
-  String title = 'Financial Insight';
-  if (advice.color == Colors.red.shade700) {
-    title = 'Critical Budget Alert 🛑';
-  } else if (advice.color == Colors.orangeAccent.shade700) {
-    title = 'Pacing Warning ⚠️';
-  } else if (advice.color == Colors.blue.shade600) {
-    title = 'Weekend Adjustment ⚖️';
-  } else {
-    title = 'Smart Pacing 💡';
+  // --- 5. SCHEDULE ONLY UNIQUE ADVICES ---
+  // If AI only yields 1 insight, schedule exactly 1 alarm. No repeating.
+  final int alarmsToSchedule = prioritizedAdvices.length > 3
+      ? 3
+      : prioritizedAdvices.length;
+
+  for (int i = 0; i < alarmsToSchedule; i++) {
+    final slotId = availableSlots[i]['id'] as int;
+    final targetTime = availableSlots[i]['time'] as DateTime;
+    final advice = prioritizedAdvices[i];
+
+    String title = 'Financial Insight';
+    if (advice.color == Colors.red.shade700) {
+      title = 'Critical Budget Alert 🛑';
+    } else if (advice.color == Colors.orangeAccent.shade700) {
+      title = 'Pacing Warning ⚠️';
+    } else if (advice.color == Colors.blue.shade600) {
+      title = 'Weekend Adjustment ⚖️';
+    } else {
+      title = 'Smart Pacing 💡';
+    }
+
+    // Schedule to Native OS Tray
+    await service.scheduleNotification(
+      id: slotId,
+      title: title,
+      body: advice.text,
+      scheduledDate: targetTime,
+    );
+
+    // Save to App Notification Center history
+    await inAppService.saveNotification(
+      id: 'heatmap_$slotId',
+      title: title,
+      body: advice.text,
+      scheduledDate: targetTime,
+      payload: jsonEncode({"type": "heatmap_advice"}),
+    );
   }
-
-  await service.scheduleNotification(
-    id: targetSlotId,
-    title: title,
-    body: advice.text,
-    scheduledDate: target,
-  );
-
-  await inAppService.saveNotification(
-    id: 'heatmap_$targetSlotId',
-    title: title,
-    body: advice.text,
-    scheduledDate: target,
-    payload: jsonEncode({"type": "heatmap_advice"}),
-  );
 }
 
 Future<void> _scheduleNotificationsForAccounts(
