@@ -283,7 +283,7 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
         if (daysRunway < exactDaysLeft) {
           int minutesRunway = (daysRunway * 1440).toInt();
           DateTime zeroDate = now.add(Duration(minutes: minutesRunway));
-          String formattedDate = DateFormat('MMM do, h:mm a').format(zeroDate);
+          String formattedDate = DateFormat('MMM dd, h:mm a').format(zeroDate);
 
           double neededPace = (includedBudget - monthTotal) / exactDaysLeft;
 
