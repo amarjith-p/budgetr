@@ -65,17 +65,15 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
 
   final int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
 
-  // --- BULLETPROOF TIME CALCULATION (Down to the minute/second) ---
+  // --- BULLETPROOF TIME CALCULATION ---
   double exactDaysElapsed = 1.0;
   double exactDaysLeft = 0.0;
 
   if (isCurrentMonth) {
-    // Current day fraction: e.g. 12:00 PM = 0.5 days.
     double todayFraction =
         (now.hour / 24.0) + (now.minute / 1440.0) + (now.second / 86400.0);
     exactDaysElapsed = (now.day - 1) + todayFraction;
-    if (exactDaysElapsed <= 0.001)
-      exactDaysElapsed = 0.001; // Avoid division by zero at exact midnight
+    if (exactDaysElapsed <= 0.001) exactDaysElapsed = 0.001;
     exactDaysLeft = daysInMonth.toDouble() - exactDaysElapsed;
   } else if (isPastMonth) {
     exactDaysElapsed = daysInMonth.toDouble();
@@ -119,6 +117,8 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
   int weekendDaysCount = 0;
   int weekdayDaysCount = 0;
 
+  DateTime? oldestTxDate; // --- FIX: Track genuine history length ---
+
   for (int i = 0; i < 60; i++) {
     final d = now.subtract(Duration(days: i));
     if (d.weekday == DateTime.saturday || d.weekday == DateTime.sunday)
@@ -131,6 +131,12 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
   for (var txData in txs) {
     final t = txData.transaction;
     if (t.type != 'Expense') continue;
+
+    // Track the oldest transaction for an accurate baseline
+    if (oldestTxDate == null || t.date.isBefore(oldestTxDate!)) {
+      oldestTxDate = t.date;
+    }
+
     if (t.bucketId == null ||
         t.bucketId == -1 ||
         !selectedBuckets.contains(t.bucketId))
@@ -152,7 +158,17 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
     }
   }
 
-  double historicalDailyBurn = trailingTotalSpend / 60.0;
+  // --- FIX: Dynamic Historical Denominator ---
+  double historicalDays = 60.0;
+  if (oldestTxDate != null) {
+    double activeDays = now.difference(oldestTxDate!).inHours / 24.0;
+    if (activeDays > 0 && activeDays < 60.0) {
+      historicalDays = activeDays;
+    }
+  }
+  if (historicalDays < 1.0) historicalDays = 1.0;
+
+  double historicalDailyBurn = trailingTotalSpend / historicalDays;
   if (historicalDailyBurn <= 0) historicalDailyBurn = 500.0;
 
   double currentBurnRate = isPastMonth
@@ -161,7 +177,6 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
   double projectedTotal = currentBurnRate * daysInMonth.toDouble();
 
   // --- 3. BULLETPROOF UPCOMING FIXED COSTS ---
-  // Loops through occurrences exactly to catch weekly/daily multiple triggers
   double upcomingBills = 0.0;
   if (isCurrentMonth) {
     final endOfMonth = DateTime(now.year, now.month, daysInMonth, 23, 59, 59);
@@ -266,7 +281,6 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
   if (includedBudget > 0 && isCurrentMonth) {
     double trueRemainingBudget = (includedBudget - monthTotal) - upcomingBills;
 
-    // SCENARIO 0: Budget Blown (Critical Stop)
     if (monthTotal >= includedBudget) {
       activeAdvices.add(
         HeatmapAdvice(
@@ -317,7 +331,6 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
         double limit = bucketLimits[id] ?? 0.0;
         if (limit > 0) {
           double exhaustion = spent / limit;
-          // If they used 30% more than the expected pace AND it's over half empty
           if (exhaustion > expectedExhaustion * 1.3 && exhaustion > 0.5) {
             activeAdvices.add(
               HeatmapAdvice(
@@ -331,12 +344,16 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
         }
       });
 
-      // SCENARIO 4: Historical Anomaly Alert
+      // --- FIX: SCENARIO 4: Dynamic Historical Anomaly Alert ---
       if (exactDaysElapsed > 5 && currentBurnRate > historicalDailyBurn * 1.3) {
+        // Dynamically calculate the exact excess percentage
+        int excessPercentage =
+            (((currentBurnRate / historicalDailyBurn) - 1.0) * 100).toInt();
+
         activeAdvices.add(
           HeatmapAdvice(
             text:
-                "Anomaly: You're spending 30%+ faster than your 60-day historical average. Tighten the belt unless planned.",
+                "Anomaly: You're spending $excessPercentage% faster than your historical average. Tighten the belt unless planned.",
             color: Colors.orangeAccent.shade700,
             icon: Icons.insights_rounded,
           ),
@@ -367,7 +384,6 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
           : 0;
 
       if (avgWeekend > (avgWeekday * 1.5) && trueRemainingBudget > 0) {
-        // Exact fraction calculations
         double exactWeekendsLeft = 0.0;
         double exactWeekdaysLeft = 0.0;
         double todayRemainingFraction =
@@ -400,7 +416,6 @@ final heatmapDailySpendProvider = Provider.autoDispose<HeatmapData>((ref) {
         );
       }
 
-      // Default: Standard Pacing Baseline
       if (trueRemainingBudget > 0) {
         double recDaily = trueRemainingBudget / exactDaysLeft;
         activeAdvices.add(
