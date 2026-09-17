@@ -9,6 +9,8 @@ import 'package:path/path.dart' as p;
 import 'package:restart_app/restart_app.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_boxy_button.dart';
@@ -32,9 +34,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
   bool _isLoading = false;
   String _loadingLabel = 'PROCESSING...';
 
-  // Removed Wi-Fi from here, keeping standard exports clean
   String _exportTarget = 'Local Folder';
-
   Map<String, dynamic>? _dbInfo;
   Map<String, dynamic>? _latestBackup;
   String _backupPath = 'Scanning...';
@@ -49,14 +49,12 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     final service = ref.read(backupServiceProvider);
     final dbInfo = await service.getDatabaseInfo();
 
-    // Wrap in try-catch so permission delays don't crash the UI initialization
     try {
       final latestBackup = await service.getLatestBackupInfo();
       if (mounted) {
         setState(() {
           _dbInfo = dbInfo;
           _latestBackup = latestBackup;
-          // UPDATE THIS TERNARY OPERATOR:
           _backupPath = Platform.isAndroid
               ? 'Downloads/FinStack 360/Backups'
               : 'App Documents/Backups';
@@ -120,6 +118,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       final result = await ref
           .read(backupServiceProvider)
           .exportDatabaseExternal();
+
       if (mounted) {
         setState(() => _isLoading = false);
         if (result != null && result.startsWith('ERROR:')) {
@@ -145,7 +144,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     });
 
     final result = await ref.read(backupServiceProvider).startWifiShare();
-
     if (mounted) {
       setState(() => _isLoading = false);
       if (result != null && result.startsWith('ERROR:')) {
@@ -168,7 +166,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final theme = Theme.of(context);
-
         return Container(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
@@ -240,7 +237,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       context,
       MaterialPageRoute(builder: (_) => const WifiScannerPage()),
     );
-
     if (scannedUrl == null || !mounted) return;
 
     final confirm = await ConfirmationBottomSheet.show(
@@ -293,7 +289,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
   // --- STANDARD RESTORE ---
   Future<void> _handleRestore(File file) async {
     HapticFeedback.heavyImpact();
-
     final confirm = await ConfirmationBottomSheet.show(
       context,
       title: 'Restore Ledger?',
@@ -326,7 +321,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       }
 
       Restart.restartApp();
-
       await Future.delayed(const Duration(milliseconds: 1500));
       if (mounted) {
         setState(() => _isLoading = false);
@@ -338,6 +332,40 @@ class _BackupPageState extends ConsumerState<BackupPage> {
         CustomSnackbars.showError(context, message: 'Restore failed: $e');
       }
     }
+  }
+
+  // --- NEW: NATIVE IN-APP DEVICE FILE BROWSER (NO PLUGINS REQUIRED) ---
+  Future<void> _showDeviceFileBrowser() async {
+    HapticFeedback.lightImpact();
+
+    // Enforce permission checks before accessing the root directory
+    if (Platform.isAndroid) {
+      if (await Permission.manageExternalStorage.isDenied) {
+        await Permission.manageExternalStorage.request();
+      }
+    }
+
+    Directory rootDir;
+    if (Platform.isAndroid) {
+      rootDir = Directory('/storage/emulated/0'); // Root of internal storage
+    } else {
+      rootDir = await getApplicationDocumentsDirectory();
+    }
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _DeviceFileBrowserSheet(
+        initialDirectory: rootDir,
+        onFileSelected: (file) {
+          Navigator.pop(ctx);
+          _handleRestore(file); // Triggers the standard restore safely
+        },
+      ),
+    );
   }
 
   void _showRestartDialog() {
@@ -380,7 +408,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
   Future<void> _showLocalBackupsSheet() async {
     HapticFeedback.lightImpact();
     final files = await ref.read(backupServiceProvider).getAllBackups();
-
     if (!mounted) return;
 
     showModalBottomSheet(
@@ -414,7 +441,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Select Backup',
+                      'App Directory',
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
@@ -488,6 +515,18 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                         },
                       ),
               ),
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: ModernBoxyButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _showDeviceFileBrowser(); // Redirects to our custom native browser
+                  },
+                  label: 'BROWSE OTHER FOLDERS',
+                  icon: Icons.screen_search_desktop_rounded,
+                  isOutlined: true,
+                ),
+              ),
             ],
           ),
         );
@@ -495,7 +534,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     );
   }
 
-  // --- COMPACT SECTION HEADER HELPER ---
   Widget _buildSectionHeader(ThemeData theme, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6.0),
@@ -511,7 +549,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     );
   }
 
-  // --- FULLY COMPACTED METRIC CARD FOR SINGLE SCREEN VIEW ---
   Widget _buildMetricCard({
     required String label,
     required String title,
@@ -527,8 +564,8 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8.0), // Compact Margin
-        padding: const EdgeInsets.all(12.0), // Compact Padding
+        margin: const EdgeInsets.only(bottom: 8.0),
+        padding: const EdgeInsets.all(12.0),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(8),
@@ -549,7 +586,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10), // Scaled Icon Container
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -564,7 +601,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                   Text(
                     label.toUpperCase(),
                     style: TextStyle(
-                      fontSize: 9, // Scaled down
+                      fontSize: 9,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
                       color: theme.colorScheme.onSurfaceVariant,
@@ -574,7 +611,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 14, // Scaled down
+                      fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: theme.colorScheme.onSurface,
                       letterSpacing: -0.3,
@@ -586,7 +623,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 11, // Scaled down
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.primary,
                     ),
@@ -614,6 +651,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
 
     IconData targetIcon = Icons.folder_rounded;
     String targetSub = 'Local Device Storage';
+
     if (_exportTarget == 'Share / Google Drive') {
       targetIcon = Icons.cloud_upload_rounded;
       targetSub = 'Google Drive, Email, etc.';
@@ -630,8 +668,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
             onLeadingPressed: _isLoading ? () {} : () => Navigator.pop(context),
           ),
           body: SafeArea(
-            // Removed SingleChildScrollView and replaced with a stretching Column.
-            // Spacers distribute empty space evenly across the single screen view.
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: DesignTokens.spacingLg,
@@ -651,7 +687,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                         : 'Scanning...',
                     icon: Icons.shield_rounded,
                   ),
-
                   const Spacer(flex: 2),
 
                   // --- 2. EXPORT DESTINATION ---
@@ -705,16 +740,16 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                             onPressed: _isLoading
                                 ? null
                                 : _showLocalBackupsSheet,
-                            label: 'BROWSE',
+                            label: 'BROWSE', // Simplified button label
                             isOutlined: true,
-                            icon: Icons.search_rounded,
+                            icon: Icons.screen_search_desktop_outlined,
                           ),
                         ),
                       ],
                     ),
                   ] else ...[
                     Container(
-                      padding: const EdgeInsets.all(16), // Compressed Padding
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHighest
                             .withOpacity(0.3),
@@ -736,12 +771,13 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8), // Compressed Margin
+                    const SizedBox(height: 8),
+                    // Replaced split buttons with a single clean button
                     ModernBoxyButton(
                       onPressed: _isLoading ? null : _showLocalBackupsSheet,
-                      label: 'BROWSE LOCAL FILES',
+                      label: 'BROWSE BACKUPS',
                       isOutlined: true,
-                      icon: Icons.search_rounded,
+                      icon: Icons.screen_search_desktop_outlined,
                     ),
                   ],
 
@@ -776,7 +812,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                       ),
                     ],
                   ),
-
                   const Spacer(flex: 1),
                 ],
               ),
@@ -803,6 +838,230 @@ class _BackupPageState extends ConsumerState<BackupPage> {
             ),
           ),
       ],
+    );
+  }
+}
+
+// =========================================================================
+// --- CUSTOM NATIVE IN-APP DEVICE BROWSER WIDGET ---
+// Completely replaces the need for the broken file_picker package
+// =========================================================================
+
+class _DeviceFileBrowserSheet extends StatefulWidget {
+  final Directory initialDirectory;
+  final Function(File) onFileSelected;
+
+  const _DeviceFileBrowserSheet({
+    required this.initialDirectory,
+    required this.onFileSelected,
+  });
+
+  @override
+  State<_DeviceFileBrowserSheet> createState() =>
+      _DeviceFileBrowserSheetState();
+}
+
+class _DeviceFileBrowserSheetState extends State<_DeviceFileBrowserSheet> {
+  late Directory _currentDir;
+  List<FileSystemEntity> _entities = [];
+  bool _isRestricted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentDir = widget.initialDirectory;
+    _loadDirectory();
+  }
+
+  void _loadDirectory() {
+    try {
+      final list = _currentDir.listSync().where((e) {
+        final name = p.basename(e.path);
+        if (name.startsWith('.'))
+          return false; // Hide hidden Android system files
+
+        if (e is Directory) return true;
+        if (e is File) {
+          final ext = p.extension(e.path).toLowerCase();
+          return ext == '.sqlite' || ext == '.db';
+        }
+        return false;
+      }).toList();
+
+      // Sort folders to the top, files to the bottom, alphabetically
+      list.sort((a, b) {
+        if (a is Directory && b is File) return -1;
+        if (a is File && b is Directory) return 1;
+        return p
+            .basename(a.path)
+            .toLowerCase()
+            .compareTo(p.basename(b.path).toLowerCase());
+      });
+
+      setState(() {
+        _entities = list;
+        _isRestricted = false;
+      });
+    } catch (e) {
+      setState(() {
+        _entities = [];
+        _isRestricted = true;
+      });
+    }
+  }
+
+  void _goUp() {
+    if (_currentDir.path != '/' && _currentDir.path != '/storage/emulated/0') {
+      setState(() {
+        _currentDir = _currentDir.parent;
+      });
+      _loadDirectory();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isRoot =
+        _currentDir.path == '/storage/emulated/0' || _currentDir.path == '/';
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 16, bottom: 16),
+              decoration: BoxDecoration(
+                color: theme.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                if (!isRoot)
+                  IconButton(
+                    icon: Icon(
+                      Icons.arrow_back_rounded,
+                      color: theme.colorScheme.primary,
+                    ),
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      _goUp();
+                    },
+                  ),
+                Expanded(
+                  child: Text(
+                    p.basename(_currentDir.path).toUpperCase(),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Text(
+              _currentDir.path,
+              style: TextStyle(
+                fontSize: 11,
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: _isRestricted
+                ? Center(
+                    child: Text(
+                      'Access Denied or Empty Folder',
+                      style: TextStyle(
+                        color: theme.colorScheme.error,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  )
+                : _entities.isEmpty
+                ? Center(
+                    child: Text(
+                      'No backups or folders found here.',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: _entities.length,
+                    itemBuilder: (context, index) {
+                      final entity = _entities[index];
+                      final isDir = entity is Directory;
+                      final name = p.basename(entity.path);
+
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 4,
+                        ),
+                        leading: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isDir
+                                ? theme.colorScheme.secondary.withOpacity(0.1)
+                                : theme.colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            isDir
+                                ? Icons.folder_rounded
+                                : Icons.description_rounded,
+                            color: isDir
+                                ? theme.colorScheme.secondary
+                                : theme.colorScheme.primary,
+                          ),
+                        ),
+                        title: Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          if (isDir) {
+                            setState(() {
+                              _currentDir = entity as Directory;
+                            });
+                            _loadDirectory();
+                          } else {
+                            widget.onFileSelected(entity as File);
+                          }
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
