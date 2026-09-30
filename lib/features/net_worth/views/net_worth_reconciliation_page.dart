@@ -576,13 +576,154 @@ class _NetWorthReconciliationPageState
               remainingTax +
               remainingCharges;
           loanOut -= totalOutstanding;
+        } else if (acc.type == 'Credit Cards') {
+          // --- FIX: Transaction-based historical CC outstanding ---
+          // Mirrors creditCardMetricsProvider logic at endOfMonth to correctly
+          // capture unbilled amounts for cards with no current billed due.
+          // The flat (balance + rollback) approach fails for cards where
+          // lastStatementDate is null (only unbilled, no prior billed cycle)
+          // because the billing-cycle split is not reconstructed at the
+          // historical date — unbilled charges are silently dropped.
+          final ccTxsData = await ref.read(
+            accountTransactionsProvider(acc.id).future,
+          );
+          final pastCcTxs = ccTxsData
+              .where((d) => !d.transaction.date.isAfter(endOfMonth))
+              .toList();
+
+          if (pastCcTxs.isEmpty) {
+            // No transactions at this historical date; fall back to balance rollback
+            final rollbackAmt = rollbacks[acc.id] ?? 0.0;
+            ccOut += acc.balance + rollbackAmt;
+          } else {
+            final bDay = acc.billDate ?? 15;
+            // pastCcTxs is ordered newest-first (from accountTransactionsProvider)
+            DateTime oldest = pastCcTxs.last.transaction.date;
+            DateTime newest = pastCcTxs.first.transaction.date;
+            // Use endOfMonth as the reference "now" for historical cycle computation
+            if (endOfMonth.isAfter(newest)) newest = endOfMonth;
+
+            DateTime currentEnd = DateTime(
+              newest.year,
+              newest.month,
+              bDay,
+              23,
+              59,
+              59,
+            );
+            if (newest.day > bDay) {
+              currentEnd = DateTime(
+                newest.year,
+                newest.month + 1,
+                bDay,
+                23,
+                59,
+                59,
+              );
+            }
+
+            DateTime pointerEnd = currentEnd;
+            final List<DateTime> cycleEnds = [];
+            while (
+              pointerEnd.isAfter(oldest) ||
+              pointerEnd.isAtSameMomentAs(oldest)
+            ) {
+              cycleEnds.add(pointerEnd);
+              pointerEnd = DateTime(
+                pointerEnd.year,
+                pointerEnd.month - 1,
+                bDay,
+                23,
+                59,
+                59,
+              );
+            }
+
+            // cycleEnds[0] = current (upcoming) billing date
+            // cycleEnds[1] = last statement date (partition between billed/unbilled)
+            final DateTime? lastStatementDate =
+                cycleEnds.length > 1 ? cycleEnds[1] : null;
+
+            double historicalNet = 0;
+            double currentCycleNet = 0;
+            double paymentsSinceStatement = 0;
+
+            for (var txData in pastCcTxs) {
+              final t = txData.transaction;
+
+              bool isExpense = t.type == 'Expense';
+              bool isPayment = t.type == 'Income';
+
+              if (t.type == 'Transfer') {
+                if (t.toAccountId == 'EXTERNAL_IN') {
+                  isPayment = true;
+                } else if (t.toAccountId == 'EXTERNAL_OUT') {
+                  isExpense = true;
+                } else {
+                  isExpense = t.accountId == acc.id;
+                  isPayment = t.toAccountId == acc.id;
+                }
+              }
+
+              final catName = t.categoryName ?? txData.category?.name ?? '';
+              final bool isRepayment = catName == 'Repayment';
+
+              double netAmount = 0;
+              if (isExpense) {
+                netAmount = -t.amount;
+              } else if (isPayment) {
+                netAmount = t.amount;
+              }
+
+              // Compute effective date, honouring spillover flag
+              DateTime effectiveDate = t.date;
+              if (t.isSpillover) {
+                DateTime nextBillDate = DateTime(
+                  t.date.year,
+                  t.date.month,
+                  bDay,
+                  23,
+                  59,
+                  59,
+                );
+                if (t.date.day > bDay) {
+                  nextBillDate = DateTime(
+                    t.date.year,
+                    t.date.month + 1,
+                    bDay,
+                    23,
+                    59,
+                    59,
+                  );
+                }
+                effectiveDate = nextBillDate.add(const Duration(days: 1));
+              }
+
+              if (lastStatementDate == null ||
+                  effectiveDate.isAfter(lastStatementDate)) {
+                // Current (unbilled) cycle
+                if (isPayment && isRepayment) {
+                  paymentsSinceStatement += netAmount;
+                } else {
+                  currentCycleNet += netAmount;
+                }
+              } else {
+                // Historical (billed) cycles
+                historicalNet += netAmount;
+              }
+            }
+
+            // billed = what's owed from past cycles net of current-cycle repayments
+            // unbilled = current cycle spending not yet billed
+            final double ccBilled = historicalNet + paymentsSinceStatement;
+            final double ccUnbilled = currentCycleNet;
+            ccOut += ccUnbilled + ccBilled;
+          }
         } else {
           final rollbackAmt = rollbacks[acc.id] ?? 0.0;
           final historicalBal = acc.balance + rollbackAmt;
 
-          if (acc.type == 'Credit Cards') {
-            ccOut += historicalBal;
-          } else if (acc.type == 'Savings Account') {
+          if (acc.type == 'Savings Account') {
             savingsBal += historicalBal;
           } else if (acc.type != 'Loan') {
             accBal += historicalBal;
