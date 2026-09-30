@@ -553,6 +553,13 @@ class _TransactionFilterBottomSheetState
         )
         .toSet();
 
+    final activeTags = widget.allTransactions
+        .expand((t) => (t.transaction.tags ?? '')
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty))
+        .toSet();
+
     String customDateText = 'Custom Range...';
     if (_draft.timeframe == TimeframeOption.custom &&
         _draft.customStartDate != null &&
@@ -909,6 +916,20 @@ class _TransactionFilterBottomSheetState
                         titleBuilder: (name) => name,
                         onApply: (val) =>
                             _updateState(_draft.copyWith(bucketNames: val)),
+                      ),
+                    ),
+
+                    _buildDropdownTrigger(
+                      label: 'Tags',
+                      count: _draft.tags.length,
+                      isEnabled: activeTags.isNotEmpty,
+                      onTap: () => _openMultiSelectSheet<String>(
+                        title: 'Select Tags',
+                        availableItems: activeTags,
+                        selectedItems: _draft.tags,
+                        titleBuilder: (tag) => '#$tag',
+                        onApply: (val) =>
+                            _updateState(_draft.copyWith(tags: val)),
                       ),
                     ),
 

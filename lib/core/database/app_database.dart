@@ -35,9 +35,9 @@ part 'app_database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
-  // --- BUMPED TO VERSION 25 ---
+  // --- BUMPED TO VERSION 41: Added #tags support ---
   @override
-  int get schemaVersion => 40;
+  int get schemaVersion => 41;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -160,6 +160,10 @@ class AppDatabase extends _$AppDatabase {
           recurringTransactionRules,
           recurringTransactionRules.currentExecutionCount,
         );
+      }
+      if (from < 41) {
+        // --- ADDED #TAGS COLUMN TO TRANSACTIONS ---
+        await m.addColumn(transactions, transactions.tags);
       }
     },
   );

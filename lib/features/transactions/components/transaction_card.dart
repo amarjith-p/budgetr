@@ -16,6 +16,7 @@ import '../../../core/utils/location_helper.dart';
 import '../services/transaction_service.dart';
 import '../providers/transaction_provider.dart';
 import '../../accounts/providers/account_provider.dart';
+import 'tag_input_sheet.dart';
 
 class TransactionCard extends ConsumerWidget {
   final TransactionWithDetails data;
@@ -518,6 +519,45 @@ class TransactionCard extends ConsumerWidget {
                         ),
                       ],
                     ),
+                    if (tx.tags != null && tx.tags!.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Divider(height: 1),
+                      ),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: tx.tags!
+                            .split(',')
+                            .map((t) => t.trim())
+                            .where((t) => t.isNotEmpty)
+                            .map(
+                              (t) {
+                                final tagColor = TagColorHelper.getColor(t, theme.brightness);
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: tagColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: tagColor.withOpacity(0.2),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '#$t',
+                                    style: TextStyle(
+                                      color: tagColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                            .toList(),
+                      ),
+                    ],
                     if (tx.notes != null && tx.notes!.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8.0),

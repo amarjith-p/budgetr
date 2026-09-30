@@ -117,8 +117,8 @@ class TransactionService {
     required String accountId,
     String? toAccountId,
     String? categoryId,
-    String? categoryName, // <-- NEW
-    int? categoryIcon, // <-- NEW
+    String? categoryName,
+    int? categoryIcon,
     String? subCategory,
     int? bucketId,
     String? bucketName,
@@ -128,6 +128,7 @@ class TransactionService {
     String? locationName,
     double? latitude,
     double? longitude,
+    String? tags, // <-- NEW: comma-separated tag string
   }) async {
     String dbAccountId = accountId;
     String? dbToAccountId = toAccountId;
@@ -205,6 +206,7 @@ class TransactionService {
               locationName: Value(locationName),
               latitude: Value(latitude),
               longitude: Value(longitude),
+              tags: Value(tags),
             ),
           );
     });
@@ -218,8 +220,8 @@ class TransactionService {
     required String accountId,
     String? toAccountId,
     String? categoryId,
-    String? categoryName, // <-- NEW
-    int? categoryIcon, // <-- NEW
+    String? categoryName,
+    int? categoryIcon,
     String? subCategory,
     int? bucketId,
     String? bucketName,
@@ -229,6 +231,7 @@ class TransactionService {
     String? locationName,
     double? latitude,
     double? longitude,
+    String? tags, // <-- NEW
   }) async {
     // --- MULTI-LEG LOAN SYNCHRONIZATION ---
     if (id.startsWith('LOAN_TX_')) {
@@ -258,6 +261,7 @@ class TransactionService {
                 locationName: Value(locationName),
                 latitude: Value(latitude),
                 longitude: Value(longitude),
+                tags: Value(tags),
               ),
             );
 
@@ -461,6 +465,7 @@ class TransactionService {
               locationName: Value(locationName),
               latitude: Value(latitude),
               longitude: Value(longitude),
+              tags: Value(tags),
             ),
           );
     });
@@ -547,8 +552,8 @@ class TransactionService {
     required String accountId,
     String? toAccountId,
     String? categoryId,
-    String? categoryName, // <-- NEW
-    int? categoryIcon, // <-- NEW
+    String? categoryName,
+    int? categoryIcon,
     String? subCategory,
     int? bucketId,
     String? bucketName,
@@ -558,6 +563,7 @@ class TransactionService {
     String? locationName,
     double? latitude,
     double? longitude,
+    String? tags, // <-- NEW
   }) async {
     await _db.transaction(() async {
       final origTx = await (_db.select(
@@ -598,8 +604,8 @@ class TransactionService {
         accountId: accountId,
         toAccountId: toAccountId,
         categoryId: categoryId,
-        categoryName: categoryName, // Pass newly selected
-        categoryIcon: categoryIcon, // Pass newly selected
+        categoryName: categoryName,
+        categoryIcon: categoryIcon,
         subCategory: subCategory,
         bucketId: bucketId,
         bucketName: bucketName,
@@ -609,6 +615,7 @@ class TransactionService {
         locationName: locationName,
         latitude: latitude,
         longitude: longitude,
+        tags: tags, // <-- PASSED
       );
     });
   }
@@ -736,6 +743,7 @@ class TransactionService {
     String? locationName,
     double? latitude,
     double? longitude,
+    String? tags, // <-- NEW
   }) async {
     await _db.transaction(() async {
       final fromAcc = await (_db.select(
@@ -792,6 +800,7 @@ class TransactionService {
                     locationName: Value(locationName),
                     latitude: Value(latitude),
                     longitude: Value(longitude),
+                    tags: Value(tags),
                   ),
                 );
           }
@@ -846,6 +855,7 @@ class TransactionService {
                 locationName: Value(locationName),
                 latitude: Value(latitude),
                 longitude: Value(longitude),
+                tags: Value(tags),
               ),
             );
       }
@@ -870,6 +880,7 @@ class TransactionService {
                   locationName: Value(locationName),
                   latitude: Value(latitude),
                   longitude: Value(longitude),
+                  tags: Value(tags),
                 ),
               );
         }

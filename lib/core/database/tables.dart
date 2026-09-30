@@ -81,6 +81,9 @@ class Transactions extends Table {
   RealColumn get latitude => real().nullable()();
   RealColumn get longitude => real().nullable()();
 
+  // --- TAGS: stored as comma-separated string, e.g. "food,coffee,work" ---
+  TextColumn get tags => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

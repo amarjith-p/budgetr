@@ -26,6 +26,7 @@ import '../providers/transaction_provider.dart';
 import '../../automation/providers/smart_inbox_provider.dart';
 import '../../settings/providers/location_settings_provider.dart';
 import 'location_map_picker_page.dart';
+import '../components/tag_input_sheet.dart';
 
 class _BucketItem {
   final int id;
@@ -91,6 +92,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   double? _latitude;
   double? _longitude;
   bool _isFetchingLoc = false;
+  List<String> _selectedTags = []; // <-- NEW: #tags
 
   late TextEditingController _loanPrinCtrl;
   late TextEditingController _loanIntCtrl;
@@ -174,6 +176,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       _locationName = tx.locationName;
       _latitude = tx.latitude;
       _longitude = tx.longitude;
+      // Load existing tags
+      _selectedTags = parseTagString(tx.tags);
 
       if (tx.type == 'Transfer') {
         if (tx.toAccountId == 'EXTERNAL_IN') {
@@ -859,6 +863,21 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     }
   }
 
+  // ── TAG EDITOR ─────────────────────────────────────────────────────────────
+  Future<void> _openTagsEditor(List<TransactionWithDetails> allTxs) async {
+    final recentTags = extractUniqueTags(
+      allTxs.map((d) => d.transaction.tags),
+    );
+    final result = await TagInputSheet.show(
+      context,
+      selectedTags: List<String>.from(_selectedTags),
+      recentTags: recentTags,
+    );
+    if (result != null && mounted) {
+      setState(() => _selectedTags = result);
+    }
+  }
+
   void _openNotesEditor(
     TransactionCategoryModel? selectedCatMatch,
     List<TransactionWithDetails> allTxs,
@@ -1337,6 +1356,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             locationName: _locationName,
             latitude: _latitude,
             longitude: _longitude,
+            tags: tagsToString(_selectedTags), // <-- PASSED
           );
       if (success && mounted) {
         if (widget.stagedTransaction != null) {
@@ -1496,6 +1516,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             locationName: _locationName,
             latitude: _latitude,
             longitude: _longitude,
+            tags: tagsToString(_selectedTags), // <-- PASSED
           );
       if (success && mounted) Navigator.pop(context);
       return;
@@ -1527,6 +1548,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           locationName: _locationName,
           latitude: _latitude,
           longitude: _longitude,
+          tags: tagsToString(_selectedTags), // <-- PASSED
         );
 
     if (success && mounted) {
@@ -1840,6 +1862,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       ),
     );
 
+
     if (cells.length % 2 != 0) cells.add(const SizedBox.shrink());
     return cells;
   }
@@ -1979,6 +2002,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             : null,
       ),
     );
+
 
     if (cells.length % 2 != 0) cells.add(const SizedBox.shrink());
     return cells;
@@ -2203,12 +2227,60 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                       ),
                       Expanded(
                         flex: isToLoan ? 2 : 3,
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
+                        child: Stack(
+                          children: [
+                            Positioned(
+                              top: 8,
+                              right: 16,
+                              child: InkWell(
+                                onTap: () => _openTagsEditor(allTxs),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: _selectedTags.isNotEmpty
+                                        ? theme.colorScheme.primary.withOpacity(0.1)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: _selectedTags.isNotEmpty
+                                          ? theme.colorScheme.primary.withOpacity(0.3)
+                                          : theme.colorScheme.onSurfaceVariant.withOpacity(0.2),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.tag_rounded,
+                                        size: 16,
+                                        color: _selectedTags.isNotEmpty
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      if (_selectedTags.isNotEmpty) ...[
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '${_selectedTags.length}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
                                 if (widget.isSplit)
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 8.0),
@@ -2358,11 +2430,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                       ),
                                     ),
                                   ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
+                    ),
                       Expanded(
                         flex: isToLoan ? 6 : 5,
                         child: SingleChildScrollView(

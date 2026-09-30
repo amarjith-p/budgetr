@@ -28,6 +28,7 @@ class TransactionFilterState {
   final Set<String> accountIds;
   final double? minAmount;
   final double? maxAmount;
+  final Set<String> tags; // <-- NEW: filter by #tags
 
   const TransactionFilterState({
     this.sortBy = SortOption.newest,
@@ -41,6 +42,7 @@ class TransactionFilterState {
     this.accountIds = const {},
     this.minAmount,
     this.maxAmount,
+    this.tags = const {},
   });
 
   bool get isActive =>
@@ -51,6 +53,7 @@ class TransactionFilterState {
       categoryNames.isNotEmpty ||
       subCategories.isNotEmpty ||
       accountIds.isNotEmpty ||
+      tags.isNotEmpty ||
       minAmount != null ||
       maxAmount != null;
 
@@ -68,6 +71,7 @@ class TransactionFilterState {
     double? maxAmount,
     bool clearMin = false,
     bool clearMax = false,
+    Set<String>? tags,
   }) {
     return TransactionFilterState(
       sortBy: sortBy ?? this.sortBy,
@@ -81,6 +85,7 @@ class TransactionFilterState {
       accountIds: accountIds ?? this.accountIds,
       minAmount: clearMin ? null : (minAmount ?? this.minAmount),
       maxAmount: clearMax ? null : (maxAmount ?? this.maxAmount),
+      tags: tags ?? this.tags,
     );
   }
 }
@@ -174,6 +179,17 @@ class TransactionFilterHelper {
         final bucketName =
             tx.bucketName ?? data.bucket?.name ?? 'Out of Bucket';
         if (!filter.bucketNames.contains(bucketName)) return false;
+      }
+
+      // --- TAG FILTER ---
+      if (filter.tags.isNotEmpty) {
+        final txTags = (tx.tags ?? '')
+            .split(',')
+            .map((t) => t.trim().toLowerCase())
+            .where((t) => t.isNotEmpty)
+            .toSet();
+        final filterTags = filter.tags.map((t) => t.toLowerCase()).toSet();
+        if (!filterTags.any((t) => txTags.contains(t))) return false;
       }
 
       return true;
@@ -293,6 +309,17 @@ class TransactionFilterHelper {
         final bucketName =
             tx.bucketName ?? item.data.bucket?.name ?? 'Out of Bucket';
         if (!filter.bucketNames.contains(bucketName)) return false;
+      }
+
+      // --- TAG FILTER ---
+      if (filter.tags.isNotEmpty) {
+        final txTags = (tx.tags ?? '')
+            .split(',')
+            .map((t) => t.trim().toLowerCase())
+            .where((t) => t.isNotEmpty)
+            .toSet();
+        final filterTags = filter.tags.map((t) => t.toLowerCase()).toSet();
+        if (!filterTags.any((t) => txTags.contains(t))) return false;
       }
 
       return true;

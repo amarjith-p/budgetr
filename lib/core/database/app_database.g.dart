@@ -2239,6 +2239,15 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
+  @override
+  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
+    'tags',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2259,6 +2268,7 @@ class $TransactionsTable extends Transactions
     locationName,
     latitude,
     longitude,
+    tags,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2408,6 +2418,12 @@ class $TransactionsTable extends Transactions
         longitude.isAcceptableOrUnknown(data['longitude']!, _longitudeMeta),
       );
     }
+    if (data.containsKey('tags')) {
+      context.handle(
+        _tagsMeta,
+        tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta),
+      );
+    }
     return context;
   }
 
@@ -2489,6 +2505,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.double,
         data['${effectivePrefix}longitude'],
       ),
+      tags: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tags'],
+      ),
     );
   }
 
@@ -2518,6 +2538,7 @@ class TransactionRecord extends DataClass
   final String? locationName;
   final double? latitude;
   final double? longitude;
+  final String? tags;
   const TransactionRecord({
     required this.id,
     required this.type,
@@ -2537,6 +2558,7 @@ class TransactionRecord extends DataClass
     this.locationName,
     this.latitude,
     this.longitude,
+    this.tags,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2580,6 +2602,9 @@ class TransactionRecord extends DataClass
     }
     if (!nullToAbsent || longitude != null) {
       map['longitude'] = Variable<double>(longitude);
+    }
+    if (!nullToAbsent || tags != null) {
+      map['tags'] = Variable<String>(tags);
     }
     return map;
   }
@@ -2626,6 +2651,7 @@ class TransactionRecord extends DataClass
       longitude: longitude == null && nullToAbsent
           ? const Value.absent()
           : Value(longitude),
+      tags: tags == null && nullToAbsent ? const Value.absent() : Value(tags),
     );
   }
 
@@ -2655,6 +2681,7 @@ class TransactionRecord extends DataClass
       locationName: serializer.fromJson<String?>(json['locationName']),
       latitude: serializer.fromJson<double?>(json['latitude']),
       longitude: serializer.fromJson<double?>(json['longitude']),
+      tags: serializer.fromJson<String?>(json['tags']),
     );
   }
   @override
@@ -2679,6 +2706,7 @@ class TransactionRecord extends DataClass
       'locationName': serializer.toJson<String?>(locationName),
       'latitude': serializer.toJson<double?>(latitude),
       'longitude': serializer.toJson<double?>(longitude),
+      'tags': serializer.toJson<String?>(tags),
     };
   }
 
@@ -2701,6 +2729,7 @@ class TransactionRecord extends DataClass
     Value<String?> locationName = const Value.absent(),
     Value<double?> latitude = const Value.absent(),
     Value<double?> longitude = const Value.absent(),
+    Value<String?> tags = const Value.absent(),
   }) => TransactionRecord(
     id: id ?? this.id,
     type: type ?? this.type,
@@ -2720,6 +2749,7 @@ class TransactionRecord extends DataClass
     locationName: locationName.present ? locationName.value : this.locationName,
     latitude: latitude.present ? latitude.value : this.latitude,
     longitude: longitude.present ? longitude.value : this.longitude,
+    tags: tags.present ? tags.value : this.tags,
   );
   TransactionRecord copyWithCompanion(TransactionsCompanion data) {
     return TransactionRecord(
@@ -2759,6 +2789,7 @@ class TransactionRecord extends DataClass
           : this.locationName,
       latitude: data.latitude.present ? data.latitude.value : this.latitude,
       longitude: data.longitude.present ? data.longitude.value : this.longitude,
+      tags: data.tags.present ? data.tags.value : this.tags,
     );
   }
 
@@ -2782,7 +2813,8 @@ class TransactionRecord extends DataClass
           ..write('isSettlementVerified: $isSettlementVerified, ')
           ..write('locationName: $locationName, ')
           ..write('latitude: $latitude, ')
-          ..write('longitude: $longitude')
+          ..write('longitude: $longitude, ')
+          ..write('tags: $tags')
           ..write(')'))
         .toString();
   }
@@ -2807,6 +2839,7 @@ class TransactionRecord extends DataClass
     locationName,
     latitude,
     longitude,
+    tags,
   );
   @override
   bool operator ==(Object other) =>
@@ -2829,7 +2862,8 @@ class TransactionRecord extends DataClass
           other.isSettlementVerified == this.isSettlementVerified &&
           other.locationName == this.locationName &&
           other.latitude == this.latitude &&
-          other.longitude == this.longitude);
+          other.longitude == this.longitude &&
+          other.tags == this.tags);
 }
 
 class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
@@ -2851,6 +2885,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
   final Value<String?> locationName;
   final Value<double?> latitude;
   final Value<double?> longitude;
+  final Value<String?> tags;
   final Value<int> rowid;
   const TransactionsCompanion({
     this.id = const Value.absent(),
@@ -2871,6 +2906,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     this.locationName = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
+    this.tags = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TransactionsCompanion.insert({
@@ -2892,6 +2928,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     this.locationName = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
+    this.tags = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        type = Value(type),
@@ -2917,6 +2954,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Expression<String>? locationName,
     Expression<double>? latitude,
     Expression<double>? longitude,
+    Expression<String>? tags,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2939,6 +2977,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       if (locationName != null) 'location_name': locationName,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      if (tags != null) 'tags': tags,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2962,6 +3001,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Value<String?>? locationName,
     Value<double?>? latitude,
     Value<double?>? longitude,
+    Value<String?>? tags,
     Value<int>? rowid,
   }) {
     return TransactionsCompanion(
@@ -2983,6 +3023,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       locationName: locationName ?? this.locationName,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      tags: tags ?? this.tags,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3046,6 +3087,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     if (longitude.present) {
       map['longitude'] = Variable<double>(longitude.value);
     }
+    if (tags.present) {
+      map['tags'] = Variable<String>(tags.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3073,6 +3117,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
           ..write('locationName: $locationName, ')
           ..write('latitude: $latitude, ')
           ..write('longitude: $longitude, ')
+          ..write('tags: $tags, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -15577,6 +15622,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<String?> locationName,
       Value<double?> latitude,
       Value<double?> longitude,
+      Value<String?> tags,
       Value<int> rowid,
     });
 typedef $$TransactionsTableUpdateCompanionBuilder =
@@ -15599,6 +15645,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String?> locationName,
       Value<double?> latitude,
       Value<double?> longitude,
+      Value<String?> tags,
       Value<int> rowid,
     });
 
@@ -15698,6 +15745,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<double> get longitude => $composableBuilder(
     column: $table.longitude,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tags => $composableBuilder(
+    column: $table.tags,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -15800,6 +15852,11 @@ class $$TransactionsTableOrderingComposer
     column: $table.longitude,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get tags => $composableBuilder(
+    column: $table.tags,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -15882,6 +15939,9 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<double> get longitude =>
       $composableBuilder(column: $table.longitude, builder: (column) => column);
+
+  GeneratedColumn<String> get tags =>
+      $composableBuilder(column: $table.tags, builder: (column) => column);
 }
 
 class $$TransactionsTableTableManager
@@ -15937,6 +15997,7 @@ class $$TransactionsTableTableManager
                 Value<String?> locationName = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
+                Value<String?> tags = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion(
                 id: id,
@@ -15957,6 +16018,7 @@ class $$TransactionsTableTableManager
                 locationName: locationName,
                 latitude: latitude,
                 longitude: longitude,
+                tags: tags,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -15979,6 +16041,7 @@ class $$TransactionsTableTableManager
                 Value<String?> locationName = const Value.absent(),
                 Value<double?> latitude = const Value.absent(),
                 Value<double?> longitude = const Value.absent(),
+                Value<String?> tags = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion.insert(
                 id: id,
@@ -15999,6 +16062,7 @@ class $$TransactionsTableTableManager
                 locationName: locationName,
                 latitude: latitude,
                 longitude: longitude,
+                tags: tags,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

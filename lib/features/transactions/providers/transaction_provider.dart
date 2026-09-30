@@ -48,8 +48,8 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     required String accountId,
     String? toAccountId,
     String? categoryId,
-    String? categoryName, // <-- NEW
-    int? categoryIcon, // <-- NEW
+    String? categoryName,
+    int? categoryIcon,
     String? subCategory,
     int? bucketId,
     String? bucketName,
@@ -59,6 +59,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     String? locationName,
     double? latitude,
     double? longitude,
+    String? tags, // <-- NEW
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -70,8 +71,8 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
           accountId: accountId,
           toAccountId: toAccountId,
           categoryId: categoryId,
-          categoryName: categoryName, // <-- PASSED
-          categoryIcon: categoryIcon, // <-- PASSED
+          categoryName: categoryName,
+          categoryIcon: categoryIcon,
           subCategory: subCategory,
           bucketId: bucketId,
           bucketName: bucketName,
@@ -81,6 +82,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
           locationName: locationName,
           latitude: latitude,
           longitude: longitude,
+          tags: tags, // <-- PASSED
         );
       } else {
         await _service.updateTransaction(
@@ -91,8 +93,8 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
           accountId: accountId,
           toAccountId: toAccountId,
           categoryId: categoryId,
-          categoryName: categoryName, // <-- PASSED
-          categoryIcon: categoryIcon, // <-- PASSED
+          categoryName: categoryName,
+          categoryIcon: categoryIcon,
           subCategory: subCategory,
           bucketId: bucketId,
           bucketName: bucketName,
@@ -102,6 +104,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
           locationName: locationName,
           latitude: latitude,
           longitude: longitude,
+          tags: tags, // <-- PASSED
         );
       }
     });
@@ -121,8 +124,8 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     required String accountId,
     String? toAccountId,
     String? categoryId,
-    String? categoryName, // <-- NEW
-    int? categoryIcon, // <-- NEW
+    String? categoryName,
+    int? categoryIcon,
     String? subCategory,
     int? bucketId,
     String? bucketName,
@@ -132,6 +135,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     String? locationName,
     double? latitude,
     double? longitude,
+    String? tags, // <-- NEW
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -143,8 +147,8 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
         accountId: accountId,
         toAccountId: toAccountId,
         categoryId: categoryId,
-        categoryName: categoryName, // <-- PASSED
-        categoryIcon: categoryIcon, // <-- PASSED
+        categoryName: categoryName,
+        categoryIcon: categoryIcon,
         subCategory: subCategory,
         bucketId: bucketId,
         bucketName: bucketName,
@@ -154,6 +158,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
         locationName: locationName,
         latitude: latitude,
         longitude: longitude,
+        tags: tags, // <-- PASSED
       );
     });
     return !state.hasError;
@@ -209,6 +214,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
     String? locationName,
     double? latitude,
     double? longitude,
+    String? tags,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -229,6 +235,7 @@ class TransactionActionNotifier extends AsyncNotifier<void> {
         locationName: locationName,
         latitude: latitude,
         longitude: longitude,
+        tags: tags, // <-- PASSED
       );
     });
     return !state.hasError;

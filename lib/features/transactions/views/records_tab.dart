@@ -15,6 +15,7 @@ import '../../accounts/providers/account_provider.dart';
 // --- NEW SEARCH & SUMMARY COMPONENTS ---
 import '../components/records_search_bar.dart';
 import '../components/records_smart_summary_card.dart';
+import '../components/tag_input_sheet.dart';
 
 class RecordsTab extends ConsumerStatefulWidget {
   const RecordsTab({Key? key}) : super(key: key);
@@ -54,6 +55,10 @@ class _RecordsTabState extends ConsumerState<RecordsTab> {
                 (txData) => !txData.transaction.id.endsWith('_SOURCETRANSFER'),
               )
               .toList();
+
+          final allAvailableTags = extractUniqueTags(
+            validTransactions.map((txData) => txData.transaction.tags),
+          );
 
           if (validTransactions.isEmpty) {
             return const PremiumEmptyState(
@@ -156,6 +161,7 @@ class _RecordsTabState extends ConsumerState<RecordsTab> {
                 .toLowerCase();
 
             final amountStr = tx.amount.toString();
+            final tagsStr = (tx.tags ?? '').toLowerCase();
 
             return catName.contains(q) ||
                 subCatName.contains(q) ||
@@ -164,7 +170,8 @@ class _RecordsTabState extends ConsumerState<RecordsTab> {
                 notes.contains(q) ||
                 locationName.contains(q) ||
                 bucketName.contains(q) ||
-                amountStr.contains(q);
+                amountStr.contains(q) ||
+                tagsStr.contains(q);
           }).toList();
 
           // 3. GROUP RESULTS
@@ -213,6 +220,68 @@ class _RecordsTabState extends ConsumerState<RecordsTab> {
                   ),
                 ),
               ),
+
+              // --- TAG FILTERS ---
+              if (allAvailableTags.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 52,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DesignTokens.spacingMd,
+                        vertical: DesignTokens.spacingXs,
+                      ),
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: allAvailableTags.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final tag = allAvailableTags[index];
+                        final isSelected = filterState.tags.contains(tag);
+                        final tagColor = TagColorHelper.getColor(
+                          tag,
+                          theme.brightness,
+                        );
+                        return FilterChip(
+                          label: Text(
+                            '#$tag',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: isSelected ? Colors.white : tagColor,
+                            ),
+                          ),
+                          selected: isSelected,
+                          onSelected: (val) {
+                            final notifier = ref.read(
+                              transactionFilterProvider('GLOBAL').notifier,
+                            );
+                            if (val) {
+                              notifier.state = filterState.copyWith(
+                                tags: {...filterState.tags, tag},
+                              );
+                            } else {
+                              final newTags = Set<String>.from(filterState.tags)
+                                ..remove(tag);
+                              notifier.state = filterState.copyWith(
+                                tags: newTags,
+                              );
+                            }
+                          },
+                          backgroundColor: tagColor.withOpacity(0.1),
+                          selectedColor: tagColor,
+                          side: BorderSide(
+                            color: isSelected
+                                ? Colors.transparent
+                                : tagColor.withOpacity(0.3),
+                          ),
+                          showCheckmark: false,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
 
               // --- SMART SUMMARY CARD ---
               if (filterState.isActive || _searchQuery.isNotEmpty)
