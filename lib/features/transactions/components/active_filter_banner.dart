@@ -58,6 +58,14 @@ class ActiveFilterBanner extends StatelessWidget {
     if (filterState.bucketNames.isNotEmpty)
       tags.add('${filterState.bucketNames.length} Buckets');
 
+    if (filterState.tags.isNotEmpty) {
+      if (filterState.tags.length <= 2) {
+        tags.addAll(filterState.tags.map((t) => '#$t'));
+      } else {
+        tags.add('${filterState.tags.length} Tags');
+      }
+    }
+
     return tags;
   }
 

@@ -75,10 +75,8 @@ class TagInputSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => TagInputSheet(
-        selectedTags: selectedTags,
-        recentTags: recentTags,
-      ),
+      builder: (_) =>
+          TagInputSheet(selectedTags: selectedTags, recentTags: recentTags),
     );
   }
 
@@ -106,7 +104,9 @@ class _TagInputSheetState extends State<TagInputSheet>
     );
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _animCtrl.forward();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _focusNode.requestFocus(),
+    );
   }
 
   @override
@@ -118,7 +118,10 @@ class _TagInputSheetState extends State<TagInputSheet>
   }
 
   void _addTag(String raw) {
-    final tag = raw.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9_\-]'), '');
+    final tag = raw.trim().toLowerCase().replaceAll(
+      RegExp(r'[^a-z0-9_\-]'),
+      '',
+    );
     if (tag.isEmpty) return;
     if (!_selectedTags.contains(tag)) {
       setState(() {
@@ -161,10 +164,8 @@ class _TagInputSheetState extends State<TagInputSheet>
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: theme.dividerColor.withOpacity(0.5),
-          ),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(isDark ? 0.4 : 0.12),
@@ -191,7 +192,7 @@ class _TagInputSheetState extends State<TagInputSheet>
                   height: 36,
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.tag_rounded,
@@ -240,11 +241,13 @@ class _TagInputSheetState extends State<TagInputSheet>
                 spacing: 8,
                 runSpacing: 8,
                 children: _selectedTags
-                    .map((tag) => _SelectedTagChip(
-                          tag: tag,
-                          onRemove: () => _removeTag(tag),
-                          theme: theme,
-                        ))
+                    .map(
+                      (tag) => _SelectedTagChip(
+                        tag: tag,
+                        onRemove: () => _removeTag(tag),
+                        theme: theme,
+                      ),
+                    )
                     .toList(),
               ),
               const SizedBox(height: 16),
@@ -253,9 +256,10 @@ class _TagInputSheetState extends State<TagInputSheet>
             // ── Text input ───────────────────────────────────────────────────
             Container(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest
-                    .withOpacity(isDark ? 0.4 : 0.5),
-                borderRadius: BorderRadius.circular(12),
+                color: theme.colorScheme.surfaceContainerHighest.withOpacity(
+                  isDark ? 0.4 : 0.5,
+                ),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: _focusNode.hasFocus
                       ? theme.colorScheme.primary.withOpacity(0.5)
@@ -288,8 +292,9 @@ class _TagInputSheetState extends State<TagInputSheet>
                         border: InputBorder.none,
                         hintText: 'Type a tag and press Enter…',
                         hintStyle: TextStyle(
-                          color: theme.colorScheme.onSurfaceVariant
-                              .withOpacity(0.6),
+                          color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                            0.6,
+                          ),
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -304,7 +309,8 @@ class _TagInputSheetState extends State<TagInputSheet>
                       // Only allow word chars, dashes, underscores
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'[a-zA-Z0-9_\-]')),
+                          RegExp(r'[a-zA-Z0-9_\-]'),
+                        ),
                       ],
                     ),
                   ),
@@ -314,7 +320,9 @@ class _TagInputSheetState extends State<TagInputSheet>
                       child: Container(
                         margin: const EdgeInsets.only(right: 8),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.primary,
                           borderRadius: BorderRadius.circular(8),
@@ -352,11 +360,13 @@ class _TagInputSheetState extends State<TagInputSheet>
                 spacing: 8,
                 runSpacing: 8,
                 children: _filteredSuggestions
-                    .map((tag) => _SuggestionChip(
-                          tag: tag,
-                          onTap: () => _addTag(tag),
-                          theme: theme,
-                        ))
+                    .map(
+                      (tag) => _SuggestionChip(
+                        tag: tag,
+                        onTap: () => _addTag(tag),
+                        theme: theme,
+                      ),
+                    )
                     .toList(),
               ),
               const SizedBox(height: 16),
@@ -370,7 +380,7 @@ class _TagInputSheetState extends State<TagInputSheet>
                   backgroundColor: theme.colorScheme.primary,
                   foregroundColor: theme.colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   elevation: 0,
@@ -421,7 +431,7 @@ class _SelectedTagChip extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: tagColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: IntrinsicWidth(
         child: Row(
@@ -442,7 +452,11 @@ class _SelectedTagChip extends StatelessWidget {
               onTap: onRemove,
               child: Padding(
                 padding: const EdgeInsets.only(
-                    left: 4, right: 8, top: 4, bottom: 4),
+                  left: 4,
+                  right: 8,
+                  top: 4,
+                  bottom: 4,
+                ),
                 child: Icon(
                   Icons.close_rounded,
                   size: 14,
@@ -478,19 +492,13 @@ class _SuggestionChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: tagColor.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: tagColor.withOpacity(0.3),
-          ),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: tagColor.withOpacity(0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.add_rounded,
-              size: 12,
-              color: tagColor,
-            ),
+            Icon(Icons.add_rounded, size: 12, color: tagColor),
             const SizedBox(width: 4),
             Text(
               '#$tag',

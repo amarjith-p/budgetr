@@ -58,7 +58,7 @@ class _RecordsTabState extends ConsumerState<RecordsTab> {
 
           final allAvailableTags = extractUniqueTags(
             validTransactions.map((txData) => txData.transaction.tags),
-          );
+          ).take(10).toList();
 
           if (validTransactions.isEmpty) {
             return const PremiumEmptyState(

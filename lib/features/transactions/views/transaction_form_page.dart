@@ -865,9 +865,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
   // ── TAG EDITOR ─────────────────────────────────────────────────────────────
   Future<void> _openTagsEditor(List<TransactionWithDetails> allTxs) async {
-    final recentTags = extractUniqueTags(
-      allTxs.map((d) => d.transaction.tags),
-    );
+    final recentTags = extractUniqueTags(allTxs.map((d) => d.transaction.tags));
     final result = await TagInputSheet.show(
       context,
       selectedTags: List<String>.from(_selectedTags),
@@ -1862,7 +1860,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       ),
     );
 
-
     if (cells.length % 2 != 0) cells.add(const SizedBox.shrink());
     return cells;
   }
@@ -2002,7 +1999,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             : null,
       ),
     );
-
 
     if (cells.length % 2 != 0) cells.add(const SizedBox.shrink());
     return cells;
@@ -2234,19 +2230,25 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                               right: 16,
                               child: InkWell(
                                 onTap: () => _openTagsEditor(allTxs),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: _selectedTags.isNotEmpty
-                                        ? theme.colorScheme.primary.withOpacity(0.1)
+                                        ? theme.colorScheme.primary.withOpacity(
+                                            0.1,
+                                          )
                                         : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
                                       color: _selectedTags.isNotEmpty
-                                          ? theme.colorScheme.primary.withOpacity(0.3)
-                                          : theme.colorScheme.onSurfaceVariant.withOpacity(0.2),
+                                          ? theme.colorScheme.primary
+                                                .withOpacity(0.3)
+                                          : theme.colorScheme.onSurfaceVariant
+                                                .withOpacity(0.2),
                                     ),
                                   ),
                                   child: Row(
@@ -2257,7 +2259,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                         size: 16,
                                         color: _selectedTags.isNotEmpty
                                             ? theme.colorScheme.primary
-                                            : theme.colorScheme.onSurfaceVariant,
+                                            : theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
                                       ),
                                       if (_selectedTags.isNotEmpty) ...[
                                         const SizedBox(width: 6),
@@ -2277,94 +2281,19 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                             ),
                             Center(
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                ),
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                if (widget.isSplit)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 8.0),
-                                    child: Text(
-                                      'SPLITTING FROM ₹ ${CurrencyFormatter.format(origAmount)}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w900,
-                                        color: theme.colorScheme.primary,
-                                        letterSpacing: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                AnimatedCrossFade(
-                                  duration: const Duration(milliseconds: 250),
-                                  crossFadeState: isToLoan
-                                      ? CrossFadeState.showSecond
-                                      : CrossFadeState.showFirst,
-                                  firstChild: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          '₹ ',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .displayMedium!
-                                              .copyWith(
-                                                color: displayAmountColor
-                                                    .withOpacity(0.7),
-                                                fontWeight: FontWeight.w600,
-                                              ),
+                                    if (widget.isSplit)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 8.0,
                                         ),
-                                        IntrinsicWidth(
-                                          child: ConstrainedBox(
-                                            constraints: const BoxConstraints(
-                                              minWidth: 40,
-                                            ),
-                                            child: TextField(
-                                              controller: _amountController,
-                                              readOnly: true,
-                                              showCursor: true,
-                                              autofocus: true,
-                                              cursorColor: displayAmountColor,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .displayLarge!
-                                                  .copyWith(
-                                                    color: displayAmountColor,
-                                                  ),
-                                              decoration: InputDecoration(
-                                                border: InputBorder.none,
-                                                focusedBorder: InputBorder.none,
-                                                enabledBorder: InputBorder.none,
-                                                errorBorder: InputBorder.none,
-                                                disabledBorder:
-                                                    InputBorder.none,
-                                                isDense: true,
-                                                contentPadding: EdgeInsets.zero,
-                                                hintText: '0.00',
-                                                hintStyle: Theme.of(context)
-                                                    .textTheme
-                                                    .displayLarge!
-                                                    .copyWith(
-                                                      color: displayAmountColor
-                                                          .withOpacity(0.3),
-                                                    ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  secondChild: Padding(
-                                    padding: const EdgeInsets.only(bottom: 0.0),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'TOTAL REPAYMENT',
+                                        child: Text(
+                                          'SPLITTING FROM ₹ ${CurrencyFormatter.format(origAmount)}',
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w900,
@@ -2372,71 +2301,170 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                                             letterSpacing: 1.5,
                                           ),
                                         ),
-                                        const SizedBox(height: 2),
-                                        RichText(
-                                          text: TextSpan(
-                                            children: [
-                                              TextSpan(
-                                                text: '₹ ',
-                                                style: TextStyle(
-                                                  fontSize: 22,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: displayAmountColor
-                                                      .withOpacity(0.7),
+                                      ),
+                                    AnimatedCrossFade(
+                                      duration: const Duration(
+                                        milliseconds: 250,
+                                      ),
+                                      crossFadeState: isToLoan
+                                          ? CrossFadeState.showSecond
+                                          : CrossFadeState.showFirst,
+                                      firstChild: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              '₹ ',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .displayMedium!
+                                                  .copyWith(
+                                                    color: displayAmountColor
+                                                        .withOpacity(0.7),
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                            ),
+                                            IntrinsicWidth(
+                                              child: ConstrainedBox(
+                                                constraints:
+                                                    const BoxConstraints(
+                                                      minWidth: 40,
+                                                    ),
+                                                child: TextField(
+                                                  controller: _amountController,
+                                                  readOnly: true,
+                                                  showCursor: true,
+                                                  autofocus: true,
+                                                  cursorColor:
+                                                      displayAmountColor,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .displayLarge!
+                                                      .copyWith(
+                                                        color:
+                                                            displayAmountColor,
+                                                      ),
+                                                  decoration: InputDecoration(
+                                                    border: InputBorder.none,
+                                                    focusedBorder:
+                                                        InputBorder.none,
+                                                    enabledBorder:
+                                                        InputBorder.none,
+                                                    errorBorder:
+                                                        InputBorder.none,
+                                                    disabledBorder:
+                                                        InputBorder.none,
+                                                    isDense: true,
+                                                    contentPadding:
+                                                        EdgeInsets.zero,
+                                                    hintText: '0.00',
+                                                    hintStyle: Theme.of(context)
+                                                        .textTheme
+                                                        .displayLarge!
+                                                        .copyWith(
+                                                          color:
+                                                              displayAmountColor
+                                                                  .withOpacity(
+                                                                    0.3,
+                                                                  ),
+                                                        ),
+                                                  ),
                                                 ),
                                               ),
-                                              TextSpan(
-                                                text: CurrencyFormatter.format(
-                                                  double.tryParse(
-                                                        _liveResult,
-                                                      ) ??
-                                                      0.0,
-                                                ),
-                                                style: TextStyle(
-                                                  fontSize: 32,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: displayAmountColor,
-                                                  letterSpacing: -1.0,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                if (_expression.isNotEmpty &&
-                                    _expression != _liveResult &&
-                                    !hasAmountError &&
-                                    !isToLoan)
-                                  Text(
-                                    '= ₹${CurrencyFormatter.format(double.tryParse(_liveResult) ?? 0.0)}',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: displayAmountColor,
-                                    ),
-                                  ),
-                                if (hasAmountError)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4.0),
-                                    child: Text(
-                                      errorMsg,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w800,
-                                        color: theme.colorScheme.error,
+                                      ),
+                                      secondChild: Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 0.0,
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              'TOTAL REPAYMENT',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w900,
+                                                color:
+                                                    theme.colorScheme.primary,
+                                                letterSpacing: 1.5,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            RichText(
+                                              text: TextSpan(
+                                                children: [
+                                                  TextSpan(
+                                                    text: '₹ ',
+                                                    style: TextStyle(
+                                                      fontSize: 22,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: displayAmountColor
+                                                          .withOpacity(0.7),
+                                                    ),
+                                                  ),
+                                                  TextSpan(
+                                                    text:
+                                                        CurrencyFormatter.format(
+                                                          double.tryParse(
+                                                                _liveResult,
+                                                              ) ??
+                                                              0.0,
+                                                        ),
+                                                    style: TextStyle(
+                                                      fontSize: 32,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      color: displayAmountColor,
+                                                      letterSpacing: -1.0,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    if (_expression.isNotEmpty &&
+                                        _expression != _liveResult &&
+                                        !hasAmountError &&
+                                        !isToLoan)
+                                      Text(
+                                        '= ₹${CurrencyFormatter.format(double.tryParse(_liveResult) ?? 0.0)}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: displayAmountColor,
+                                        ),
+                                      ),
+                                    if (hasAmountError)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4.0,
+                                        ),
+                                        child: Text(
+                                          errorMsg,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: theme.colorScheme.error,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
                       Expanded(
                         flex: isToLoan ? 6 : 5,
                         child: SingleChildScrollView(
