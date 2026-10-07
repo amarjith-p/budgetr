@@ -26,6 +26,10 @@ class TransactionClassifySheet extends StatefulWidget {
   /// If true, all items already have auto or user classifications — edit mode.
   final bool isEditMode;
 
+  /// Transaction IDs that are newly added and have never been classified by
+  /// the user. These are sorted to the top and shown with a 'NEW' badge.
+  final Set<String> newTxIds;
+
   const TransactionClassifySheet({
     Key? key,
     required this.transactions,
@@ -33,6 +37,7 @@ class TransactionClassifySheet extends StatefulWidget {
     required this.year,
     required this.existingClassifications,
     this.isEditMode = false,
+    this.newTxIds = const {},
   }) : super(key: key);
 
   static Future<Map<String, TransactionClassification>?> show(
@@ -42,6 +47,7 @@ class TransactionClassifySheet extends StatefulWidget {
     required int year,
     required Map<String, TransactionClassification> existingClassifications,
     bool isEditMode = false,
+    Set<String> newTxIds = const {},
   }) {
     return showModalBottomSheet<Map<String, TransactionClassification>>(
       context: context,
@@ -58,6 +64,7 @@ class TransactionClassifySheet extends StatefulWidget {
         year: year,
         existingClassifications: existingClassifications,
         isEditMode: isEditMode,
+        newTxIds: newTxIds,
       ),
     );
   }
@@ -80,6 +87,18 @@ class _TransactionClassifySheetState extends State<TransactionClassifySheet> {
   void initState() {
     super.initState();
     _allTransactions = List.from(widget.transactions);
+
+    // Sort: NEW (unclassified) transactions appear at the top so the user
+    // immediately sees which ones need review.
+    if (widget.newTxIds.isNotEmpty) {
+      _allTransactions.sort((a, b) {
+        final aIsNew = widget.newTxIds.contains(a.id) ? 0 : 1;
+        final bIsNew = widget.newTxIds.contains(b.id) ? 0 : 1;
+        if (aIsNew != bIsNew) return aIsNew.compareTo(bIsNew);
+        return b.date.compareTo(a.date);
+      });
+    }
+
     _classifications = Map.from(widget.existingClassifications);
 
     // Auto-classify everything that isn't already user-classified
@@ -213,7 +232,9 @@ class _TransactionClassifySheetState extends State<TransactionClassifySheet> {
                             ),
                           ),
                           Text(
-                            '$classified / $total classified — swipe or tap to change',
+                            widget.newTxIds.isNotEmpty
+                                ? '${widget.newTxIds.length} new · $classified / $total classified'
+                                : '$classified / $total classified - swipe or tap to change',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
@@ -405,12 +426,14 @@ class _TransactionClassifySheetState extends State<TransactionClassifySheet> {
                           final guess = _autoGuesses[tx.id];
                           final isAutoGuess =
                               guess != null && guess.classification == current;
+                          final isNew = widget.newTxIds.contains(tx.id);
 
                           return _SwipeClassifyCard(
                             tx: tx,
                             current: current,
                             autoGuess: guess,
                             isAutoGuess: isAutoGuess,
+                            isNew: isNew,
                             theme: theme,
                             isDark: isDark,
                             onClassify: (clf) => _setClassification(tx, clf),
@@ -452,6 +475,7 @@ class _SwipeClassifyCard extends StatefulWidget {
   final TransactionClassification current;
   final ClassificationGuess? autoGuess;
   final bool isAutoGuess;
+  final bool isNew;
   final ThemeData theme;
   final bool isDark;
   final ValueChanged<TransactionClassification> onClassify;
@@ -464,6 +488,7 @@ class _SwipeClassifyCard extends StatefulWidget {
     required this.theme,
     required this.isDark,
     required this.onClassify,
+    this.isNew = false,
   });
 
   @override
@@ -528,9 +553,14 @@ class _SwipeClassifyCardState extends State<_SwipeClassifyCard> {
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
-          color: color.withOpacity(widget.isDark ? 0.08 : 0.05),
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.25), width: 1.0),
+          border: widget.isNew
+              ? Border.all(
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                  width: 1.5,
+                )
+              : Border.all(color: color.withOpacity(0.25), width: 1.0),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -628,6 +658,35 @@ class _SwipeClassifyCardState extends State<_SwipeClassifyCard> {
                             ),
                             if (widget.autoGuess != null) ...[
                               const SizedBox(width: 8),
+                              // NEW badge (shown for newly added, unclassified tx)
+                              if (widget.isNew)
+                                Container(
+                                  margin: const EdgeInsets.only(right: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFF5A623,
+                                    ).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFFF5A623,
+                                      ).withOpacity(0.5),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    '✦ NEW',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFFF5A623),
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 5,

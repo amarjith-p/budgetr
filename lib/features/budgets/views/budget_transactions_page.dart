@@ -71,6 +71,7 @@ class _BudgetTransactionsPageState
     BuildContext context,
     List<TransactionWithDetails> bucketExpenses, {
     bool forceEdit = false,
+    Set<String> newTxIds = const {},
   }) async {
     if (_sheetOpen) return;
     final projMode = ref.read(projectionSettingsProvider);
@@ -89,6 +90,7 @@ class _BudgetTransactionsPageState
       year: _year,
       existingClassifications: _classifications,
       isEditMode: forceEdit || hasExisting,
+      newTxIds: newTxIds,
     );
 
     _sheetOpen = false;
@@ -206,7 +208,21 @@ class _BudgetTransactionsPageState
 
           final isOverBudget = activeProjection > widget.allocatedAmount;
 
-          // 4. TRIGGER CLASSIFY SHEET on first open
+          // 4. DETECT UNCLASSIFIED TRANSACTIONS
+          // Transactions present in this bucket but absent from the stored
+          // classifications map — these are NEW transactions added after the
+          // user last ran the classify sheet.
+          final unclassifiedTxIds =
+              projMode == ProjectionMode.smart &&
+                  _classificationsLoaded &&
+                  isCurrentMonth
+              ? bucketTransactions
+                    .map((d) => d.transaction.id)
+                    .where((id) => !_classifications.containsKey(id))
+                    .toList()
+              : <String>[];
+
+          // 4a. TRIGGER CLASSIFY SHEET on first open (no classifications at all)
           if (projMode == ProjectionMode.smart &&
               _classificationsLoaded &&
               isCurrentMonth &&
@@ -228,18 +244,20 @@ class _BudgetTransactionsPageState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // --- PROJECTION MODE BADGE ---
+                      // --- PROJECTION MODE BADGE (carries unclassified warning inline) ---
                       _BucketProjectionBadge(
                         mode: projMode,
                         smartResult: smartResult,
                         theme: theme,
                         isDark: isDark,
                         bucketName: widget.bucket.name,
+                        unclassifiedCount: unclassifiedTxIds.length,
                         onReclassify: isCurrentMonth
                             ? () => _openClassifySheet(
                                 context,
                                 bucketTransactions,
                                 forceEdit: true,
+                                newTxIds: unclassifiedTxIds.toSet(),
                               )
                             : null,
                       ),
@@ -247,12 +265,15 @@ class _BudgetTransactionsPageState
                       const SizedBox(height: DesignTokens.spacingMd),
 
                       // --- SMART INSIGHT BANNER ---
+                      // Suppressed when unclassified items exist (projections unreliable)
                       if (projMode == ProjectionMode.smart &&
-                          smartResult != null)
+                          smartResult != null &&
+                          unclassifiedTxIds.isEmpty)
                         _BucketInsightBanner(result: smartResult, theme: theme),
 
                       if (projMode == ProjectionMode.smart &&
-                          smartResult != null)
+                          smartResult != null &&
+                          unclassifiedTxIds.isEmpty)
                         const SizedBox(height: DesignTokens.spacingMd),
 
                       // --- METRICS GRID ---
@@ -402,6 +423,7 @@ class _BucketProjectionBadge extends StatelessWidget {
   final ThemeData theme;
   final bool isDark;
   final String bucketName;
+  final int unclassifiedCount;
   final VoidCallback? onReclassify;
 
   const _BucketProjectionBadge({
@@ -410,64 +432,97 @@ class _BucketProjectionBadge extends StatelessWidget {
     required this.theme,
     required this.isDark,
     required this.bucketName,
+    this.unclassifiedCount = 0,
     this.onReclassify,
   });
 
   @override
   Widget build(BuildContext context) {
     final isLinear = mode == ProjectionMode.linear;
-    final color = isLinear
+    final hasUnclassified = unclassifiedCount > 0 && !isLinear;
+
+    final baseColor = isLinear
         ? theme.colorScheme.onSurfaceVariant
         : theme.colorScheme.primary;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(isDark ? 0.1 : 0.06),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isLinear ? Icons.show_chart_rounded : Icons.psychology_rounded,
-            size: 16,
-            color: color,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              isLinear
-                  ? 'Linear Projection - $bucketName bucket'
-                  : 'Smart Projection - Variable Only Extrapolated',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
-          ),
-          if (!isLinear && onReclassify != null)
-            GestureDetector(
-              onTap: onReclassify,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(6),
+    final color = hasUnclassified ? const Color(0xFFF5A623) : baseColor;
+
+    return GestureDetector(
+      onTap: hasUnclassified ? onReclassify : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(isDark ? 0.1 : 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isLinear
+                      ? Icons.show_chart_rounded
+                      : (hasUnclassified
+                            ? Icons.warning_amber_rounded
+                            : Icons.psychology_rounded),
+                  size: 16,
+                  color: color,
                 ),
-                child: Text(
-                  'EDIT',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                    color: color,
-                    letterSpacing: 0.5,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isLinear
+                        ? 'Linear Projection - $bucketName bucket'
+                        : (hasUnclassified
+                              ? '$unclassifiedCount Auto-Classified, Needs Review'
+                              : 'Smart Projection - Variable Only Extrapolated'),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
                   ),
                 ),
-              ),
+                if (!isLinear && onReclassify != null && !hasUnclassified)
+                  GestureDetector(
+                    onTap: onReclassify,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'EDIT',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          color: color,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-        ],
+            if (hasUnclassified) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Confirm the auto-classification first to see accurate insights',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
