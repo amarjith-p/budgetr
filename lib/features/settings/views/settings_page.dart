@@ -10,6 +10,7 @@ import '../../../core/components/theme_switcher_card.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../notifications/views/notification_manager_screen.dart';
 import '../../auth/auth_state.dart';
+import '../../budgets/providers/projection_settings_provider.dart';
 import 'factory_reset_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -91,6 +92,71 @@ class SettingsPage extends ConsumerWidget {
                     ),
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // --- BUDGET SECTION ---
+              _buildSectionTitle('BUDGET', theme),
+              const SizedBox(height: 8),
+              _buildBentoActionCard(
+                context,
+                icon: Icons.psychology_rounded,
+                title: 'Projection Mode',
+                subtitle: ref.watch(projectionSettingsProvider) == ProjectionMode.linear
+                    ? 'Linear — Daily average'
+                    : 'Smart — Fixed costs isolated',
+                onTap: () async {
+                  HapticFeedback.selectionClick();
+
+                  final currentMode = ref.read(projectionSettingsProvider);
+                  final currentLabel = currentMode == ProjectionMode.linear
+                      ? 'Linear Projection'
+                      : 'Smart Projection';
+
+                  final result = await GlobalSelectionSheet.show<String>(
+                    context: context,
+                    title: 'Budget Projection Mode',
+                    builder: (sheetContext, scrollController) => ListView(
+                      controller: scrollController,
+                      physics: const BouncingScrollPhysics(),
+                      children: [
+                        // Linear option
+                        _buildProjectionOption(
+                          sheetContext,
+                          key: 'Linear Projection',
+                          icon: Icons.show_chart_rounded,
+                          title: 'Linear Projection',
+                          description:
+                              'Projects end-of-month spend using a simple daily average. Accurate for uniform spending patterns.',
+                          isSelected: currentLabel == 'Linear Projection',
+                          theme: theme,
+                        ),
+                        Divider(height: 1, color: theme.dividerColor.withOpacity(0.3), indent: 24, endIndent: 24),
+                        // Smart option
+                        _buildProjectionOption(
+                          sheetContext,
+                          key: 'Smart Projection',
+                          icon: Icons.psychology_rounded,
+                          title: 'Smart Projection',
+                          description:
+                              'You classify each transaction as Fixed, Variable, or One-off. Only variable spending is extrapolated — EMIs and one-time costs are isolated for accuracy.',
+                          isSelected: currentLabel == 'Smart Projection',
+                          theme: theme,
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (result != null) {
+                    final notifier = ref.read(projectionSettingsProvider.notifier);
+                    if (result == 'Linear Projection') {
+                      notifier.setMode(ProjectionMode.linear);
+                    } else {
+                      notifier.setMode(ProjectionMode.smart);
+                    }
+                  }
+                },
               ),
 
               const SizedBox(height: 20),
@@ -242,6 +308,63 @@ class SettingsPage extends ConsumerWidget {
           color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
         ),
       ),
+    );
+  }
+
+  /// Rich projection mode option tile used inside the GlobalSelectionSheet.
+  static Widget _buildProjectionOption(
+    BuildContext sheetContext, {
+    required String key,
+    required IconData icon,
+    required String title,
+    required String description,
+    required bool isSelected,
+    required ThemeData theme,
+  }) {
+    final color = isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface;
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+          fontSize: 15,
+          color: color,
+        ),
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(
+          description,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: theme.colorScheme.onSurfaceVariant,
+            height: 1.4,
+          ),
+        ),
+      ),
+      trailing: Icon(
+        isSelected
+            ? Icons.radio_button_checked_rounded
+            : Icons.radio_button_off_rounded,
+        size: 20,
+        color: isSelected
+            ? theme.colorScheme.primary
+            : theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+      ),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        Navigator.pop(sheetContext, key);
+      },
     );
   }
 

@@ -228,39 +228,63 @@ class SmartBudgetChartPainter extends CustomPainter {
         projPaint,
       );
 
-      // Warning Intersection
+      // -----------------------------------------------------------------------
+      // Break-point: find where the projection line crosses the budget limit.
+      //
+      // The projection line goes from P1=(currentX, currentY) to P2=(projX, projY).
+      // The limit line is the horizontal y = limitY.
+      //
+      // Parametric form: Y(t) = currentY + t * (projY - currentY),  t ∈ [0,1]
+      // Solve for t where Y(t) = limitY:
+      //   t = (limitY - currentY) / (projY - currentY)
+      //
+      // Then X at that t: X(t) = currentX + t * (projX - currentX)
+      //
+      // The corresponding day (for the label):
+      //   fracDay = daysElapsed + t * (daysInMonth - daysElapsed)
+      // -----------------------------------------------------------------------
       if (isOverBudget && cumulativeData.last < allocatedAmount) {
-        final dailyAvg = cumulativeData.last / daysElapsed;
-        if (dailyAvg > 0) {
-          breakDay = (allocatedAmount / dailyAvg).round();
-          breakX = getX(breakDay);
+        final dy = projY - currentY;
+        if (dy.abs() > 0.001) {
+          final t = (limitY - currentY) / dy;
+          if (t >= 0.0 && t <= 1.0) {
+            final bx = currentX + t * (projX - currentX);
+            breakX = bx;
 
-          final warningPaint = Paint()
-            ..color = theme.colorScheme.error.withOpacity(0.4)
-            ..strokeWidth = 1.0
-            ..style = PaintingStyle.stroke;
-          _drawDashedLine(
-            canvas,
-            Offset(breakX, paddingTop),
-            Offset(breakX, size.height - paddingBottom),
-            warningPaint,
-            dashWidth: 4,
-            dashSpace: 4,
-          );
+            // Fractional day at intersection
+            final fracDay = daysElapsed + t * (daysInMonth - daysElapsed);
+            breakDay = fracDay.round().clamp(daysElapsed + 1, daysInMonth);
 
-          canvas.drawCircle(
-            Offset(breakX, limitY),
-            4.0,
-            Paint()..color = theme.colorScheme.error,
-          );
-          canvas.drawCircle(
-            Offset(breakX, limitY),
-            8.0,
-            Paint()..color = theme.colorScheme.error.withOpacity(0.3),
-          );
+            // Vertical dashed warning line at break point
+            final warningPaint = Paint()
+              ..color = theme.colorScheme.error.withOpacity(0.4)
+              ..strokeWidth = 1.0
+              ..style = PaintingStyle.stroke;
+            _drawDashedLine(
+              canvas,
+              Offset(bx, paddingTop),
+              Offset(bx, size.height - paddingBottom),
+              warningPaint,
+              dashWidth: 4,
+              dashSpace: 4,
+            );
+
+            // Dot exactly at the intersection of projection line + limit line
+            canvas.drawCircle(
+              Offset(bx, limitY),
+              8.0,
+              Paint()..color = theme.colorScheme.error.withOpacity(0.25),
+            );
+            canvas.drawCircle(
+              Offset(bx, limitY),
+              4.0,
+              Paint()..color = theme.colorScheme.error,
+            );
+          }
         }
       }
     }
+
 
     // 5. Draw Actual Spending Line & Gradient
     if (cumulativeData.isNotEmpty) {
