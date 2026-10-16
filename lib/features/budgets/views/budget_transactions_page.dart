@@ -18,6 +18,7 @@ import '../models/smart_projection_result.dart';
 import '../providers/projection_settings_provider.dart';
 import '../services/smart_projection_engine.dart';
 import '../services/transaction_classification_store.dart';
+import '../services/transaction_auto_classifier.dart';
 
 class BudgetTransactionsPage extends ConsumerStatefulWidget {
   final BudgetBucket bucket;
@@ -55,6 +56,15 @@ class _BudgetTransactionsPageState
   void initState() {
     super.initState();
     _loadClassifications();
+    TransactionClassificationStore.changeNotifier
+        .addListener(_loadClassifications);
+  }
+
+  @override
+  void dispose() {
+    TransactionClassificationStore.changeNotifier
+        .removeListener(_loadClassifications);
+    super.dispose();
   }
 
   Future<void> _loadClassifications() async {
@@ -174,6 +184,8 @@ class _BudgetTransactionsPageState
 
           // 3. SMART PROJECTION
           SmartProjectionResult? smartResult;
+          final List<String> unclassifiedTxIds = [];
+
           if (projMode == ProjectionMode.smart &&
               _classificationsLoaded &&
               isCurrentMonth &&
@@ -181,9 +193,28 @@ class _BudgetTransactionsPageState
             final txRecords = bucketTransactions
                 .map((d) => d.transaction)
                 .toList();
+
+            final activeClassifications = <String, TransactionClassification>{};
+            final dailyBudget = daysInMonth > 0
+                ? widget.allocatedAmount / daysInMonth
+                : 500.0;
+
+            for (final tx in txRecords) {
+              if (_classifications.containsKey(tx.id)) {
+                activeClassifications[tx.id] = _classifications[tx.id]!;
+              } else {
+                final guess = TransactionAutoClassifier.classify(
+                  tx,
+                  dailyBudget: dailyBudget,
+                );
+                activeClassifications[tx.id] = guess.classification;
+                unclassifiedTxIds.add(tx.id);
+              }
+            }
+
             smartResult = SmartProjectionEngine.compute(
               transactions: txRecords,
-              classifications: _classifications,
+              classifications: activeClassifications,
               allocatedBudget: widget.allocatedAmount,
               daysInMonth: daysInMonth,
               daysElapsed: daysElapsed,
@@ -207,20 +238,6 @@ class _BudgetTransactionsPageState
               : dailyAvg;
 
           final isOverBudget = activeProjection > widget.allocatedAmount;
-
-          // 4. DETECT UNCLASSIFIED TRANSACTIONS
-          // Transactions present in this bucket but absent from the stored
-          // classifications map — these are NEW transactions added after the
-          // user last ran the classify sheet.
-          final unclassifiedTxIds =
-              projMode == ProjectionMode.smart &&
-                  _classificationsLoaded &&
-                  isCurrentMonth
-              ? bucketTransactions
-                    .map((d) => d.transaction.id)
-                    .where((id) => !_classifications.containsKey(id))
-                    .toList()
-              : <String>[];
 
           // 4a. TRIGGER CLASSIFY SHEET on first open (no classifications at all)
           if (projMode == ProjectionMode.smart &&

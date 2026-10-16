@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/design_tokens.dart';
 import '../../../core/constants/date_time_constants.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/database/app_database.dart';
@@ -372,7 +371,30 @@ class _BudgetSimulatorWidgetState extends ConsumerState<BudgetSimulatorWidget> {
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
+
+          // --- LINEAR PROJECTION LABEL ---
+          Row(
+            children: [
+              Icon(
+                Icons.show_chart_rounded,
+                size: 11,
+                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Simulations use Linear Projection (Daily Average)',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
 
           // --- HORIZONTALLY SCROLLABLE BUCKET PILLS ---
           budgetAsync.when(

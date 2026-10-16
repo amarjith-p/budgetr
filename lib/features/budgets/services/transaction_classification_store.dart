@@ -5,11 +5,20 @@
 // Value: JSON map { "<txId>": "fixed" | "variable" | "oneoff" }
 
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/transaction_classification.dart';
 
+class ClassificationChangeNotifier extends ChangeNotifier {
+  void notify() => notifyListeners();
+}
+
 class TransactionClassificationStore {
   static String _prefKey(int month, int year) => 'tx_clf_${month}_$year';
+
+  /// Global notifier that fires whenever classifications are saved or cleared.
+  static final ClassificationChangeNotifier changeNotifier =
+      ClassificationChangeNotifier();
 
   /// Load all classifications for a given budget month.
   static Future<Map<String, TransactionClassification>> load(
@@ -47,6 +56,7 @@ class TransactionClassificationStore {
     await prefs.setString(_prefKey(month, year), jsonEncode(
       existing.map((k, v) => MapEntry(k, v.name)),
     ));
+    changeNotifier.notify();
   }
 
   /// Bulk-save all classifications for a month at once.
@@ -60,11 +70,13 @@ class TransactionClassificationStore {
       _prefKey(month, year),
       jsonEncode(classifications.map((k, v) => MapEntry(k, v.name))),
     );
+    changeNotifier.notify();
   }
 
   /// Clear all classifications for a month (e.g. on budget reset).
   static Future<void> clear(int month, int year) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefKey(month, year));
+    changeNotifier.notify();
   }
 }

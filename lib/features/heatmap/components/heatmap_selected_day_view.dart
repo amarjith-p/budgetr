@@ -107,6 +107,41 @@ class HeatmapSelectedDayView extends ConsumerWidget {
                         ),
                       ],
                     ),
+                  if (summary != null &&
+                      (summary.fixedSpend > 0 || summary.oneoffSpend > 0)) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (summary.variableSpend > 0)
+                          Text(
+                            'Var: ₹${summary.variableSpend.toStringAsFixed(0)}  ',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        if (summary.fixedSpend > 0)
+                          Text(
+                            'Fixed: ₹${summary.fixedSpend.toStringAsFixed(0)}  ',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        if (summary.oneoffSpend > 0)
+                          Text(
+                            'One-off: ₹${summary.oneoffSpend.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.secondary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
               IconButton(

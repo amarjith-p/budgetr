@@ -16,6 +16,8 @@ import '../models/smart_projection_result.dart';
 import '../providers/projection_settings_provider.dart';
 import '../services/smart_projection_engine.dart';
 import '../services/transaction_classification_store.dart';
+import '../services/transaction_auto_classifier.dart';
+import '../components/projection_mode_badge.dart';
 
 class MonthlyBudgetTransactionsPage extends ConsumerStatefulWidget {
   final int month;
@@ -47,6 +49,15 @@ class _MonthlyBudgetTransactionsPageState
   void initState() {
     super.initState();
     _loadClassifications();
+    TransactionClassificationStore.changeNotifier
+        .addListener(_loadClassifications);
+  }
+
+  @override
+  void dispose() {
+    TransactionClassificationStore.changeNotifier
+        .removeListener(_loadClassifications);
+    super.dispose();
   }
 
   Future<void> _loadClassifications() async {
@@ -201,6 +212,8 @@ class _MonthlyBudgetTransactionsPageState
 
           // 5. SMART PROJECTION (computed when classifications are loaded)
           SmartProjectionResult? smartResult;
+          final List<String> unclassifiedTxIds = [];
+
           if (projMode == ProjectionMode.smart &&
               _classificationsLoaded &&
               isCurrentMonth &&
@@ -208,9 +221,28 @@ class _MonthlyBudgetTransactionsPageState
             final txRecords = allMonthExpenses
                 .map((d) => d.transaction)
                 .toList();
+
+            final activeClassifications = <String, TransactionClassification>{};
+            final dailyBudget = daysInMonth > 0
+                ? widget.effectiveIncome / daysInMonth
+                : 500.0;
+
+            for (final tx in txRecords) {
+              if (_classifications.containsKey(tx.id)) {
+                activeClassifications[tx.id] = _classifications[tx.id]!;
+              } else {
+                final guess = TransactionAutoClassifier.classify(
+                  tx,
+                  dailyBudget: dailyBudget,
+                );
+                activeClassifications[tx.id] = guess.classification;
+                unclassifiedTxIds.add(tx.id);
+              }
+            }
+
             smartResult = SmartProjectionEngine.compute(
               transactions: txRecords,
-              classifications: _classifications,
+              classifications: activeClassifications,
               allocatedBudget: widget.effectiveIncome,
               daysInMonth: daysInMonth,
               daysElapsed: daysElapsed,
@@ -235,18 +267,6 @@ class _MonthlyBudgetTransactionsPageState
 
           final isOverBudget = activeProjection > widget.effectiveIncome;
 
-          // DETECT UNCLASSIFIED TRANSACTIONS
-          // Any expense in this month that has no entry in the stored
-          // classifications map — newly added after the last classify session.
-          final unclassifiedTxIds = projMode == ProjectionMode.smart &&
-                  _classificationsLoaded &&
-                  isCurrentMonth
-              ? allMonthExpenses
-                    .map((d) => d.transaction.id)
-                    .where((id) => !_classifications.containsKey(id))
-                    .toList()
-              : <String>[];
-
           // 6. TRIGGER CLASSIFY SHEET on first open (only if no classifications yet)
           if (projMode == ProjectionMode.smart &&
               _classificationsLoaded &&
@@ -270,7 +290,7 @@ class _MonthlyBudgetTransactionsPageState
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // --- PROJECTION MODE BADGE (carries unclassified warning inline) ---
-                      _ProjectionModeBadge(
+                      ProjectionModeBadge(
                         mode: projMode,
                         smartResult: smartResult,
                         theme: theme,
@@ -393,7 +413,7 @@ class _MonthlyBudgetTransactionsPageState
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
-                                  '₹${outOfBucketTotal.toStringAsFixed(2)} out-of-bucket included - classify via the sheet above.',
+                                  '₹${outOfBucketTotal.toStringAsFixed(2)} Out of Bucket included - classify via the sheet above.',
                                   style: TextStyle(
                                     fontSize: 9,
                                     fontWeight: FontWeight.w600,
@@ -427,6 +447,11 @@ class _MonthlyBudgetTransactionsPageState
                         projectedSpend: activeProjection,
                         dailyAvg: activeDailyAvg,
                         recDaily: activeRecDaily,
+                        remainingWithoutOutOfBucket:
+                            (projMode == ProjectionMode.smart &&
+                                    outOfBucketTotal > 0)
+                                ? (remainingBudget + outOfBucketTotal)
+                                : null,
                       ),
 
                       const SizedBox(height: DesignTokens.spacingLg),
@@ -558,108 +583,7 @@ class _MonthlyBudgetTransactionsPageState
   }
 }
 
-// ---------------------------------------------------------------------------
-// Projection Mode Badge Widget
-// ---------------------------------------------------------------------------
-class _ProjectionModeBadge extends StatelessWidget {
-  final ProjectionMode mode;
-  final SmartProjectionResult? smartResult;
-  final ThemeData theme;
-  final bool isDark;
-  final int unclassifiedCount;
-  final VoidCallback? onReclassify;
 
-  const _ProjectionModeBadge({
-    required this.mode,
-    required this.smartResult,
-    required this.theme,
-    required this.isDark,
-    this.unclassifiedCount = 0,
-    this.onReclassify,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isLinear = mode == ProjectionMode.linear;
-    final hasUnclassified = unclassifiedCount > 0 && !isLinear;
-    
-    final baseColor = isLinear
-        ? theme.colorScheme.onSurfaceVariant
-        : theme.colorScheme.primary;
-        
-    final color = hasUnclassified ? const Color(0xFFF5A623) : baseColor;
-
-    return GestureDetector(
-      onTap: hasUnclassified ? onReclassify : null,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(isDark ? 0.1 : 0.06),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.2)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  isLinear ? Icons.show_chart_rounded : (hasUnclassified ? Icons.warning_amber_rounded : Icons.psychology_rounded),
-                  size: 16,
-                  color: color,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    isLinear
-                        ? 'Linear Projection - Simple Daily Average'
-                        : (hasUnclassified ? '$unclassifiedCount Auto-Classified, Needs Review' : 'Smart Projection - Variable Only Extrapolated'),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: color,
-                    ),
-                  ),
-                ),
-                if (!isLinear && onReclassify != null && !hasUnclassified)
-                  GestureDetector(
-                    onTap: onReclassify,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'RE-CLASSIFY',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.w900,
-                          color: color,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          if (hasUnclassified) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Classify first to see accurate insights',
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
-              ),
-            ),
-          ]
-        ],
-      ),
-      ),
-    );
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Smart Insight Banner Widget

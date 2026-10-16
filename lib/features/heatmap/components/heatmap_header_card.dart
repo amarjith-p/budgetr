@@ -6,6 +6,10 @@ import 'package:flutter/services.dart';
 import '../../../core/components/bento_card.dart';
 import '../../../core/components/currency_text.dart';
 import '../../../core/constants/date_time_constants.dart';
+import '../../transactions/providers/transaction_provider.dart';
+import '../../budgets/components/projection_mode_badge.dart';
+import '../../budgets/components/transaction_classify_sheet.dart';
+import '../../budgets/services/transaction_classification_store.dart';
 import '../providers/heatmap_month_provider.dart';
 import '../providers/heatmap_daily_spend_provider.dart';
 import 'heatmap_bucket_filter_sheet.dart';
@@ -19,6 +23,44 @@ class HeatmapHeaderCard extends ConsumerStatefulWidget {
 
 class _HeatmapHeaderCardState extends ConsumerState<HeatmapHeaderCard> {
   int _currentAdviceIndex = 0;
+  bool _sheetOpen = false;
+
+  Future<void> _openClassifySheet(BuildContext context) async {
+    if (_sheetOpen) return;
+    final month = ref.read(heatmapSelectedMonthProvider);
+    final allTxs = ref.read(allTransactionsProvider).asData?.value ?? [];
+    final monthExpenses = allTxs
+        .map((d) => d.transaction)
+        .where((t) =>
+            t.type == 'Expense' &&
+            t.date.year == month.year &&
+            t.date.month == month.month)
+        .toList();
+
+    if (monthExpenses.isEmpty) return;
+
+    final existing =
+        await TransactionClassificationStore.load(month.month, month.year);
+
+    final unclassifiedIds = monthExpenses
+        .map((t) => t.id)
+        .where((id) => !existing.containsKey(id))
+        .toSet();
+
+    if (!context.mounted) return;
+
+    _sheetOpen = true;
+    await TransactionClassifySheet.show(
+      context,
+      transactions: monthExpenses,
+      month: month.month,
+      year: month.year,
+      existingClassifications: existing,
+      isEditMode: existing.isNotEmpty,
+      newTxIds: unclassifiedIds,
+    );
+    _sheetOpen = false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +88,9 @@ class _HeatmapHeaderCardState extends ConsumerState<HeatmapHeaderCard> {
     final currentAdvice = advices.isNotEmpty
         ? advices[_currentAdviceIndex]
         : null;
+
+    final now = DateTime.now();
+    final isCurrentMonth = month.year == now.year && month.month == now.month;
 
     return BentoCard(
       onTap: () {
@@ -116,7 +161,20 @@ class _HeatmapHeaderCardState extends ConsumerState<HeatmapHeaderCard> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+
+          // --- PROJECTION MODE BADGE (MATCHES BUDGET MODULE EXACTLY) ---
+          ProjectionModeBadge(
+            mode: heatmapData.projectionMode,
+            smartResult: heatmapData.smartResult,
+            theme: theme,
+            isDark: isDark,
+            unclassifiedCount: heatmapData.unclassifiedCount,
+            onReclassify: isCurrentMonth
+                ? () => _openClassifySheet(context)
+                : null,
+          ),
+          const SizedBox(height: 12),
 
           Wrap(
             alignment: WrapAlignment.center,

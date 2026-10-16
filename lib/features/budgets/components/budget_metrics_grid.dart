@@ -8,6 +8,7 @@ class BudgetMetricsGrid extends StatelessWidget {
   final double projectedSpend;
   final double dailyAvg;
   final double recDaily;
+  final double? remainingWithoutOutOfBucket;
 
   const BudgetMetricsGrid({
     Key? key,
@@ -17,6 +18,7 @@ class BudgetMetricsGrid extends StatelessWidget {
     required this.projectedSpend,
     required this.dailyAvg,
     required this.recDaily,
+    this.remainingWithoutOutOfBucket,
   }) : super(key: key);
 
   @override
@@ -48,6 +50,7 @@ class BudgetMetricsGrid extends StatelessWidget {
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _buildHeroMetric(
@@ -62,7 +65,7 @@ class BudgetMetricsGrid extends StatelessWidget {
               const SizedBox(width: 12),
               Container(
                 width: 1,
-                height: 36,
+                height: remainingWithoutOutOfBucket != null ? 50 : 36,
                 color: theme.dividerColor.withOpacity(0.5),
               ),
               const SizedBox(width: 12),
@@ -73,6 +76,9 @@ class BudgetMetricsGrid extends StatelessWidget {
                   theme: theme,
                   isError: remainingBudget < 0,
                   alignment: CrossAxisAlignment.end,
+                  subtitle: remainingWithoutOutOfBucket != null
+                      ? 'w/o Out of Bucket: ${remainingWithoutOutOfBucket! < 0 ? '-' : ''}₹${CurrencyFormatter.format(remainingWithoutOutOfBucket!.abs())}'
+                      : null,
                 ),
               ),
             ],
@@ -135,6 +141,7 @@ class BudgetMetricsGrid extends StatelessWidget {
     required ThemeData theme,
     required bool isError,
     required CrossAxisAlignment alignment,
+    String? subtitle,
   }) {
     final color = isError ? theme.colorScheme.error : theme.colorScheme.primary;
     final sign = amount < 0 ? '-' : '';
@@ -172,6 +179,21 @@ class BudgetMetricsGrid extends StatelessWidget {
             symbolStyle: TextStyle(fontSize: 12, color: color.withOpacity(0.8)),
           ),
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: boxAlignment,
+            child: Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.75),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

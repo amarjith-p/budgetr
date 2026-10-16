@@ -113,13 +113,16 @@ class SmartProjectionEngine {
     if (allocatedBudget <= 0) return 50;
 
     // Factor 1: How well is variable spending pacing vs controllable budget?
-    final targetVariableDailyAvg = daysElapsed > 0
-        ? controllableBudget / daysInMonth
-        : 0.0;
-    final variablePaceRatio = targetVariableDailyAvg > 0
-        ? (variableDailyAvg / targetVariableDailyAvg).clamp(0.0, 2.0)
-        : 0.0;
-    final pacingScore = ((1.0 - variablePaceRatio) * 50 + 50).clamp(0.0, 100.0);
+    final double pacingScore;
+    if (controllableBudget <= 0) {
+      pacingScore = variableDailyAvg > 0 ? 0.0 : 50.0;
+    } else {
+      final targetVariableDailyAvg = controllableBudget / daysInMonth;
+      final variablePaceRatio = targetVariableDailyAvg > 0
+          ? (variableDailyAvg / targetVariableDailyAvg).clamp(0.0, 2.0)
+          : 0.0;
+      pacingScore = ((1.0 - variablePaceRatio) * 50 + 50).clamp(0.0, 100.0);
+    }
 
     // Factor 2: Overall projection vs budget ratio
     final projRatio = (smartProjection / allocatedBudget).clamp(0.0, 2.0);

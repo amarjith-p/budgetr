@@ -248,7 +248,7 @@ Future<void> _scheduleHeatmapAdvice(Ref ref, HeatmapData heatmapData) async {
   // If the AI found specific behavioral insights, hide the generic baseline pacing text
   if (validAdvices.length > 1) {
     validAdvices.removeWhere(
-      (a) => a.text.contains("Monthly Pacing: Keep daily spends"),
+      (a) => a.text.contains("Monthly Pacing: Keep daily"),
     );
   }
 
