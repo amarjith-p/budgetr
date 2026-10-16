@@ -38,7 +38,7 @@ class MonthlyBudgetTransactionsPage extends ConsumerStatefulWidget {
 
 class _MonthlyBudgetTransactionsPageState
     extends ConsumerState<MonthlyBudgetTransactionsPage> {
-  bool _showOutOfBucket = true;
+  bool _showOutOfBucket = false;
 
   // Smart projection state
   Map<String, TransactionClassification> _classifications = {};
@@ -151,10 +151,8 @@ class _MonthlyBudgetTransactionsPageState
           }
 
           // 3. APPLY TOGGLE FILTER
-          // In Smart mode: ALL transactions are included — classifications cover
-          // out-of-bucket items too, so the toggle is irrelevant.
-          final isSmartMode = projMode == ProjectionMode.smart;
-          final displayExpenses = (isSmartMode || _showOutOfBucket)
+          // Out-of-bucket toggle works in BOTH linear and smart modes.
+          final displayExpenses = _showOutOfBucket
               ? allMonthExpenses
               : allMonthExpenses
                     .where(
@@ -218,7 +216,7 @@ class _MonthlyBudgetTransactionsPageState
               _classificationsLoaded &&
               isCurrentMonth &&
               daysElapsed > 0) {
-            final txRecords = allMonthExpenses
+            final txRecords = displayExpenses
                 .map((d) => d.transaction)
                 .toList();
 
@@ -308,122 +306,87 @@ class _MonthlyBudgetTransactionsPageState
 
                       const SizedBox(height: DesignTokens.spacingMd),
 
-                      // --- OUT OF BUCKET TOGGLE CARD (Linear mode only) ---
-                      if (projMode == ProjectionMode.linear)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: theme.dividerColor,
-                              width: 1.0,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(
-                                  isDark ? 0.2 : 0.03,
-                                ),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.error
-                                          .withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      Icons.blur_circular_rounded,
-                                      color: theme.colorScheme.error,
-                                      size: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Out of Bucket',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      Text(
-                                        '₹${outOfBucketTotal.toStringAsFixed(2)} Total',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 11,
-                                          color: theme.colorScheme.error,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              Switch(
-                                value: _showOutOfBucket,
-                                activeColor: theme.colorScheme.primary,
-                                onChanged: (val) =>
-                                    setState(() => _showOutOfBucket = val),
-                              ),
-                            ],
-                          ),
+                      // --- OUT OF BUCKET TOGGLE CARD (Both modes) ---
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
                         ),
-
-                      // --- SMART MODE: out-of-bucket info note ---
-                      if (projMode == ProjectionMode.smart &&
-                          outOfBucketTotal > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: theme.dividerColor,
+                            width: 1.0,
                           ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withOpacity(
-                              isDark ? 0.08 : 0.05,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: theme.colorScheme.primary.withOpacity(
-                                0.15,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(
+                                isDark ? 0.2 : 0.03,
                               ),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline_rounded,
-                                size: 14,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  '₹${outOfBucketTotal.toStringAsFixed(2)} Out of Bucket included - classify via the sheet above.',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w600,
-                                    color: theme.colorScheme.primary,
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.error
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.blur_circular_rounded,
+                                    color: theme.colorScheme.error,
+                                    size: 18,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Out of Bucket',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 13,
+                                        color: !_showOutOfBucket
+                                            ? theme.colorScheme.onSurfaceVariant.withOpacity(0.5)
+                                            : null,
+                                      ),
+                                    ),
+                                    Text(
+                                      _showOutOfBucket
+                                          ? '₹${outOfBucketTotal.toStringAsFixed(2)} Total · Included'
+                                          : '₹${outOfBucketTotal.toStringAsFixed(2)} Total · Excluded',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 11,
+                                        color: _showOutOfBucket
+                                            ? theme.colorScheme.error
+                                            : theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Switch(
+                              value: _showOutOfBucket,
+                              activeColor: theme.colorScheme.primary,
+                              onChanged: (val) =>
+                                  setState(() => _showOutOfBucket = val),
+                            ),
+                          ],
                         ),
+                      ),
 
                       const SizedBox(height: DesignTokens.spacingMd),
 
@@ -448,8 +411,7 @@ class _MonthlyBudgetTransactionsPageState
                         dailyAvg: activeDailyAvg,
                         recDaily: activeRecDaily,
                         remainingWithoutOutOfBucket:
-                            (projMode == ProjectionMode.smart &&
-                                    outOfBucketTotal > 0)
+                            (_showOutOfBucket && outOfBucketTotal > 0)
                                 ? (remainingBudget + outOfBucketTotal)
                                 : null,
                       ),
@@ -562,7 +524,7 @@ class _MonthlyBudgetTransactionsPageState
                       final data = displayExpenses[index];
                       return Padding(
                         padding: const EdgeInsets.only(
-                          bottom: DesignTokens.spacingSm,
+                          bottom: 2.0,
                         ),
                         child: TransactionCard(
                           data: data,

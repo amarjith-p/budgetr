@@ -410,7 +410,7 @@ class _BudgetTransactionsPageState
                       final data = bucketTransactions[index];
                       return Padding(
                         padding: const EdgeInsets.only(
-                          bottom: DesignTokens.spacingSm,
+                          bottom: 2.0,
                         ),
                         child: TransactionCard(
                           data: data,
