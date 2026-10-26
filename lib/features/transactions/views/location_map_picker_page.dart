@@ -21,6 +21,7 @@ import '../providers/transaction_provider.dart';
 enum MapPickerStyle { satellite, streets, terrain }
 
 class PastLocationSpot {
+  final String id;
   final String name;
   final LatLng position;
   final int count;
@@ -28,6 +29,7 @@ class PastLocationSpot {
   final String? primaryCategory;
 
   const PastLocationSpot({
+    required this.id,
     required this.name,
     required this.position,
     required this.count,
@@ -99,6 +101,8 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
   MapPickerStyle _mapStyle = MapPickerStyle.satellite;
   bool _showPastMarkers = true;
   Map<String, PastLocationSpot> _pastSpots = {};
+  PastLocationSpot? _selectedPastSpot;
+  int _addressSessionId = 0;
 
   static const List<QuickCategoryConfig> _quickCategories = [
     QuickCategoryConfig(
@@ -423,7 +427,8 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
   Map<String, PastLocationSpot> _computePastSpots(List<dynamic> allTxs) {
     if (allTxs.isEmpty) return _pastSpots;
 
-    final Map<String, List<dynamic>> grouped = {};
+    const Distance dist = Distance();
+    final List<List<dynamic>> clusters = [];
 
     for (var txData in allTxs) {
       final t = txData.transaction;
@@ -431,14 +436,30 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
           t.locationName!.trim().isNotEmpty &&
           t.latitude != null &&
           t.longitude != null) {
-        final key = t.locationName!.trim().toLowerCase();
-        grouped.putIfAbsent(key, () => []).add(txData);
+        final pos = LatLng(t.latitude!, t.longitude!);
+        final name = t.locationName!.trim().toLowerCase();
+
+        bool added = false;
+        for (var cluster in clusters) {
+          final first = cluster.first.transaction;
+          if (first.locationName!.trim().toLowerCase() == name) {
+            final firstPos = LatLng(first.latitude!, first.longitude!);
+            if (dist.as(LengthUnit.Meter, pos, firstPos) < 150) {
+              cluster.add(txData);
+              added = true;
+              break;
+            }
+          }
+        }
+        if (!added) {
+          clusters.add([txData]);
+        }
       }
     }
 
     final Map<String, PastLocationSpot> spots = {};
-    for (var entry in grouped.entries) {
-      final list = entry.value;
+    for (int i = 0; i < clusters.length; i++) {
+      final list = clusters[i];
       final firstTx = list.first.transaction;
       double totalSpent = 0.0;
       for (var item in list) {
@@ -448,7 +469,10 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
         }
       }
 
-      spots[entry.key] = PastLocationSpot(
+      final spotId =
+          'past_spot_${i}_${firstTx.locationName!.trim().toLowerCase()}';
+      spots[spotId] = PastLocationSpot(
+        id: spotId,
         name: firstTx.locationName!.trim(),
         position: LatLng(firstTx.latitude!, firstTx.longitude!),
         count: list.length,
@@ -458,6 +482,343 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
     }
 
     return spots;
+  }
+
+  List<PastLocationSpot> _getNearbyPastSpots(
+    LatLng point, {
+    double radiusMeters = 30.0,
+  }) {
+    const Distance dist = Distance();
+    final List<MapEntry<PastLocationSpot, double>> matches = [];
+    for (var spot in _pastSpots.values) {
+      final d = dist.as(LengthUnit.Meter, point, spot.position);
+      if (d <= radiusMeters) {
+        matches.add(MapEntry(spot, d));
+      }
+    }
+    matches.sort((a, b) => a.value.compareTo(b.value));
+    return matches.map((e) => e.key).toList();
+  }
+
+  void _onMarkerTap(PastLocationSpot spot) {
+    HapticFeedback.mediumImpact();
+    final nearby = _getNearbyPastSpots(spot.position, radiusMeters: 30.0);
+    if (nearby.length <= 1) {
+      _selectPastSpot(spot);
+    } else {
+      _showPastSpotsDisambiguationSheet(nearby, initialSelected: spot);
+    }
+  }
+
+  void _handleMapTap(LatLng tapLatLng) {
+    if (!_showPastMarkers || _pastSpots.isEmpty) return;
+    final nearby = _getNearbyPastSpots(tapLatLng, radiusMeters: 25.0);
+    if (nearby.isEmpty) return;
+
+    HapticFeedback.selectionClick();
+    if (nearby.length == 1) {
+      _selectPastSpot(nearby.first);
+    } else {
+      _showPastSpotsDisambiguationSheet(nearby, initialSelected: nearby.first);
+    }
+  }
+
+  void _showPastSpotsDisambiguationSheet(
+    List<PastLocationSpot> spots, {
+    PastLocationSpot? initialSelected,
+  }) {
+    HapticFeedback.selectionClick();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.58,
+          ),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.6 : 0.2),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.3,
+                      ),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00E5FF).withValues(
+                            alpha: 0.15,
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.layers_rounded,
+                          size: 18,
+                          color: Color(0xFF00E5FF),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Locations in this Area',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${spots.length} past pins found here. Choose one:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 16),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    itemCount: spots.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final spot = spots[index];
+                      final bool isCurrent =
+                          _selectedPastSpot?.id == spot.id ||
+                          (initialSelected?.id == spot.id);
+
+                      return Material(
+                        color: isCurrent
+                            ? const Color(0xFF00E5FF).withValues(alpha: 0.10)
+                            : theme.colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _selectPastSpot(spot);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isCurrent
+                                    ? const Color(0xFF00E5FF)
+                                    : theme.dividerColor.withValues(alpha: 0.2),
+                                width: isCurrent ? 1.6 : 1.0,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0F172A),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isCurrent
+                                          ? const Color(0xFF00E5FF)
+                                          : Colors.white24,
+                                      width: isCurrent ? 2 : 1,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.storefront_rounded,
+                                    size: 16,
+                                    color: Color(0xFF00E5FF),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        spot.name,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: isCurrent
+                                              ? const Color(0xFF00E5FF)
+                                              : theme.colorScheme.onSurface,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Wrap(
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
+                                        spacing: 6,
+                                        children: [
+                                          Text(
+                                            '${spot.count} ${spot.count == 1 ? 'visit' : 'visits'}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                          ),
+                                          if (spot.totalSpent > 0) ...[
+                                            Text(
+                                              '•',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                            ),
+                                            Text(
+                                              '₹${CurrencyFormatter.format(spot.totalSpent)}',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                color: Color(0xFF00E5FF),
+                                              ),
+                                            ),
+                                          ],
+                                          if (spot.primaryCategory != null &&
+                                              spot
+                                                  .primaryCategory!
+                                                  .isNotEmpty) ...[
+                                            Text(
+                                              '•',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                            ),
+                                            Text(
+                                              spot.primaryCategory!,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (isCurrent)
+                                  const Icon(
+                                    Icons.check_circle_rounded,
+                                    color: Color(0xFF00E5FF),
+                                    size: 20,
+                                  )
+                                else
+                                  Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    color: theme.colorScheme.onSurfaceVariant
+                                        .withValues(alpha: 0.4),
+                                    size: 13,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      if (spots.isNotEmpty) {
+                        _mapController.move(spots.first.position, 17.5);
+                        setState(() {
+                          _selectedPastSpot = null;
+                          _selectedPoiName = null;
+                          _isAddressManuallyEdited = false;
+                          _subAddress = '';
+                          _isFetchingAddress = true;
+                        });
+                        _debounceAddressFetch();
+                      }
+                    },
+                    icon: const Icon(Icons.add_location_alt_rounded, size: 16),
+                    label: const Text(
+                      'Pick as a New Location instead',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF4285F4),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _initDeviceLocation() async {
@@ -942,6 +1303,9 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
     setState(() {
       _isSearching = false;
       _activeCategory = null;
+      _selectedPastSpot = isLocal
+          ? (result['spot'] as PastLocationSpot?)
+          : null;
       _selectedPoiName = name;
       _currentAddress = name;
       _subAddress = sub;
@@ -952,7 +1316,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
     });
 
     if (isLocal) {
-      _resolveAddress(pos);
+      _resolveAddress(pos, preserveName: name);
     }
   }
 
@@ -965,6 +1329,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
     setState(() {
       _isSearching = false;
       _activeCategory = null;
+      _selectedPastSpot = spot;
       _selectedPoiName = spot.name;
       _currentAddress = spot.name;
       _subAddress = '';
@@ -974,7 +1339,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
       _searchCtrl.clear();
     });
 
-    _resolveAddress(spot.position);
+    _resolveAddress(spot.position, preserveName: spot.name);
   }
 
   void _debounceAddressFetch() {
@@ -989,172 +1354,292 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
     });
   }
 
-  Future<void> _resolveAddress(LatLng pos) async {
-    // 1. Proximity Check: If pin is within 35m of a known past merchant, snap merchant name
-    const Distance dist = Distance();
-    String resolvedPrimary = _selectedPoiName ?? '';
-    for (var spot in _pastSpots.values) {
-      if (dist.as(LengthUnit.Meter, pos, spot.position) < 35) {
-        resolvedPrimary = spot.name;
-        break;
-      }
-    }
+  Future<void> _resolveAddress(LatLng pos, {String? preserveName}) async {
+    final sessionId = ++_addressSessionId;
 
-    String resolvedSecondary = '';
-
-    // 2. High-speed Photon reverse geocoding (fast, accurate, no 429 rate limit)
-    try {
-      final photonUrl = Uri.parse(
-        'https://photon.komoot.io/reverse?lat=${pos.latitude}&lon=${pos.longitude}',
-      );
-      final response = await http
-          .get(photonUrl, headers: {'User-Agent': 'Budgetr_Expense_App'})
-          .timeout(const Duration(seconds: 3));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final features = data['features'] as List<dynamic>?;
-        if (features != null && features.isNotEmpty) {
-          final props =
-              features.first['properties'] as Map<String, dynamic>? ?? {};
-          if (resolvedPrimary.isEmpty) {
-            resolvedPrimary =
-                props['name']?.toString() ??
-                props['street']?.toString() ??
-                props['locality']?.toString() ??
-                props['city']?.toString() ??
-                '';
-          }
-          resolvedSecondary =
-              [
-                    props['street'],
-                    props['locality'] ?? props['district'],
-                    props['city'],
-                    props['state'],
-                    props['postcode'],
-                  ]
-                  .where(
-                    (e) =>
-                        e != null &&
-                        e.toString().isNotEmpty &&
-                        e.toString().toLowerCase() !=
-                            resolvedPrimary.toLowerCase(),
-                  )
-                  .toSet()
-                  .join(', ');
-        }
-      }
-    } catch (_) {}
-
-    // 3. Fallback to OpenStreetMap Nominatim
-    if (resolvedPrimary.isEmpty || resolvedSecondary.isEmpty) {
+    // If an explicit name is preserved (selected past spot or search POI), lock it
+    if (preserveName != null && preserveName.isNotEmpty) {
+      String resolvedSecondary = '';
       try {
-        final url = Uri.parse(
-          'https://nominatim.openstreetmap.org/reverse?lat=${pos.latitude}&lon=${pos.longitude}&format=jsonv2&zoom=18&addressdetails=1',
+        final photonUrl = Uri.parse(
+          'https://photon.komoot.io/reverse?lat=${pos.latitude}&lon=${pos.longitude}',
         );
         final response = await http
-            .get(url, headers: {'User-Agent': 'Budgetr_Expense_App'})
+            .get(photonUrl, headers: {'User-Agent': 'Budgetr_Expense_App'})
             .timeout(const Duration(seconds: 3));
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          if (resolvedPrimary.isEmpty) {
-            if (data['name'] != null && data['name'].toString().isNotEmpty) {
-              resolvedPrimary = data['name'];
-            }
-          }
-
-          if (data['address'] != null) {
-            final addr = data['address'];
-            if (resolvedPrimary.isEmpty) {
-              resolvedPrimary =
-                  addr['amenity'] ??
-                  addr['shop'] ??
-                  addr['building'] ??
-                  addr['tourism'] ??
-                  addr['historic'] ??
-                  addr['road'] ??
-                  '';
-            }
-
-            if (resolvedSecondary.isEmpty) {
-              resolvedSecondary =
-                  [
-                        addr['road'],
-                        addr['suburb'] ?? addr['neighbourhood'],
-                        addr['city'] ?? addr['town'] ?? addr['county'],
-                        addr['state'],
-                        addr['postcode'],
-                      ]
-                      .where(
-                        (e) =>
-                            e != null &&
-                            e.toString().isNotEmpty &&
-                            e.toString().toLowerCase() !=
-                                resolvedPrimary.toLowerCase(),
-                      )
-                      .toSet()
-                      .join(', ');
-            }
+          final features = data['features'] as List<dynamic>?;
+          if (features != null && features.isNotEmpty) {
+            final props =
+                features.first['properties'] as Map<String, dynamic>? ?? {};
+            resolvedSecondary = [
+              props['street'],
+              props['locality'] ?? props['district'],
+              props['city'],
+              props['state'],
+              props['postcode'],
+            ]
+                .where((e) =>
+                    e != null &&
+                    e.toString().isNotEmpty &&
+                    e.toString().toLowerCase() != preserveName.toLowerCase())
+                .toSet()
+                .join(', ');
           }
         }
       } catch (_) {}
+
+      if (mounted && sessionId == _addressSessionId) {
+        setState(() {
+          _currentAddress = preserveName;
+          _subAddress = resolvedSecondary;
+          _isFetchingAddress = false;
+        });
+      }
+      return;
     }
 
-    // 4. Fallback to native platform geocoder
-    if (resolvedPrimary.isEmpty || resolvedSecondary.isEmpty) {
+    // --- Google Maps-grade High Accuracy Multi-Source Reverse Geocoder ---
+    String resolvedVenue = '';
+    String resolvedStreet = '';
+    String resolvedArea = '';
+    String resolvedCity = '';
+    String resolvedState = '';
+    String resolvedPostcode = '';
+
+    // 1. Parallel dispatch: Native Platform Geocoder + Nominatim (with POI details) + Photon
+    final nativeFuture = () async {
       try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
+        final placemarks = await placemarkFromCoordinates(
           pos.latitude,
           pos.longitude,
+        ).timeout(const Duration(milliseconds: 3200));
+        return placemarks.isNotEmpty ? placemarks.first : null;
+      } catch (_) {
+        return null;
+      }
+    }();
+
+    final nominatimFuture = () async {
+      try {
+        final url = Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse?lat=${pos.latitude}&lon=${pos.longitude}&format=jsonv2&zoom=18&addressdetails=1&extratags=1&namedetails=1',
         );
-        if (placemarks.isNotEmpty) {
-          Placemark place = placemarks.first;
-          bool isValid(String? s) =>
-              s != null &&
-              s.isNotEmpty &&
-              !s.contains('+') &&
-              !s.toLowerCase().contains('unnamed');
+        final response = await http
+            .get(url, headers: {'User-Agent': 'Budgetr_Expense_App'})
+            .timeout(const Duration(milliseconds: 3200));
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body) as Map<String, dynamic>?;
+        }
+      } catch (_) {}
+      return null;
+    }();
 
-          if (resolvedPrimary.isEmpty) {
-            if (isValid(place.name) &&
-                !RegExp(r'^[0-9]+$').hasMatch(place.name!)) {
-              resolvedPrimary = place.name!;
-            } else if (isValid(place.street)) {
-              resolvedPrimary = place.street!;
-            } else if (isValid(place.subLocality)) {
-              resolvedPrimary = place.subLocality!;
-            }
-          }
-
-          if (resolvedSecondary.isEmpty) {
-            resolvedSecondary =
-                [
-                      place.street,
-                      place.subLocality,
-                      place.locality,
-                      place.administrativeArea,
-                      place.postalCode,
-                    ]
-                    .where(
-                      (e) =>
-                          e != null &&
-                          e.isNotEmpty &&
-                          e.toLowerCase() != resolvedPrimary.toLowerCase(),
-                    )
-                    .toSet()
-                    .join(', ');
+    final photonFuture = () async {
+      try {
+        final url = Uri.parse(
+          'https://photon.komoot.io/reverse?lat=${pos.latitude}&lon=${pos.longitude}',
+        );
+        final response = await http
+            .get(url, headers: {'User-Agent': 'Budgetr_Expense_App'})
+            .timeout(const Duration(milliseconds: 3000));
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final features = data['features'] as List<dynamic>?;
+          if (features != null && features.isNotEmpty) {
+            return features.first['properties'] as Map<String, dynamic>?;
           }
         }
       } catch (_) {}
+      return null;
+    }();
+
+    final results = await Future.wait([nativeFuture, nominatimFuture, photonFuture]);
+    if (!mounted || sessionId != _addressSessionId) return;
+
+    final Placemark? nativePlace = results[0] as Placemark?;
+    final Map<String, dynamic>? nomData = results[1] as Map<String, dynamic>?;
+    final Map<String, dynamic>? photonProps = results[2] as Map<String, dynamic>?;
+
+    // Helper: is a string a valid non-empty venue name (not plus-code, not generic)
+    bool isMeaningfulVenue(String? s) {
+      if (s == null) return false;
+      final clean = s.trim();
+      if (clean.isEmpty) return false;
+      if (clean.contains('+')) return false; // Plus code
+      if (RegExp(r'^[0-9\s,-]+$').hasMatch(clean)) return false; // Pure number / code
+      if (clean.toLowerCase().contains('unnamed')) return false;
+      if (clean.toLowerCase().contains('null')) return false;
+      return true;
     }
 
-    if (mounted) {
+    // Step A: Extract Tier-1 Exact Venue Name
+    // 1. Nominatim exact POI / merchant / amenity / building
+    if (nomData != null) {
+      final addr = nomData['address'] as Map<String, dynamic>? ?? {};
+      final namedetails = nomData['namedetails'] as Map<String, dynamic>? ?? {};
+      final extratags = nomData['extratags'] as Map<String, dynamic>? ?? {};
+
+      final candidatePoi = [
+        nomData['name'],
+        namedetails['name'],
+        namedetails['name:en'],
+        namedetails['brand'],
+        extratags['brand'],
+        extratags['operator'],
+        extratags['building:name'],
+        addr['amenity'],
+        addr['shop'],
+        addr['building'],
+        addr['tourism'],
+        addr['leisure'],
+        addr['office'],
+        addr['craft'],
+        addr['healthcare'],
+        addr['historic'],
+      ].whereType<String>().map((e) => e.trim()).firstWhere(
+            (name) => isMeaningfulVenue(name),
+            orElse: () => '',
+          );
+
+      if (candidatePoi.isNotEmpty) {
+        resolvedVenue = candidatePoi;
+      }
+    }
+
+    // 2. Native Geocoder (Google Play Services Geocoder on Android)
+    if (nativePlace != null) {
+      final pName = nativePlace.name?.trim() ?? '';
+      final pStreet = nativePlace.thoroughfare?.trim() ?? nativePlace.street?.trim() ?? '';
+      final pLocality = nativePlace.locality?.trim() ?? '';
+      final pSubLocality = nativePlace.subLocality?.trim() ?? '';
+
+      // If place.name is distinct from street, locality, sublocality and not numeric,
+      // Google Maps considers it the specific venue/place!
+      if (isMeaningfulVenue(pName) &&
+          pName.toLowerCase() != pStreet.toLowerCase() &&
+          pName.toLowerCase() != pLocality.toLowerCase() &&
+          pName.toLowerCase() != pSubLocality.toLowerCase()) {
+        resolvedVenue = pName;
+      }
+
+      // Collect street & area context
+      if (pStreet.isNotEmpty && resolvedStreet.isEmpty) resolvedStreet = pStreet;
+      if (pSubLocality.isNotEmpty && resolvedArea.isEmpty) resolvedArea = pSubLocality;
+      if (pLocality.isNotEmpty && resolvedCity.isEmpty) resolvedCity = pLocality;
+      if ((nativePlace.administrativeArea ?? '').isNotEmpty && resolvedState.isEmpty) {
+        resolvedState = nativePlace.administrativeArea!;
+      }
+      if ((nativePlace.postalCode ?? '').isNotEmpty && resolvedPostcode.isEmpty) {
+        resolvedPostcode = nativePlace.postalCode!;
+      }
+    }
+
+    // 3. Photon exact POI check (if still no venue)
+    if (resolvedVenue.isEmpty && photonProps != null) {
+      final osmKey = (photonProps['osm_key'] ?? '').toString().toLowerCase();
+      final pName = (photonProps['name'] ?? '').toString().trim();
+      const poiKeys = {
+        'amenity', 'shop', 'tourism', 'building', 'leisure',
+        'office', 'craft', 'historic', 'club', 'healthcare'
+      };
+
+      if (poiKeys.contains(osmKey) && isMeaningfulVenue(pName)) {
+        resolvedVenue = pName;
+      }
+    }
+
+    // Step B: Collect Street, Locality & City from Nominatim / Photon if missing
+    if (nomData != null) {
+      final addr = nomData['address'] as Map<String, dynamic>? ?? {};
+      final road = addr['road'] ?? addr['street'] ?? addr['pedestrian'] ?? addr['footway'];
+      final houseNumber = addr['house_number'] ?? addr['house_name'];
+      final fullRoad = [houseNumber, road].where((e) => e != null && e.toString().trim().isNotEmpty).join(' ');
+
+      if (resolvedStreet.isEmpty && fullRoad.isNotEmpty) resolvedStreet = fullRoad;
+      if (resolvedArea.isEmpty) {
+        resolvedArea = addr['suburb'] ?? addr['neighbourhood'] ?? addr['quarter'] ?? addr['residential'] ?? '';
+      }
+      if (resolvedCity.isEmpty) {
+        resolvedCity = addr['city'] ?? addr['town'] ?? addr['village'] ?? addr['county'] ?? '';
+      }
+      if (resolvedState.isEmpty) resolvedState = addr['state'] ?? '';
+      if (resolvedPostcode.isEmpty) resolvedPostcode = addr['postcode'] ?? '';
+    }
+
+    if (photonProps != null) {
+      final pStreet = photonProps['street']?.toString() ?? '';
+      final pHouse = photonProps['housenumber']?.toString() ?? '';
+      final fullRoad = [pHouse, pStreet].where((e) => e.trim().isNotEmpty).join(' ');
+
+      if (resolvedStreet.isEmpty && fullRoad.isNotEmpty) resolvedStreet = fullRoad;
+      if (resolvedArea.isEmpty) {
+        resolvedArea = photonProps['locality']?.toString() ?? photonProps['district']?.toString() ?? '';
+      }
+      if (resolvedCity.isEmpty) {
+        resolvedCity = photonProps['city']?.toString() ?? '';
+      }
+      if (resolvedState.isEmpty) resolvedState = photonProps['state']?.toString() ?? '';
+      if (resolvedPostcode.isEmpty) resolvedPostcode = photonProps['postcode']?.toString() ?? '';
+    }
+
+    // Step C: Determine Google Maps Style Primary Name
+    String finalPrimary = '';
+    if (resolvedVenue.isNotEmpty) {
+      finalPrimary = resolvedVenue;
+    } else if (resolvedStreet.isNotEmpty) {
+      finalPrimary = resolvedStreet;
+    } else if (resolvedArea.isNotEmpty) {
+      finalPrimary = resolvedArea;
+    } else if (resolvedCity.isNotEmpty) {
+      finalPrimary = resolvedCity;
+    } else {
+      finalPrimary = 'Pinned Location';
+    }
+
+    // Step D: Assemble Google Maps Style Secondary Context (Address Line)
+    final secondaryParts = <String>[];
+    // If primary was a venue name, include the street in the secondary line
+    if (resolvedVenue.isNotEmpty &&
+        resolvedStreet.isNotEmpty &&
+        resolvedStreet.toLowerCase() != finalPrimary.toLowerCase()) {
+      secondaryParts.add(resolvedStreet);
+    }
+    if (resolvedArea.isNotEmpty &&
+        resolvedArea.toLowerCase() != finalPrimary.toLowerCase()) {
+      secondaryParts.add(resolvedArea);
+    }
+    if (resolvedCity.isNotEmpty &&
+        resolvedCity.toLowerCase() != finalPrimary.toLowerCase()) {
+      secondaryParts.add(resolvedCity);
+    }
+    if (resolvedState.isNotEmpty &&
+        resolvedState.toLowerCase() != finalPrimary.toLowerCase()) {
+      secondaryParts.add(resolvedState);
+    }
+    if (resolvedPostcode.isNotEmpty) {
+      secondaryParts.add(resolvedPostcode);
+    }
+
+    // Clean deduplication
+    final Set<String> seenParts = {};
+    final cleanSecondary = secondaryParts.where((p) {
+      final lower = p.trim().toLowerCase();
+      if (lower.isEmpty ||
+          lower == finalPrimary.toLowerCase() ||
+          seenParts.contains(lower)) {
+        return false;
+      }
+      seenParts.add(lower);
+      return true;
+    }).join(', ');
+
+    if (mounted && sessionId == _addressSessionId) {
       setState(() {
-        _currentAddress = resolvedPrimary.isNotEmpty
-            ? resolvedPrimary
-            : 'Pinned Location';
-        _subAddress = resolvedSecondary;
+        _currentAddress = finalPrimary;
+        _subAddress = cleanSecondary;
         _isFetchingAddress = false;
       });
     }
@@ -1339,7 +1824,14 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                         spacing: 8.0,
                         runSpacing: 8.0,
                         children: suggestions.map((suggestion) {
-                          final spot = _pastSpots[suggestion.toLowerCase()];
+                          final spot = _pastSpots.values
+                              .cast<PastLocationSpot?>()
+                              .firstWhere(
+                                (s) =>
+                                    s?.name.toLowerCase() ==
+                                    suggestion.toLowerCase(),
+                                orElse: () => null,
+                              );
                           final int visitCount = spot?.count ?? 1;
 
                           return ActionChip(
@@ -1373,6 +1865,8 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                                   pastLocations[suggestion]!;
                               _mapController.move(savedPos, 18.0);
                               setState(() {
+                                _selectedPastSpot = spot;
+                                _selectedPoiName = suggestion;
                                 _currentAddress = suggestion;
                                 _isAddressManuallyEdited = true;
                               });
@@ -1628,12 +2122,16 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
     }
 
     // Check if current selected address matches any past spot
-    PastLocationSpot? matchedPastSpot;
-    final lowerAddress = _currentAddress.trim().toLowerCase();
-    for (var spot in _pastSpots.values) {
-      if (spot.name.toLowerCase() == lowerAddress) {
-        matchedPastSpot = spot;
-        break;
+    PastLocationSpot? matchedPastSpot = _selectedPastSpot;
+    if (matchedPastSpot == null &&
+        _selectedPoiName != null &&
+        _selectedPoiName!.isNotEmpty) {
+      final query = _selectedPoiName!.trim().toLowerCase();
+      for (var spot in _pastSpots.values) {
+        if (spot.name.toLowerCase() == query) {
+          matchedPastSpot = spot;
+          break;
+        }
       }
     }
 
@@ -1684,10 +2182,14 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                     backgroundColor: isDark
                         ? const Color(0xFF1E293B)
                         : const Color(0xFFF1F5F9),
+                    onTap: (tapPosition, latLng) {
+                      _handleMapTap(latLng);
+                    },
                     onLongPress: (tapPosition, latLng) {
                       HapticFeedback.selectionClick();
                       _mapController.move(latLng, _mapController.camera.zoom);
                       setState(() {
+                        _selectedPastSpot = null;
                         _selectedPoiName = null;
                         _isAddressManuallyEdited = false;
                         _subAddress = '';
@@ -1704,6 +2206,7 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                           setState(() => _searchResults = []);
                         }
                         setState(() {
+                          _selectedPastSpot = null;
                           _selectedPoiName = null;
                           _isAddressManuallyEdited = false;
                           _subAddress = '';
@@ -1730,87 +2233,171 @@ class _LocationMapPickerPageState extends ConsumerState<LocationMapPickerPage> {
                     // Past Transactions Marker Layer
                     if (_showPastMarkers && _pastSpots.isNotEmpty)
                       MarkerLayer(
-                        markers: _pastSpots.values.map((spot) {
-                          final isSelected =
-                              spot.name.toLowerCase() == lowerAddress;
-                          const pinColor = Color(0xFF00E5FF);
+                        markers: () {
+                          const Distance dist = Distance();
+                          // Precompute clusters (spots within 30m of each other)
+                          final Map<String, int> clusterCounts = {};
+                          for (var spot in _pastSpots.values) {
+                            int count = 0;
+                            for (var other in _pastSpots.values) {
+                              if (dist.as(
+                                    LengthUnit.Meter,
+                                    spot.position,
+                                    other.position,
+                                  ) <=
+                                  30.0) {
+                                count++;
+                              }
+                            }
+                            clusterCounts[spot.id] = count;
+                          }
 
-                          return Marker(
-                            point: spot.position,
-                            width: 38,
-                            height: 38,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () {
-                                HapticFeedback.mediumImpact();
-                                _selectPastSpot(spot);
-                              },
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                alignment: Alignment.center,
-                                children: [
-                                  Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF0F172A),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? Colors.white
-                                            : pinColor,
-                                        width: isSelected ? 2.5 : 1.8,
+                          // Sort spots so the selected spot is drawn last (on top)
+                          final sortedSpots = _pastSpots.values.toList()
+                            ..sort((a, b) {
+                              final aSelected =
+                                  _selectedPastSpot?.id == a.id ||
+                                  (matchedPastSpot?.id == a.id);
+                              final bSelected =
+                                  _selectedPastSpot?.id == b.id ||
+                                  (matchedPastSpot?.id == b.id);
+                              if (aSelected && !bSelected) return 1;
+                              if (!aSelected && bSelected) return -1;
+                              return 0;
+                            });
+
+                          return sortedSpots.map((spot) {
+                            final isSelected =
+                                _selectedPastSpot?.id == spot.id ||
+                                (matchedPastSpot?.id == spot.id);
+                            final int clusterCount =
+                                clusterCounts[spot.id] ?? 1;
+                            final bool hasCluster = clusterCount > 1;
+                            const pinColor = Color(0xFF00E5FF);
+
+                            return Marker(
+                              point: spot.position,
+                              width: 42,
+                              height: 42,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => _onMarkerTap(spot),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Container(
+                                      width: isSelected ? 32 : 30,
+                                      height: isSelected ? 32 : 30,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF0F172A),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? Colors.white
+                                              : pinColor,
+                                          width: isSelected ? 2.8 : 1.8,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: pinColor.withValues(
+                                              alpha: isSelected ? 0.75 : 0.35,
+                                            ),
+                                            blurRadius: isSelected ? 12 : 7,
+                                            spreadRadius: isSelected ? 2 : 1,
+                                          ),
+                                        ],
                                       ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: pinColor.withOpacity(
-                                            isSelected ? 0.6 : 0.35,
-                                          ),
-                                          blurRadius: 8,
-                                          spreadRadius: 1,
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Icon(
-                                      Icons.storefront_rounded,
-                                      size: 15,
-                                      color: pinColor,
-                                    ),
-                                  ),
-                                  if (spot.count > 1)
-                                    Positioned(
-                                      right: -1,
-                                      top: -2,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 4,
-                                          vertical: 1,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: pinColor,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          border: Border.all(
-                                            color: Colors.black,
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '${spot.count}',
-                                          style: const TextStyle(
-                                            color: Colors.black,
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
+                                      child: Icon(
+                                        hasCluster
+                                            ? Icons.layers_rounded
+                                            : Icons.storefront_rounded,
+                                        size: 15,
+                                        color: pinColor,
                                       ),
                                     ),
-                                ],
+                                    // Individual merchant visits count badge
+                                    if (spot.count > 1 && !hasCluster)
+                                      Positioned(
+                                        right: -1,
+                                        top: -2,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 1,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: pinColor,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: Colors.black,
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${spot.count}',
+                                            style: const TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    // Cluster badge when multiple past pins are in the same area
+                                    if (hasCluster)
+                                      Positioned(
+                                        right: -2,
+                                        top: -2,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 1.5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFF9100),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: Colors.black,
+                                              width: 1,
+                                            ),
+                                            boxShadow: const [
+                                              BoxShadow(
+                                                color: Colors.black38,
+                                                blurRadius: 3,
+                                                offset: Offset(0, 1),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.layers_rounded,
+                                                size: 8,
+                                                color: Colors.black,
+                                              ),
+                                              const SizedBox(width: 2),
+                                              Text(
+                                                '$clusterCount',
+                                                style: const TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 8.5,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        }).toList(),
+                            );
+                          }).toList();
+                        }(),
                       ),
 
                     // Discovered Category POI Markers (Google Maps Style)
