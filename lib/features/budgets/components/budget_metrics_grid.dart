@@ -28,6 +28,29 @@ class BudgetMetricsGrid extends StatelessWidget {
     final isOverBudget = totalSpend > allocatedAmount;
     final isProjectedOver = projectedSpend > allocatedAmount;
 
+    // Intelligent label management based on remaining balance
+    final String smartRemainingTitle;
+    if (remainingBudget < 0) {
+      smartRemainingTitle = 'OVER BUDGET';
+    } else if (remainingBudget == 0) {
+      smartRemainingTitle = 'EXHAUSTED';
+    } else {
+      smartRemainingTitle = 'REMAINING';
+    }
+
+    final String? smartSubtitle;
+    if (remainingWithoutOutOfBucket != null) {
+      if (remainingWithoutOutOfBucket! < 0) {
+        smartSubtitle =
+            'w/o Out of Bucket: Over ₹${CurrencyFormatter.format(remainingWithoutOutOfBucket!.abs())}';
+      } else {
+        smartSubtitle =
+            'w/o Out of Bucket: ₹${CurrencyFormatter.format(remainingWithoutOutOfBucket!)} left';
+      }
+    } else {
+      smartSubtitle = null;
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -35,13 +58,13 @@ class BudgetMetricsGrid extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isOverBudget
-              ? theme.colorScheme.error.withOpacity(0.5)
+              ? theme.colorScheme.error.withValues(alpha: 0.5)
               : theme.dividerColor,
           width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -61,24 +84,21 @@ class BudgetMetricsGrid extends StatelessWidget {
                   alignment: CrossAxisAlignment.start,
                 ),
               ),
-              // --- FIX: Added Spacing so they don't stick together on huge amounts ---
               const SizedBox(width: 12),
               Container(
                 width: 1,
-                height: remainingWithoutOutOfBucket != null ? 50 : 36,
-                color: theme.dividerColor.withOpacity(0.5),
+                height: smartSubtitle != null ? 52 : 38,
+                color: theme.dividerColor.withValues(alpha: 0.4),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildHeroMetric(
-                  title: 'REMAINING',
+                  title: smartRemainingTitle,
                   amount: remainingBudget,
                   theme: theme,
                   isError: remainingBudget < 0,
                   alignment: CrossAxisAlignment.end,
-                  subtitle: remainingWithoutOutOfBucket != null
-                      ? 'w/o Out of Bucket: ${remainingWithoutOutOfBucket! < 0 ? '-' : ''}₹${CurrencyFormatter.format(remainingWithoutOutOfBucket!.abs())}'
-                      : null,
+                  subtitle: smartSubtitle,
                 ),
               ),
             ],
@@ -158,7 +178,9 @@ class BudgetMetricsGrid extends StatelessWidget {
             fontSize: 9,
             fontWeight: FontWeight.w900,
             letterSpacing: 1.0,
-            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
+            color: isError
+                ? theme.colorScheme.error
+                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -176,7 +198,10 @@ class BudgetMetricsGrid extends StatelessWidget {
               letterSpacing: -1.0,
               color: color,
             ),
-            symbolStyle: TextStyle(fontSize: 12, color: color.withOpacity(0.8)),
+            symbolStyle: TextStyle(
+              fontSize: 12,
+              color: color.withValues(alpha: 0.8),
+            ),
           ),
         ),
         if (subtitle != null) ...[
@@ -189,7 +214,7 @@ class BudgetMetricsGrid extends StatelessWidget {
               style: TextStyle(
                 fontSize: 8.5,
                 fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.75),
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
               ),
             ),
           ),
@@ -211,10 +236,10 @@ class BudgetMetricsGrid extends StatelessWidget {
         : theme.colorScheme.onSurface;
 
     final bgColor = isError
-        ? theme.colorScheme.error.withOpacity(0.1)
+        ? theme.colorScheme.error.withValues(alpha: 0.1)
         : (isDark
-              ? Colors.white.withOpacity(0.04)
-              : Colors.black.withOpacity(0.03));
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.03));
 
     final sign = amount < 0 ? '-' : '';
 
@@ -225,7 +250,7 @@ class BudgetMetricsGrid extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isError
-              ? theme.colorScheme.error.withOpacity(0.3)
+              ? theme.colorScheme.error.withValues(alpha: 0.3)
               : Colors.transparent,
           width: 1.0,
         ),
@@ -270,7 +295,7 @@ class BudgetMetricsGrid extends StatelessWidget {
               ),
               symbolStyle: TextStyle(
                 fontSize: 10,
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
               ),
             ),
           ),

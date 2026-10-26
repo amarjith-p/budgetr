@@ -307,13 +307,13 @@ class _BudgetTransactionsPageState
 
                       // --- CHART ---
                       Container(
-                        padding: const EdgeInsets.fromLTRB(0, 20, 0, 16),
+                        padding: const EdgeInsets.fromLTRB(0, 18, 0, 16),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isOverBudget && isCurrentMonth
-                                ? theme.colorScheme.error.withOpacity(0.5)
+                                ? theme.colorScheme.error.withValues(alpha: 0.5)
                                 : theme.dividerColor,
                           ),
                         ),
@@ -322,39 +322,57 @@ class _BudgetTransactionsPageState
                           children: [
                             Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
+                                horizontal: 16,
                               ),
                               child: Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'SPENDING TREND',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.0,
-                                      color: theme.colorScheme.onSurfaceVariant,
+                                  Expanded(
+                                    child: Text(
+                                      'SPENDING TREND',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.0,
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   if (isOverBudget && isCurrentMonth)
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.warning_rounded,
-                                          color: theme.colorScheme.error,
-                                          size: 14,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'OVER BUDGET',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w900,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2.5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.error
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.warning_rounded,
                                             color: theme.colorScheme.error,
+                                            size: 13,
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            'OVER BUDGET',
+                                            style: TextStyle(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.w900,
+                                              color: theme.colorScheme.error,
+                                              letterSpacing: 0.4,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                 ],
                               ),

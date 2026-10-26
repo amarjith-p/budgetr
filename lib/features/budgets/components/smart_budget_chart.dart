@@ -188,19 +188,69 @@ class SmartBudgetChartPainter extends CustomPainter {
 
     final limitLabel = TextPainter(
       text: TextSpan(
-        text: 'LIMIT',
+        text: ' LIMIT ',
         style: TextStyle(
           color: theme.colorScheme.error,
-          fontSize: 9,
+          fontSize: 8,
           fontWeight: FontWeight.w900,
+          letterSpacing: 0.5,
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    limitLabel.paint(
-      canvas,
-      Offset(size.width - paddingRight - limitLabel.width, limitY - 14),
+
+    // Determine whether the projection line is near the limit line on the
+    // right side. If so, place the label on the LEFT side to avoid overlap.
+    // Also decide whether to place above or below the limit line.
+    bool projectionNearLimitRight = false;
+    bool projectionApproachesFromBelow = false;
+    if (isCurrentMonth && daysElapsed > 0 && cumulativeData.isNotEmpty) {
+      final projY = getY(projectedSpend);
+      // If the projection endpoint is close to the limit line (within 20px),
+      // the right side is congested.
+      if ((projY - limitY).abs() < 20) {
+        projectionNearLimitRight = true;
+      }
+      // If the current spending is below the limit, the projection line
+      // approaches from below, meaning it passes through the area just
+      // above the limit line on the right.
+      if (cumulativeData.last < allocatedAmount && projectedSpend > allocatedAmount) {
+        projectionApproachesFromBelow = true;
+      }
+    }
+
+    // Place label on the left when projection clutters the right side
+    final double limitLabelX = projectionNearLimitRight || projectionApproachesFromBelow
+        ? paddingLeft + 4
+        : size.width - paddingRight - limitLabel.width - 4;
+
+    // Place below the limit line if the projection line crosses near the
+    // label's default above-position
+    final double limitLabelY = projectionApproachesFromBelow
+        ? limitY + 4
+        : limitY - limitLabel.height - 4;
+
+    // Draw a background pill so the label is always legible
+    final limitLabelRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        limitLabelX - 2,
+        limitLabelY - 1,
+        limitLabel.width + 4,
+        limitLabel.height + 2,
+      ),
+      const Radius.circular(3),
     );
+    canvas.drawRRect(
+      limitLabelRect,
+      Paint()..color = theme.colorScheme.surface.withValues(alpha: 0.92),
+    );
+    canvas.drawRRect(
+      limitLabelRect,
+      Paint()
+        ..color = theme.colorScheme.error.withValues(alpha: 0.15)
+        ..style = PaintingStyle.fill,
+    );
+    limitLabel.paint(canvas, Offset(limitLabelX, limitLabelY));
 
     // 4. Draw Projected Line & Warning Label
     double? breakX;
