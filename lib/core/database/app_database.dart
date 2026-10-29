@@ -19,6 +19,7 @@ part 'app_database.g.dart';
     CustomBudgets,
     Investments,
     InvestmentLogs,
+    InvestmentLiveTrackers,
     SmartTrackerTemplates,
     SmartTrackerRecords,
     AppNotifications,
@@ -37,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
 
   // --- BUMPED TO VERSION 42: Added account balance hiding columns ---
   @override
-  int get schemaVersion => 42;
+  int get schemaVersion => 43;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -170,6 +171,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(accounts, accounts.hideBalanceInDashboard);
         await m.addColumn(accounts, accounts.hideBalanceInHome);
         await m.addColumn(accounts, accounts.hideBalanceInAccounts);
+      }
+      if (from < 43) {
+        // --- ADDED INVESTMENT LIVE TRACKERS TABLE ---
+        await m.createTable(investmentLiveTrackers);
       }
     },
   );

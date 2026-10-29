@@ -7221,6 +7221,592 @@ class InvestmentLogsCompanion extends UpdateCompanion<InvestmentLog> {
   }
 }
 
+class $InvestmentLiveTrackersTable extends InvestmentLiveTrackers
+    with TableInfo<$InvestmentLiveTrackersTable, InvestmentLiveTracker> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InvestmentLiveTrackersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _investmentIdMeta = const VerificationMeta(
+    'investmentId',
+  );
+  @override
+  late final GeneratedColumn<String> investmentId = GeneratedColumn<String>(
+    'investment_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _symbolMeta = const VerificationMeta('symbol');
+  @override
+  late final GeneratedColumn<String> symbol = GeneratedColumn<String>(
+    'symbol',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _assetTypeMeta = const VerificationMeta(
+    'assetType',
+  );
+  @override
+  late final GeneratedColumn<String> assetType = GeneratedColumn<String>(
+    'asset_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<double> quantity = GeneratedColumn<double>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastPriceMeta = const VerificationMeta(
+    'lastPrice',
+  );
+  @override
+  late final GeneratedColumn<double> lastPrice = GeneratedColumn<double>(
+    'last_price',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _changePercentMeta = const VerificationMeta(
+    'changePercent',
+  );
+  @override
+  late final GeneratedColumn<double> changePercent = GeneratedColumn<double>(
+    'change_percent',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastFetchedAtMeta = const VerificationMeta(
+    'lastFetchedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastFetchedAt =
+      GeneratedColumn<DateTime>(
+        'last_fetched_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _currencyMeta = const VerificationMeta(
+    'currency',
+  );
+  @override
+  late final GeneratedColumn<String> currency = GeneratedColumn<String>(
+    'currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('INR'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    investmentId,
+    symbol,
+    name,
+    assetType,
+    quantity,
+    lastPrice,
+    changePercent,
+    lastFetchedAt,
+    currency,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'investment_live_trackers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<InvestmentLiveTracker> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('investment_id')) {
+      context.handle(
+        _investmentIdMeta,
+        investmentId.isAcceptableOrUnknown(
+          data['investment_id']!,
+          _investmentIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_investmentIdMeta);
+    }
+    if (data.containsKey('symbol')) {
+      context.handle(
+        _symbolMeta,
+        symbol.isAcceptableOrUnknown(data['symbol']!, _symbolMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_symbolMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('asset_type')) {
+      context.handle(
+        _assetTypeMeta,
+        assetType.isAcceptableOrUnknown(data['asset_type']!, _assetTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetTypeMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    if (data.containsKey('last_price')) {
+      context.handle(
+        _lastPriceMeta,
+        lastPrice.isAcceptableOrUnknown(data['last_price']!, _lastPriceMeta),
+      );
+    }
+    if (data.containsKey('change_percent')) {
+      context.handle(
+        _changePercentMeta,
+        changePercent.isAcceptableOrUnknown(
+          data['change_percent']!,
+          _changePercentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_fetched_at')) {
+      context.handle(
+        _lastFetchedAtMeta,
+        lastFetchedAt.isAcceptableOrUnknown(
+          data['last_fetched_at']!,
+          _lastFetchedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('currency')) {
+      context.handle(
+        _currencyMeta,
+        currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {investmentId};
+  @override
+  InvestmentLiveTracker map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InvestmentLiveTracker(
+      investmentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}investment_id'],
+      )!,
+      symbol: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}symbol'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      assetType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}asset_type'],
+      )!,
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}quantity'],
+      )!,
+      lastPrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}last_price'],
+      ),
+      changePercent: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}change_percent'],
+      ),
+      lastFetchedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_fetched_at'],
+      ),
+      currency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency'],
+      )!,
+    );
+  }
+
+  @override
+  $InvestmentLiveTrackersTable createAlias(String alias) {
+    return $InvestmentLiveTrackersTable(attachedDatabase, alias);
+  }
+}
+
+class InvestmentLiveTracker extends DataClass
+    implements Insertable<InvestmentLiveTracker> {
+  final String investmentId;
+  final String symbol;
+  final String name;
+  final String assetType;
+  final double quantity;
+  final double? lastPrice;
+  final double? changePercent;
+  final DateTime? lastFetchedAt;
+  final String currency;
+  const InvestmentLiveTracker({
+    required this.investmentId,
+    required this.symbol,
+    required this.name,
+    required this.assetType,
+    required this.quantity,
+    this.lastPrice,
+    this.changePercent,
+    this.lastFetchedAt,
+    required this.currency,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['investment_id'] = Variable<String>(investmentId);
+    map['symbol'] = Variable<String>(symbol);
+    map['name'] = Variable<String>(name);
+    map['asset_type'] = Variable<String>(assetType);
+    map['quantity'] = Variable<double>(quantity);
+    if (!nullToAbsent || lastPrice != null) {
+      map['last_price'] = Variable<double>(lastPrice);
+    }
+    if (!nullToAbsent || changePercent != null) {
+      map['change_percent'] = Variable<double>(changePercent);
+    }
+    if (!nullToAbsent || lastFetchedAt != null) {
+      map['last_fetched_at'] = Variable<DateTime>(lastFetchedAt);
+    }
+    map['currency'] = Variable<String>(currency);
+    return map;
+  }
+
+  InvestmentLiveTrackersCompanion toCompanion(bool nullToAbsent) {
+    return InvestmentLiveTrackersCompanion(
+      investmentId: Value(investmentId),
+      symbol: Value(symbol),
+      name: Value(name),
+      assetType: Value(assetType),
+      quantity: Value(quantity),
+      lastPrice: lastPrice == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastPrice),
+      changePercent: changePercent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(changePercent),
+      lastFetchedAt: lastFetchedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastFetchedAt),
+      currency: Value(currency),
+    );
+  }
+
+  factory InvestmentLiveTracker.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InvestmentLiveTracker(
+      investmentId: serializer.fromJson<String>(json['investmentId']),
+      symbol: serializer.fromJson<String>(json['symbol']),
+      name: serializer.fromJson<String>(json['name']),
+      assetType: serializer.fromJson<String>(json['assetType']),
+      quantity: serializer.fromJson<double>(json['quantity']),
+      lastPrice: serializer.fromJson<double?>(json['lastPrice']),
+      changePercent: serializer.fromJson<double?>(json['changePercent']),
+      lastFetchedAt: serializer.fromJson<DateTime?>(json['lastFetchedAt']),
+      currency: serializer.fromJson<String>(json['currency']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'investmentId': serializer.toJson<String>(investmentId),
+      'symbol': serializer.toJson<String>(symbol),
+      'name': serializer.toJson<String>(name),
+      'assetType': serializer.toJson<String>(assetType),
+      'quantity': serializer.toJson<double>(quantity),
+      'lastPrice': serializer.toJson<double?>(lastPrice),
+      'changePercent': serializer.toJson<double?>(changePercent),
+      'lastFetchedAt': serializer.toJson<DateTime?>(lastFetchedAt),
+      'currency': serializer.toJson<String>(currency),
+    };
+  }
+
+  InvestmentLiveTracker copyWith({
+    String? investmentId,
+    String? symbol,
+    String? name,
+    String? assetType,
+    double? quantity,
+    Value<double?> lastPrice = const Value.absent(),
+    Value<double?> changePercent = const Value.absent(),
+    Value<DateTime?> lastFetchedAt = const Value.absent(),
+    String? currency,
+  }) => InvestmentLiveTracker(
+    investmentId: investmentId ?? this.investmentId,
+    symbol: symbol ?? this.symbol,
+    name: name ?? this.name,
+    assetType: assetType ?? this.assetType,
+    quantity: quantity ?? this.quantity,
+    lastPrice: lastPrice.present ? lastPrice.value : this.lastPrice,
+    changePercent: changePercent.present
+        ? changePercent.value
+        : this.changePercent,
+    lastFetchedAt: lastFetchedAt.present
+        ? lastFetchedAt.value
+        : this.lastFetchedAt,
+    currency: currency ?? this.currency,
+  );
+  InvestmentLiveTracker copyWithCompanion(
+    InvestmentLiveTrackersCompanion data,
+  ) {
+    return InvestmentLiveTracker(
+      investmentId: data.investmentId.present
+          ? data.investmentId.value
+          : this.investmentId,
+      symbol: data.symbol.present ? data.symbol.value : this.symbol,
+      name: data.name.present ? data.name.value : this.name,
+      assetType: data.assetType.present ? data.assetType.value : this.assetType,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      lastPrice: data.lastPrice.present ? data.lastPrice.value : this.lastPrice,
+      changePercent: data.changePercent.present
+          ? data.changePercent.value
+          : this.changePercent,
+      lastFetchedAt: data.lastFetchedAt.present
+          ? data.lastFetchedAt.value
+          : this.lastFetchedAt,
+      currency: data.currency.present ? data.currency.value : this.currency,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvestmentLiveTracker(')
+          ..write('investmentId: $investmentId, ')
+          ..write('symbol: $symbol, ')
+          ..write('name: $name, ')
+          ..write('assetType: $assetType, ')
+          ..write('quantity: $quantity, ')
+          ..write('lastPrice: $lastPrice, ')
+          ..write('changePercent: $changePercent, ')
+          ..write('lastFetchedAt: $lastFetchedAt, ')
+          ..write('currency: $currency')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    investmentId,
+    symbol,
+    name,
+    assetType,
+    quantity,
+    lastPrice,
+    changePercent,
+    lastFetchedAt,
+    currency,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InvestmentLiveTracker &&
+          other.investmentId == this.investmentId &&
+          other.symbol == this.symbol &&
+          other.name == this.name &&
+          other.assetType == this.assetType &&
+          other.quantity == this.quantity &&
+          other.lastPrice == this.lastPrice &&
+          other.changePercent == this.changePercent &&
+          other.lastFetchedAt == this.lastFetchedAt &&
+          other.currency == this.currency);
+}
+
+class InvestmentLiveTrackersCompanion
+    extends UpdateCompanion<InvestmentLiveTracker> {
+  final Value<String> investmentId;
+  final Value<String> symbol;
+  final Value<String> name;
+  final Value<String> assetType;
+  final Value<double> quantity;
+  final Value<double?> lastPrice;
+  final Value<double?> changePercent;
+  final Value<DateTime?> lastFetchedAt;
+  final Value<String> currency;
+  final Value<int> rowid;
+  const InvestmentLiveTrackersCompanion({
+    this.investmentId = const Value.absent(),
+    this.symbol = const Value.absent(),
+    this.name = const Value.absent(),
+    this.assetType = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.lastPrice = const Value.absent(),
+    this.changePercent = const Value.absent(),
+    this.lastFetchedAt = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InvestmentLiveTrackersCompanion.insert({
+    required String investmentId,
+    required String symbol,
+    required String name,
+    required String assetType,
+    required double quantity,
+    this.lastPrice = const Value.absent(),
+    this.changePercent = const Value.absent(),
+    this.lastFetchedAt = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : investmentId = Value(investmentId),
+       symbol = Value(symbol),
+       name = Value(name),
+       assetType = Value(assetType),
+       quantity = Value(quantity);
+  static Insertable<InvestmentLiveTracker> custom({
+    Expression<String>? investmentId,
+    Expression<String>? symbol,
+    Expression<String>? name,
+    Expression<String>? assetType,
+    Expression<double>? quantity,
+    Expression<double>? lastPrice,
+    Expression<double>? changePercent,
+    Expression<DateTime>? lastFetchedAt,
+    Expression<String>? currency,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (investmentId != null) 'investment_id': investmentId,
+      if (symbol != null) 'symbol': symbol,
+      if (name != null) 'name': name,
+      if (assetType != null) 'asset_type': assetType,
+      if (quantity != null) 'quantity': quantity,
+      if (lastPrice != null) 'last_price': lastPrice,
+      if (changePercent != null) 'change_percent': changePercent,
+      if (lastFetchedAt != null) 'last_fetched_at': lastFetchedAt,
+      if (currency != null) 'currency': currency,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InvestmentLiveTrackersCompanion copyWith({
+    Value<String>? investmentId,
+    Value<String>? symbol,
+    Value<String>? name,
+    Value<String>? assetType,
+    Value<double>? quantity,
+    Value<double?>? lastPrice,
+    Value<double?>? changePercent,
+    Value<DateTime?>? lastFetchedAt,
+    Value<String>? currency,
+    Value<int>? rowid,
+  }) {
+    return InvestmentLiveTrackersCompanion(
+      investmentId: investmentId ?? this.investmentId,
+      symbol: symbol ?? this.symbol,
+      name: name ?? this.name,
+      assetType: assetType ?? this.assetType,
+      quantity: quantity ?? this.quantity,
+      lastPrice: lastPrice ?? this.lastPrice,
+      changePercent: changePercent ?? this.changePercent,
+      lastFetchedAt: lastFetchedAt ?? this.lastFetchedAt,
+      currency: currency ?? this.currency,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (investmentId.present) {
+      map['investment_id'] = Variable<String>(investmentId.value);
+    }
+    if (symbol.present) {
+      map['symbol'] = Variable<String>(symbol.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (assetType.present) {
+      map['asset_type'] = Variable<String>(assetType.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<double>(quantity.value);
+    }
+    if (lastPrice.present) {
+      map['last_price'] = Variable<double>(lastPrice.value);
+    }
+    if (changePercent.present) {
+      map['change_percent'] = Variable<double>(changePercent.value);
+    }
+    if (lastFetchedAt.present) {
+      map['last_fetched_at'] = Variable<DateTime>(lastFetchedAt.value);
+    }
+    if (currency.present) {
+      map['currency'] = Variable<String>(currency.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvestmentLiveTrackersCompanion(')
+          ..write('investmentId: $investmentId, ')
+          ..write('symbol: $symbol, ')
+          ..write('name: $name, ')
+          ..write('assetType: $assetType, ')
+          ..write('quantity: $quantity, ')
+          ..write('lastPrice: $lastPrice, ')
+          ..write('changePercent: $changePercent, ')
+          ..write('lastFetchedAt: $lastFetchedAt, ')
+          ..write('currency: $currency, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SmartTrackerTemplatesTable extends SmartTrackerTemplates
     with TableInfo<$SmartTrackerTemplatesTable, SmartTrackerTemplate> {
   @override
@@ -14751,6 +15337,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CustomBudgetsTable customBudgets = $CustomBudgetsTable(this);
   late final $InvestmentsTable investments = $InvestmentsTable(this);
   late final $InvestmentLogsTable investmentLogs = $InvestmentLogsTable(this);
+  late final $InvestmentLiveTrackersTable investmentLiveTrackers =
+      $InvestmentLiveTrackersTable(this);
   late final $SmartTrackerTemplatesTable smartTrackerTemplates =
       $SmartTrackerTemplatesTable(this);
   late final $SmartTrackerRecordsTable smartTrackerRecords =
@@ -14784,6 +15372,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     customBudgets,
     investments,
     investmentLogs,
+    investmentLiveTrackers,
     smartTrackerTemplates,
     smartTrackerRecords,
     appNotifications,
@@ -18175,6 +18764,307 @@ typedef $$InvestmentLogsTableProcessedTableManager =
         BaseReferences<_$AppDatabase, $InvestmentLogsTable, InvestmentLog>,
       ),
       InvestmentLog,
+      PrefetchHooks Function()
+    >;
+typedef $$InvestmentLiveTrackersTableCreateCompanionBuilder =
+    InvestmentLiveTrackersCompanion Function({
+      required String investmentId,
+      required String symbol,
+      required String name,
+      required String assetType,
+      required double quantity,
+      Value<double?> lastPrice,
+      Value<double?> changePercent,
+      Value<DateTime?> lastFetchedAt,
+      Value<String> currency,
+      Value<int> rowid,
+    });
+typedef $$InvestmentLiveTrackersTableUpdateCompanionBuilder =
+    InvestmentLiveTrackersCompanion Function({
+      Value<String> investmentId,
+      Value<String> symbol,
+      Value<String> name,
+      Value<String> assetType,
+      Value<double> quantity,
+      Value<double?> lastPrice,
+      Value<double?> changePercent,
+      Value<DateTime?> lastFetchedAt,
+      Value<String> currency,
+      Value<int> rowid,
+    });
+
+class $$InvestmentLiveTrackersTableFilterComposer
+    extends Composer<_$AppDatabase, $InvestmentLiveTrackersTable> {
+  $$InvestmentLiveTrackersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get investmentId => $composableBuilder(
+    column: $table.investmentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get symbol => $composableBuilder(
+    column: $table.symbol,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get assetType => $composableBuilder(
+    column: $table.assetType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lastPrice => $composableBuilder(
+    column: $table.lastPrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get changePercent => $composableBuilder(
+    column: $table.changePercent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastFetchedAt => $composableBuilder(
+    column: $table.lastFetchedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currency => $composableBuilder(
+    column: $table.currency,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$InvestmentLiveTrackersTableOrderingComposer
+    extends Composer<_$AppDatabase, $InvestmentLiveTrackersTable> {
+  $$InvestmentLiveTrackersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get investmentId => $composableBuilder(
+    column: $table.investmentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get symbol => $composableBuilder(
+    column: $table.symbol,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get assetType => $composableBuilder(
+    column: $table.assetType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lastPrice => $composableBuilder(
+    column: $table.lastPrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get changePercent => $composableBuilder(
+    column: $table.changePercent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastFetchedAt => $composableBuilder(
+    column: $table.lastFetchedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currency => $composableBuilder(
+    column: $table.currency,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$InvestmentLiveTrackersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $InvestmentLiveTrackersTable> {
+  $$InvestmentLiveTrackersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get investmentId => $composableBuilder(
+    column: $table.investmentId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get symbol =>
+      $composableBuilder(column: $table.symbol, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get assetType =>
+      $composableBuilder(column: $table.assetType, builder: (column) => column);
+
+  GeneratedColumn<double> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<double> get lastPrice =>
+      $composableBuilder(column: $table.lastPrice, builder: (column) => column);
+
+  GeneratedColumn<double> get changePercent => $composableBuilder(
+    column: $table.changePercent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastFetchedAt => $composableBuilder(
+    column: $table.lastFetchedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get currency =>
+      $composableBuilder(column: $table.currency, builder: (column) => column);
+}
+
+class $$InvestmentLiveTrackersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $InvestmentLiveTrackersTable,
+          InvestmentLiveTracker,
+          $$InvestmentLiveTrackersTableFilterComposer,
+          $$InvestmentLiveTrackersTableOrderingComposer,
+          $$InvestmentLiveTrackersTableAnnotationComposer,
+          $$InvestmentLiveTrackersTableCreateCompanionBuilder,
+          $$InvestmentLiveTrackersTableUpdateCompanionBuilder,
+          (
+            InvestmentLiveTracker,
+            BaseReferences<
+              _$AppDatabase,
+              $InvestmentLiveTrackersTable,
+              InvestmentLiveTracker
+            >,
+          ),
+          InvestmentLiveTracker,
+          PrefetchHooks Function()
+        > {
+  $$InvestmentLiveTrackersTableTableManager(
+    _$AppDatabase db,
+    $InvestmentLiveTrackersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InvestmentLiveTrackersTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$InvestmentLiveTrackersTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$InvestmentLiveTrackersTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> investmentId = const Value.absent(),
+                Value<String> symbol = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> assetType = const Value.absent(),
+                Value<double> quantity = const Value.absent(),
+                Value<double?> lastPrice = const Value.absent(),
+                Value<double?> changePercent = const Value.absent(),
+                Value<DateTime?> lastFetchedAt = const Value.absent(),
+                Value<String> currency = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InvestmentLiveTrackersCompanion(
+                investmentId: investmentId,
+                symbol: symbol,
+                name: name,
+                assetType: assetType,
+                quantity: quantity,
+                lastPrice: lastPrice,
+                changePercent: changePercent,
+                lastFetchedAt: lastFetchedAt,
+                currency: currency,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String investmentId,
+                required String symbol,
+                required String name,
+                required String assetType,
+                required double quantity,
+                Value<double?> lastPrice = const Value.absent(),
+                Value<double?> changePercent = const Value.absent(),
+                Value<DateTime?> lastFetchedAt = const Value.absent(),
+                Value<String> currency = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InvestmentLiveTrackersCompanion.insert(
+                investmentId: investmentId,
+                symbol: symbol,
+                name: name,
+                assetType: assetType,
+                quantity: quantity,
+                lastPrice: lastPrice,
+                changePercent: changePercent,
+                lastFetchedAt: lastFetchedAt,
+                currency: currency,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$InvestmentLiveTrackersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $InvestmentLiveTrackersTable,
+      InvestmentLiveTracker,
+      $$InvestmentLiveTrackersTableFilterComposer,
+      $$InvestmentLiveTrackersTableOrderingComposer,
+      $$InvestmentLiveTrackersTableAnnotationComposer,
+      $$InvestmentLiveTrackersTableCreateCompanionBuilder,
+      $$InvestmentLiveTrackersTableUpdateCompanionBuilder,
+      (
+        InvestmentLiveTracker,
+        BaseReferences<
+          _$AppDatabase,
+          $InvestmentLiveTrackersTable,
+          InvestmentLiveTracker
+        >,
+      ),
+      InvestmentLiveTracker,
       PrefetchHooks Function()
     >;
 typedef $$SmartTrackerTemplatesTableCreateCompanionBuilder =
@@ -21829,6 +22719,11 @@ class $AppDatabaseManager {
       $$InvestmentsTableTableManager(_db, _db.investments);
   $$InvestmentLogsTableTableManager get investmentLogs =>
       $$InvestmentLogsTableTableManager(_db, _db.investmentLogs);
+  $$InvestmentLiveTrackersTableTableManager get investmentLiveTrackers =>
+      $$InvestmentLiveTrackersTableTableManager(
+        _db,
+        _db.investmentLiveTrackers,
+      );
   $$SmartTrackerTemplatesTableTableManager get smartTrackerTemplates =>
       $$SmartTrackerTemplatesTableTableManager(_db, _db.smartTrackerTemplates);
   $$SmartTrackerRecordsTableTableManager get smartTrackerRecords =>

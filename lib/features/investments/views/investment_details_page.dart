@@ -8,6 +8,8 @@ import '../../../core/components/modern_app_bar.dart';
 import '../../../core/components/modern_boxy_button.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
 import '../components/investment_summary_card.dart';
+import '../components/investment_live_valuation_card.dart';
+import '../components/investment_live_tracker_sheet.dart';
 import '../components/investment_passive_income_card.dart';
 import '../components/investment_action_bottom_sheet.dart';
 import '../components/investment_activity_ledger.dart';
@@ -88,6 +90,24 @@ class InvestmentDetailsPage extends ConsumerWidget {
                           existingInvestment: liveInvestment,
                         ),
                       ),
+                    );
+                  },
+                ),
+                _buildOptionTile(
+                  context: ctx,
+                  icon: Icons.show_chart_rounded,
+                  title: 'Configure Live Tracking',
+                  color: const Color(0xFF4361EE),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    final tracker = ref
+                        .read(liveTrackerStreamProvider(liveInvestment.id))
+                        .asData
+                        ?.value;
+                    InvestmentLiveTrackerSheet.show(
+                      context,
+                      investment: liveInvestment,
+                      existingTracker: tracker,
                     );
                   },
                 ),
@@ -244,6 +264,8 @@ class InvestmentDetailsPage extends ConsumerWidget {
           ],
 
           InvestmentSummaryCard(investment: liveInvestment),
+          const SizedBox(height: 12),
+          InvestmentLiveValuationCard(investment: liveInvestment),
           const SizedBox(height: 12),
           InvestmentPassiveIncomeCard(investment: liveInvestment),
           const SizedBox(height: 32),

@@ -39,6 +39,70 @@ class InvestmentService {
 
   Future<void> deleteInvestment(String id) async {
     await (_db.delete(_db.investments)..where((t) => t.id.equals(id))).go();
+    await (_db.delete(_db.investmentLiveTrackers)
+          ..where((t) => t.investmentId.equals(id)))
+        .go();
+  }
+
+  Stream<InvestmentLiveTracker?> watchLiveTracker(String investmentId) {
+    return (_db.select(_db.investmentLiveTrackers)
+          ..where((t) => t.investmentId.equals(investmentId)))
+        .watchSingleOrNull();
+  }
+
+  Future<InvestmentLiveTracker?> getLiveTracker(String investmentId) {
+    return (_db.select(_db.investmentLiveTrackers)
+          ..where((t) => t.investmentId.equals(investmentId)))
+        .getSingleOrNull();
+  }
+
+  Future<void> saveLiveTracker({
+    required String investmentId,
+    required String symbol,
+    required String name,
+    required String assetType,
+    required double quantity,
+    double? lastPrice,
+    double? changePercent,
+    DateTime? lastFetchedAt,
+    String currency = 'INR',
+  }) async {
+    await _db.into(_db.investmentLiveTrackers).insertOnConflictUpdate(
+          InvestmentLiveTrackersCompanion(
+            investmentId: Value(investmentId),
+            symbol: Value(symbol),
+            name: Value(name),
+            assetType: Value(assetType),
+            quantity: Value(quantity),
+            lastPrice: Value(lastPrice),
+            changePercent: Value(changePercent),
+            lastFetchedAt: Value(lastFetchedAt ?? DateTime.now()),
+            currency: Value(currency),
+          ),
+        );
+  }
+
+  Future<void> updateCachedTrackerPrice({
+    required String investmentId,
+    required double price,
+    double? changePercent,
+    DateTime? fetchedAt,
+  }) async {
+    await (_db.update(_db.investmentLiveTrackers)
+          ..where((t) => t.investmentId.equals(investmentId)))
+        .write(
+      InvestmentLiveTrackersCompanion(
+        lastPrice: Value(price),
+        changePercent: Value(changePercent),
+        lastFetchedAt: Value(fetchedAt ?? DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> deleteLiveTracker(String investmentId) async {
+    await (_db.delete(_db.investmentLiveTrackers)
+          ..where((t) => t.investmentId.equals(investmentId)))
+        .go();
   }
 
   Stream<List<InvestmentLog>> watchInvestmentLogs(String investmentId) {

@@ -196,6 +196,22 @@ class InvestmentLogs extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+@DataClassName('InvestmentLiveTracker')
+class InvestmentLiveTrackers extends Table {
+  TextColumn get investmentId => text()();
+  TextColumn get symbol => text()();
+  TextColumn get name => text()();
+  TextColumn get assetType => text()(); // 'mutual_fund' or 'stock'
+  RealColumn get quantity => real()();
+  RealColumn get lastPrice => real().nullable()();
+  RealColumn get changePercent => real().nullable()();
+  DateTimeColumn get lastFetchedAt => dateTime().nullable()();
+  TextColumn get currency => text().withDefault(const Constant('INR'))();
+
+  @override
+  Set<Column> get primaryKey => {investmentId};
+}
+
 @DataClassName('SmartTrackerTemplate')
 class SmartTrackerTemplates extends Table {
   TextColumn get id => text()();

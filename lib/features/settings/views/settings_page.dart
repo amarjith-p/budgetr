@@ -2,6 +2,7 @@
 
 import 'package:budgetr/core/components/global_selection_sheet.dart';
 import 'package:budgetr/features/settings/providers/location_settings_provider.dart';
+import '../providers/investment_settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -103,7 +104,9 @@ class SettingsPage extends ConsumerWidget {
                 context,
                 icon: Icons.psychology_rounded,
                 title: 'Projection Mode',
-                subtitle: ref.watch(projectionSettingsProvider) == ProjectionMode.linear
+                subtitle:
+                    ref.watch(projectionSettingsProvider) ==
+                        ProjectionMode.linear
                     ? 'Linear — Daily average'
                     : 'Smart — Fixed costs isolated',
                 onTap: () async {
@@ -132,7 +135,12 @@ class SettingsPage extends ConsumerWidget {
                           isSelected: currentLabel == 'Linear Projection',
                           theme: theme,
                         ),
-                        Divider(height: 1, color: theme.dividerColor.withOpacity(0.3), indent: 24, endIndent: 24),
+                        Divider(
+                          height: 1,
+                          color: theme.dividerColor.withOpacity(0.3),
+                          indent: 24,
+                          endIndent: 24,
+                        ),
                         // Smart option
                         _buildProjectionOption(
                           sheetContext,
@@ -149,13 +157,35 @@ class SettingsPage extends ConsumerWidget {
                   );
 
                   if (result != null) {
-                    final notifier = ref.read(projectionSettingsProvider.notifier);
+                    final notifier = ref.read(
+                      projectionSettingsProvider.notifier,
+                    );
                     if (result == 'Linear Projection') {
                       notifier.setMode(ProjectionMode.linear);
                     } else {
                       notifier.setMode(ProjectionMode.smart);
                     }
                   }
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // --- INVESTMENTS SECTION ---
+              _buildSectionTitle('INVESTMENTS', theme),
+              const SizedBox(height: 8),
+              _buildBentoToggleActionCard(
+                context,
+                icon: Icons.trending_up_rounded,
+                iconColor: const Color(0xFF4361EE),
+                title: 'Live Market Valuation',
+                subtitle: 'Auto-track Live Market Prices',
+                value: ref.watch(liveMarketValuationSettingsProvider),
+                onChanged: (val) {
+                  HapticFeedback.selectionClick();
+                  ref
+                      .read(liveMarketValuationSettingsProvider.notifier)
+                      .toggle(val);
                 },
               ),
 
@@ -321,7 +351,9 @@ class SettingsPage extends ConsumerWidget {
     required bool isSelected,
     required ThemeData theme,
   }) {
-    final color = isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface;
+    final color = isSelected
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurface;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       leading: Container(
@@ -461,6 +493,81 @@ class SettingsPage extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBentoToggleActionCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    Color? iconColor,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final displayColor = iconColor ?? theme.colorScheme.primary;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: theme.dividerColor.withOpacity(isDark ? 0.2 : 0.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.02),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: displayColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: displayColor, size: 22),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                    letterSpacing: -0.3,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: value,
+            activeColor: theme.colorScheme.primary,
+            onChanged: onChanged,
           ),
         ],
       ),

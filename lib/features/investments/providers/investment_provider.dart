@@ -5,9 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../services/investment_service.dart';
+import '../services/market_data_service.dart';
+import '../models/market_data_models.dart';
 
 final investmentServiceProvider = Provider<InvestmentService>((ref) {
   return InvestmentService(ref.watch(databaseProvider));
+});
+
+final marketDataServiceProvider = Provider<MarketDataService>((ref) {
+  return MarketDataService();
 });
 
 final investmentsStreamProvider = StreamProvider<List<Investment>>((ref) {
@@ -19,6 +25,13 @@ final investmentLogsStreamProvider =
       return ref
           .watch(investmentServiceProvider)
           .watchInvestmentLogs(investmentId);
+    });
+
+final liveTrackerStreamProvider =
+    StreamProvider.family<InvestmentLiveTracker?, String>((ref, investmentId) {
+      return ref
+          .watch(investmentServiceProvider)
+          .watchLiveTracker(investmentId);
     });
 
 class InvestmentActionNotifier extends AsyncNotifier<void> {
@@ -137,6 +150,79 @@ class InvestmentActionNotifier extends AsyncNotifier<void> {
               closeReason: drift.Value(reason),
               currentValue: finalValue,
             ),
+          );
+    });
+    return !state.hasError;
+  }
+
+  // --- LIVE MARKET TRACKING ACTIONS ---
+  Future<bool> saveLiveTracker({
+    required String investmentId,
+    required String symbol,
+    required String name,
+    required String assetType,
+    required double quantity,
+    double? lastPrice,
+    double? changePercent,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(investmentServiceProvider).saveLiveTracker(
+            investmentId: investmentId,
+            symbol: symbol,
+            name: name,
+            assetType: assetType,
+            quantity: quantity,
+            lastPrice: lastPrice,
+            changePercent: changePercent,
+            lastFetchedAt: DateTime.now(),
+          );
+    });
+    return !state.hasError;
+  }
+
+  Future<bool> deleteLiveTracker(String investmentId) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(investmentServiceProvider).deleteLiveTracker(investmentId);
+    });
+    return !state.hasError;
+  }
+
+  Future<MarketPriceQuote?> refreshLivePrice(String investmentId) async {
+    final tracker = await ref
+        .read(investmentServiceProvider)
+        .getLiveTracker(investmentId);
+    if (tracker == null) return null;
+
+    final marketService = ref.read(marketDataServiceProvider);
+    final quote = await marketService.getQuote(
+      symbol: tracker.symbol,
+      assetType: tracker.assetType,
+    );
+
+    if (quote != null) {
+      await ref.read(investmentServiceProvider).updateCachedTrackerPrice(
+            investmentId: investmentId,
+            price: quote.price,
+            changePercent: quote.changePercent,
+            fetchedAt: quote.date,
+          );
+    }
+    return quote;
+  }
+
+  Future<bool> applyLiveValueToInvestment({
+    required String investmentId,
+    required double liveValue,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(investmentServiceProvider).logInvestmentTransaction(
+            investmentId: investmentId,
+            type: 'Update',
+            amount: liveValue,
+            date: DateTime.now(),
           );
     });
     return !state.hasError;
