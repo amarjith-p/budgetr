@@ -18,10 +18,10 @@ class InvestmentLiveTrackerSheet extends ConsumerStatefulWidget {
   final InvestmentLiveTracker? existingTracker;
 
   const InvestmentLiveTrackerSheet({
-    Key? key,
+    super.key,
     required this.investment,
     this.existingTracker,
-  }) : super(key: key);
+  });
 
   static Future<void> show(
     BuildContext context, {
@@ -48,6 +48,7 @@ class InvestmentLiveTrackerSheet extends ConsumerStatefulWidget {
 class _InvestmentLiveTrackerSheetState
     extends ConsumerState<InvestmentLiveTrackerSheet> {
   late String _assetType; // 'mutual_fund' or 'stock'
+
   final _searchCtrl = TextEditingController();
   final _qtyCtrl = TextEditingController();
 
@@ -175,7 +176,10 @@ class _InvestmentLiveTrackerSheetState
 
   Future<void> _save() async {
     if (_selectedItem == null) {
-      CustomSnackbars.showError(context, message: 'Please select a Ticker / Fund');
+      CustomSnackbars.showError(
+        context,
+        message: 'Please select a Ticker / Fund',
+      );
       return;
     }
 
@@ -323,12 +327,12 @@ class _InvestmentLiveTrackerSheetState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Asset Type Selector Toggle
+                    // Asset Type Selector Toggle (Mutual Fund vs Stock/ETF)
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHighest
-                            .withOpacity(0.5),
+                            .withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -356,265 +360,11 @@ class _InvestmentLiveTrackerSheetState
 
                     const SizedBox(height: 16),
 
-                    // Selected Item Card or Search Box
+                    // Selected Item Card or Unified Search Box
                     if (_selectedItem != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer
-                              .withOpacity(isDark ? 0.25 : 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: theme.colorScheme.primary.withOpacity(0.4),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    _assetType == 'mutual_fund'
-                                        ? 'AMFI'
-                                        : (_selectedItem!.exchange ?? 'STOCK'),
-                                    style: const TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _selectedItem!.symbol,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                  ),
-                                ),
-                                TextButton(
-                                  style: TextButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedItem = null;
-                                      _livePrice = null;
-                                      _searchResults = [];
-                                    });
-                                  },
-                                  child: const Text('Change'),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _selectedItem!.name,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Text(
-                                  _assetType == 'mutual_fund'
-                                      ? 'NAV: '
-                                      : 'Live Price: ',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                if (_isFetchingPrice)
-                                  const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                else if (_livePrice != null) ...[
-                                  Text(
-                                    '₹ ${CurrencyFormatter.format(_livePrice!)}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w900,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                  ),
-                                  if (_changePercent != null) ...[
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '(${_changePercent! >= 0 ? '+' : ''}${_changePercent!.toStringAsFixed(2)}%)',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: _changePercent! >= 0
-                                            ? Colors.green.shade600
-                                            : theme.colorScheme.error,
-                                      ),
-                                    ),
-                                  ],
-                                ] else ...[ 
-                                  Text(
-                                    'Unavailable',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.error,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  InkWell(
-                                    onTap: _fetchQuoteForSelected,
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: theme.colorScheme.primary.withOpacity(0.5),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.refresh_rounded,
-                                            size: 12,
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Retry',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
+                      _buildSelectedItemCard(theme, isDark),
                     ] else ...[
-                      // Search Input
-                      TextField(
-                        controller: _searchCtrl,
-                        onChanged: _onSearchChanged,
-                        decoration: InputDecoration(
-                          hintText: _assetType == 'mutual_fund'
-                              ? 'Search Scheme Name (e.g. HDFC, Parag Parikh)'
-                              : 'Search Stock Ticker or Name (e.g. TCS, Reliance)',
-                          prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                          suffixIcon: _isSearching
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: Center(
-                                    child: SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : (_searchCtrl.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 18),
-                                      onPressed: () {
-                                        _searchCtrl.clear();
-                                        _onSearchChanged('');
-                                      },
-                                    )
-                                  : null),
-                          filled: true,
-                          fillColor: theme.colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: theme.dividerColor),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-
-                      if (_searchResults.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          constraints: const BoxConstraints(maxHeight: 200),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: theme.dividerColor),
-                          ),
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            itemCount: _searchResults.length,
-                            separatorBuilder: (_, __) =>
-                                const Divider(height: 1),
-                            itemBuilder: (ctx, i) {
-                              final item = _searchResults[i];
-                              return ListTile(
-                                dense: true,
-                                title: Text(
-                                  item.name,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(
-                                  '${item.symbol}${item.exchange != null ? " • ${item.exchange}" : ""}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                trailing: const Icon(
-                                  Icons.chevron_right_rounded,
-                                  size: 16,
-                                ),
-                                onTap: () => _selectItem(item),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                      _buildSearchSection(theme),
                     ],
 
                     const SizedBox(height: 16),
@@ -663,11 +413,11 @@ class _InvestmentLiveTrackerSheetState
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: isDark
-                              ? Colors.white.withOpacity(0.04)
-                              : Colors.black.withOpacity(0.03),
+                              ? Colors.white.withValues(alpha: 0.04)
+                              : Colors.black.withValues(alpha: 0.03),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: theme.dividerColor.withOpacity(0.6),
+                            color: theme.dividerColor.withValues(alpha: 0.6),
                           ),
                         ),
                         child: Row(
@@ -727,6 +477,343 @@ class _InvestmentLiveTrackerSheetState
     );
   }
 
+  // ─── Selected Item Card ──────────────────────────────────────────
+
+  Widget _buildSelectedItemCard(ThemeData theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer
+            .withValues(alpha: isDark ? 0.25 : 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  _assetType == 'mutual_fund'
+                      ? 'AMFI'
+                      : (_selectedItem!.exchange ?? 'STOCK'),
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _selectedItem!.symbol,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _selectedItem = null;
+                    _livePrice = null;
+                    _searchResults = [];
+                  });
+                },
+                child: const Text('Change'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _selectedItem!.name,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          if (_assetType == 'mutual_fund') ...[
+            const SizedBox(height: 4),
+            _buildMfSchemeBadges(_selectedItem!.name),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                _assetType == 'mutual_fund' ? 'NAV: ' : 'Live Price: ',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (_isFetchingPrice)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else if (_livePrice != null) ...[
+                Text(
+                  '₹ ${CurrencyFormatter.format(_livePrice!)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                if (_changePercent != null) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '(${_changePercent! >= 0 ? '+' : ''}${_changePercent!.toStringAsFixed(2)}%)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: _changePercent! >= 0
+                          ? Colors.green.shade600
+                          : theme.colorScheme.error,
+                    ),
+                  ),
+                ],
+              ] else ...[
+                Text(
+                  'Unavailable',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: _fetchQuoteForSelected,
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.refresh_rounded,
+                          size: 12,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Retry',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Unified Search Section ──────────────────────────────────────
+
+  Widget _buildSearchSection(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _searchCtrl,
+          onChanged: _onSearchChanged,
+          decoration: InputDecoration(
+            hintText: _assetType == 'mutual_fund'
+                ? 'Search by name or AMFI code (e.g. Parag, 122639)'
+                : 'Search by name or ticker (e.g. TCS, NIFTYBEES.NS)',
+            prefixIcon: const Icon(Icons.search_rounded, size: 20),
+            suffixIcon: _isSearching
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Center(
+                      child: SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  )
+                : (_searchCtrl.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null),
+            filled: true,
+            fillColor: theme.colorScheme.surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: theme.dividerColor),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
+          ),
+        ),
+
+        if (_searchResults.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 280),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: theme.dividerColor),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: _searchResults.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (ctx, i) {
+                final item = _searchResults[i];
+                final isMf = item.type == 'mutual_fund';
+                return ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  title: Text(
+                    item.name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (isMf) _buildMfSchemeBadges(item.name),
+                        const SizedBox(height: 2),
+                        Text(
+                          isMf
+                              ? 'AMFI Code: ${item.symbol}'
+                              : '${item.symbol}${item.exchange != null ? " • ${item.exchange}" : ""}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                  ),
+                  onTap: () => _selectItem(item),
+                );
+              },
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // ─── Mutual Fund Attribute Badges (Direct, Regular, Growth, IDCW) ──
+
+  Widget _buildMfSchemeBadges(String schemeName) {
+    final upper = schemeName.toUpperCase();
+    final isDirect = upper.contains('DIRECT');
+    final isRegular = upper.contains('REGULAR');
+    final isGrowth = upper.contains('GROWTH');
+    final isIdcw = upper.contains('IDCW') || upper.contains('DIVIDEND');
+
+    if (!isDirect && !isRegular && !isGrowth && !isIdcw) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 2,
+        children: [
+          if (isDirect)
+            _buildBadge('DIRECT', Colors.green.shade800, Colors.green.shade100),
+          if (isRegular)
+            _buildBadge('REGULAR', Colors.orange.shade900, Colors.orange.shade100),
+          if (isGrowth)
+            _buildBadge('GROWTH', Colors.blue.shade900, Colors.blue.shade100),
+          if (isIdcw)
+            _buildBadge('IDCW', Colors.purple.shade900, Colors.purple.shade100),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text, Color textColor, Color bgColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: bgColor.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: textColor.withValues(alpha: 0.4), width: 0.8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 8.5,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.4,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
+  // ─── Type Toggle Pill ────────────────────────────────────────────
+
   Widget _buildTypePill({
     required String label,
     required IconData icon,
@@ -757,7 +844,7 @@ class _InvestmentLiveTrackerSheetState
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 4,
                     offset: const Offset(0, 1),
                   ),
@@ -791,4 +878,3 @@ class _InvestmentLiveTrackerSheetState
     );
   }
 }
-
