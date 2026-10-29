@@ -25,11 +25,13 @@ class _CreditPayableBottomSheetState
     extends ConsumerState<CreditPayableBottomSheet> {
   late Set<String> _selectedIds;
 
+  bool _isAccountHided(Account acc) => acc.isHidden || acc.hideBalanceInHome;
+
   @override
   void initState() {
     super.initState();
     _selectedIds = widget.bankAccounts
-        .where((a) => a.isCreditPayable)
+        .where((a) => a.isCreditPayable && !_isAccountHided(a))
         .map((a) => a.id)
         .toSet();
   }
@@ -47,7 +49,10 @@ class _CreditPayableBottomSheetState
 
   Future<void> _saveAllocations() async {
     final updatedList = widget.bankAccounts.map((acc) {
-      return acc.copyWith(isCreditPayable: _selectedIds.contains(acc.id));
+      final isHided = _isAccountHided(acc);
+      return acc.copyWith(
+        isCreditPayable: !isHided && _selectedIds.contains(acc.id),
+      );
     }).toList();
     await ref
         .read(accountActionProvider.notifier)
@@ -62,7 +67,9 @@ class _CreditPayableBottomSheetState
 
     double allocatedFunds = 0.0;
     for (var acc in widget.bankAccounts) {
-      if (_selectedIds.contains(acc.id)) allocatedFunds += acc.balance;
+      if (_selectedIds.contains(acc.id) && !_isAccountHided(acc)) {
+        allocatedFunds += (acc.balance > 0 ? acc.balance : 0.0);
+      }
     }
     final liability = widget.totalCreditLiability.abs();
     final difference = allocatedFunds - liability;
@@ -237,59 +244,135 @@ class _CreditPayableBottomSheetState
                   itemCount: widget.bankAccounts.length,
                   itemBuilder: (context, index) {
                     final acc = widget.bankAccounts[index];
-                    final isSelected = _selectedIds.contains(acc.id);
-                    return Container(
+                    final isHided = _isAccountHided(acc);
+                    final isSelected =
+                        !isHided && _selectedIds.contains(acc.id);
+
+                    final tileWidget = Container(
                       margin: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? theme.colorScheme.primaryContainer.withOpacity(
-                                0.3,
-                              )
-                            : theme.colorScheme.surface,
+                        color: isHided
+                            ? (isDark
+                                  ? Colors.white.withOpacity(0.02)
+                                  : Colors.black.withOpacity(0.02))
+                            : (isSelected
+                                  ? theme.colorScheme.primaryContainer
+                                        .withOpacity(0.3)
+                                  : theme.colorScheme.surface),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isSelected
-                              ? theme.colorScheme.primary
-                              : theme.dividerColor,
+                          color: isHided
+                              ? theme.dividerColor.withOpacity(0.4)
+                              : (isSelected
+                                    ? theme.colorScheme.primary
+                                    : theme.dividerColor),
                         ),
                       ),
-                      child: CheckboxListTile(
-                        value: isSelected,
-                        activeColor: theme.colorScheme.primary,
-                        title: Text(
-                          acc.name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.onSurface,
+                      child: Opacity(
+                        opacity: isHided ? 0.45 : 1.0,
+                        child: CheckboxListTile(
+                          value: isSelected,
+                          enabled: !isHided,
+                          activeColor: theme.colorScheme.primary,
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  acc.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    color: isHided
+                                        ? theme.colorScheme.onSurface
+                                              .withOpacity(0.6)
+                                        : theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                              if (isHided) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: theme
+                                        .colorScheme
+                                        .surfaceContainerHighest
+                                        .withOpacity(0.8),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: theme.dividerColor.withOpacity(
+                                        0.6,
+                                      ),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.visibility_off_rounded,
+                                        size: 10,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      // const SizedBox(width: 3),
+                                      // Text(
+                                      //   'HIDDEN',
+                                      //   style: TextStyle(
+                                      //     fontSize: 9,
+                                      //     fontWeight: FontWeight.w800,
+                                      //     letterSpacing: 0.5,
+                                      //     color: theme.colorScheme.onSurfaceVariant,
+                                      //   ),
+                                      // ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                        ),
-                        subtitle: Row(
-                          children: [
-                            Text(
-                              acc.providerName,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: theme.colorScheme.onSurfaceVariant,
+                          subtitle: Row(
+                            children: [
+                              Text(
+                                acc.providerName,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              '₹ ${CurrencyFormatter.format(acc.balance)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: theme.colorScheme.primary,
+                              const Spacer(),
+                              Text(
+                                '₹ ${CurrencyFormatter.format(acc.balance)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: isHided
+                                      ? theme.colorScheme.onSurfaceVariant
+                                      : theme.colorScheme.primary,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                          onChanged: isHided
+                              ? null
+                              : (val) => _toggleSelection(acc.id, val ?? false),
                         ),
-                        onChanged: (val) =>
-                            _toggleSelection(acc.id, val ?? false),
                       ),
                     );
+
+                    if (isHided) {
+                      return Tooltip(
+                        message:
+                            'Hidden accounts cannot be selected for payable allocation',
+                        child: tileWidget,
+                      );
+                    }
+                    return tileWidget;
                   },
                 ),
               ),

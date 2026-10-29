@@ -7,6 +7,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../accounts/providers/loan_math_provider.dart';
 import '../../accounts/providers/credit_math_provider.dart'; // <-- IMPORTED
+import 'account_balance_visibility_sheet.dart';
 
 class PremiumAccountCard extends ConsumerStatefulWidget {
   final Account account;
@@ -257,6 +258,47 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                           letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  if (widget.account.hideBalanceInDashboard ||
+                      widget.account.hideBalanceInHome ||
+                      widget.account.hideBalanceInAccounts)
+                    GestureDetector(
+                      onTap: () => AccountBalanceVisibilitySheet.show(
+                        context,
+                        widget.account,
+                      ),
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: fgColor.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.visibility_off_rounded,
+                              size: 10,
+                              color: fgColor.withOpacity(0.95),
+                            ),
+                            // const SizedBox(width: 4),
+                            // Text(
+                            //   'HIDDEN',
+                            //   style: TextStyle(
+                            //     fontSize: 8,
+                            //     fontWeight: FontWeight.w900,
+                            //     color: fgColor.withOpacity(0.95),
+                            //     letterSpacing: 0.5,
+                            //   ),
+                            // ),
+                          ],
                         ),
                       ),
                     ),

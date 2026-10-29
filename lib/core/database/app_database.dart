@@ -35,9 +35,9 @@ part 'app_database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
-  // --- BUMPED TO VERSION 41: Added #tags support ---
+  // --- BUMPED TO VERSION 42: Added account balance hiding columns ---
   @override
-  int get schemaVersion => 41;
+  int get schemaVersion => 42;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -164,6 +164,12 @@ class AppDatabase extends _$AppDatabase {
       if (from < 41) {
         // --- ADDED #TAGS COLUMN TO TRANSACTIONS ---
         await m.addColumn(transactions, transactions.tags);
+      }
+      if (from < 42) {
+        // --- ADDED BALANCE HIDING COLUMNS TO ACCOUNTS ---
+        await m.addColumn(accounts, accounts.hideBalanceInDashboard);
+        await m.addColumn(accounts, accounts.hideBalanceInHome);
+        await m.addColumn(accounts, accounts.hideBalanceInAccounts);
       }
     },
   );

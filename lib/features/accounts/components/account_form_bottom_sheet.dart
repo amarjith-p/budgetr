@@ -44,6 +44,11 @@ class _AccountFormBottomSheetState
   final Map<TextEditingController, FocusNode> _focusNodes = {};
   TextEditingController? _activeCalcController;
 
+  bool _masterHideBalance = false;
+  bool _hideBalanceInDashboard = false;
+  bool _hideBalanceInHome = false;
+  bool _hideBalanceInAccounts = false;
+
   final List<String> _accountTypes = [
     'Savings Account',
     'Current Account',
@@ -167,6 +172,13 @@ class _AccountFormBottomSheetState
     _endDateCtrl = TextEditingController(
       text: acc?.loanEndDate?.toIso8601String().split('T').first ?? '',
     );
+
+    _hideBalanceInDashboard = acc?.hideBalanceInDashboard ?? false;
+    _hideBalanceInHome = acc?.hideBalanceInHome ?? false;
+    _hideBalanceInAccounts = acc?.hideBalanceInAccounts ?? false;
+    _masterHideBalance = _hideBalanceInDashboard ||
+        _hideBalanceInHome ||
+        _hideBalanceInAccounts;
 
     _focusNodes[_nameCtrl] = FocusNode();
     _focusNodes[_providerCtrl] = FocusNode();
@@ -384,6 +396,11 @@ class _AccountFormBottomSheetState
           emiDate: isLoan ? DateTime.tryParse(_emiDateCtrl.text) : null,
           loanStartDate: isLoan ? DateTime.tryParse(_startDateCtrl.text) : null,
           loanEndDate: isLoan ? DateTime.tryParse(_endDateCtrl.text) : null,
+          hideBalanceInDashboard:
+              _masterHideBalance && _hideBalanceInDashboard,
+          hideBalanceInHome: _masterHideBalance && _hideBalanceInHome,
+          hideBalanceInAccounts:
+              _masterHideBalance && _hideBalanceInAccounts,
         );
 
     if (success && mounted) Navigator.pop(context);
@@ -449,6 +466,7 @@ class _AccountFormBottomSheetState
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     final isCC = _typeCtrl.text == 'Credit Cards';
     final isLiquid = _typeCtrl.text == 'Liquid Money';
@@ -756,6 +774,162 @@ class _AccountFormBottomSheetState
                             v == null || v.isEmpty ? 'Required' : null,
                       ),
                     ],
+
+                    const SizedBox(height: DesignTokens.spacingMd),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _masterHideBalance
+                            ? theme.colorScheme.primary
+                                .withOpacity(isDark ? 0.12 : 0.06)
+                            : theme.colorScheme.surfaceContainerHighest
+                                .withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _masterHideBalance
+                              ? theme.colorScheme.primary.withOpacity(0.4)
+                              : theme.dividerColor.withOpacity(0.5),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                _masterHideBalance
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
+                                size: 18,
+                                color: _masterHideBalance
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Hide Balance from Totals',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Exclude from selected total displays',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: _masterHideBalance,
+                                activeColor: theme.colorScheme.primary,
+                                onChanged: (val) {
+                                  HapticFeedback.selectionClick();
+                                  setState(() {
+                                    _masterHideBalance = val;
+                                    if (val &&
+                                        !_hideBalanceInDashboard &&
+                                        !_hideBalanceInHome &&
+                                        !_hideBalanceInAccounts) {
+                                      _hideBalanceInDashboard = true;
+                                      _hideBalanceInHome = true;
+                                      _hideBalanceInAccounts = true;
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          if (_masterHideBalance) ...[
+                            const SizedBox(height: 10),
+                            const Divider(height: 1),
+                            const SizedBox(height: 8),
+                            Text(
+                              'WHERE TO HIDE',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.8,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            CheckboxListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              title: const Text(
+                                'Dashboard Money Tracker',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: const Text(
+                                'Main dashboard tile balance',
+                                style: TextStyle(fontSize: 10),
+                              ),
+                              value: _hideBalanceInDashboard,
+                              activeColor: theme.colorScheme.primary,
+                              onChanged: (val) => setState(() {
+                                _hideBalanceInDashboard = val ?? false;
+                              }),
+                            ),
+                            CheckboxListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              title: const Text(
+                                'Home Tab Total Pill',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: const Text(
+                                'Dr / Cr / Tally summary pill',
+                                style: TextStyle(fontSize: 10),
+                              ),
+                              value: _hideBalanceInHome,
+                              activeColor: theme.colorScheme.primary,
+                              onChanged: (val) => setState(() {
+                                _hideBalanceInHome = val ?? false;
+                              }),
+                            ),
+                            CheckboxListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              title: const Text(
+                                'Accounts Tab Summary Card',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: const Text(
+                                'Net Balance summary card',
+                                style: TextStyle(fontSize: 10),
+                              ),
+                              value: _hideBalanceInAccounts,
+                              activeColor: theme.colorScheme.primary,
+                              onChanged: (val) => setState(() {
+                                _hideBalanceInAccounts = val ?? false;
+                              }),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
 
                     const SizedBox(height: DesignTokens.spacingLg),
                     Row(

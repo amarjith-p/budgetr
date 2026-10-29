@@ -36,6 +36,9 @@ class AccountService {
     double? totalInterestPayable,
     double? totalTaxPayable,
     double? bankCharges, // <-- THIS WAS MISSING
+    bool hideBalanceInDashboard = false,
+    bool hideBalanceInHome = false,
+    bool hideBalanceInAccounts = false,
   }) async {
     await _db
         .into(_db.accounts)
@@ -60,8 +63,26 @@ class AccountService {
             totalInterestPayable: Value(totalInterestPayable),
             totalTaxPayable: Value(totalTaxPayable),
             bankCharges: Value(bankCharges), // <-- MAPS TO YOUR NEW DB FIELD
+            hideBalanceInDashboard: Value(hideBalanceInDashboard),
+            hideBalanceInHome: Value(hideBalanceInHome),
+            hideBalanceInAccounts: Value(hideBalanceInAccounts),
           ),
         );
+  }
+
+  Future<void> updateAccountBalanceHiding({
+    required String accountId,
+    required bool hideBalanceInDashboard,
+    required bool hideBalanceInHome,
+    required bool hideBalanceInAccounts,
+  }) async {
+    await (_db.update(_db.accounts)..where((a) => a.id.equals(accountId))).write(
+      AccountsCompanion(
+        hideBalanceInDashboard: Value(hideBalanceInDashboard),
+        hideBalanceInHome: Value(hideBalanceInHome),
+        hideBalanceInAccounts: Value(hideBalanceInAccounts),
+      ),
+    );
   }
 
   Future<void> updateAccount(Account account) async {

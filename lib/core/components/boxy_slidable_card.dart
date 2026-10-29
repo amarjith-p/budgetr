@@ -8,6 +8,7 @@ class BoxySlidableCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onClone;
   final VoidCallback? onInterest; // <-- NEW
+  final VoidCallback? onVisibility;
   final VoidCallback? onSplit;
   final VoidCallback? onSettle;
   final VoidCallback? onDelete;
@@ -21,6 +22,7 @@ class BoxySlidableCard extends StatelessWidget {
     this.onEdit,
     this.onClone,
     this.onInterest, // <-- NEW
+    this.onVisibility,
     this.onSplit,
     this.onSettle,
     this.onDelete,
@@ -34,11 +36,12 @@ class BoxySlidableCard extends StatelessWidget {
     final activeRadius =
         customBorderRadius ?? BorderRadius.circular(DesignTokens.spacingXs);
 
-    // --- UPDATED: Included onInterest in the start extent calculation ---
+    // --- UPDATED: Included onInterest & onVisibility in the start extent calculation ---
     int startActionCount =
         (onEdit != null ? 1 : 0) +
         (onClone != null ? 1 : 0) +
-        (onInterest != null ? 1 : 0);
+        (onInterest != null ? 1 : 0) +
+        (onVisibility != null ? 1 : 0);
     double startExtent = startActionCount * 0.25;
 
     int endActionCount =
@@ -174,6 +177,47 @@ class BoxySlidableCard extends StatelessWidget {
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.blue.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (onVisibility != null)
+                    CustomSlidableAction(
+                      onPressed: (_) => onVisibility!(),
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Theme.of(
+                        context,
+                      ).colorScheme.onTertiaryContainer,
+                      padding: EdgeInsets.zero,
+                      child: Container(
+                        margin: const EdgeInsets.only(
+                          right: DesignTokens.spacingSm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.tertiaryContainer,
+                          borderRadius: activeRadius,
+                          border: Border.all(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.tertiary.withOpacity(0.3),
+                            width: 1.2,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.visibility_off_outlined),
+                            SizedBox(height: 4),
+                            Text(
+                              'Hide',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],

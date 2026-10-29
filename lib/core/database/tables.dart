@@ -47,6 +47,12 @@ class Accounts extends Table {
   RealColumn get bankCharges => real().nullable()();
 
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
+  BoolColumn get hideBalanceInDashboard =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get hideBalanceInHome =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get hideBalanceInAccounts =>
+      boolean().withDefault(const Constant(false))();
   IntColumn get displayOrder => integer().nullable()();
   BoolColumn get isClosed => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();

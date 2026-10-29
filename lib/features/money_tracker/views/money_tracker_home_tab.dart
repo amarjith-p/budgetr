@@ -80,6 +80,11 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
               .where((a) => a.type == 'Loan' && !a.isClosed)
               .toList();
 
+          final allBankAccounts = accounts
+              .where((a) =>
+                  a.type != 'Credit Cards' && a.type != 'Loan' && !a.isClosed)
+              .toList();
+
           // --- FIX 2: UNIVERSAL MATH STANDARD ---
           // Calculates the global totals using the raw database list, ignoring visual hidden states.
           double totalAssets = 0.0;
@@ -87,8 +92,13 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
           double totalLoans = 0.0;
           double allocatedFunds = 0.0;
 
+          final bool hasHiddenInHome = accounts.any(
+            (a) => a.hideBalanceInHome && (!a.isClosed || a.type == 'Loan'),
+          );
+
           for (var acc in accounts) {
             if (acc.isClosed && acc.type != 'Loan') continue;
+            if (acc.hideBalanceInHome) continue;
 
             if (acc.type == 'Credit Cards') {
               // Automatically nets surpluses (+2.35) against debts (-16,217.24)
@@ -99,7 +109,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
               totalLoans += ref.watch(loanTotalOutstandingProvider(acc));
             } else if (acc.type != 'Credit Cards' && acc.type != 'Loan') {
               totalAssets += acc.balance;
-              if (acc.isCreditPayable) {
+              if (acc.isCreditPayable && !acc.isHidden) {
                 allocatedFunds += (acc.balance > 0 ? acc.balance : 0.0);
               }
             }
@@ -127,14 +137,8 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    DesignTokens.spacingLg,
-                    8.0,
-                    DesignTokens.spacingLg,
-                    8.0,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Align(
@@ -146,8 +150,9 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                               drBalance,
                               crBalance,
                               difference,
-                              bankAccounts,
+                              allBankAccounts,
                               theme,
+                              hasHidden: hasHiddenInHome,
                             ),
                           ),
                         ),
@@ -359,8 +364,9 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
     double crBalance,
     double difference,
     List<Account> bankAccounts,
-    ThemeData theme,
-  ) {
+    ThemeData theme, {
+    bool hasHidden = false,
+  }) {
     final isDark = theme.brightness == Brightness.dark;
 
     Color diffColor = Colors.blueAccent.shade700;
@@ -428,6 +434,22 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                   theme,
                   showPlus: difference > 0,
                 ),
+                if (hasHidden) ...[
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    height: 14,
+                    width: 1.5,
+                    color: theme.dividerColor,
+                  ),
+                  Tooltip(
+                    message: 'Some account balances are hidden',
+                    child: Icon(
+                      Icons.visibility_off_rounded,
+                      size: 13,
+                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.85),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -511,18 +533,18 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
             ),
             child: Row(
               children: bottomRow
-                  .map(
-                    (acc) => Padding(
-                      padding: const EdgeInsets.only(right: 12.0),
-                      child: MiniAccountCard(
-                        account: acc,
-                        onTap: () => _navigateToAccount(context, acc),
-                      ),
+                .map(
+                  (acc) => Padding(
+                    padding: const EdgeInsets.only(right: 12.0),
+                    child: MiniAccountCard(
+                      account: acc,
+                      onTap: () => _navigateToAccount(context, acc),
                     ),
-                  )
-                  .toList(),
-            ),
+                  ),
+                )
+                .toList(),
           ),
+        ),
       ],
     );
   }

@@ -21,6 +21,7 @@ import '../providers/account_provider.dart';
 import '../providers/loan_math_provider.dart';
 import '../providers/credit_math_provider.dart';
 import '../components/global_summary_card.dart';
+import '../components/account_balance_visibility_sheet.dart';
 
 final selectionModeProvider = StateProvider.autoDispose<bool>((ref) => false);
 final selectedAccountsProvider = StateProvider.autoDispose<Set<String>>(
@@ -70,27 +71,59 @@ class AccountsTab extends ConsumerWidget {
               .where((a) => a.type == 'Loan' && a.isClosed)
               .toList();
 
-          // --- FIX 3: UNIVERSAL MATH STANDARD ---
-          // Calculates the global totals using the raw database list
+          // --- FIX 3: UNIVERSAL MATH STANDARD & BALANCE PRIVACY ---
+          // Calculates visible (without hidden), hidden, and full global totals
+          double visibleBankBalance = 0.0;
+          double visibleCreditBalance = 0.0;
+          double visibleLoanOutstanding = 0.0;
+
+          double hiddenBankBalance = 0.0;
+          double hiddenCreditBalance = 0.0;
+          double hiddenLoanOutstanding = 0.0;
+
           double totalBankBalance = 0.0;
           double totalCreditBalance = 0.0;
           double totalLoanOutstanding = 0.0;
 
+          int hiddenCount = 0;
+
           for (var acc in accounts) {
             if (acc.isClosed && acc.type != 'Loan') continue;
 
+            final isHiddenInAccounts = acc.hideBalanceInAccounts;
+            if (isHiddenInAccounts) hiddenCount++;
+
             if (acc.type == 'Credit Cards') {
-              totalCreditBalance += ref
+              final dues = ref
                   .watch(creditCardMetricsProvider(acc))
                   .totalOutstanding;
+              totalCreditBalance += dues;
+              if (isHiddenInAccounts) {
+                hiddenCreditBalance += dues;
+              } else {
+                visibleCreditBalance += dues;
+              }
             } else if (acc.type == 'Loan' && !acc.isClosed) {
-              totalLoanOutstanding += ref.watch(
+              final loanDue = ref.watch(
                 loanTotalOutstandingProvider(acc),
               );
+              totalLoanOutstanding += loanDue;
+              if (isHiddenInAccounts) {
+                hiddenLoanOutstanding += loanDue;
+              } else {
+                visibleLoanOutstanding += loanDue;
+              }
             } else if (acc.type != 'Credit Cards' && acc.type != 'Loan') {
               totalBankBalance += acc.balance;
+              if (isHiddenInAccounts) {
+                hiddenBankBalance += acc.balance;
+              } else {
+                visibleBankBalance += acc.balance;
+              }
             }
           }
+
+          final bool hasHiddenInAccounts = hiddenCount > 0;
 
           double customTotal = 0.0;
           for (var acc in accounts) {
@@ -130,10 +163,17 @@ class AccountsTab extends ConsumerWidget {
                 ),
               SliverToBoxAdapter(
                 child: GlobalSummaryCard(
-                  assets: totalBankBalance,
-                  liabilities: totalCreditBalance, // Naturally negative if owed
-                  loans:
-                      -totalLoanOutstanding, // Forced negative for calculation
+                  assets: visibleBankBalance,
+                  liabilities: visibleCreditBalance, // Naturally negative if owed
+                  loans: -visibleLoanOutstanding, // Forced negative for calculation
+                  hiddenAssets: hiddenBankBalance,
+                  hiddenLiabilities: hiddenCreditBalance,
+                  hiddenLoans: -hiddenLoanOutstanding,
+                  totalAssets: totalBankBalance,
+                  totalLiabilities: totalCreditBalance,
+                  totalLoans: -totalLoanOutstanding,
+                  hasHidden: hasHiddenInAccounts,
+                  hiddenCount: hiddenCount,
                 ),
               ),
               if (bankAccounts.isNotEmpty) ...[
@@ -315,6 +355,9 @@ class AccountsTab extends ConsumerWidget {
             onEdit: (isSelectionMode || isSettled)
                 ? null
                 : () => _openForm(context, existingAccount: acc),
+            onVisibility: isSelectionMode
+                ? null
+                : () => AccountBalanceVisibilitySheet.show(context, acc),
             onSettle: (isSelectionMode || !isLoan || isSettled)
                 ? null
                 : () {

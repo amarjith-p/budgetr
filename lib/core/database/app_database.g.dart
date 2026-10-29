@@ -907,6 +907,51 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _hideBalanceInDashboardMeta =
+      const VerificationMeta('hideBalanceInDashboard');
+  @override
+  late final GeneratedColumn<bool> hideBalanceInDashboard =
+      GeneratedColumn<bool>(
+        'hide_balance_in_dashboard',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("hide_balance_in_dashboard" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
+  static const VerificationMeta _hideBalanceInHomeMeta = const VerificationMeta(
+    'hideBalanceInHome',
+  );
+  @override
+  late final GeneratedColumn<bool> hideBalanceInHome = GeneratedColumn<bool>(
+    'hide_balance_in_home',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("hide_balance_in_home" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _hideBalanceInAccountsMeta =
+      const VerificationMeta('hideBalanceInAccounts');
+  @override
+  late final GeneratedColumn<bool> hideBalanceInAccounts =
+      GeneratedColumn<bool>(
+        'hide_balance_in_accounts',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("hide_balance_in_accounts" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
   static const VerificationMeta _displayOrderMeta = const VerificationMeta(
     'displayOrder',
   );
@@ -968,6 +1013,9 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     totalTaxPayable,
     bankCharges,
     isHidden,
+    hideBalanceInDashboard,
+    hideBalanceInHome,
+    hideBalanceInAccounts,
     displayOrder,
     isClosed,
     createdAt,
@@ -1153,6 +1201,33 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         isHidden.isAcceptableOrUnknown(data['is_hidden']!, _isHiddenMeta),
       );
     }
+    if (data.containsKey('hide_balance_in_dashboard')) {
+      context.handle(
+        _hideBalanceInDashboardMeta,
+        hideBalanceInDashboard.isAcceptableOrUnknown(
+          data['hide_balance_in_dashboard']!,
+          _hideBalanceInDashboardMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hide_balance_in_home')) {
+      context.handle(
+        _hideBalanceInHomeMeta,
+        hideBalanceInHome.isAcceptableOrUnknown(
+          data['hide_balance_in_home']!,
+          _hideBalanceInHomeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hide_balance_in_accounts')) {
+      context.handle(
+        _hideBalanceInAccountsMeta,
+        hideBalanceInAccounts.isAcceptableOrUnknown(
+          data['hide_balance_in_accounts']!,
+          _hideBalanceInAccountsMeta,
+        ),
+      );
+    }
     if (data.containsKey('display_order')) {
       context.handle(
         _displayOrderMeta,
@@ -1267,6 +1342,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_hidden'],
       )!,
+      hideBalanceInDashboard: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}hide_balance_in_dashboard'],
+      )!,
+      hideBalanceInHome: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}hide_balance_in_home'],
+      )!,
+      hideBalanceInAccounts: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}hide_balance_in_accounts'],
+      )!,
       displayOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}display_order'],
@@ -1310,6 +1397,9 @@ class Account extends DataClass implements Insertable<Account> {
   final double? totalTaxPayable;
   final double? bankCharges;
   final bool isHidden;
+  final bool hideBalanceInDashboard;
+  final bool hideBalanceInHome;
+  final bool hideBalanceInAccounts;
   final int? displayOrder;
   final bool isClosed;
   final DateTime createdAt;
@@ -1335,6 +1425,9 @@ class Account extends DataClass implements Insertable<Account> {
     this.totalTaxPayable,
     this.bankCharges,
     required this.isHidden,
+    required this.hideBalanceInDashboard,
+    required this.hideBalanceInHome,
+    required this.hideBalanceInAccounts,
     this.displayOrder,
     required this.isClosed,
     required this.createdAt,
@@ -1391,6 +1484,9 @@ class Account extends DataClass implements Insertable<Account> {
       map['bank_charges'] = Variable<double>(bankCharges);
     }
     map['is_hidden'] = Variable<bool>(isHidden);
+    map['hide_balance_in_dashboard'] = Variable<bool>(hideBalanceInDashboard);
+    map['hide_balance_in_home'] = Variable<bool>(hideBalanceInHome);
+    map['hide_balance_in_accounts'] = Variable<bool>(hideBalanceInAccounts);
     if (!nullToAbsent || displayOrder != null) {
       map['display_order'] = Variable<int>(displayOrder);
     }
@@ -1450,6 +1546,9 @@ class Account extends DataClass implements Insertable<Account> {
           ? const Value.absent()
           : Value(bankCharges),
       isHidden: Value(isHidden),
+      hideBalanceInDashboard: Value(hideBalanceInDashboard),
+      hideBalanceInHome: Value(hideBalanceInHome),
+      hideBalanceInAccounts: Value(hideBalanceInAccounts),
       displayOrder: displayOrder == null && nullToAbsent
           ? const Value.absent()
           : Value(displayOrder),
@@ -1487,6 +1586,13 @@ class Account extends DataClass implements Insertable<Account> {
       totalTaxPayable: serializer.fromJson<double?>(json['totalTaxPayable']),
       bankCharges: serializer.fromJson<double?>(json['bankCharges']),
       isHidden: serializer.fromJson<bool>(json['isHidden']),
+      hideBalanceInDashboard: serializer.fromJson<bool>(
+        json['hideBalanceInDashboard'],
+      ),
+      hideBalanceInHome: serializer.fromJson<bool>(json['hideBalanceInHome']),
+      hideBalanceInAccounts: serializer.fromJson<bool>(
+        json['hideBalanceInAccounts'],
+      ),
       displayOrder: serializer.fromJson<int?>(json['displayOrder']),
       isClosed: serializer.fromJson<bool>(json['isClosed']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1517,6 +1623,9 @@ class Account extends DataClass implements Insertable<Account> {
       'totalTaxPayable': serializer.toJson<double?>(totalTaxPayable),
       'bankCharges': serializer.toJson<double?>(bankCharges),
       'isHidden': serializer.toJson<bool>(isHidden),
+      'hideBalanceInDashboard': serializer.toJson<bool>(hideBalanceInDashboard),
+      'hideBalanceInHome': serializer.toJson<bool>(hideBalanceInHome),
+      'hideBalanceInAccounts': serializer.toJson<bool>(hideBalanceInAccounts),
       'displayOrder': serializer.toJson<int?>(displayOrder),
       'isClosed': serializer.toJson<bool>(isClosed),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1545,6 +1654,9 @@ class Account extends DataClass implements Insertable<Account> {
     Value<double?> totalTaxPayable = const Value.absent(),
     Value<double?> bankCharges = const Value.absent(),
     bool? isHidden,
+    bool? hideBalanceInDashboard,
+    bool? hideBalanceInHome,
+    bool? hideBalanceInAccounts,
     Value<int?> displayOrder = const Value.absent(),
     bool? isClosed,
     DateTime? createdAt,
@@ -1578,6 +1690,10 @@ class Account extends DataClass implements Insertable<Account> {
         : this.totalTaxPayable,
     bankCharges: bankCharges.present ? bankCharges.value : this.bankCharges,
     isHidden: isHidden ?? this.isHidden,
+    hideBalanceInDashboard:
+        hideBalanceInDashboard ?? this.hideBalanceInDashboard,
+    hideBalanceInHome: hideBalanceInHome ?? this.hideBalanceInHome,
+    hideBalanceInAccounts: hideBalanceInAccounts ?? this.hideBalanceInAccounts,
     displayOrder: displayOrder.present ? displayOrder.value : this.displayOrder,
     isClosed: isClosed ?? this.isClosed,
     createdAt: createdAt ?? this.createdAt,
@@ -1629,6 +1745,15 @@ class Account extends DataClass implements Insertable<Account> {
           ? data.bankCharges.value
           : this.bankCharges,
       isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
+      hideBalanceInDashboard: data.hideBalanceInDashboard.present
+          ? data.hideBalanceInDashboard.value
+          : this.hideBalanceInDashboard,
+      hideBalanceInHome: data.hideBalanceInHome.present
+          ? data.hideBalanceInHome.value
+          : this.hideBalanceInHome,
+      hideBalanceInAccounts: data.hideBalanceInAccounts.present
+          ? data.hideBalanceInAccounts.value
+          : this.hideBalanceInAccounts,
       displayOrder: data.displayOrder.present
           ? data.displayOrder.value
           : this.displayOrder,
@@ -1661,6 +1786,9 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('totalTaxPayable: $totalTaxPayable, ')
           ..write('bankCharges: $bankCharges, ')
           ..write('isHidden: $isHidden, ')
+          ..write('hideBalanceInDashboard: $hideBalanceInDashboard, ')
+          ..write('hideBalanceInHome: $hideBalanceInHome, ')
+          ..write('hideBalanceInAccounts: $hideBalanceInAccounts, ')
           ..write('displayOrder: $displayOrder, ')
           ..write('isClosed: $isClosed, ')
           ..write('createdAt: $createdAt')
@@ -1691,6 +1819,9 @@ class Account extends DataClass implements Insertable<Account> {
     totalTaxPayable,
     bankCharges,
     isHidden,
+    hideBalanceInDashboard,
+    hideBalanceInHome,
+    hideBalanceInAccounts,
     displayOrder,
     isClosed,
     createdAt,
@@ -1720,6 +1851,9 @@ class Account extends DataClass implements Insertable<Account> {
           other.totalTaxPayable == this.totalTaxPayable &&
           other.bankCharges == this.bankCharges &&
           other.isHidden == this.isHidden &&
+          other.hideBalanceInDashboard == this.hideBalanceInDashboard &&
+          other.hideBalanceInHome == this.hideBalanceInHome &&
+          other.hideBalanceInAccounts == this.hideBalanceInAccounts &&
           other.displayOrder == this.displayOrder &&
           other.isClosed == this.isClosed &&
           other.createdAt == this.createdAt);
@@ -1747,6 +1881,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<double?> totalTaxPayable;
   final Value<double?> bankCharges;
   final Value<bool> isHidden;
+  final Value<bool> hideBalanceInDashboard;
+  final Value<bool> hideBalanceInHome;
+  final Value<bool> hideBalanceInAccounts;
   final Value<int?> displayOrder;
   final Value<bool> isClosed;
   final Value<DateTime> createdAt;
@@ -1773,6 +1910,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.totalTaxPayable = const Value.absent(),
     this.bankCharges = const Value.absent(),
     this.isHidden = const Value.absent(),
+    this.hideBalanceInDashboard = const Value.absent(),
+    this.hideBalanceInHome = const Value.absent(),
+    this.hideBalanceInAccounts = const Value.absent(),
     this.displayOrder = const Value.absent(),
     this.isClosed = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1800,6 +1940,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.totalTaxPayable = const Value.absent(),
     this.bankCharges = const Value.absent(),
     this.isHidden = const Value.absent(),
+    this.hideBalanceInDashboard = const Value.absent(),
+    this.hideBalanceInHome = const Value.absent(),
+    this.hideBalanceInAccounts = const Value.absent(),
     this.displayOrder = const Value.absent(),
     this.isClosed = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1831,6 +1974,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<double>? totalTaxPayable,
     Expression<double>? bankCharges,
     Expression<bool>? isHidden,
+    Expression<bool>? hideBalanceInDashboard,
+    Expression<bool>? hideBalanceInHome,
+    Expression<bool>? hideBalanceInAccounts,
     Expression<int>? displayOrder,
     Expression<bool>? isClosed,
     Expression<DateTime>? createdAt,
@@ -1859,6 +2005,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (totalTaxPayable != null) 'total_tax_payable': totalTaxPayable,
       if (bankCharges != null) 'bank_charges': bankCharges,
       if (isHidden != null) 'is_hidden': isHidden,
+      if (hideBalanceInDashboard != null)
+        'hide_balance_in_dashboard': hideBalanceInDashboard,
+      if (hideBalanceInHome != null) 'hide_balance_in_home': hideBalanceInHome,
+      if (hideBalanceInAccounts != null)
+        'hide_balance_in_accounts': hideBalanceInAccounts,
       if (displayOrder != null) 'display_order': displayOrder,
       if (isClosed != null) 'is_closed': isClosed,
       if (createdAt != null) 'created_at': createdAt,
@@ -1888,6 +2039,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<double?>? totalTaxPayable,
     Value<double?>? bankCharges,
     Value<bool>? isHidden,
+    Value<bool>? hideBalanceInDashboard,
+    Value<bool>? hideBalanceInHome,
+    Value<bool>? hideBalanceInAccounts,
     Value<int?>? displayOrder,
     Value<bool>? isClosed,
     Value<DateTime>? createdAt,
@@ -1915,6 +2069,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       totalTaxPayable: totalTaxPayable ?? this.totalTaxPayable,
       bankCharges: bankCharges ?? this.bankCharges,
       isHidden: isHidden ?? this.isHidden,
+      hideBalanceInDashboard:
+          hideBalanceInDashboard ?? this.hideBalanceInDashboard,
+      hideBalanceInHome: hideBalanceInHome ?? this.hideBalanceInHome,
+      hideBalanceInAccounts:
+          hideBalanceInAccounts ?? this.hideBalanceInAccounts,
       displayOrder: displayOrder ?? this.displayOrder,
       isClosed: isClosed ?? this.isClosed,
       createdAt: createdAt ?? this.createdAt,
@@ -1990,6 +2149,19 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (isHidden.present) {
       map['is_hidden'] = Variable<bool>(isHidden.value);
     }
+    if (hideBalanceInDashboard.present) {
+      map['hide_balance_in_dashboard'] = Variable<bool>(
+        hideBalanceInDashboard.value,
+      );
+    }
+    if (hideBalanceInHome.present) {
+      map['hide_balance_in_home'] = Variable<bool>(hideBalanceInHome.value);
+    }
+    if (hideBalanceInAccounts.present) {
+      map['hide_balance_in_accounts'] = Variable<bool>(
+        hideBalanceInAccounts.value,
+      );
+    }
     if (displayOrder.present) {
       map['display_order'] = Variable<int>(displayOrder.value);
     }
@@ -2029,6 +2201,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('totalTaxPayable: $totalTaxPayable, ')
           ..write('bankCharges: $bankCharges, ')
           ..write('isHidden: $isHidden, ')
+          ..write('hideBalanceInDashboard: $hideBalanceInDashboard, ')
+          ..write('hideBalanceInHome: $hideBalanceInHome, ')
+          ..write('hideBalanceInAccounts: $hideBalanceInAccounts, ')
           ..write('displayOrder: $displayOrder, ')
           ..write('isClosed: $isClosed, ')
           ..write('createdAt: $createdAt, ')
@@ -15044,6 +15219,9 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<double?> totalTaxPayable,
       Value<double?> bankCharges,
       Value<bool> isHidden,
+      Value<bool> hideBalanceInDashboard,
+      Value<bool> hideBalanceInHome,
+      Value<bool> hideBalanceInAccounts,
       Value<int?> displayOrder,
       Value<bool> isClosed,
       Value<DateTime> createdAt,
@@ -15072,6 +15250,9 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<double?> totalTaxPayable,
       Value<double?> bankCharges,
       Value<bool> isHidden,
+      Value<bool> hideBalanceInDashboard,
+      Value<bool> hideBalanceInHome,
+      Value<bool> hideBalanceInAccounts,
       Value<int?> displayOrder,
       Value<bool> isClosed,
       Value<DateTime> createdAt,
@@ -15189,6 +15370,21 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<bool> get isHidden => $composableBuilder(
     column: $table.isHidden,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hideBalanceInDashboard => $composableBuilder(
+    column: $table.hideBalanceInDashboard,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hideBalanceInHome => $composableBuilder(
+    column: $table.hideBalanceInHome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hideBalanceInAccounts => $composableBuilder(
+    column: $table.hideBalanceInAccounts,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15322,6 +15518,21 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get hideBalanceInDashboard => $composableBuilder(
+    column: $table.hideBalanceInDashboard,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hideBalanceInHome => $composableBuilder(
+    column: $table.hideBalanceInHome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hideBalanceInAccounts => $composableBuilder(
+    column: $table.hideBalanceInAccounts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get displayOrder => $composableBuilder(
     column: $table.displayOrder,
     builder: (column) => ColumnOrderings(column),
@@ -15434,6 +15645,21 @@ class $$AccountsTableAnnotationComposer
   GeneratedColumn<bool> get isHidden =>
       $composableBuilder(column: $table.isHidden, builder: (column) => column);
 
+  GeneratedColumn<bool> get hideBalanceInDashboard => $composableBuilder(
+    column: $table.hideBalanceInDashboard,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get hideBalanceInHome => $composableBuilder(
+    column: $table.hideBalanceInHome,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get hideBalanceInAccounts => $composableBuilder(
+    column: $table.hideBalanceInAccounts,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get displayOrder => $composableBuilder(
     column: $table.displayOrder,
     builder: (column) => column,
@@ -15495,6 +15721,9 @@ class $$AccountsTableTableManager
                 Value<double?> totalTaxPayable = const Value.absent(),
                 Value<double?> bankCharges = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
+                Value<bool> hideBalanceInDashboard = const Value.absent(),
+                Value<bool> hideBalanceInHome = const Value.absent(),
+                Value<bool> hideBalanceInAccounts = const Value.absent(),
                 Value<int?> displayOrder = const Value.absent(),
                 Value<bool> isClosed = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -15521,6 +15750,9 @@ class $$AccountsTableTableManager
                 totalTaxPayable: totalTaxPayable,
                 bankCharges: bankCharges,
                 isHidden: isHidden,
+                hideBalanceInDashboard: hideBalanceInDashboard,
+                hideBalanceInHome: hideBalanceInHome,
+                hideBalanceInAccounts: hideBalanceInAccounts,
                 displayOrder: displayOrder,
                 isClosed: isClosed,
                 createdAt: createdAt,
@@ -15549,6 +15781,9 @@ class $$AccountsTableTableManager
                 Value<double?> totalTaxPayable = const Value.absent(),
                 Value<double?> bankCharges = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
+                Value<bool> hideBalanceInDashboard = const Value.absent(),
+                Value<bool> hideBalanceInHome = const Value.absent(),
+                Value<bool> hideBalanceInAccounts = const Value.absent(),
                 Value<int?> displayOrder = const Value.absent(),
                 Value<bool> isClosed = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -15575,6 +15810,9 @@ class $$AccountsTableTableManager
                 totalTaxPayable: totalTaxPayable,
                 bankCharges: bankCharges,
                 isHidden: isHidden,
+                hideBalanceInDashboard: hideBalanceInDashboard,
+                hideBalanceInHome: hideBalanceInHome,
+                hideBalanceInAccounts: hideBalanceInAccounts,
                 displayOrder: displayOrder,
                 isClosed: isClosed,
                 createdAt: createdAt,

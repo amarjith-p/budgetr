@@ -143,6 +143,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
     for (var acc in rawAccounts) {
       if (acc.isClosed && acc.type != 'Loan') continue;
+      if (acc.hideBalanceInDashboard) continue;
 
       if (acc.type == 'Credit Cards') {
         totalCreditDues += ref
@@ -152,7 +153,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         totalLoans += ref.watch(loanTotalOutstandingProvider(acc));
       } else if (acc.type != 'Credit Cards' && acc.type != 'Loan') {
         totalAssets += acc.balance;
-        if (acc.isCreditPayable) {
+        if (acc.isCreditPayable && !acc.isHidden) {
           allocatedFunds += (acc.balance > 0 ? acc.balance : 0.0);
         }
       }
@@ -553,17 +554,33 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                Text(
-                                                  'MONEY TRACKER',
-                                                  style: theme
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        letterSpacing: 0.5,
-                                                        color: Colors.black54,
+                                                Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      'MONEY TRACKER',
+                                                      style: theme
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            letterSpacing: 0.5,
+                                                            color: Colors.black54,
+                                                          ),
+                                                    ),
+                                                    if (rawAccounts.any((a) =>
+                                                        a.hideBalanceInDashboard &&
+                                                        (!a.isClosed ||
+                                                            a.type == 'Loan'))) ...[
+                                                      const SizedBox(width: 4),
+                                                      const Icon(
+                                                        Icons.visibility_off_rounded,
+                                                        size: 11,
+                                                        color: Colors.black45,
                                                       ),
+                                                    ],
+                                                  ],
                                                 ),
                                                 SizedBox(
                                                   height: hasBanner ? 4 : 8,

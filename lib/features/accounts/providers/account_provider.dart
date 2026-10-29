@@ -42,6 +42,9 @@ class AccountActionNotifier extends AsyncNotifier<void> {
     double? totalInterestPayable,
     double? totalTaxPayable,
     double? bankCharges, // <-- ADDED HERE
+    bool? hideBalanceInDashboard,
+    bool? hideBalanceInHome,
+    bool? hideBalanceInAccounts,
   }) async {
     state = const AsyncLoading();
 
@@ -66,6 +69,9 @@ class AccountActionNotifier extends AsyncNotifier<void> {
           totalInterestPayable: totalInterestPayable,
           totalTaxPayable: totalTaxPayable,
           bankCharges: bankCharges, // <-- PASSED TO SERVICE
+          hideBalanceInDashboard: hideBalanceInDashboard ?? false,
+          hideBalanceInHome: hideBalanceInHome ?? false,
+          hideBalanceInAccounts: hideBalanceInAccounts ?? false,
         );
       } else {
         final db = ref.read(databaseProvider);
@@ -92,10 +98,33 @@ class AccountActionNotifier extends AsyncNotifier<void> {
           totalInterestPayable: Value(totalInterestPayable),
           totalTaxPayable: Value(totalTaxPayable),
           bankCharges: Value(bankCharges), // <-- UPDATED VIA COPYWITH
+          hideBalanceInDashboard:
+              hideBalanceInDashboard ?? existing.hideBalanceInDashboard,
+          hideBalanceInHome: hideBalanceInHome ?? existing.hideBalanceInHome,
+          hideBalanceInAccounts:
+              hideBalanceInAccounts ?? existing.hideBalanceInAccounts,
         );
         await _service.updateAccount(updated);
       }
     });
+    return !state.hasError;
+  }
+
+  Future<bool> updateAccountBalanceHiding({
+    required String accountId,
+    required bool hideBalanceInDashboard,
+    required bool hideBalanceInHome,
+    required bool hideBalanceInAccounts,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => _service.updateAccountBalanceHiding(
+        accountId: accountId,
+        hideBalanceInDashboard: hideBalanceInDashboard,
+        hideBalanceInHome: hideBalanceInHome,
+        hideBalanceInAccounts: hideBalanceInAccounts,
+      ),
+    );
     return !state.hasError;
   }
 
