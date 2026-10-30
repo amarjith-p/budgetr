@@ -12,6 +12,10 @@ import '../models/upi_payment_models.dart';
 import '../providers/pending_upi_provider.dart';
 import '../views/upi_payment_form_page.dart';
 
+// Dynamic IconData from DB codepoints — build with --no-tree-shake-icons.
+IconData _iconFromCode(int code) =>
+    IconData(code, fontFamily: 'MaterialIcons');
+
 class PendingUpiModalSheet extends ConsumerWidget {
   const PendingUpiModalSheet({super.key});
 
@@ -285,7 +289,7 @@ class PendingUpiModalSheet extends ConsumerWidget {
               if (item.categoryName != null)
                 _buildPill(
                   item.categoryIcon != null
-                      ? IconData(item.categoryIcon!, fontFamily: 'MaterialIcons')
+                      ? _iconFromCode(item.categoryIcon!)
                       : Icons.category_rounded,
                   item.categoryName!,
                   theme,

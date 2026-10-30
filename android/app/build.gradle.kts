@@ -54,3 +54,13 @@ configurations.all {
         force("androidx.glance:glance:1.1.1")
     }
 }
+
+// Disable icon tree-shaking for all Flutter build tasks.
+// Required because the app loads Material icon codepoints from the database
+// at runtime (user-defined category icons). The tree-shaker cannot
+// statically determine which icons are used, so we disable it globally.
+afterEvaluate {
+    tasks.withType<com.flutter.gradle.tasks.BaseFlutterTask>().configureEach {
+        treeShakeIcons = false
+    }
+}

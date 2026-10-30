@@ -1,4 +1,5 @@
 // lib/features/scan_and_pay/views/upi_payment_form_page.dart
+
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:budgetr/core/models/transaction_category_model.dart';
@@ -24,6 +25,11 @@ import '../../transactions/views/location_map_picker_page.dart';
 import '../models/upi_payment_models.dart';
 import '../providers/pending_upi_provider.dart';
 import '../services/upi_payment_service.dart';
+
+// ignore_for_file: avoid_dynamic_calls
+// Dynamic IconData from DB codepoints — build with --no-tree-shake-icons.
+IconData _iconFromCode(int code) =>
+    IconData(code, fontFamily: 'MaterialIcons');
 
 class _BucketItem {
   final int id;
@@ -910,10 +916,7 @@ class _UpiPaymentFormPageState extends ConsumerState<UpiPaymentFormPage> {
                         const SizedBox(height: 7),
                         buildSizedTile(_buildFieldTile(
                           icon: selectedCat != null
-                              ? IconData(
-                                  selectedCat.iconCode,
-                                  fontFamily: 'MaterialIcons',
-                                )
+                              ? _iconFromCode(selectedCat.iconCode)
                               : Icons.category_rounded,
                           title: 'EXPENSE CATEGORY *',
                           value: selectedCat?.name ?? 'Select Category',
