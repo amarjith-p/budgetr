@@ -13,7 +13,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../core/components/modern_app_bar.dart';
 import '../../core/components/currency_text.dart';
 import '../category_manager/views/category_manager_page.dart';
 import '../settings/views/settings_page.dart';
@@ -42,6 +41,10 @@ import '../backup/services/backup_service.dart';
 import '../backup/providers/backup_reminder_provider.dart';
 import '../../core/components/futuristic_loader.dart';
 import '../../core/components/custom_snackbars.dart';
+import '../scan_and_pay/views/upi_qr_scanner_page.dart';
+import '../scan_and_pay/components/floating_pending_upi_pill.dart';
+import '../scan_and_pay/components/pending_upi_modal_sheet.dart';
+import '../scan_and_pay/providers/pending_upi_provider.dart';
 
 final _dashboardBudgetProvider = StreamProvider.autoDispose<MonthlyBudget?>((
   ref,
@@ -61,6 +64,126 @@ class DashboardPage extends ConsumerStatefulWidget {
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
   DateTime? _lastPressedAt;
+
+  void _handleScanAndPayTap(BuildContext context, WidgetRef ref) {
+    HapticFeedback.selectionClick();
+    final pending = ref.read(pendingUpiPaymentsProvider);
+    if (pending.isNotEmpty) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (sheetCtx) {
+          final sheetTheme = Theme.of(sheetCtx);
+          final isDarkTheme = sheetTheme.brightness == Brightness.dark;
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: sheetTheme.scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(8),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: sheetTheme.dividerColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'UPI SCAN & PAY',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                      color: sheetTheme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    tileColor: sheetTheme.colorScheme.surface,
+                    leading: const Icon(Icons.qr_code_scanner_rounded),
+                    title: const Text(
+                      'Scan New QR Code',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Point camera at merchant or UPI QR',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetCtx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const UpiQrScannerPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    tileColor: isDarkTheme
+                        ? Colors.amber.shade900.withValues(alpha: 0.2)
+                        : Colors.amber.shade50,
+                    leading: Icon(
+                      Icons.pending_actions_rounded,
+                      color: isDarkTheme
+                          ? Colors.amber.shade300
+                          : Colors.amber.shade800,
+                    ),
+                    title: Text(
+                      '${pending.length} Pending Payment${pending.length > 1 ? 's' : ''}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        color: isDarkTheme
+                            ? Colors.amber.shade300
+                            : Colors.amber.shade900,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Confirm or discard initiated payments',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded, size: 18),
+                    onTap: () {
+                      Navigator.pop(sheetCtx);
+                      PendingUpiModalSheet.show(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const UpiQrScannerPage()),
+      );
+    }
+  }
 
   Future<void> _handleQuickBackup(BuildContext context, WidgetRef ref) async {
     HapticFeedback.selectionClick();
@@ -320,17 +443,27 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ),
               );
             },
-            child: Text(
-              'FINSTACK 360',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'FINSTACK 360',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ),
           actions: [
             if (isBackupDue)
               IconButton(
+                visualDensity: const VisualDensity(
+                  horizontal: -2,
+                  vertical: -2,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 icon: const Icon(
                   Icons.cloud_sync_rounded,
                   color: Colors.redAccent,
@@ -339,6 +472,27 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 onPressed: () => _handleQuickBackup(context, ref),
               ),
             IconButton(
+              visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: Badge(
+                isLabelVisible: ref
+                    .watch(pendingUpiPaymentsProvider)
+                    .isNotEmpty,
+                label: Text(
+                  ref.watch(pendingUpiPaymentsProvider).length.toString(),
+                ),
+                backgroundColor: Colors.amber.shade800,
+                child: const Icon(Icons.qr_code_scanner_rounded),
+              ),
+              color: theme.colorScheme.onSurface,
+              tooltip: 'Scan & Pay',
+              onPressed: () => _handleScanAndPayTap(context, ref),
+            ),
+            IconButton(
+              visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               icon: Badge(
                 isLabelVisible: stagedCount > 0,
                 label: Text(stagedCount.toString()),
@@ -364,834 +518,884 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           ],
         ),
         body: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
-              if (hasBanner)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 0),
-                  child: Column(
-                    children: triggeredReminders
-                        .map(
-                          (r) => _buildReminderBanner(
-                            context,
-                            ref,
-                            r,
-                            theme,
-                            isDark,
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // --- ROW 1: Money Tracker (Left) & Dynamic 2x2 Grid (Right) ---
-                      Expanded(
-                        flex: 2,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 5,
-                              child: Material(
-                                color: AppTokens.surfaceLight,
-                                borderRadius: BorderRadius.zero,
-                                child: InkWell(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const MoneyTrackerBasePage(),
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    padding: EdgeInsets.all(
-                                      hasBanner ? 12.0 : 16.0,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      border: isDark
-                                          ? null
-                                          : Border.all(
-                                              color: theme.dividerColor,
-                                              width: 1.0,
-                                            ),
-                                    ),
-                                    child: Stack(
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
+              Column(
+                children: [
+                  if (hasBanner)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 0),
+                      child: Column(
+                        children: triggeredReminders
+                            .map(
+                              (r) => _buildReminderBanner(
+                                context,
+                                ref,
+                                r,
+                                theme,
+                                isDark,
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // --- ROW 1: Money Tracker (Left) & Dynamic 2x2 Grid (Right) ---
+                          Expanded(
+                            flex: 2,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  flex: 5,
+                                  child: Material(
+                                    color: AppTokens.surfaceLight,
+                                    borderRadius: BorderRadius.zero,
+                                    child: InkWell(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const MoneyTrackerBasePage(),
+                                          ),
+                                        );
+                                      },
+                                      child: Container(
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        padding: EdgeInsets.all(
+                                          hasBanner ? 12.0 : 16.0,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          border: isDark
+                                              ? null
+                                              : Border.all(
+                                                  color: theme.dividerColor,
+                                                  width: 1.0,
+                                                ),
+                                        ),
+                                        child: Stack(
                                           children: [
-                                            Row(
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               mainAxisAlignment:
                                                   MainAxisAlignment
                                                       .spaceBetween,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.center,
                                               children: [
-                                                const Icon(
-                                                  Icons
-                                                      .account_balance_wallet_outlined,
-                                                  color: Colors.black,
-                                                ),
-                                                // --- BUDGET PROGRESS VISUALIZER IN TOP ROW ---
-                                                if (totalBudget > 0)
-                                                  Expanded(
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 5.0,
-                                                          ),
-                                                      child: Column(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .stretch,
-                                                        children: [
-                                                          // 1. Spend % directly above
-                                                          Text(
-                                                            '${(budgetProgress * 100).toStringAsFixed(2)}%',
-                                                            textAlign:
-                                                                TextAlign.right,
-                                                            style: TextStyle(
-                                                              fontSize: 7,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w700,
-                                                              color:
-                                                                  progressColor,
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 4,
-                                                          ),
-                                                          // 2. Progress Bar
-                                                          Container(
-                                                            height: 4,
-                                                            width:
-                                                                double.infinity,
-                                                            decoration: BoxDecoration(
-                                                              color: Colors
-                                                                  .black
-                                                                  .withOpacity(
-                                                                    0.1,
-                                                                  ),
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    2,
-                                                                  ),
-                                                            ),
-                                                            child: FractionallySizedBox(
-                                                              alignment: Alignment
-                                                                  .centerLeft,
-                                                              widthFactor:
-                                                                  budgetProgress
-                                                                      .clamp(
-                                                                        0.0,
-                                                                        1.0,
-                                                                      ),
-                                                              child: Container(
-                                                                decoration: BoxDecoration(
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
+                                                  children: [
+                                                    const Icon(
+                                                      Icons
+                                                          .account_balance_wallet_outlined,
+                                                      color: Colors.black,
+                                                    ),
+                                                    // --- BUDGET PROGRESS VISUALIZER IN TOP ROW ---
+                                                    if (totalBudget > 0)
+                                                      Expanded(
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 5.0,
+                                                              ),
+                                                          child: Column(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .stretch,
+                                                            children: [
+                                                              // 1. Spend % directly above
+                                                              Text(
+                                                                '${(budgetProgress * 100).toStringAsFixed(2)}%',
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .right,
+                                                                style: TextStyle(
+                                                                  fontSize: 7,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w700,
                                                                   color:
                                                                       progressColor,
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 4,
+                                                              ),
+                                                              // 2. Progress Bar
+                                                              Container(
+                                                                height: 4,
+                                                                width: double
+                                                                    .infinity,
+                                                                decoration: BoxDecoration(
+                                                                  color: Colors
+                                                                      .black
+                                                                      .withOpacity(
+                                                                        0.1,
+                                                                      ),
                                                                   borderRadius:
                                                                       BorderRadius.circular(
                                                                         2,
                                                                       ),
                                                                 ),
+                                                                child: FractionallySizedBox(
+                                                                  alignment:
+                                                                      Alignment
+                                                                          .centerLeft,
+                                                                  widthFactor:
+                                                                      budgetProgress
+                                                                          .clamp(
+                                                                            0.0,
+                                                                            1.0,
+                                                                          ),
+                                                                  child: Container(
+                                                                    decoration: BoxDecoration(
+                                                                      color:
+                                                                          progressColor,
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                            2,
+                                                                          ),
+                                                                    ),
+                                                                  ),
+                                                                ),
                                                               ),
-                                                            ),
+                                                              const SizedBox(
+                                                                height: 4,
+                                                              ),
+                                                              // 3. Spend amount directly below (FittedBox to prevent overflow)
+                                                              FittedBox(
+                                                                fit: BoxFit
+                                                                    .scaleDown,
+                                                                alignment: Alignment
+                                                                    .centerRight,
+                                                                child: Text(
+                                                                  '₹ ${CurrencyFormatter.format(budgetedSpend)} / ₹ ${CurrencyFormatter.format(totalBudget)}',
+                                                                  style: const TextStyle(
+                                                                    fontSize: 7,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    color: Colors
+                                                                        .black54,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
                                                           ),
-                                                          const SizedBox(
-                                                            height: 4,
-                                                          ),
-                                                          // 3. Spend amount directly below (FittedBox to prevent overflow)
-                                                          FittedBox(
-                                                            fit: BoxFit
-                                                                .scaleDown,
-                                                            alignment: Alignment
-                                                                .centerRight,
-                                                            child: Text(
-                                                              '₹ ${CurrencyFormatter.format(budgetedSpend)} / ₹ ${CurrencyFormatter.format(totalBudget)}',
-                                                              style: const TextStyle(
-                                                                fontSize: 7,
+                                                        ),
+                                                      )
+                                                    else
+                                                      const Spacer(),
+                                                    const Icon(
+                                                      Icons
+                                                          .arrow_forward_rounded,
+                                                      color: Colors.black,
+                                                      size: 18,
+                                                    ),
+                                                  ],
+                                                ),
+                                                Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Text(
+                                                          'MONEY TRACKER',
+                                                          style: theme
+                                                              .textTheme
+                                                              .bodySmall
+                                                              ?.copyWith(
                                                                 fontWeight:
                                                                     FontWeight
                                                                         .w600,
+                                                                letterSpacing:
+                                                                    0.5,
                                                                 color: Colors
                                                                     .black54,
                                                               ),
-                                                            ),
+                                                        ),
+                                                        if (rawAccounts.any(
+                                                          (a) =>
+                                                              a.hideBalanceInDashboard &&
+                                                              (!a.isClosed ||
+                                                                  a.type ==
+                                                                      'Loan'),
+                                                        )) ...[
+                                                          const SizedBox(
+                                                            width: 4,
+                                                          ),
+                                                          const Icon(
+                                                            Icons
+                                                                .visibility_off_rounded,
+                                                            size: 11,
+                                                            color:
+                                                                Colors.black45,
                                                           ),
                                                         ],
+                                                      ],
+                                                    ),
+                                                    SizedBox(
+                                                      height: hasBanner ? 4 : 8,
+                                                    ),
+                                                    FittedBox(
+                                                      fit: BoxFit.scaleDown,
+                                                      alignment:
+                                                          Alignment.centerLeft,
+                                                      child: CurrencyText(
+                                                        amount: netBalance
+                                                            .abs(),
+                                                        sign: netSign,
+                                                        amountStyle:
+                                                            valueStyle
+                                                                ?.copyWith(
+                                                                  fontSize: 26,
+                                                                  color: Colors
+                                                                      .black,
+                                                                ) ??
+                                                            const TextStyle(),
+                                                        symbolStyle:
+                                                            const TextStyle(
+                                                              fontSize: 16,
+                                                              color: Colors
+                                                                  .black87,
+                                                            ),
                                                       ),
                                                     ),
-                                                  )
-                                                else
-                                                  const Spacer(),
-                                                const Icon(
-                                                  Icons.arrow_forward_rounded,
-                                                  color: Colors.black,
-                                                  size: 18,
+                                                    SizedBox(
+                                                      height: hasBanner
+                                                          ? 8
+                                                          : 16,
+                                                    ),
+                                                    // --- ORIGINAL VERTICAL BARS ---
+                                                    Row(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .end,
+                                                      children: [
+                                                        _buildFlatBar(
+                                                          40 * barScale,
+                                                          true,
+                                                        ),
+                                                        _buildFlatBar(
+                                                          60 * barScale,
+                                                          true,
+                                                        ),
+                                                        _buildFlatBar(
+                                                          30 * barScale,
+                                                          true,
+                                                        ),
+                                                        _buildFlatBar(
+                                                          80 * barScale,
+                                                          true,
+                                                        ),
+                                                        _buildFlatBar(
+                                                          50 * barScale,
+                                                          true,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
                                                 ),
                                               ],
                                             ),
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      'MONEY TRACKER',
-                                                      style: theme
-                                                          .textTheme
-                                                          .bodySmall
-                                                          ?.copyWith(
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            letterSpacing: 0.5,
-                                                            color: Colors.black54,
-                                                          ),
+                                            Positioned(
+                                              bottom: 0,
+                                              right: 0,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  if (hasPayableShortage)
+                                                    const Icon(
+                                                      Icons
+                                                          .warning_amber_rounded,
+                                                      color: Colors.redAccent,
+                                                      size: 24,
                                                     ),
-                                                    if (rawAccounts.any((a) =>
-                                                        a.hideBalanceInDashboard &&
-                                                        (!a.isClosed ||
-                                                            a.type == 'Loan'))) ...[
-                                                      const SizedBox(width: 4),
-                                                      const Icon(
-                                                        Icons.visibility_off_rounded,
-                                                        size: 11,
-                                                        color: Colors.black45,
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                                SizedBox(
-                                                  height: hasBanner ? 4 : 8,
-                                                ),
-                                                FittedBox(
-                                                  fit: BoxFit.scaleDown,
-                                                  alignment:
-                                                      Alignment.centerLeft,
-                                                  child: CurrencyText(
-                                                    amount: netBalance.abs(),
-                                                    sign: netSign,
-                                                    amountStyle:
-                                                        valueStyle?.copyWith(
-                                                          fontSize: 26,
-                                                          color: Colors.black,
-                                                        ) ??
-                                                        const TextStyle(),
-                                                    symbolStyle:
-                                                        const TextStyle(
-                                                          fontSize: 16,
-                                                          color: Colors.black87,
-                                                        ),
-                                                  ),
-                                                ),
-                                                SizedBox(
-                                                  height: hasBanner ? 8 : 16,
-                                                ),
-                                                // --- ORIGINAL VERTICAL BARS ---
-                                                Row(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.end,
-                                                  children: [
-                                                    _buildFlatBar(
-                                                      40 * barScale,
-                                                      true,
+                                                  if (hasPayableShortage &&
+                                                      (hasActiveTrip ||
+                                                          hasPausedTrip))
+                                                    const SizedBox(width: 8),
+                                                  if (hasActiveTrip ||
+                                                      hasPausedTrip)
+                                                    Icon(
+                                                      Icons
+                                                          .flight_takeoff_rounded,
+                                                      color: hasActiveTrip
+                                                          ? Colors.green
+                                                          : Colors.orangeAccent,
+                                                      size: 24,
                                                     ),
-                                                    _buildFlatBar(
-                                                      60 * barScale,
-                                                      true,
-                                                    ),
-                                                    _buildFlatBar(
-                                                      30 * barScale,
-                                                      true,
-                                                    ),
-                                                    _buildFlatBar(
-                                                      80 * barScale,
-                                                      true,
-                                                    ),
-                                                    _buildFlatBar(
-                                                      50 * barScale,
-                                                      true,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                           ],
                                         ),
-                                        Positioned(
-                                          bottom: 0,
-                                          right: 0,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (hasPayableShortage)
-                                                const Icon(
-                                                  Icons.warning_amber_rounded,
-                                                  color: Colors.redAccent,
-                                                  size: 24,
-                                                ),
-                                              if (hasPayableShortage &&
-                                                  (hasActiveTrip ||
-                                                      hasPausedTrip))
-                                                const SizedBox(width: 8),
-                                              if (hasActiveTrip ||
-                                                  hasPausedTrip)
-                                                Icon(
-                                                  Icons.flight_takeoff_rounded,
-                                                  color: hasActiveTrip
-                                                      ? Colors.green
-                                                      : Colors.orangeAccent,
-                                                  size: 24,
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
+                                const SizedBox(width: tileGap),
+                                Expanded(
+                                  flex: 4,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        flex: 70,
+                                        child: _buildMetroTile(
+                                          title: 'ADD TRANSACTION',
+                                          icon: Icons.add_rounded,
+                                          height: double.infinity,
+                                          color: darkTileColor,
+                                          topLeftContent:
+                                              const _LiveClockWidget(),
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const TransactionFormPage(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(height: tileGap),
+                                      // 2x2 Grid - Row 1
+                                      Expanded(
+                                        flex: 65,
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            Expanded(
+                                              child: _buildMetroTile(
+                                                title: 'BUCKETS',
+                                                icon: Icons.donut_small_rounded,
+                                                verticalText: true,
+                                                badge: liveBucketsCount > 0
+                                                    ? liveBucketsCount
+                                                          .toString()
+                                                    : '-',
+                                                height: double.infinity,
+                                                color: darkTileColor,
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          const BudgetBucketsPage(),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: tileGap),
+                                            Expanded(
+                                              child: _buildMetroTile(
+                                                title: 'SETTINGS',
+                                                icon: Icons.settings_rounded,
+                                                verticalText: true,
+                                                height: double.infinity,
+                                                color: darkTileColor,
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          const SettingsPage(),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: tileGap),
+                                      // 2x2 Grid - Row 2
+                                      Expanded(
+                                        flex: 65,
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            Expanded(
+                                              child: _buildMetroTile(
+                                                title: 'REMINDER',
+                                                icon: Icons
+                                                    .notifications_active_rounded,
+                                                verticalText: true,
+                                                height: double.infinity,
+                                                color: darkTileColor,
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          const ReminderDashboardPage(),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: tileGap),
+                                            Expanded(
+                                              child: _buildMetroTile(
+                                                title: 'BACKUP',
+                                                icon: Icons.cloud_sync_rounded,
+                                                verticalText: true,
+                                                height: double.infinity,
+                                                color: darkTileColor,
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          const BackupPage(),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: tileGap),
-                            Expanded(
-                              flex: 4,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Expanded(
-                                    flex: 70,
-                                    child: _buildMetroTile(
-                                      title: 'ADD TRANSACTION',
-                                      icon: Icons.add_rounded,
-                                      height: double.infinity,
-                                      color: darkTileColor,
-                                      topLeftContent: const _LiveClockWidget(),
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const TransactionFormPage(),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(height: tileGap),
-                                  // 2x2 Grid - Row 1
-                                  Expanded(
-                                    flex: 65,
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        Expanded(
-                                          child: _buildMetroTile(
-                                            title: 'BUCKETS',
-                                            icon: Icons.donut_small_rounded,
-                                            verticalText: true,
-                                            badge: liveBucketsCount > 0
-                                                ? liveBucketsCount.toString()
-                                                : '-',
-                                            height: double.infinity,
-                                            color: darkTileColor,
-                                            onTap: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const BudgetBucketsPage(),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                        const SizedBox(width: tileGap),
-                                        Expanded(
-                                          child: _buildMetroTile(
-                                            title: 'SETTINGS',
-                                            icon: Icons.settings_rounded,
-                                            verticalText: true,
-                                            height: double.infinity,
-                                            color: darkTileColor,
-                                            onTap: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const SettingsPage(),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: tileGap),
-                                  // 2x2 Grid - Row 2
-                                  Expanded(
-                                    flex: 65,
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        Expanded(
-                                          child: _buildMetroTile(
-                                            title: 'REMINDER',
-                                            icon: Icons
-                                                .notifications_active_rounded,
-                                            verticalText: true,
-                                            height: double.infinity,
-                                            color: darkTileColor,
-                                            onTap: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      const ReminderDashboardPage(),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                        const SizedBox(width: tileGap),
-                                        Expanded(
-                                          child: _buildMetroTile(
-                                            title: 'BACKUP',
-                                            icon: Icons.cloud_sync_rounded,
-                                            verticalText: true,
-                                            height: double.infinity,
-                                            color: darkTileColor,
-                                            onTap: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      const BackupPage(),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: tileGap),
-                      // --- ROW 2: INVESTMENT TRACKER ---
-                      Expanded(
-                        flex: 1,
-                        child: _buildWideMetroTile(
-                          title: 'INVESTMENT TRACKER',
-                          icon: Icons.trending_up_rounded,
-                          height: double.infinity,
-                          color: darkTileColor,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const InvestmentDashboardPage(),
-                              ),
-                            );
-                          },
-                          customContent: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerRight,
-                                child: CurrencyText(
-                                  amount: totalInvestmentValue.abs(),
-                                  sign: totalInvestmentValue < 0 ? '-₹ ' : '₹ ',
-                                  amountStyle: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    letterSpacing: -1.0,
-                                  ),
-                                  symbolStyle: const TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              if (totalInvestedAmount > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: invReturnPct >= 0
-                                        ? Colors.green.withOpacity(0.2)
-                                        : Colors.redAccent.withOpacity(0.2),
-                                    borderRadius: BorderRadius.zero,
-                                  ),
-                                  child: Text(
-                                    '$invReturnSign${invReturnPct.toStringAsFixed(1)}% Return',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: invReturnPct >= 0
-                                          ? Colors.greenAccent
-                                          : Colors.redAccent,
-                                    ),
-                                  ),
-                                ),
-                            ],
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: tileGap),
-                      // --- ROW 3: Automation & Categories ---
-                      Expanded(
-                        flex: 1,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: _buildMetroTile(
-                                title: 'RECURRING RULES',
-                                icon: Icons.autorenew_rounded,
-                                height: double.infinity,
-                                color: darkTileColor,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const AutomationDashboardPage(),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: tileGap),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                          const SizedBox(height: tileGap),
+                          // --- ROW 2: INVESTMENT TRACKER ---
+                          Expanded(
+                            flex: 1,
+                            child: _buildWideMetroTile(
+                              title: 'INVESTMENT TRACKER',
+                              icon: Icons.trending_up_rounded,
+                              height: double.infinity,
+                              color: darkTileColor,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const InvestmentDashboardPage(),
+                                  ),
+                                );
+                              },
+                              customContent: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Expanded(
-                                    child: _buildMetroTile(
-                                      title: 'TRIP MODE',
-                                      icon: hasActiveTrip || hasPausedTrip
-                                          ? Icons.flight_takeoff_rounded
-                                          : Icons.flight_land_rounded,
-                                      swapPositions: false,
-                                      iconColor: hasActiveTrip
-                                          ? Colors.green
-                                          : (hasPausedTrip
-                                                ? Colors.orangeAccent
-                                                : Colors.white),
-                                      height: double.infinity,
-                                      color: darkTileColor,
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const TripDashboardPage(),
-                                          ),
-                                        );
-                                      },
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: CurrencyText(
+                                      amount: totalInvestmentValue.abs(),
+                                      sign: totalInvestmentValue < 0
+                                          ? '-₹ '
+                                          : '₹ ',
+                                      amountStyle: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        letterSpacing: -1.0,
+                                      ),
+                                      symbolStyle: const TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.white70,
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: tileGap),
-                                  Expanded(
-                                    child: _buildMetroTile(
-                                      title: 'CATEGORIES',
-                                      icon: Icons.category_rounded,
-                                      swapPositions: false,
-                                      height: double.infinity,
-                                      color: darkTileColor,
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const CategoryManagerPage(),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: tileGap),
-                      // --- ROW 4: VAULT (60%) & SMART TRACKERS (40%) ---
-                      Expanded(
-                        flex: 1,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 6, // 60% Width
-                              child: _buildWideMetroTile(
-                                title: 'VAULT',
-                                icon: Icons.security_rounded,
-                                height: double.infinity,
-                                color: darkTileColor,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const VaultAuthPage(),
-                                    ),
-                                  );
-                                },
-                                customContent: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.lock_outline_rounded,
-                                      color: Colors.white70,
-                                      size: 28,
-                                    ),
-                                    const SizedBox(height: 6),
+                                  const SizedBox(height: 6),
+                                  if (totalInvestedAmount > 0)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 6,
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.blueAccent.withOpacity(
-                                          0.2,
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'AES-256 ENCRYPTED',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.blueAccent,
-                                          letterSpacing: 1.0,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: tileGap),
-                            Expanded(
-                              flex: 4, // 40% Width
-                              child: _buildMetroTile(
-                                title: 'SMART TRACKERS',
-                                icon: Icons.post_add_rounded,
-                                height: double.infinity,
-                                color: darkTileColor,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const SmartTrackersDashboardPage(),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: tileGap),
-                      // --- ROW 5: DEBTS & NET WORTH ---
-                      Expanded(
-                        flex: 1,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 6, // 60% Width
-                              child: _buildWideMetroTile(
-                                title: 'NET WORTH',
-                                icon: Icons.diamond_rounded,
-                                height: double.infinity,
-                                color: darkTileColor,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const NetWorthPage(),
-                                    ),
-                                  );
-                                },
-                                customContent: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      alignment: Alignment.centerRight,
-                                      child: CurrencyText(
-                                        amount: liveNetWorth.abs(),
-                                        sign: liveNetWorth < 0
-                                            ? ' -₹ '
-                                            : (liveNetWorth > 0
-                                                  ? ' +₹ '
-                                                  : ' ₹ '),
-                                        amountStyle: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                          letterSpacing: -1.0,
-                                        ),
-                                        symbolStyle: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.white70,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isNwPositive
+                                        color: invReturnPct >= 0
                                             ? Colors.green.withOpacity(0.2)
                                             : Colors.redAccent.withOpacity(0.2),
                                         borderRadius: BorderRadius.zero,
                                       ),
                                       child: Text(
-                                        isNwPositive ? 'POSITIVE' : 'NEGATIVE',
+                                        '$invReturnSign${invReturnPct.toStringAsFixed(1)}% Return',
                                         style: TextStyle(
-                                          fontSize: 6,
+                                          fontSize: 9,
                                           fontWeight: FontWeight.w700,
-                                          color: isNwPositive
+                                          color: invReturnPct >= 0
                                               ? Colors.greenAccent
                                               : Colors.redAccent,
-                                          letterSpacing: 1.0,
                                         ),
                                       ),
                                     ),
-                                  ],
-                                ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: tileGap),
-                            Expanded(
-                              flex: 4, // 40% Width
-                              child: _buildWideMetroTile(
-                                title: 'DEBTS',
-                                icon: Icons.money_off_rounded,
-                                height: double.infinity,
-                                color: darkTileColor,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const DebtDashboardPage(),
-                                    ),
-                                  );
-                                },
-                                customContent: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      alignment: Alignment.centerRight,
-                                      child: CurrencyText(
-                                        amount: netDebtBalance.abs(),
-                                        sign: netDebtBalance < 0
-                                            ? ' -₹ '
-                                            : (netDebtBalance > 0
-                                                  ? ' +₹ '
-                                                  : ' ₹ '),
-                                        amountStyle: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                          letterSpacing: -1.0,
+                          ),
+                          const SizedBox(height: tileGap),
+                          // --- ROW 3: Automation & Categories ---
+                          Expanded(
+                            flex: 1,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: _buildMetroTile(
+                                    title: 'RECURRING RULES',
+                                    icon: Icons.autorenew_rounded,
+                                    height: double.infinity,
+                                    color: darkTileColor,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const AutomationDashboardPage(),
                                         ),
-                                        symbolStyle: const TextStyle(
-                                          fontSize: 14,
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: tileGap),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        child: _buildMetroTile(
+                                          title: 'TRIP MODE',
+                                          icon: hasActiveTrip || hasPausedTrip
+                                              ? Icons.flight_takeoff_rounded
+                                              : Icons.flight_land_rounded,
+                                          swapPositions: false,
+                                          iconColor: hasActiveTrip
+                                              ? Colors.green
+                                              : (hasPausedTrip
+                                                    ? Colors.orangeAccent
+                                                    : Colors.white),
+                                          height: double.infinity,
+                                          color: darkTileColor,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const TripDashboardPage(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(height: tileGap),
+                                      Expanded(
+                                        child: _buildMetroTile(
+                                          title: 'CATEGORIES',
+                                          icon: Icons.category_rounded,
+                                          swapPositions: false,
+                                          height: double.infinity,
+                                          color: darkTileColor,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const CategoryManagerPage(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: tileGap),
+                          // --- ROW 4: VAULT (60%) & SMART TRACKERS (40%) ---
+                          Expanded(
+                            flex: 1,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  flex: 6, // 60% Width
+                                  child: _buildWideMetroTile(
+                                    title: 'VAULT',
+                                    icon: Icons.security_rounded,
+                                    height: double.infinity,
+                                    color: darkTileColor,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const VaultAuthPage(),
+                                        ),
+                                      );
+                                    },
+                                    customContent: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.lock_outline_rounded,
                                           color: Colors.white70,
+                                          size: 28,
                                         ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: netDebtBalance < 0
-                                            ? Colors.redAccent.withOpacity(0.2)
-                                            : (netDebtBalance > 0
-                                                  ? Colors.green.withOpacity(
-                                                      0.2,
-                                                    )
-                                                  : Colors.white.withOpacity(
-                                                      0.1,
-                                                    )),
-                                        borderRadius: BorderRadius.zero,
-                                      ),
-                                      child: Text(
-                                        'NET BALANCE',
-                                        style: TextStyle(
-                                          fontSize: 6,
-                                          fontWeight: FontWeight.w700,
-                                          color: netDebtBalance < 0
-                                              ? Colors.redAccent
-                                              : (netDebtBalance > 0
-                                                    ? Colors.greenAccent
-                                                    : Colors.white70),
-                                          letterSpacing: 1.0,
+                                        const SizedBox(height: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blueAccent
+                                                .withOpacity(0.2),
+                                          ),
+                                          child: const Text(
+                                            'AES-256 ENCRYPTED',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.blueAccent,
+                                              letterSpacing: 1.0,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: tileGap),
+                                Expanded(
+                                  flex: 4, // 40% Width
+                                  child: _buildMetroTile(
+                                    title: 'SMART TRACKERS',
+                                    icon: Icons.post_add_rounded,
+                                    height: double.infinity,
+                                    color: darkTileColor,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const SmartTrackersDashboardPage(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: tileGap),
+                          // --- ROW 5: DEBTS & NET WORTH ---
+                          Expanded(
+                            flex: 1,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  flex: 6, // 60% Width
+                                  child: _buildWideMetroTile(
+                                    title: 'NET WORTH',
+                                    icon: Icons.diamond_rounded,
+                                    height: double.infinity,
+                                    color: darkTileColor,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const NetWorthPage(),
+                                        ),
+                                      );
+                                    },
+                                    customContent: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerRight,
+                                          child: CurrencyText(
+                                            amount: liveNetWorth.abs(),
+                                            sign: liveNetWorth < 0
+                                                ? ' -₹ '
+                                                : (liveNetWorth > 0
+                                                      ? ' +₹ '
+                                                      : ' ₹ '),
+                                            amountStyle: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.white,
+                                              letterSpacing: -1.0,
+                                            ),
+                                            symbolStyle: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isNwPositive
+                                                ? Colors.green.withOpacity(0.2)
+                                                : Colors.redAccent.withOpacity(
+                                                    0.2,
+                                                  ),
+                                            borderRadius: BorderRadius.zero,
+                                          ),
+                                          child: Text(
+                                            isNwPositive
+                                                ? 'POSITIVE'
+                                                : 'NEGATIVE',
+                                            style: TextStyle(
+                                              fontSize: 6,
+                                              fontWeight: FontWeight.w700,
+                                              color: isNwPositive
+                                                  ? Colors.greenAccent
+                                                  : Colors.redAccent,
+                                              letterSpacing: 1.0,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: tileGap),
+                                Expanded(
+                                  flex: 4, // 40% Width
+                                  child: _buildWideMetroTile(
+                                    title: 'DEBTS',
+                                    icon: Icons.money_off_rounded,
+                                    height: double.infinity,
+                                    color: darkTileColor,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const DebtDashboardPage(),
+                                        ),
+                                      );
+                                    },
+                                    customContent: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerRight,
+                                          child: CurrencyText(
+                                            amount: netDebtBalance.abs(),
+                                            sign: netDebtBalance < 0
+                                                ? ' -₹ '
+                                                : (netDebtBalance > 0
+                                                      ? ' +₹ '
+                                                      : ' ₹ '),
+                                            amountStyle: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.white,
+                                              letterSpacing: -1.0,
+                                            ),
+                                            symbolStyle: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: netDebtBalance < 0
+                                                ? Colors.redAccent.withOpacity(
+                                                    0.2,
+                                                  )
+                                                : (netDebtBalance > 0
+                                                      ? Colors.green
+                                                            .withOpacity(0.2)
+                                                      : Colors.white
+                                                            .withOpacity(0.1)),
+                                            borderRadius: BorderRadius.zero,
+                                          ),
+                                          child: Text(
+                                            'NET BALANCE',
+                                            style: TextStyle(
+                                              fontSize: 6,
+                                              fontWeight: FontWeight.w700,
+                                              color: netDebtBalance < 0
+                                                  ? Colors.redAccent
+                                                  : (netDebtBalance > 0
+                                                        ? Colors.greenAccent
+                                                        : Colors.white70),
+                                              letterSpacing: 1.0,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
+              ),
+              const Positioned(
+                bottom: 12,
+                left: 16,
+                right: 16,
+                child: FloatingPendingUpiPill(),
               ),
             ],
           ),
