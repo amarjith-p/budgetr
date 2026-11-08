@@ -133,12 +133,18 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
         } else {
           switch (_timeframe) {
             case TrendTimeframe.week:
-              start = DateTime(now.year, now.month, now.day)
-                  .subtract(const Duration(days: 6));
+              start = DateTime(
+                now.year,
+                now.month,
+                now.day,
+              ).subtract(const Duration(days: 6));
               break;
             case TrendTimeframe.month:
-              start = DateTime(now.year, now.month, now.day)
-                  .subtract(const Duration(days: 29));
+              start = DateTime(
+                now.year,
+                now.month,
+                now.day,
+              ).subtract(const Duration(days: 29));
               break;
             case TrendTimeframe.currentMonth:
               start = DateTime(now.year, now.month, 1);
@@ -150,8 +156,11 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
               end = DateTime(targetYear, targetMonth + 1, 0, 23, 59, 59);
               break;
             case TrendTimeframe.year:
-              start = DateTime(now.year, now.month, now.day)
-                  .subtract(const Duration(days: 364));
+              start = DateTime(
+                now.year,
+                now.month,
+                now.day,
+              ).subtract(const Duration(days: 364));
               break;
             case TrendTimeframe.allTime:
             default:
@@ -176,10 +185,7 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
               .where((tag) => tag.isNotEmpty);
 
           for (final tag in tagList) {
-            final data = tagMap.putIfAbsent(
-              tag,
-              () => _TagData(tag: tag),
-            );
+            final data = tagMap.putIfAbsent(tag, () => _TagData(tag: tag));
 
             data.count++;
             data.txs.add(txData);
@@ -197,13 +203,14 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
         final sortedTags = tagMap.values.toList()
           ..sort((a, b) => b.totalVolume.compareTo(a.totalVolume));
 
-        final String? activeTag = _selectedTag != null &&
-                sortedTags.any((t) => t.tag == _selectedTag)
+        final String? activeTag =
+            _selectedTag != null && sortedTags.any((t) => t.tag == _selectedTag)
             ? _selectedTag
             : (sortedTags.isNotEmpty ? sortedTags.first.tag : null);
 
-        final _TagData? currentTagData =
-            activeTag != null ? tagMap[activeTag] : null;
+        final _TagData? currentTagData = activeTag != null
+            ? tagMap[activeTag]
+            : null;
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -257,12 +264,14 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                     ],
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest
                           .withOpacity(isDark ? 0.3 : 0.6),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '${sortedTags.length} ${sortedTags.length == 1 ? "Tag" : "Tags"}',
@@ -289,8 +298,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                         Icon(
                           Icons.tag_rounded,
                           size: 28,
-                          color: theme.colorScheme.onSurfaceVariant
-                              .withOpacity(0.4),
+                          color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                            0.4,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -324,12 +334,14 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                   child: Row(
                     children: sortedTags.map((item) {
                       final isSelected = item.tag == activeTag;
-                      final tagColor =
-                          TagColorHelper.getColor(item.tag, theme.brightness);
+                      final tagColor = TagColorHelper.getColor(
+                        item.tag,
+                        theme.brightness,
+                      );
                       return Padding(
                         padding: const EdgeInsets.only(right: 6),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(8),
                           onTap: () {
                             HapticFeedback.selectionClick();
                             setState(() {
@@ -341,13 +353,15 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 250),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? tagColor.withOpacity(0.18)
                                   : theme.colorScheme.surfaceContainerHighest
-                                      .withOpacity(isDark ? 0.2 : 0.4),
-                              borderRadius: BorderRadius.circular(16),
+                                        .withOpacity(isDark ? 0.2 : 0.4),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: isSelected
                                     ? tagColor
@@ -375,7 +389,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                                         ? FontWeight.w900
                                         : FontWeight.w700,
                                     color: isSelected
-                                        ? (isDark ? Colors.white : Colors.black87)
+                                        ? (isDark
+                                              ? Colors.white
+                                              : Colors.black87)
                                         : theme.colorScheme.onSurfaceVariant,
                                   ),
                                 ),
@@ -409,7 +425,10 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
 
                   // --- MINI TRANSACTION PREVIEW (PAGINATED 3 PER PAGE) ---
                   _buildRecentTransactionsPreview(
-                      currentTagData, theme, isDark),
+                    currentTagData,
+                    theme,
+                    isDark,
+                  ),
                 ],
               ],
 
@@ -430,7 +449,10 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
 
   // --- DONUT AND NET IMPACT VISUALIZATION ---
   Widget _buildDonutWithNetSection(
-      _TagData data, ThemeData theme, bool isDark) {
+    _TagData data,
+    ThemeData theme,
+    bool isDark,
+  ) {
     final double exp = data.expense;
     final double inc = data.income;
     final double trf = data.transfer;
@@ -445,13 +467,15 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
       void addSegment(String label, double amount, Color color) {
         if (amount <= 0) return;
         final double sweep = (amount / total) * 2 * pi - gap;
-        segments.add(_TagDonutSegment(
-          label: label,
-          amount: amount,
-          color: color,
-          startAngle: currentAngle + gap / 2,
-          sweepAngle: max(0.01, sweep),
-        ));
+        segments.add(
+          _TagDonutSegment(
+            label: label,
+            amount: amount,
+            color: color,
+            startAngle: currentAngle + gap / 2,
+            sweepAngle: max(0.01, sweep),
+          ),
+        );
         currentAngle += (amount / total) * 2 * pi;
       }
 
@@ -461,8 +485,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
     }
 
     final double net = data.net;
-    final Color netColor =
-        net > 0 ? Colors.green : (net < 0 ? theme.colorScheme.error : theme.colorScheme.onSurface);
+    final Color netColor = net > 0
+        ? Colors.green
+        : (net < 0 ? theme.colorScheme.error : theme.colorScheme.onSurface);
     final String netSign = net > 0 ? '+₹ ' : (net < 0 ? '-₹ ' : '₹ ');
 
     return Center(
@@ -476,7 +501,8 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
               size: const Size(140, 140),
               painter: _TagDonutPainter(
                 segments: segments,
-                emptyColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                emptyColor: theme.colorScheme.surfaceContainerHighest
+                    .withOpacity(0.3),
               ),
             ),
             Padding(
@@ -519,7 +545,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                       style: TextStyle(
                         fontSize: 8.5,
                         fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                          0.7,
+                        ),
                       ),
                     ),
                   ),
@@ -633,7 +661,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                     style: TextStyle(
                       fontSize: 7.5,
                       fontWeight: FontWeight.w800,
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                        0.7,
+                      ),
                     ),
                   ),
                 ],
@@ -665,7 +695,10 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
 
   // --- RECENT TAG TRANSACTIONS PREVIEW (PAGINATED 3 PER PAGE) ---
   Widget _buildRecentTransactionsPreview(
-      _TagData data, ThemeData theme, bool isDark) {
+    _TagData data,
+    ThemeData theme,
+    bool isDark,
+  ) {
     List<TransactionWithDetails> displayList = data.txs;
     if (_selectedTypeFilter != null) {
       displayList = displayList
@@ -674,7 +707,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
     }
 
     // Sort newest first
-    displayList.sort((a, b) => b.transaction.date.compareTo(a.transaction.date));
+    displayList.sort(
+      (a, b) => b.transaction.date.compareTo(a.transaction.date),
+    );
     final int pageCount = (displayList.length / 3).ceil();
     final bool hasMultiplePages = pageCount > 1;
 
@@ -715,8 +750,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                           size: 14,
                           color: _txCurrentPage > 0
                               ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurfaceVariant
-                                  .withOpacity(0.3),
+                              : theme.colorScheme.onSurfaceVariant.withOpacity(
+                                  0.3,
+                                ),
                         ),
                       ),
                     ),
@@ -743,8 +779,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                           size: 14,
                           color: _txCurrentPage < pageCount - 1
                               ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurfaceVariant
-                                  .withOpacity(0.3),
+                              : theme.colorScheme.onSurfaceVariant.withOpacity(
+                                  0.3,
+                                ),
                         ),
                       ),
                     ),
@@ -755,8 +792,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                       style: TextStyle(
                         fontSize: 7.5,
                         fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurfaceVariant
-                            .withOpacity(0.7),
+                        color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                          0.7,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -804,16 +842,21 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                 .toList(),
           )
         else
-          Builder(builder: (context) {
-            final pageItems =
-                displayList.skip(_txCurrentPage * 3).take(3).toList();
-            return Column(
-              children: pageItems
-                  .map((txData) =>
-                      _buildTransactionCard(txData, theme, isDark))
-                  .toList(),
-            );
-          }),
+          Builder(
+            builder: (context) {
+              final pageItems = displayList
+                  .skip(_txCurrentPage * 3)
+                  .take(3)
+                  .toList();
+              return Column(
+                children: pageItems
+                    .map(
+                      (txData) => _buildTransactionCard(txData, theme, isDark),
+                    )
+                    .toList(),
+              );
+            },
+          ),
       ],
     );
   }
@@ -832,18 +875,19 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
     final Color amtColor = isIncome
         ? Colors.green
         : (isExpense
-            ? theme.colorScheme.error
-            : TransactionColors.transfer(theme));
+              ? theme.colorScheme.error
+              : TransactionColors.transfer(theme));
 
     final String sign = isIncome ? '+₹ ' : (isExpense ? '-₹ ' : '₹ ');
     final bool hasNotes = t.notes != null && t.notes!.trim().isNotEmpty;
     final String categoryName =
         (t.categoryName != null && t.categoryName!.trim().isNotEmpty)
-            ? t.categoryName!.trim()
-            : (txData.category?.name ??
-                (isTransfer ? 'Transfer' : 'Uncategorized'));
+        ? t.categoryName!.trim()
+        : (txData.category?.name ??
+              (isTransfer ? 'Transfer' : 'Uncategorized'));
 
-    final String? subCat = (t.subCategory != null &&
+    final String? subCat =
+        (t.subCategory != null &&
             t.subCategory!.trim().isNotEmpty &&
             t.subCategory!.trim() != categoryName)
         ? t.subCategory!.trim()
@@ -851,14 +895,14 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
 
     final String? rawBucket =
         (t.bucketName != null && t.bucketName!.trim().isNotEmpty)
-            ? t.bucketName!.trim()
-            : txData.bucket?.name;
+        ? t.bucketName!.trim()
+        : txData.bucket?.name;
 
     final String? bucketName = (rawBucket != null && rawBucket.isNotEmpty)
         ? rawBucket
         : (isExpense && (t.bucketId == null || t.bucketId == -1)
-            ? 'Out of Bucket'
-            : null);
+              ? 'Out of Bucket'
+              : null);
 
     String accountDisplay = txData.account.name;
     if (isTransfer) {
@@ -867,8 +911,7 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
       } else if (t.toAccountId == 'EXTERNAL_OUT') {
         accountDisplay = '${txData.account.name} → External';
       } else if (txData.toAccount != null) {
-        accountDisplay =
-            '${txData.account.name} → ${txData.toAccount!.name}';
+        accountDisplay = '${txData.account.name} → ${txData.toAccount!.name}';
       }
     }
 
@@ -878,8 +921,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
     return Container(
       margin: const EdgeInsets.only(bottom: 5),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest
-            .withOpacity(isDark ? 0.2 : 0.35),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(
+          isDark ? 0.2 : 0.35,
+        ),
         borderRadius: BorderRadius.circular(7),
         border: Border.all(
           color: theme.dividerColor.withOpacity(0.12),
@@ -890,16 +934,7 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(7),
-          onTap: () {
-            HapticFeedback.lightImpact();
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    TransactionFormPage(existingTransaction: txData),
-              ),
-            );
-          },
+          onTap: () {},
           onLongPress: () {
             HapticFeedback.heavyImpact();
             Navigator.push(
@@ -927,8 +962,8 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                     isIncome
                         ? Icons.arrow_downward_rounded
                         : (isExpense
-                            ? Icons.arrow_upward_rounded
-                            : Icons.swap_horiz_rounded),
+                              ? Icons.arrow_upward_rounded
+                              : Icons.swap_horiz_rounded),
                     size: 12,
                     color: amtColor,
                   ),
@@ -968,7 +1003,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                                 icon: Icons.subdirectory_arrow_right_rounded,
                                 text: subCat,
                                 textColor: theme.colorScheme.onSurfaceVariant,
-                                bgColor: theme.colorScheme.surfaceContainerHighest
+                                bgColor: theme
+                                    .colorScheme
+                                    .surfaceContainerHighest
                                     .withOpacity(0.7),
                               ),
 
@@ -982,7 +1019,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                                     : theme.colorScheme.primary,
                                 bgColor: bucketName == 'Out of Bucket'
                                     ? theme.colorScheme.error.withOpacity(0.08)
-                                    : theme.colorScheme.primary.withOpacity(0.1),
+                                    : theme.colorScheme.primary.withOpacity(
+                                        0.1,
+                                      ),
                               ),
                           ],
                         ),
@@ -1012,8 +1051,9 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                         style: TextStyle(
                           fontSize: 7,
                           fontWeight: FontWeight.w500,
-                          color: theme.colorScheme.onSurfaceVariant
-                              .withOpacity(0.65),
+                          color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                            0.65,
+                          ),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1083,7 +1123,7 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
     );
   }
 
-  // --- MODAL BOTTOM SHEET: ALL TAG TRANSACTIONS ---
+  // --- MODAL BOTTOM SHEET: ALL TAG TRANSACTIONS (MODERN PROFESSIONAL DESIGN) ---
   void _showAllTransactionsSheet(
     BuildContext context,
     _TagData data,
@@ -1092,100 +1132,983 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
     bool isDark,
   ) {
     HapticFeedback.lightImpact();
+    final tagColor = TagColorHelper.getColor(data.tag, theme.brightness);
+
+    final allTxs = List<TransactionWithDetails>.from(data.txs)
+      ..sort((a, b) => b.transaction.date.compareTo(a.transaction.date));
+
+    final expenses = allTxs
+        .where((t) => t.transaction.type == 'Expense')
+        .toList();
+    final incomes = allTxs
+        .where((t) => t.transaction.type == 'Income')
+        .toList();
+    final transfers = allTxs
+        .where((t) => t.transaction.type == 'Transfer')
+        .toList();
+
+    String activeFilter = 'All';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          maxChildSize: 0.95,
-          minChildSize: 0.4,
-          builder: (_, scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Sheet drag handle
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      margin: const EdgeInsets.only(top: 10, bottom: 8),
-                      decoration: BoxDecoration(
-                        color: theme.dividerColor.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+        return StatefulBuilder(
+          builder: (sheetCtx, setSheetState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.85,
+              maxChildSize: 0.95,
+              minChildSize: 0.5,
+              builder: (_, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: theme.scaffoldBackgroundColor,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(DesignTokens.radiusLg),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.4 : 0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
                   ),
-                  // Sheet Header
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
+                  child: Column(
+                    children: [
+                      // ─── DRAG HANDLE ───
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(top: 10, bottom: 8),
+                          decoration: BoxDecoration(
+                            color: theme.dividerColor.withOpacity(0.4),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+
+                      // ─── HEADER BAR ───
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          DesignTokens.spacingMd,
+                          2,
+                          8,
+                          8,
+                        ),
+                        child: Row(
                           children: [
+                            // Tag Badge
                             Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color:
-                                    theme.colorScheme.primary.withOpacity(0.1),
-                                shape: BoxShape.circle,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
                               ),
-                              child: Icon(
-                                Icons.tag_rounded,
-                                size: 14,
-                                color: theme.colorScheme.primary,
+                              decoration: BoxDecoration(
+                                color: tagColor.withOpacity(
+                                  isDark ? 0.16 : 0.1,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: tagColor.withOpacity(0.35),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.tag_rounded,
+                                    size: 14,
+                                    color: tagColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    data.tag,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.2,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '#${data.tag} Transactions',
+                              '${allTxs.length} Transactions',
                               style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                                color: theme.colorScheme.onSurface,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const Spacer(),
+                            // Net volume pill
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    (data.net >= 0
+                                            ? Colors.green
+                                            : theme.colorScheme.error)
+                                        .withOpacity(isDark ? 0.15 : 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color:
+                                      (data.net >= 0
+                                              ? Colors.green
+                                              : theme.colorScheme.error)
+                                          .withOpacity(0.25),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Net: ',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${data.net > 0 ? "+₹" : (data.net < 0 ? "-₹" : "₹")}${data.net.abs().toStringAsFixed(0)}',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: data.net >= 0
+                                          ? Colors.green
+                                          : theme.colorScheme.error,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: Icon(
+                                Icons.close_rounded,
+                                size: 20,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              onPressed: () => Navigator.pop(ctx),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      Divider(
+                        height: 1,
+                        color: theme.dividerColor.withOpacity(0.15),
+                      ),
+
+                      // ─── UNIFIED SMART OVERVIEW METRICS CARD ───
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(
+                          DesignTokens.spacingMd,
+                          10,
+                          DesignTokens.spacingMd,
+                          8,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(
+                            DesignTokens.radiusSm,
+                          ),
+                          border: Border.all(
+                            color: theme.dividerColor.withOpacity(
+                              isDark ? 0.12 : 0.25,
+                            ),
+                            width: 0.8,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(
+                                isDark ? 0.2 : 0.03,
+                              ),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            _buildSheetOverviewColumn(
+                              label: 'EXPENSES',
+                              amount: data.expense,
+                              count: expenses.length,
+                              color: theme.colorScheme.error,
+                              sign: '-₹ ',
+                              icon: Icons.arrow_upward_rounded,
+                              theme: theme,
+                            ),
+                            Container(
+                              width: 1,
+                              height: 32,
+                              color: theme.dividerColor.withOpacity(0.2),
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
+                            ),
+                            _buildSheetOverviewColumn(
+                              label: 'INCOME',
+                              amount: data.income,
+                              count: incomes.length,
+                              color: Colors.green,
+                              sign: '+₹ ',
+                              icon: Icons.arrow_downward_rounded,
+                              theme: theme,
+                            ),
+                            Container(
+                              width: 1,
+                              height: 32,
+                              color: theme.dividerColor.withOpacity(0.2),
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
+                            ),
+                            _buildSheetOverviewColumn(
+                              label: 'TRANSFERS',
+                              amount: data.transfer,
+                              count: transfers.length,
+                              color: TransactionColors.transfer(theme),
+                              sign: '₹ ',
+                              icon: Icons.swap_horiz_rounded,
+                              theme: theme,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // ─── FILTER TABS ───
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DesignTokens.spacingMd,
+                          vertical: 4,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest
+                                .withOpacity(isDark ? 0.3 : 0.5),
+                            borderRadius: BorderRadius.circular(
+                              DesignTokens.radiusSm,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              _buildSheetTab(
+                                label: 'All',
+                                count: allTxs.length,
+                                isActive: activeFilter == 'All',
+                                theme: theme,
+                                isDark: isDark,
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setSheetState(() => activeFilter = 'All');
+                                },
+                              ),
+                              _buildSheetTab(
+                                label: 'Expenses',
+                                count: expenses.length,
+                                isActive: activeFilter == 'Expense',
+                                theme: theme,
+                                isDark: isDark,
+                                color: theme.colorScheme.error,
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setSheetState(() => activeFilter = 'Expense');
+                                },
+                              ),
+                              _buildSheetTab(
+                                label: 'Income',
+                                count: incomes.length,
+                                isActive: activeFilter == 'Income',
+                                theme: theme,
+                                isDark: isDark,
+                                color: Colors.green,
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setSheetState(() => activeFilter = 'Income');
+                                },
+                              ),
+                              _buildSheetTab(
+                                label: 'Transfers',
+                                count: transfers.length,
+                                isActive: activeFilter == 'Transfer',
+                                theme: theme,
+                                isDark: isDark,
+                                color: TransactionColors.transfer(theme),
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setSheetState(
+                                    () => activeFilter = 'Transfer',
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // ─── SCROLLABLE SECTIONS LIST ───
+                      Expanded(
+                        child: ListView(
+                          controller: scrollController,
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(
+                            DesignTokens.spacingMd,
+                            4,
+                            DesignTokens.spacingMd,
+                            36,
+                          ),
+                          children: [
+                            // ── EXPENSES SECTION ──
+                            if (activeFilter == 'All' ||
+                                activeFilter == 'Expense')
+                              if (expenses.isNotEmpty) ...[
+                                _buildSheetTypeSectionHeader(
+                                  title: 'EXPENSES',
+                                  count: expenses.length,
+                                  total: data.expense,
+                                  color: theme.colorScheme.error,
+                                  sign: '-₹ ',
+                                  icon: Icons.arrow_upward_rounded,
+                                  theme: theme,
+                                ),
+                                ...expenses.map(
+                                  (tx) => _buildSheetTransactionTile(
+                                    tx,
+                                    theme,
+                                    isDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+
+                            // ── INCOME SECTION ──
+                            if (activeFilter == 'All' ||
+                                activeFilter == 'Income')
+                              if (incomes.isNotEmpty) ...[
+                                _buildSheetTypeSectionHeader(
+                                  title: 'INCOME',
+                                  count: incomes.length,
+                                  total: data.income,
+                                  color: Colors.green,
+                                  sign: '+₹ ',
+                                  icon: Icons.arrow_downward_rounded,
+                                  theme: theme,
+                                ),
+                                ...incomes.map(
+                                  (tx) => _buildSheetTransactionTile(
+                                    tx,
+                                    theme,
+                                    isDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+
+                            // ── TRANSFERS SECTION ──
+                            if (activeFilter == 'All' ||
+                                activeFilter == 'Transfer')
+                              if (transfers.isNotEmpty) ...[
+                                _buildSheetTypeSectionHeader(
+                                  title: 'TRANSFERS',
+                                  count: transfers.length,
+                                  total: data.transfer,
+                                  color: TransactionColors.transfer(theme),
+                                  sign: '₹ ',
+                                  icon: Icons.swap_horiz_rounded,
+                                  theme: theme,
+                                ),
+                                ...transfers.map(
+                                  (tx) => _buildSheetTransactionTile(
+                                    tx,
+                                    theme,
+                                    isDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+
+                            // Empty filter state
+                            if ((activeFilter == 'Expense' &&
+                                    expenses.isEmpty) ||
+                                (activeFilter == 'Income' && incomes.isEmpty) ||
+                                (activeFilter == 'Transfer' &&
+                                    transfers.isEmpty) ||
+                                (allTxs.isEmpty))
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 40.0,
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.receipt_long_outlined,
+                                        size: 36,
+                                        color: theme
+                                            .colorScheme
+                                            .onSurfaceVariant
+                                            .withOpacity(0.3),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        'No ${activeFilter == "All" ? "" : activeFilter} transactions found',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant
+                                              .withOpacity(0.6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                            // Footer hint
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 14.0,
+                                bottom: 12.0,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.touch_app_rounded,
+                                    size: 13,
+                                    color: theme.colorScheme.onSurfaceVariant
+                                        .withOpacity(0.5),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Long-press any transaction to edit',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: theme.colorScheme.onSurfaceVariant
+                                          .withOpacity(0.5),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 18),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const Divider(height: 1),
-                  // Scrollable Transactions List
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: displayList.length,
-                      itemBuilder: (context, index) {
-                        return _buildTransactionCard(
-                          displayList[index],
-                          theme,
-                          isDark,
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             );
           },
         );
       },
+    );
+  }
+
+  // ─── SMART OVERVIEW COLUMN ───
+  Widget _buildSheetOverviewColumn({
+    required String label,
+    required double amount,
+    required int count,
+    required Color color,
+    required String sign,
+    required IconData icon,
+    required ThemeData theme,
+  }) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 10, color: color),
+              const SizedBox(width: 3),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.7,
+                    color: color,
+                  ),
+                ),
+              ),
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: CurrencyText(
+              amount: amount,
+              sign: sign,
+              amountStyle: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.3,
+                color: color,
+              ),
+              symbolStyle: TextStyle(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w700,
+                color: color.withOpacity(0.85),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── SEGMENTED TAB BUTTON ───
+  Widget _buildSheetTab({
+    required String label,
+    required int count,
+    required bool isActive,
+    required ThemeData theme,
+    required bool isDark,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    final activeColor = color ?? theme.colorScheme.primary;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isActive ? theme.colorScheme.surface : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: isActive ? FontWeight.w900 : FontWeight.w600,
+                  color: isActive
+                      ? activeColor
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? activeColor.withOpacity(0.15)
+                      : theme.colorScheme.onSurfaceVariant.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 7.5,
+                    fontWeight: FontWeight.w800,
+                    color: isActive
+                        ? activeColor
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── TRANSACTION TYPE SECTION HEADER ───
+  Widget _buildSheetTypeSectionHeader({
+    required String title,
+    required int count,
+    required double total,
+    required Color color,
+    required String sign,
+    required IconData icon,
+    required ThemeData theme,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 3.5,
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.1,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+          ),
+          const Spacer(),
+          CurrencyText(
+            amount: total,
+            sign: sign,
+            amountStyle: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w900,
+              color: color,
+              letterSpacing: -0.3,
+            ),
+            symbolStyle: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: color.withOpacity(0.85),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── PROFESSIONAL TRANSACTION LIST TILE ───
+  Widget _buildSheetTransactionTile(
+    TransactionWithDetails txData,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    final t = txData.transaction;
+    final isExpense = t.type == 'Expense';
+    final isIncome = t.type == 'Income';
+    final isTransfer = t.type == 'Transfer';
+
+    final Color typeColor = isIncome
+        ? Colors.green
+        : (isExpense
+              ? theme.colorScheme.error
+              : TransactionColors.transfer(theme));
+
+    final String sign = isIncome ? '+₹ ' : (isExpense ? '-₹ ' : '₹ ');
+
+    final String categoryName =
+        (t.categoryName != null && t.categoryName!.trim().isNotEmpty)
+        ? t.categoryName!.trim()
+        : (txData.category?.name ??
+              (isTransfer ? 'Transfer' : 'Uncategorized'));
+
+    final String? subCat =
+        (t.subCategory != null &&
+            t.subCategory!.trim().isNotEmpty &&
+            t.subCategory!.trim() != categoryName)
+        ? t.subCategory!.trim()
+        : null;
+
+    final String? rawBucket =
+        (t.bucketName != null && t.bucketName!.trim().isNotEmpty)
+        ? t.bucketName!.trim()
+        : txData.bucket?.name;
+
+    final String? bucketName = (rawBucket != null && rawBucket.isNotEmpty)
+        ? rawBucket
+        : (isExpense && (t.bucketId == null || t.bucketId == -1)
+              ? 'Out of Bucket'
+              : null);
+
+    String accountDisplay = txData.account.name;
+    if (isTransfer) {
+      if (t.toAccountId == 'EXTERNAL_IN') {
+        accountDisplay = 'External → ${txData.account.name}';
+      } else if (t.toAccountId == 'EXTERNAL_OUT') {
+        accountDisplay = '${txData.account.name} → External';
+      } else if (txData.toAccount != null) {
+        accountDisplay = '${txData.account.name} → ${txData.toAccount!.name}';
+      }
+    }
+
+    final String dateStr =
+        '${t.date.day.toString().padLeft(2, '0')} ${DateTimeConstants.shortMonths[t.date.month - 1]}';
+    final bool hasNotes = t.notes != null && t.notes!.trim().isNotEmpty;
+
+    final IconData leadIcon = isIncome
+        ? Icons.arrow_downward_rounded
+        : (isExpense ? Icons.arrow_upward_rounded : Icons.swap_horiz_rounded);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(DesignTokens.radiusSm),
+        border: Border.all(
+          color: theme.dividerColor.withOpacity(isDark ? 0.12 : 0.22),
+          width: 0.7,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.18 : 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(DesignTokens.radiusSm),
+          onTap: () {},
+          onLongPress: () {
+            HapticFeedback.heavyImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    TransactionFormPage(existingTransaction: txData),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Type icon container
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: typeColor.withOpacity(isDark ? 0.12 : 0.08),
+                    borderRadius: BorderRadius.circular(DesignTokens.spacingXs),
+                    border: Border.all(
+                      color: typeColor.withOpacity(0.2),
+                      width: 0.6,
+                    ),
+                  ),
+                  child: Icon(leadIcon, size: 16, color: typeColor),
+                ),
+                const SizedBox(width: 10),
+
+                // Details column
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Category title
+                      Text(
+                        categoryName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+
+                      // Badges row
+                      if (subCat != null || bucketName != null) ...[
+                        const SizedBox(height: 2),
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 2,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (subCat != null)
+                              _buildSheetBadge(
+                                subCat,
+                                theme.colorScheme.primary.withOpacity(
+                                  isDark ? 0.14 : 0.08,
+                                ),
+                                theme.colorScheme.primary,
+                                theme,
+                              ),
+                            if (bucketName != null)
+                              _buildSheetBadge(
+                                bucketName,
+                                Colors.orange.withOpacity(isDark ? 0.14 : 0.08),
+                                Colors.orange.shade700,
+                                theme,
+                              ),
+                          ],
+                        ),
+                      ],
+
+                      // Notes
+                      if (hasNotes) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          t.notes!.trim(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontStyle: FontStyle.italic,
+                            fontWeight: FontWeight.w500,
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withOpacity(0.65),
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 3),
+
+                      // Date & Account details
+                      Row(
+                        children: [
+                          Text(
+                            dateStr,
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.7),
+                            ),
+                          ),
+                          Container(
+                            width: 2.5,
+                            height: 2.5,
+                            margin: const EdgeInsets.symmetric(horizontal: 5),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.4),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              accountDisplay,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurfaceVariant
+                                    .withOpacity(0.6),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                // Amount
+                CurrencyText(
+                  amount: t.amount,
+                  sign: sign,
+                  amountStyle: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.4,
+                    color: typeColor,
+                  ),
+                  symbolStyle: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: typeColor.withOpacity(0.85),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── MINI BADGE HELPER ───
+  Widget _buildSheetBadge(
+    String text,
+    Color bgColor,
+    Color textColor,
+    ThemeData theme,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 8.5,
+          fontWeight: FontWeight.w800,
+          color: textColor,
+        ),
+      ),
     );
   }
 }
