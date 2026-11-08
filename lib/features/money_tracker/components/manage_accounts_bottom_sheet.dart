@@ -24,6 +24,7 @@ final _availableWidgets = [
   _WidgetOption('CREDIT_TRACKER', 'Credit Tracker', Icons.credit_card_rounded),
   _WidgetOption('BUDGET_SIMULATOR', 'Budget Simulator', Icons.memory_rounded),
   _WidgetOption('BUDGET_SNAPSHOT', 'Budget Snapshot', Icons.analytics_rounded),
+  _WidgetOption('TAG_ANALYTICS', 'Tag Insights', Icons.tag_rounded),
 ];
 
 class ManageAccountsBottomSheet extends ConsumerStatefulWidget {

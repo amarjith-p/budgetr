@@ -9,6 +9,7 @@ import 'cash_flow_widget.dart';
 import 'spending_widget.dart';
 import 'credit_tracker_widget.dart';
 import 'budget_simulator_widget.dart';
+import 'tag_analytics_widget.dart';
 
 class PinnedWidgetsDisplay extends ConsumerWidget {
   const PinnedWidgetsDisplay({Key? key}) : super(key: key);
@@ -27,6 +28,8 @@ class PinnedWidgetsDisplay extends ConsumerWidget {
         return const BudgetSimulatorWidget();
       case 'BUDGET_SNAPSHOT':
         return const ClosedBudgetSnapshotWidget();
+      case 'TAG_ANALYTICS':
+        return const TagAnalyticsWidget();
       default:
         return const SizedBox.shrink();
     }

@@ -26,6 +26,7 @@ import '../../analytics/components/cash_flow_widget.dart';
 import '../../analytics/components/spending_widget.dart';
 import '../../analytics/components/budget_simulator_widget.dart';
 import '../../analytics/components/credit_tracker_widget.dart';
+import '../../analytics/components/tag_analytics_widget.dart';
 
 import '../../insights/views/insights_tab.dart';
 
@@ -186,7 +187,8 @@ class _AnalyticsTab extends ConsumerWidget {
         if (!pinned.contains('BUDGET_SIMULATOR')) const BudgetSimulatorWidget(),
         if (!pinned.contains('BUDGET_SNAPSHOT'))
           const ClosedBudgetSnapshotWidget(),
-        if (pinned.length >= 6)
+        if (!pinned.contains('TAG_ANALYTICS')) const TagAnalyticsWidget(),
+        if (pinned.length >= 7)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 40.0),
             child: Center(
