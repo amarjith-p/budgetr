@@ -733,6 +733,10 @@ class _NetWorthReconciliationPageState
 
       // 2. CHRONOLOGICAL RECONSTRUCTION FOR INVESTMENTS
       for (var inv in investments) {
+        if (inv.isClosed) {
+          continue;
+        }
+
         if (inv.startDate.isAfter(endOfMonth)) {
           _omittedInvestmentCount++;
           _omittedInvestmentsValue += inv.currentValue;
