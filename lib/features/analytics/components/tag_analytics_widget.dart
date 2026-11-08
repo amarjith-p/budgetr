@@ -541,7 +541,7 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      'Gross: ₹${data.totalVolume.toStringAsFixed(0)}',
+                      'Gross: ₹${data.totalVolume.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 8.5,
                         fontWeight: FontWeight.w700,
@@ -1284,7 +1284,7 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                                     ),
                                   ),
                                   Text(
-                                    '${data.net > 0 ? "+₹" : (data.net < 0 ? "-₹" : "₹")}${data.net.abs().toStringAsFixed(0)}',
+                                    '${data.net > 0 ? "+₹" : (data.net < 0 ? "-₹" : "₹")}${data.net.abs().toStringAsFixed(2)}',
                                     style: TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w900,
