@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/currency_text.dart';
 import '../../accounts/providers/account_provider.dart';
+import '../../budgets/providers/budget_provider.dart';
 import '../../transactions/providers/transaction_provider.dart';
 
 import 'analytics_account_selection_sheet.dart';
@@ -29,6 +30,7 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
   DateTime? _customEnd;
 
   bool _hideOutOfBucket = false;
+  bool _showNonCalculatedOnly = false;
 
   Future<void> _pickCustomDateRange() async {
     HapticFeedback.selectionClick();
@@ -265,6 +267,8 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
 
     final accountsAsync = ref.watch(accountsStreamProvider);
     final transactionsAsync = ref.watch(allTransactionsProvider);
+    final budgetsAsync = ref.watch(allMonthlyBudgetsStreamProvider);
+    final budgets = budgetsAsync.asData?.value ?? [];
 
     return accountsAsync.when(
       loading: () => const SizedBox(
@@ -352,8 +356,10 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
               }
             }
 
-            double totalIncome = 0.0;
+            double actualIncome = 0.0;
             double totalExpense = 0.0;
+            double nonCalcIncome = 0.0;
+            double nonCalcExpense = 0.0;
 
             for (var txData in transactions) {
               final t = txData.transaction;
@@ -365,25 +371,56 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
               bool fromTarget = targetIds.contains(t.accountId);
               bool isOutOfBucket = t.bucketId == null || t.bucketId == -1;
 
+              bool isNonCalcInc = t.subCategory == 'Non-Calculated Income';
+              bool isNonCalcExp = t.subCategory == 'Non-Calculated Expenses';
+
               // --- FIX: Strictly isolated to Income and Expense types ---
               if (t.type == 'Income' && fromTarget) {
-                totalIncome += t.amount;
+                actualIncome += t.amount;
+                if (isNonCalcInc) nonCalcIncome += t.amount;
               } else if (t.type == 'Expense' && fromTarget) {
                 if (_hideOutOfBucket && isOutOfBucket) continue;
                 totalExpense += t.amount;
+                if (isNonCalcExp) nonCalcExpense += t.amount;
               }
             }
 
-            double netPosition = totalIncome - totalExpense;
+            double budgetedIncome = 0.0;
+            if (_accountFilterId != 'CREDIT') {
+              DateTime cur = DateTime(start.year, start.month, 1);
+              DateTime stop = DateTime(end.year, end.month, 1);
+              final targetMonths = <String>{};
+              while (!cur.isAfter(stop)) {
+                targetMonths.add('${cur.year}-${cur.month}');
+                cur = DateTime(cur.year, cur.month + 1, 1);
+              }
+
+              for (var b in budgets) {
+                if (targetMonths.contains('${b.year}-${b.month}')) {
+                  budgetedIncome +=
+                      (b.salaryIncome + b.extraIncome) - b.deductions;
+                }
+              }
+            }
+
+            final double displayIncome = _showNonCalculatedOnly
+                ? nonCalcIncome
+                : (_hideOutOfBucket ? budgetedIncome : actualIncome);
+
+            final double displayExpense = _showNonCalculatedOnly
+                ? nonCalcExpense
+                : totalExpense;
+
+            double netPosition = displayIncome - displayExpense;
             String netSign = netPosition > 0
                 ? '+₹ '
                 : (netPosition < 0 ? '-₹ ' : '₹ ');
 
-            double maxVal = max(totalIncome, totalExpense);
+            double maxVal = max(displayIncome, displayExpense);
             if (maxVal == 0) maxVal = 1;
 
-            double incPct = (totalIncome / maxVal).clamp(0.0, 1.0);
-            double expPct = (totalExpense / maxVal).clamp(0.0, 1.0);
+            double incPct = (displayIncome / maxVal).clamp(0.0, 1.0);
+            double expPct = (displayExpense / maxVal).clamp(0.0, 1.0);
 
             String dropdownLabel = 'All Accounts';
             if (_accountFilterId == 'ASSETS')
@@ -465,8 +502,12 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
                   const SizedBox(height: 16),
 
                   _buildFlowBar(
-                    'TOTAL INCOME',
-                    totalIncome,
+                    _showNonCalculatedOnly
+                        ? 'NON-CALC INCOME'
+                        : (_hideOutOfBucket
+                            ? 'BUDGETED INCOME'
+                            : 'TOTAL INCOME'),
+                    displayIncome,
                     incPct,
                     Colors.green,
                     theme,
@@ -474,8 +515,12 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
                   ),
                   const SizedBox(height: 10),
                   _buildFlowBar(
-                    'TOTAL EXPENSE',
-                    totalExpense,
+                    _showNonCalculatedOnly
+                        ? 'NON-CALC EXPENSE'
+                        : (_hideOutOfBucket
+                            ? 'BUDGETED EXPENSE'
+                            : 'TOTAL EXPENSE'),
+                    displayExpense,
                     expPct,
                     theme.colorScheme.error,
                     theme,
@@ -484,9 +529,11 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
                   const SizedBox(height: 10),
 
                   _buildBattleBar(
-                    'NET POSITION',
-                    totalIncome,
-                    totalExpense,
+                    _showNonCalculatedOnly
+                        ? 'NET NON-CALC'
+                        : (_hideOutOfBucket ? 'NET BUDGETED' : 'NET POSITION'),
+                    displayIncome,
+                    displayExpense,
                     netPosition,
                     theme,
                     netSign,
@@ -496,7 +543,7 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
 
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
+                      horizontal: 8,
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
@@ -505,37 +552,118 @@ class _CashFlowWidgetState extends ConsumerState<CashFlowWidget> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.donut_small_rounded,
-                              size: 12,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Budgeted Expenses Only',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: theme.colorScheme.onSurface,
+                        // --- 1. BUDGETED ONLY ---
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.donut_small_rounded,
+                                      size: 11,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          'Budgeted Only',
+                                          style: TextStyle(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: theme.colorScheme.onSurface,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                              Transform.scale(
+                                scale: 0.65,
+                                child: Switch(
+                                  value: _hideOutOfBucket,
+                                  activeColor: theme.colorScheme.primary,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  onChanged: (val) {
+                                    HapticFeedback.lightImpact();
+                                    setState(() {
+                                      _hideOutOfBucket = val;
+                                      if (val) _showNonCalculatedOnly = false;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        Transform.scale(
-                          scale: 0.7,
-                          child: Switch(
-                            value: _hideOutOfBucket,
-                            activeColor: theme.colorScheme.primary,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            onChanged: (val) {
-                              HapticFeedback.lightImpact();
-                              setState(() => _hideOutOfBucket = val);
-                            },
+
+                        // --- DIVIDER ---
+                        Container(
+                          width: 1,
+                          height: 18,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          color: theme.dividerColor.withOpacity(0.2),
+                        ),
+
+                        // --- 2. NON-CALCULATED ONLY ---
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.help_outline_rounded,
+                                      size: 11,
+                                      color: theme.colorScheme.onSurfaceVariant
+                                          .withOpacity(0.7),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          'Non-Calculated',
+                                          style: TextStyle(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: theme
+                                                .colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Transform.scale(
+                                scale: 0.65,
+                                child: Switch(
+                                  value: _showNonCalculatedOnly,
+                                  activeColor: theme.colorScheme.secondary,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  onChanged: (val) {
+                                    HapticFeedback.lightImpact();
+                                    setState(() {
+                                      _showNonCalculatedOnly = val;
+                                      if (val) _hideOutOfBucket = false;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

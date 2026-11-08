@@ -26,3 +26,10 @@ final monthlyBudgetForMonthProvider =
     StreamProvider.autoDispose.family<MonthlyBudget?, DateTime>((ref, date) {
   return ref.watch(budgetServiceProvider).watchBudgetForMonth(date.month, date.year);
 });
+
+// 5. Stream Provider watching ALL monthly budgets in the DB
+final allMonthlyBudgetsStreamProvider =
+    StreamProvider.autoDispose<List<MonthlyBudget>>((ref) {
+  final db = ref.watch(databaseProvider);
+  return db.select(db.monthlyBudgets).watch();
+});
