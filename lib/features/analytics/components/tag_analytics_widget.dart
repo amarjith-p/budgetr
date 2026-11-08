@@ -12,6 +12,7 @@ import '../../../core/constants/date_time_constants.dart';
 import '../../transactions/components/tag_input_sheet.dart';
 import '../../transactions/services/transaction_service.dart';
 import '../../transactions/providers/transaction_provider.dart';
+import '../../transactions/views/transaction_form_page.dart';
 import 'analytics_timeframe_selector.dart';
 
 class TagAnalyticsWidget extends ConsumerStatefulWidget {
@@ -59,12 +60,13 @@ class _TagDonutSegment {
 }
 
 class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
+  String? _selectedTag;
+  String? _selectedTypeFilter;
   TrendTimeframe _timeframe = TrendTimeframe.currentMonth;
+  int _txCurrentPage = 0;
+
   DateTime? _customStart;
   DateTime? _customEnd;
-
-  String? _selectedTag; // null means auto-select first or 'ALL'
-  String? _selectedTypeFilter; // 'Expense', 'Income', 'Transfer', or null for all
 
   Future<void> _pickCustomDateRange() async {
     HapticFeedback.selectionClick();
@@ -76,8 +78,8 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: Theme.of(context).colorScheme.primary,
-                ),
+              primary: Theme.of(context).colorScheme.primary,
+            ),
           ),
           child: child!,
         );
@@ -158,28 +160,36 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
           }
         }
 
-        // --- 2. EXTRACT AND AGGREGATE TAGS ---
+        // --- 2. AGGREGATE BY TAG ---
         final Map<String, _TagData> tagMap = {};
 
         for (var txData in transactions) {
           final t = txData.transaction;
-          if (t.id.endsWith('_SOURCETRANSFER')) continue;
+          if (t.id.startsWith('LOAN_TX_')) continue;
           if (t.date.isBefore(start) || t.date.isAfter(end)) continue;
 
-          final tagList = parseTagString(t.tags);
-          if (tagList.isEmpty) continue;
+          if (t.tags == null || t.tags!.trim().isEmpty) continue;
 
-          for (var tag in tagList) {
-            final entry = tagMap.putIfAbsent(tag, () => _TagData(tag: tag));
-            entry.count++;
-            entry.txs.add(txData);
+          final tagList = t.tags!
+              .split(',')
+              .map((tag) => tag.trim())
+              .where((tag) => tag.isNotEmpty);
 
-            if (t.type == 'Income') {
-              entry.income += t.amount;
-            } else if (t.type == 'Expense') {
-              entry.expense += t.amount;
+          for (final tag in tagList) {
+            final data = tagMap.putIfAbsent(
+              tag,
+              () => _TagData(tag: tag),
+            );
+
+            data.count++;
+            data.txs.add(txData);
+
+            if (t.type == 'Expense') {
+              data.expense += t.amount;
+            } else if (t.type == 'Income') {
+              data.income += t.amount;
             } else if (t.type == 'Transfer') {
-              entry.transfer += t.amount;
+              data.transfer += t.amount;
             }
           }
         }
@@ -187,14 +197,10 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
         final sortedTags = tagMap.values.toList()
           ..sort((a, b) => b.totalVolume.compareTo(a.totalVolume));
 
-        // Auto-select first tag if not selected or invalid
-        String? activeTag = _selectedTag;
-        if (activeTag != null && !tagMap.containsKey(activeTag)) {
-          activeTag = null;
-        }
-        if (activeTag == null && sortedTags.isNotEmpty) {
-          activeTag = sortedTags.first.tag;
-        }
+        final String? activeTag = _selectedTag != null &&
+                sortedTags.any((t) => t.tag == _selectedTag)
+            ? _selectedTag
+            : (sortedTags.isNotEmpty ? sortedTags.first.tag : null);
 
         final _TagData? currentTagData =
             activeTag != null ? tagMap[activeTag] : null;
@@ -311,84 +317,83 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                   ),
                 ),
               ] else ...[
-                // --- TAG SELECTOR CHIPS ---
-                SizedBox(
-                  height: 32,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: sortedTags.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 6),
-                    itemBuilder: (context, index) {
-                      final item = sortedTags[index];
+                // --- TAG SELECTOR CHIPS (Single line horizontal scroll) ---
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: sortedTags.map((item) {
                       final isSelected = item.tag == activeTag;
                       final tagColor =
                           TagColorHelper.getColor(item.tag, theme.brightness);
-
-                      return InkWell(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() {
-                            _selectedTag = item.tag;
-                            _selectedTypeFilter = null;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? tagColor.withOpacity(0.18)
-                                : theme.colorScheme.surfaceContainerHighest
-                                    .withOpacity(isDark ? 0.2 : 0.4),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() {
+                              _selectedTag = item.tag;
+                              _selectedTypeFilter = null;
+                              _txCurrentPage = 0;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
                               color: isSelected
-                                  ? tagColor
-                                  : theme.dividerColor.withOpacity(0.3),
-                              width: isSelected ? 1.5 : 0.8,
+                                  ? tagColor.withOpacity(0.18)
+                                  : theme.colorScheme.surfaceContainerHighest
+                                      .withOpacity(isDark ? 0.2 : 0.4),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected
+                                    ? tagColor
+                                    : theme.dividerColor.withOpacity(0.3),
+                                width: isSelected ? 1.5 : 0.8,
+                              ),
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: tagColor,
-                                  shape: BoxShape.circle,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: tagColor,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '#${item.tag}',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w900
-                                      : FontWeight.w700,
-                                  color: isSelected
-                                      ? (isDark ? Colors.white : Colors.black87)
-                                      : theme.colorScheme.onSurfaceVariant,
+                                const SizedBox(width: 6),
+                                Text(
+                                  '#${item.tag}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w900
+                                        : FontWeight.w700,
+                                    color: isSelected
+                                        ? (isDark ? Colors.white : Colors.black87)
+                                        : theme.colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${item.count}',
-                                style: TextStyle(
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: tagColor.withOpacity(0.85),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${item.count}',
+                                  style: TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: tagColor.withOpacity(0.85),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       );
-                    },
+                    }).toList(),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -402,7 +407,7 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                   _buildTypePillsRow(currentTagData, theme),
                   const SizedBox(height: 12),
 
-                  // --- MINI TRANSACTION PREVIEW ---
+                  // --- MINI TRANSACTION PREVIEW (PAGINATED 3 PER PAGE) ---
                   _buildRecentTransactionsPreview(
                       currentTagData, theme, isDark),
                 ],
@@ -512,8 +517,8 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                     child: Text(
                       'Gross: ₹${data.totalVolume.toStringAsFixed(0)}',
                       style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 8.5,
+                        fontWeight: FontWeight.w700,
                         color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
                       ),
                     ),
@@ -527,14 +532,17 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
     );
   }
 
-  // --- 3-PILL TYPE SELECTOR ROW ---
+  // --- 3-PILL TYPE BREAKDOWN SELECTOR ---
   Widget _buildTypePillsRow(_TagData data, ThemeData theme) {
-    int expCount =
-        data.txs.where((d) => d.transaction.type == 'Expense').length;
-    int incCount =
-        data.txs.where((d) => d.transaction.type == 'Income').length;
-    int trfCount =
-        data.txs.where((d) => d.transaction.type == 'Transfer').length;
+    int expCount = 0;
+    int incCount = 0;
+    int trfCount = 0;
+
+    for (var d in data.txs) {
+      if (d.transaction.type == 'Expense') expCount++;
+      if (d.transaction.type == 'Income') incCount++;
+      if (d.transaction.type == 'Transfer') trfCount++;
+    }
 
     return Row(
       children: [
@@ -584,13 +592,14 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
 
     return Expanded(
       child: InkWell(
+        borderRadius: BorderRadius.circular(6),
         onTap: () {
           HapticFeedback.lightImpact();
           setState(() {
             _selectedTypeFilter = isSelected ? null : typeKey;
+            _txCurrentPage = 0;
           });
         },
-        borderRadius: BorderRadius.circular(6),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
@@ -654,7 +663,7 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
     );
   }
 
-  // --- RECENT TAG TRANSACTIONS PREVIEW ---
+  // --- RECENT TAG TRANSACTIONS PREVIEW (PAGINATED 3 PER PAGE) ---
   Widget _buildRecentTransactionsPreview(
       _TagData data, ThemeData theme, bool isDark) {
     List<TransactionWithDetails> displayList = data.txs;
@@ -666,7 +675,8 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
 
     // Sort newest first
     displayList.sort((a, b) => b.transaction.date.compareTo(a.transaction.date));
-    final previewItems = displayList.take(3).toList();
+    final int pageCount = (displayList.length / 3).ceil();
+    final bool hasMultiplePages = pageCount > 1;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -677,7 +687,7 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
             Text(
               _selectedTypeFilter != null
                   ? '${_selectedTypeFilter!.toUpperCase()} TRANSACTIONS'
-                  : 'RECENT TRANSACTIONS',
+                  : 'TAG TRANSACTIONS',
               style: TextStyle(
                 fontSize: 8,
                 fontWeight: FontWeight.w900,
@@ -686,18 +696,95 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
               ),
             ),
             if (displayList.isNotEmpty)
-              Text(
-                'Showing ${previewItems.length} of ${displayList.length}',
-                style: TextStyle(
-                  fontSize: 7.5,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hasMultiplePages) ...[
+                    InkWell(
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: _txCurrentPage > 0
+                          ? () {
+                              HapticFeedback.selectionClick();
+                              setState(() => _txCurrentPage--);
+                            }
+                          : null,
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Icon(
+                          Icons.chevron_left_rounded,
+                          size: 14,
+                          color: _txCurrentPage > 0
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.3),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${_txCurrentPage + 1}/$pageCount (${displayList.length})',
+                      style: TextStyle(
+                        fontSize: 7.5,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: _txCurrentPage < pageCount - 1
+                          ? () {
+                              HapticFeedback.selectionClick();
+                              setState(() => _txCurrentPage++);
+                            }
+                          : null,
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: 14,
+                          color: _txCurrentPage < pageCount - 1
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.3),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ] else ...[
+                    Text(
+                      '${displayList.length} total',
+                      style: TextStyle(
+                        fontSize: 7.5,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  InkWell(
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: () => _showAllTransactionsSheet(
+                      context,
+                      data,
+                      displayList,
+                      theme,
+                      isDark,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: Icon(
+                        Icons.open_in_new_rounded,
+                        size: 11,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
           ],
         ),
         const SizedBox(height: 6),
-        if (previewItems.isEmpty)
+        if (displayList.isEmpty)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12),
             alignment: Alignment.center,
@@ -710,29 +797,133 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
               ),
             ),
           )
+        else if (!hasMultiplePages)
+          Column(
+            children: displayList
+                .map((txData) => _buildTransactionCard(txData, theme, isDark))
+                .toList(),
+          )
         else
-          ...previewItems.map((txData) {
-            final t = txData.transaction;
-            final isExpense = t.type == 'Expense';
-            final isIncome = t.type == 'Income';
-            final Color amtColor = isIncome
-                ? Colors.green
-                : (isExpense
-                    ? theme.colorScheme.error
-                    : TransactionColors.transfer(theme));
-            final String sign = isIncome ? '+₹ ' : (isExpense ? '-₹ ' : '₹ ');
+          Builder(builder: (context) {
+            final pageItems =
+                displayList.skip(_txCurrentPage * 3).take(3).toList();
+            return Column(
+              children: pageItems
+                  .map((txData) =>
+                      _buildTransactionCard(txData, theme, isDark))
+                  .toList(),
+            );
+          }),
+      ],
+    );
+  }
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest
-                    .withOpacity(isDark ? 0.2 : 0.35),
-                borderRadius: BorderRadius.circular(6),
+  // --- INDIVIDUAL TRANSACTION CARD WITH CATEGORY & BUDGET BUCKET ---
+  Widget _buildTransactionCard(
+    TransactionWithDetails txData,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    final t = txData.transaction;
+    final isExpense = t.type == 'Expense';
+    final isIncome = t.type == 'Income';
+    final isTransfer = t.type == 'Transfer';
+
+    final Color amtColor = isIncome
+        ? Colors.green
+        : (isExpense
+            ? theme.colorScheme.error
+            : TransactionColors.transfer(theme));
+
+    final String sign = isIncome ? '+₹ ' : (isExpense ? '-₹ ' : '₹ ');
+    final bool hasNotes = t.notes != null && t.notes!.trim().isNotEmpty;
+    final String categoryName =
+        (t.categoryName != null && t.categoryName!.trim().isNotEmpty)
+            ? t.categoryName!.trim()
+            : (txData.category?.name ??
+                (isTransfer ? 'Transfer' : 'Uncategorized'));
+
+    final String? subCat = (t.subCategory != null &&
+            t.subCategory!.trim().isNotEmpty &&
+            t.subCategory!.trim() != categoryName)
+        ? t.subCategory!.trim()
+        : null;
+
+    final String? rawBucket =
+        (t.bucketName != null && t.bucketName!.trim().isNotEmpty)
+            ? t.bucketName!.trim()
+            : txData.bucket?.name;
+
+    final String? bucketName = (rawBucket != null && rawBucket.isNotEmpty)
+        ? rawBucket
+        : (isExpense && (t.bucketId == null || t.bucketId == -1)
+            ? 'Out of Bucket'
+            : null);
+
+    String accountDisplay = txData.account.name;
+    if (isTransfer) {
+      if (t.toAccountId == 'EXTERNAL_IN') {
+        accountDisplay = 'External → ${txData.account.name}';
+      } else if (t.toAccountId == 'EXTERNAL_OUT') {
+        accountDisplay = '${txData.account.name} → External';
+      } else if (txData.toAccount != null) {
+        accountDisplay =
+            '${txData.account.name} → ${txData.toAccount!.name}';
+      }
+    }
+
+    final String dateStr =
+        '${t.date.day} ${DateTimeConstants.shortMonths[t.date.month - 1]}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 5),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest
+            .withOpacity(isDark ? 0.2 : 0.35),
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(
+          color: theme.dividerColor.withOpacity(0.12),
+          width: 0.6,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(7),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    TransactionFormPage(existingTransaction: txData),
               ),
-              child: Row(
-                children: [
-                  Icon(
+            );
+          },
+          onLongPress: () {
+            HapticFeedback.heavyImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    TransactionFormPage(existingTransaction: txData),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Direction / Type Icon
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: amtColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
                     isIncome
                         ? Icons.arrow_downward_rounded
                         : (isExpense
@@ -741,52 +932,260 @@ class _TagAnalyticsWidgetState extends ConsumerState<TagAnalyticsWidget> {
                     size: 12,
                     color: amtColor,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          t.notes != null && t.notes!.trim().isNotEmpty
-                              ? t.notes!
-                              : (t.categoryName ?? t.type),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700,
-                            color: theme.colorScheme.onSurface,
-                          ),
+                ),
+                const SizedBox(width: 8),
+
+                // Transaction Details (Category as Main Header, Subcategory, Bucket, Notes, Date & Account)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Category is ALWAYS the Main Header
+                      Text(
+                        categoryName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                          color: theme.colorScheme.onSurface,
                         ),
+                      ),
+
+                      // Badges: Subcategory & Budget Bucket
+                      if (subCat != null || bucketName != null) ...[
+                        const SizedBox(height: 1.5),
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 2,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            // Subcategory pill
+                            if (subCat != null)
+                              _buildCardBadge(
+                                icon: Icons.subdirectory_arrow_right_rounded,
+                                text: subCat,
+                                textColor: theme.colorScheme.onSurfaceVariant,
+                                bgColor: theme.colorScheme.surfaceContainerHighest
+                                    .withOpacity(0.7),
+                              ),
+
+                            // Budget Bucket pill
+                            if (bucketName != null)
+                              _buildCardBadge(
+                                icon: Icons.folder_outlined,
+                                text: bucketName,
+                                textColor: bucketName == 'Out of Bucket'
+                                    ? theme.colorScheme.error.withOpacity(0.85)
+                                    : theme.colorScheme.primary,
+                                bgColor: bucketName == 'Out of Bucket'
+                                    ? theme.colorScheme.error.withOpacity(0.08)
+                                    : theme.colorScheme.primary.withOpacity(0.1),
+                              ),
+                          ],
+                        ),
+                      ],
+
+                      // Notes with lesser priority (subtle italic)
+                      if (hasNotes) ...[
+                        const SizedBox(height: 1),
                         Text(
-                          '${t.date.day} ${DateTimeConstants.shortMonths[t.date.month - 1]} • ${txData.account?.name ?? "Account"}',
+                          '"${t.notes!.trim()}"',
                           style: TextStyle(
                             fontSize: 7.5,
+                            fontStyle: FontStyle.italic,
                             color: theme.colorScheme.onSurfaceVariant
-                                .withOpacity(0.7),
+                                .withOpacity(0.75),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+
+                      const SizedBox(height: 1),
+
+                      // Date & Account details
+                      Text(
+                        '$dateStr • $accountDisplay',
+                        style: TextStyle(
+                          fontSize: 7,
+                          fontWeight: FontWeight.w500,
+                          color: theme.colorScheme.onSurfaceVariant
+                              .withOpacity(0.65),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 6),
+
+                // Formatted Amount
+                CurrencyText(
+                  amount: t.amount,
+                  sign: sign,
+                  amountStyle: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: amtColor,
+                  ),
+                  symbolStyle: TextStyle(
+                    fontSize: 7.5,
+                    color: amtColor.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- REUSABLE MICRO BADGE FOR CATEGORY / BUCKET ---
+  Widget _buildCardBadge({
+    required IconData icon,
+    required String text,
+    required Color textColor,
+    required Color bgColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(3.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 7, color: textColor),
+          const SizedBox(width: 2),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 80),
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 6.8,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+                letterSpacing: -0.1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- MODAL BOTTOM SHEET: ALL TAG TRANSACTIONS ---
+  void _showAllTransactionsSheet(
+    BuildContext context,
+    _TagData data,
+    List<TransactionWithDetails> displayList,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          maxChildSize: 0.95,
+          minChildSize: 0.4,
+          builder: (_, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Sheet drag handle
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(top: 10, bottom: 8),
+                      decoration: BoxDecoration(
+                        color: theme.dividerColor.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  // Sheet Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color:
+                                    theme.colorScheme.primary.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.tag_rounded,
+                                size: 14,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '#${data.tag} Transactions',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                          onPressed: () => Navigator.pop(ctx),
                         ),
                       ],
                     ),
                   ),
-                  CurrencyText(
-                    amount: t.amount,
-                    sign: sign,
-                    amountStyle: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      color: amtColor,
-                    ),
-                    symbolStyle: TextStyle(
-                      fontSize: 8,
-                      color: amtColor.withOpacity(0.8),
+                  const Divider(height: 1),
+                  // Scrollable Transactions List
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: displayList.length,
+                      itemBuilder: (context, index) {
+                        return _buildTransactionCard(
+                          displayList[index],
+                          theme,
+                          isDark,
+                        );
+                      },
                     ),
                   ),
                 ],
               ),
             );
-          }).toList(),
-      ],
+          },
+        );
+      },
     );
   }
 }
@@ -833,4 +1232,3 @@ class _TagDonutPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _TagDonutPainter oldDelegate) => true;
 }
-

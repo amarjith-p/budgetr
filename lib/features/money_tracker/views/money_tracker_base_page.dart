@@ -176,6 +176,7 @@ class _AnalyticsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pinned = ref.watch(pinnedWidgetsProvider);
+
     return ListView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 120),
@@ -183,11 +184,11 @@ class _AnalyticsTab extends ConsumerWidget {
         if (!pinned.contains('BALANCE_TREND')) const BalanceTrendWidget(),
         if (!pinned.contains('CASH_FLOW')) const CashFlowWidget(),
         if (!pinned.contains('SPENDING')) const SpendingWidget(),
+        if (!pinned.contains('TAG_ANALYTICS')) const TagAnalyticsWidget(),
         if (!pinned.contains('CREDIT_TRACKER')) const CreditTrackerWidget(),
         if (!pinned.contains('BUDGET_SIMULATOR')) const BudgetSimulatorWidget(),
         if (!pinned.contains('BUDGET_SNAPSHOT'))
           const ClosedBudgetSnapshotWidget(),
-        if (!pinned.contains('TAG_ANALYTICS')) const TagAnalyticsWidget(),
         if (pinned.length >= 7)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 40.0),
