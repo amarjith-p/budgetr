@@ -164,6 +164,7 @@ class InvestmentActionNotifier extends AsyncNotifier<void> {
     required double quantity,
     double? lastPrice,
     double? changePercent,
+    DateTime? lastFetchedAt,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -175,7 +176,7 @@ class InvestmentActionNotifier extends AsyncNotifier<void> {
             quantity: quantity,
             lastPrice: lastPrice,
             changePercent: changePercent,
-            lastFetchedAt: DateTime.now(),
+            lastFetchedAt: lastFetchedAt ?? DateTime.now(),
           );
     });
     return !state.hasError;
@@ -206,7 +207,7 @@ class InvestmentActionNotifier extends AsyncNotifier<void> {
             investmentId: investmentId,
             price: quote.price,
             changePercent: quote.changePercent,
-            fetchedAt: quote.date,
+            fetchedAt: DateTime.now(),
           );
     }
     return quote;

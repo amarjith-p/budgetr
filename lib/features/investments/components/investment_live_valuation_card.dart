@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/components/currency_text.dart';
 import '../../../core/components/custom_snackbars.dart';
+import '../../../core/constants/date_time_constants.dart';
 import '../../settings/providers/investment_settings_provider.dart';
 import '../providers/investment_provider.dart';
 import 'investment_live_tracker_sheet.dart';
@@ -103,6 +104,39 @@ class _InvestmentLiveValuationCardState
         return _buildActiveTrackerCard(context, tracker, theme, isDark);
       },
     );
+  }
+
+  String _formatLastFetched(DateTime dt) {
+    final now = DateTime.now();
+    final bool hasTime = dt.hour != 0 || dt.minute != 0 || dt.second != 0;
+
+    String timeStr = '';
+    if (hasTime) {
+      final int rawHour = dt.hour;
+      final String amPm = rawHour >= 12 ? 'PM' : 'AM';
+      final int displayHour =
+          rawHour == 0 ? 12 : (rawHour > 12 ? rawHour - 12 : rawHour);
+      final String minuteStr = dt.minute.toString().padLeft(2, '0');
+      timeStr = '$displayHour:$minuteStr $amPm';
+    }
+
+    final bool isToday =
+        dt.year == now.year && dt.month == now.month && dt.day == now.day;
+    final yesterday = now.subtract(const Duration(days: 1));
+    final bool isYesterday = dt.year == yesterday.year &&
+        dt.month == yesterday.month &&
+        dt.day == yesterday.day;
+
+    if (isToday) {
+      return hasTime ? 'Fetched today, $timeStr' : 'Fetched today';
+    } else if (isYesterday) {
+      return hasTime ? 'Fetched yesterday, $timeStr' : 'Fetched yesterday';
+    } else {
+      final monthStr = DateTimeConstants.shortMonths[dt.month - 1];
+      final yearStr = dt.year != now.year ? ' ${dt.year}' : '';
+      final timePart = hasTime ? ', $timeStr' : '';
+      return 'Fetched ${dt.day} $monthStr$yearStr$timePart';
+    }
   }
 
   // --- STATE A: SETUP PROMPT BLOCK ---
@@ -364,63 +398,90 @@ class _InvestmentLiveValuationCardState
           // Price & Total Live Value
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isMf ? 'LATEST NAV' : 'MARKET PRICE',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        hasPrice
-                            ? '₹ ${CurrencyFormatter.format(livePrice)}'
-                            : 'Fetching...',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: theme.colorScheme.onSurface,
-                        ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isMf ? 'LATEST NAV' : 'MARKET PRICE',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
-                      if (tracker.changePercent != null) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 1,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          hasPrice
+                              ? '₹ ${CurrencyFormatter.format(livePrice)}'
+                              : 'Fetching...',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.onSurface,
                           ),
-                          decoration: BoxDecoration(
-                            color: (tracker.changePercent! >= 0
+                        ),
+                        if (tracker.changePercent != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: (tracker.changePercent! >= 0
+                                      ? Colors.green.shade600
+                                      : theme.colorScheme.error)
+                                  .withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              '${tracker.changePercent! >= 0 ? '+' : ''}${tracker.changePercent!.toStringAsFixed(2)}%',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: tracker.changePercent! >= 0
                                     ? Colors.green.shade600
-                                    : theme.colorScheme.error)
-                                .withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                          child: Text(
-                            '${tracker.changePercent! >= 0 ? '+' : ''}${tracker.changePercent!.toStringAsFixed(2)}%',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: tracker.changePercent! >= 0
-                                  ? Colors.green.shade600
-                                  : theme.colorScheme.error,
+                                    : theme.colorScheme.error,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
+                    ),
+                    if (hasPrice && tracker.lastFetchedAt != null) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.schedule_rounded,
+                            size: 10,
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withOpacity(0.55),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            _formatLastFetched(tracker.lastFetchedAt!),
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [

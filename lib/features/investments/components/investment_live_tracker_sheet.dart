@@ -10,6 +10,7 @@ import '../../../core/components/modern_boxy_button.dart';
 import '../../../core/components/currency_text.dart';
 import '../../../core/components/custom_snackbars.dart';
 import '../../../core/components/confirmation_bottom_sheet.dart';
+import '../../../core/constants/date_time_constants.dart';
 import '../models/market_data_models.dart';
 import '../providers/investment_provider.dart';
 
@@ -59,6 +60,7 @@ class _InvestmentLiveTrackerSheetState
   MarketSearchResult? _selectedItem;
   double? _livePrice;
   double? _changePercent;
+  DateTime? _lastFetchedAt;
   bool _isFetchingPrice = false;
 
   @override
@@ -76,6 +78,7 @@ class _InvestmentLiveTrackerSheetState
       );
       _livePrice = existing.lastPrice;
       _changePercent = existing.changePercent;
+      _lastFetchedAt = existing.lastFetchedAt;
     } else {
       _assetType = widget.investment.type == 'Mutual Fund'
           ? 'mutual_fund'
@@ -169,8 +172,42 @@ class _InvestmentLiveTrackerSheetState
         if (quote != null) {
           _livePrice = quote.price;
           _changePercent = quote.changePercent;
+          _lastFetchedAt = DateTime.now();
         }
       });
+    }
+  }
+
+  String _formatLastFetched(DateTime dt) {
+    final now = DateTime.now();
+    final bool hasTime = dt.hour != 0 || dt.minute != 0 || dt.second != 0;
+
+    String timeStr = '';
+    if (hasTime) {
+      final int rawHour = dt.hour;
+      final String amPm = rawHour >= 12 ? 'PM' : 'AM';
+      final int displayHour =
+          rawHour == 0 ? 12 : (rawHour > 12 ? rawHour - 12 : rawHour);
+      final String minuteStr = dt.minute.toString().padLeft(2, '0');
+      timeStr = '$displayHour:$minuteStr $amPm';
+    }
+
+    final bool isToday =
+        dt.year == now.year && dt.month == now.month && dt.day == now.day;
+    final yesterday = now.subtract(const Duration(days: 1));
+    final bool isYesterday = dt.year == yesterday.year &&
+        dt.month == yesterday.month &&
+        dt.day == yesterday.day;
+
+    if (isToday) {
+      return hasTime ? 'Fetched today, $timeStr' : 'Fetched today';
+    } else if (isYesterday) {
+      return hasTime ? 'Fetched yesterday, $timeStr' : 'Fetched yesterday';
+    } else {
+      final monthStr = DateTimeConstants.shortMonths[dt.month - 1];
+      final yearStr = dt.year != now.year ? ' ${dt.year}' : '';
+      final timePart = hasTime ? ', $timeStr' : '';
+      return 'Fetched ${dt.day} $monthStr$yearStr$timePart';
     }
   }
 
@@ -203,6 +240,7 @@ class _InvestmentLiveTrackerSheetState
           quantity: qty,
           lastPrice: _livePrice,
           changePercent: _changePercent,
+          lastFetchedAt: _lastFetchedAt ?? DateTime.now(),
         );
 
     if (success && mounted) {
@@ -642,6 +680,28 @@ class _InvestmentLiveTrackerSheetState
               ],
             ],
           ),
+          if (_livePrice != null && _lastFetchedAt != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.schedule_rounded,
+                  size: 10,
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.55),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _formatLastFetched(_lastFetchedAt!),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
