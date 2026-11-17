@@ -219,7 +219,9 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         if (stagedTx.accountLast4 != null &&
             stagedTx.accountLast4!.isNotEmpty) {
           final match = rawAccounts
-              .where((a) => (a.last4 ?? '').endsWith(stagedTx.accountLast4!))
+              .where((a) =>
+                  !a.isClosed &&
+                  (a.last4 ?? '').endsWith(stagedTx.accountLast4!))
               .firstOrNull;
           if (match != null) {
             setState(() => _selectedAccountId = match.id);
@@ -231,6 +233,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         if (!foundMatch) {
           final textLower = stagedTx.rawText.toLowerCase();
           final matchesByBank = rawAccounts.where((a) {
+            if (a.isClosed) return false;
             final prov = a.providerName.toLowerCase();
             if (prov.isEmpty) return false;
             final mainBankWord = prov.split(' ').first;
@@ -260,13 +263,16 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         // 3. Ultimate Default (Prefer Asset accounts over Credit Cards to prevent random CC picks)
         if (!foundMatch) {
           final defaultAsset = rawAccounts
-              .where((a) => a.type != 'Loan' && a.type != 'Credit Cards')
+              .where((a) =>
+                  !a.isClosed &&
+                  a.type != 'Loan' &&
+                  a.type != 'Credit Cards')
               .firstOrNull;
           if (defaultAsset != null) {
             setState(() => _selectedAccountId = defaultAsset.id);
           } else {
             final defaultAny = rawAccounts
-                .where((a) => a.type != 'Loan')
+                .where((a) => !a.isClosed && a.type != 'Loan')
                 .firstOrNull;
             if (defaultAny != null) {
               setState(() => _selectedAccountId = defaultAny.id);
@@ -614,7 +620,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
   Future<void> _pickAccount(bool isToAccount, List<Account> rawAccounts) async {
     final theme = Theme.of(context);
-    List<Account> availableAccounts = List.from(rawAccounts);
+    List<Account> availableAccounts =
+        rawAccounts.where((a) => !a.isClosed).toList();
 
     if (!isToAccount) {
       availableAccounts = availableAccounts

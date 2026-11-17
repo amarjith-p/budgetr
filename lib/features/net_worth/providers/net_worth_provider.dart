@@ -62,7 +62,11 @@ final netWorthMetricsProvider = Provider<AsyncValue<NetWorthMetrics>>((ref) {
     } else if (acc.type == 'Loan' && !acc.isClosed) {
       // IMPORTANT FIX: Loan outstandings are mathematically positive in the DB.
       // We MUST subtract them here so they become negative liabilities.
-      totalLoans -= ref.watch(loanTotalOutstandingProvider(acc));
+      // Overpayment (loanDue <= 0) must not be counted as positive net worth.
+      final loanDue = ref.watch(loanTotalOutstandingProvider(acc));
+      if (loanDue > 0) {
+        totalLoans -= loanDue;
+      }
     } else if (acc.type != 'Credit Cards' && acc.type != 'Loan') {
       totalAssets += acc.balance;
     }

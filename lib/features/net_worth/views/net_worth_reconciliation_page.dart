@@ -575,7 +575,9 @@ class _NetWorthReconciliationPageState
               remainingInterest +
               remainingTax +
               remainingCharges;
-          loanOut -= totalOutstanding;
+          if (totalOutstanding > 0) {
+            loanOut -= totalOutstanding;
+          }
         } else if (acc.type == 'Credit Cards') {
           // --- FIX: Transaction-based historical CC outstanding ---
           // Mirrors creditCardMetricsProvider logic at endOfMonth to correctly

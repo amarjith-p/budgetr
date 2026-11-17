@@ -150,7 +150,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             .watch(creditCardMetricsProvider(acc))
             .totalOutstanding;
       } else if (acc.type == 'Loan' && !acc.isClosed) {
-        totalLoans += ref.watch(loanTotalOutstandingProvider(acc));
+        final loanDue = ref.watch(loanTotalOutstandingProvider(acc));
+        if (loanDue > 0) {
+          totalLoans += loanDue;
+        }
       } else if (acc.type != 'Credit Cards' && acc.type != 'Loan') {
         totalAssets += acc.balance;
         if (acc.isCreditPayable && !acc.isHidden) {

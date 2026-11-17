@@ -355,7 +355,8 @@ class _AutomationRuleFormPageState
   Future<void> _pickAccount(bool isToAccount, List<Account> rawAccounts) async {
     _closeKeyboard();
     final theme = Theme.of(context);
-    List<Account> availableAccounts = List.from(rawAccounts);
+    List<Account> availableAccounts =
+        rawAccounts.where((a) => !a.isClosed).toList();
     if (isToAccount) {
       if (_selectedAccountId != null && _selectedAccountId != 'EXTERNAL') {
         availableAccounts = availableAccounts

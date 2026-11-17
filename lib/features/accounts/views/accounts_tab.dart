@@ -104,9 +104,10 @@ class AccountsTab extends ConsumerWidget {
                 visibleCreditBalance += dues;
               }
             } else if (acc.type == 'Loan' && !acc.isClosed) {
-              final loanDue = ref.watch(
+              final rawLoanDue = ref.watch(
                 loanTotalOutstandingProvider(acc),
               );
+              final loanDue = rawLoanDue > 0 ? rawLoanDue : 0.0;
               totalLoanOutstanding += loanDue;
               if (isHiddenInAccounts) {
                 hiddenLoanOutstanding += loanDue;
@@ -129,7 +130,9 @@ class AccountsTab extends ConsumerWidget {
           for (var acc in accounts) {
             if (selectedIds.contains(acc.id) && !acc.isClosed) {
               if (acc.type == 'Loan') {
-                customTotal -= ref.watch(loanTotalOutstandingProvider(acc));
+                final rawLoanDue = ref.watch(loanTotalOutstandingProvider(acc));
+                final loanDue = rawLoanDue > 0 ? rawLoanDue : 0.0;
+                customTotal -= loanDue;
               } else if (acc.type == 'Credit Cards') {
                 customTotal += ref
                     .watch(creditCardMetricsProvider(acc))

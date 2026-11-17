@@ -72,7 +72,8 @@ class _ApproveStagedTransactionBottomSheetState
     if (widget.stagedTx.accountLast4 != null &&
         widget.stagedTx.accountLast4!.isNotEmpty) {
       final match = rawAccounts
-          .where((a) => (a.last4 ?? '').endsWith(widget.stagedTx.accountLast4!))
+          .where((a) =>
+              !a.isClosed && (a.last4 ?? '').endsWith(widget.stagedTx.accountLast4!))
           .firstOrNull;
       if (match != null) {
         setState(() => _selectedAccountId = match.id);
@@ -80,7 +81,8 @@ class _ApproveStagedTransactionBottomSheetState
       }
     }
     // Fallback: Default to first active non-loan account
-    final defaultAcc = rawAccounts.where((a) => a.type != 'Loan').firstOrNull;
+    final defaultAcc =
+        rawAccounts.where((a) => !a.isClosed && a.type != 'Loan').firstOrNull;
     if (defaultAcc != null && _selectedAccountId == null) {
       setState(() => _selectedAccountId = defaultAcc.id);
     }
@@ -292,7 +294,7 @@ class _ApproveStagedTransactionBottomSheetState
               trailing: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
               onTap: () async {
                 final names = rawAccounts
-                    .where((a) => a.type != 'Loan')
+                    .where((a) => !a.isClosed && a.type != 'Loan')
                     .map((a) => a.name)
                     .toList();
                 final res = await GlobalSelectionSheet.showSimple(
