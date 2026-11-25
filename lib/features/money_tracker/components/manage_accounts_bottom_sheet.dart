@@ -25,6 +25,11 @@ final _availableWidgets = [
   _WidgetOption('BUDGET_SIMULATOR', 'Budget Simulator', Icons.memory_rounded),
   _WidgetOption('BUDGET_SNAPSHOT', 'Budget Snapshot', Icons.analytics_rounded),
   _WidgetOption('TAG_ANALYTICS', 'Tag Insights', Icons.tag_rounded),
+  _WidgetOption(
+    'LOCATION_ANALYTICS',
+    'Location Insights',
+    Icons.location_on_rounded,
+  ),
 ];
 
 class ManageAccountsBottomSheet extends ConsumerStatefulWidget {

@@ -105,111 +105,201 @@ class MiniAccountCard extends ConsumerWidget {
                   ),
                 ),
                 child: customWidth != null
-                    // ── GRID MODE (3:1 ratio): compact 2-row layout, no overflow ──
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
+                    // ── GRID MODE (3:1.2 ratio) ──
+                    ? (!isDebtCard
+                        // Asset cards: separate rows for name & balance
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Flexible(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: fgColor.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    account.providerName.toUpperCase(),
-                                    style: TextStyle(
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.5,
-                                      color: fgColor.withOpacity(0.8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: fgColor.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        account.providerName.toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.5,
+                                          color: fgColor.withOpacity(0.8),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    cardIcon,
+                                    size: 13,
+                                    color: fgColor.withOpacity(0.5),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 6),
-                              Icon(
-                                cardIcon,
-                                size: 13,
-                                color: fgColor.withOpacity(0.5),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Expanded(
-                                flex: 6,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    FittedBox(
+                              account.name.length <= 20
+                                  ? FittedBox(
                                       fit: BoxFit.scaleDown,
                                       alignment: Alignment.centerLeft,
                                       child: Text(
                                         account.name,
                                         style: TextStyle(
-                                          fontSize: 11,
+                                          fontSize: 10.5,
                                           fontWeight: FontWeight.w500,
                                           color: fgColor,
-                                          letterSpacing: 0.2,
+                                          letterSpacing: 0.1,
                                         ),
                                       ),
-                                    ),
-                                    if (isCreditCard &&
-                                        (unbilled != 0 || billed != 0))
-                                      FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        alignment: Alignment.centerLeft,
-                                        child: Text(
-                                          'U: ${_formatSubtext(unbilled)} | B: ${_formatSubtext(billed)}',
-                                          style: TextStyle(
-                                            fontSize: 7,
-                                            fontWeight: FontWeight.w800,
-                                            color: fgColor.withOpacity(0.7),
-                                          ),
-                                        ),
+                                    )
+                                  : Text(
+                                      account.name,
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: fgColor,
+                                        letterSpacing: 0.0,
                                       ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                flex: 5,
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerRight,
-                                  child: CurrencyText(
-                                    amount: rawBalance.abs(),
-                                    sign: signText,
-                                    amountStyle: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w900,
-                                      color: fgColor,
-                                      letterSpacing: -0.5,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    symbolStyle: TextStyle(
-                                      fontSize: 9,
-                                      color: fgColor.withOpacity(0.8),
-                                    ),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: CurrencyText(
+                                  amount: rawBalance.abs(),
+                                  sign: signText,
+                                  amountStyle: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w900,
+                                    color: fgColor,
+                                    letterSpacing: -0.5,
+                                  ),
+                                  symbolStyle: TextStyle(
+                                    fontSize: 9,
+                                    color: fgColor.withOpacity(0.8),
                                   ),
                                 ),
                               ),
                             ],
-                          ),
-                        ],
-                      )
+                          )
+                        // Liability cards: compact 2-row layout to fit U/B subtext cleanly
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: fgColor.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        account.providerName.toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.5,
+                                          color: fgColor.withOpacity(0.8),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    cardIcon,
+                                    size: 13,
+                                    color: fgColor.withOpacity(0.5),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Expanded(
+                                    flex: 6,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            account.name,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                              color: fgColor,
+                                              letterSpacing: 0.2,
+                                            ),
+                                          ),
+                                        ),
+                                        if (isCreditCard &&
+                                            (unbilled != 0 || billed != 0))
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
+                                              'U: ${_formatSubtext(unbilled)} | B: ${_formatSubtext(billed)}',
+                                              style: TextStyle(
+                                                fontSize: 7,
+                                                fontWeight: FontWeight.w800,
+                                                color: fgColor.withOpacity(0.7),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    flex: 5,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerRight,
+                                      child: CurrencyText(
+                                        amount: rawBalance.abs(),
+                                        sign: signText,
+                                        amountStyle: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w900,
+                                          color: fgColor,
+                                          letterSpacing: -0.5,
+                                        ),
+                                        symbolStyle: TextStyle(
+                                          fontSize: 9,
+                                          color: fgColor.withOpacity(0.8),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ))
                     // ── CAROUSEL MODE: original side-by-side layout ──
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
