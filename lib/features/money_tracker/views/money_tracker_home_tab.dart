@@ -20,6 +20,7 @@ import '../../transactions/views/loan_transaction_page.dart';
 import '../components/mini_account_card.dart';
 import '../components/manage_accounts_bottom_sheet.dart';
 import '../components/credit_payable_bottom_sheet.dart';
+import '../providers/home_account_view_mode_provider.dart';
 import '../../analytics/components/pinned_widgets_display.dart';
 import '../../analytics/providers/pinned_widgets_provider.dart';
 
@@ -58,6 +59,8 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(accountsStreamProvider);
     final pinnedWidgets = ref.watch(pinnedWidgetsProvider);
+    final accountViewMode = ref.watch(homeAccountViewModeProvider);
+    final bool isGridView = accountViewMode == HomeAccountViewMode.grid;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -145,23 +148,59 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: _buildSummaryPill(
-                              context,
-                              drBalance,
-                              crBalance,
-                              difference,
-                              allBankAccounts,
-                              theme,
-                              hasHidden: hasHiddenInHome,
+                        child: _buildSummaryPill(
+                          context,
+                          drBalance,
+                          crBalance,
+                          difference,
+                          allBankAccounts,
+                          theme,
+                          hasHidden: hasHiddenInHome,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // View Mode Toggle Button (Carousel vs All Grid)
+                      SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            ref
+                                .read(homeAccountViewModeProvider.notifier)
+                                .toggle();
+                          },
+                          icon: Icon(
+                            isGridView
+                                ? Icons.view_carousel_rounded
+                                : Icons.grid_view_rounded,
+                            size: 18,
+                            color: isGridView
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                          tooltip: isGridView
+                              ? 'Switch to Carousel View'
+                              : 'View All Accounts',
+                          style: IconButton.styleFrom(
+                            backgroundColor: isGridView
+                                ? theme.colorScheme.primary.withOpacity(0.12)
+                                : theme.colorScheme.surface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(
+                                color: isGridView
+                                    ? theme.colorScheme.primary.withOpacity(0.4)
+                                    : theme.dividerColor,
+                                width: 1.0,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
+                      // Customize Dashboard Button
                       SizedBox(
                         width: 36,
                         height: 36,
@@ -190,27 +229,184 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (bankAccounts.isNotEmpty) ...[
-                SliverToBoxAdapter(
-                  child: _buildAccountCarousel(context, bankAccounts),
-                ),
-              ],
-              if (bankAccounts.isNotEmpty && debtAccounts.isNotEmpty) ...[
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6.0),
-                    child: Divider(
-                      indent: DesignTokens.spacingLg,
-                      endIndent: DesignTokens.spacingLg,
-                      color: theme.dividerColor.withOpacity(isDark ? 0.3 : 0.5),
-                      thickness: 1.5,
+
+              // --- MODE A: HORIZONTAL CAROUSEL VIEW (Default) ---
+              if (!isGridView) ...[
+                if (bankAccounts.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildAccountCarousel(context, bankAccounts),
+                  ),
+                ],
+                if (bankAccounts.isNotEmpty && debtAccounts.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6.0),
+                      child: Divider(
+                        indent: DesignTokens.spacingLg,
+                        endIndent: DesignTokens.spacingLg,
+                        color: theme.dividerColor.withOpacity(isDark ? 0.3 : 0.5),
+                        thickness: 1.5,
+                      ),
                     ),
                   ),
-                ),
+                ],
+                if (debtAccounts.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildAccountCarousel(context, debtAccounts),
+                  ),
+                ],
               ],
-              if (debtAccounts.isNotEmpty) ...[
-                SliverToBoxAdapter(
-                  child: _buildAccountCarousel(context, debtAccounts),
+
+              // --- MODE B: ALL ACCOUNTS GRID VIEW ---
+              if (isGridView) ...[
+                if (bankAccounts.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 6, 20, 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.account_balance_wallet_rounded,
+                                size: 14,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'ASSETS',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.0,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          CurrencyText(
+                            amount: drBalance.abs(),
+                            sign: '₹ ',
+                            amountStyle: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            symbolStyle: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DesignTokens.spacingLg,
+                    ),
+                    sliver: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 2.5,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final acc = bankAccounts[index];
+                          return MiniAccountCard(
+                            account: acc,
+                            customWidth: double.infinity,
+                            onTap: () => _navigateToAccount(context, acc),
+                          );
+                        },
+                        childCount: bankAccounts.length,
+                      ),
+                    ),
+                  ),
+                ],
+                if (debtAccounts.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.credit_card_rounded,
+                                size: 14,
+                                color: theme.colorScheme.error,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'LIABILITIES & LOANS',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.0,
+                                  color: theme.colorScheme.error,
+                                ),
+                              ),
+                            ],
+                          ),
+                          CurrencyText(
+                            amount: crBalance.abs(),
+                            sign: crBalance > 0 ? '-₹ ' : '₹ ',
+                            amountStyle: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: crBalance > 0
+                                  ? theme.colorScheme.error
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                            symbolStyle: TextStyle(
+                              fontSize: 10,
+                              color: (crBalance > 0
+                                      ? theme.colorScheme.error
+                                      : theme.colorScheme.onSurfaceVariant)
+                                  .withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DesignTokens.spacingLg,
+                    ),
+                    sliver: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 2.5,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final acc = debtAccounts[index];
+                          return MiniAccountCard(
+                            account: acc,
+                            customWidth: double.infinity,
+                            onTap: () => _navigateToAccount(context, acc),
+                          );
+                        },
+                        childCount: debtAccounts.length,
+                      ),
+                    ),
+                  ),
+                ],
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 10),
                 ),
               ],
               if (pinnedWidgets.isNotEmpty)
@@ -385,6 +581,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
     }
 
     return Container(
+      height: 36,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
@@ -403,58 +600,64 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
           borderRadius: BorderRadius.circular(8),
           onTap: () => _openPayableSheet(context, bankAccounts, crBalance),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildPillMetric(
-                  'Dr:',
-                  drBalance,
-                  theme.colorScheme.primary,
-                  theme,
-                ),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 10),
-                  height: 14,
-                  width: 1.5,
-                  color: theme.dividerColor,
-                ),
-                _buildPillMetric(
-                  'Cr:',
-                  crBalance > 0 ? -crBalance : 0.0,
-                  theme.colorScheme.error,
-                  theme,
-                ),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 10),
-                  height: 14,
-                  width: 1.5,
-                  color: theme.dividerColor,
-                ),
-                _buildPillMetric(
-                  diffLabel,
-                  difference,
-                  diffColor,
-                  theme,
-                  showPlus: difference > 0,
-                ),
-                if (hasHidden) ...[
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    height: 14,
-                    width: 1.5,
-                    color: theme.dividerColor,
-                  ),
-                  Tooltip(
-                    message: 'Some account balances are hidden',
-                    child: Icon(
-                      Icons.visibility_off_rounded,
-                      size: 13,
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.85),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildPillMetric(
+                      'Dr:',
+                      drBalance,
+                      theme.colorScheme.primary,
+                      theme,
                     ),
-                  ),
-                ],
-              ],
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 10),
+                      height: 14,
+                      width: 1.5,
+                      color: theme.dividerColor,
+                    ),
+                    _buildPillMetric(
+                      'Cr:',
+                      crBalance > 0 ? -crBalance : 0.0,
+                      theme.colorScheme.error,
+                      theme,
+                    ),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 10),
+                      height: 14,
+                      width: 1.5,
+                      color: theme.dividerColor,
+                    ),
+                    _buildPillMetric(
+                      diffLabel,
+                      difference,
+                      diffColor,
+                      theme,
+                      showPlus: difference > 0,
+                    ),
+                    if (hasHidden) ...[
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        height: 14,
+                        width: 1.5,
+                        color: theme.dividerColor,
+                      ),
+                      Tooltip(
+                        message: 'Some account balances are hidden',
+                        child: Icon(
+                          Icons.visibility_off_rounded,
+                          size: 13,
+                          color: theme.colorScheme.onSurfaceVariant
+                              .withOpacity(0.85),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
         ),

@@ -18,6 +18,7 @@ import '../../transactions/providers/transaction_filter_provider.dart';
 import '../../transactions/components/transaction_filter_bottom_sheet.dart';
 
 import '../providers/bottom_nav_provider.dart';
+import '../providers/home_account_view_mode_provider.dart';
 import 'money_tracker_home_tab.dart';
 
 import '../../custom_budgets/views/custom_budget_dashboard_page.dart';
@@ -162,6 +163,9 @@ class MoneyTrackerBasePage extends ConsumerWidget {
       bottomNavigationBar: ModernBottomNav(
         selectedIndex: currentIndex,
         onDestinationSelected: (index) {
+          if (index != 0) {
+            ref.read(homeAccountViewModeProvider.notifier).reset();
+          }
           ref.read(moneyTrackerNavProvider.notifier).state = index;
         },
         onAddPressed: () => _openTransactionForm(context),
