@@ -84,8 +84,7 @@ class TransactionCard extends ConsumerWidget {
     final parentAccount = accountsList
         .where((a) => a.id == currentAccountId)
         .firstOrNull;
-    final bool isParentLoanSettled =
-        parentAccount?.type == 'Loan' && (parentAccount?.isClosed ?? false);
+    final bool isParentAccountArchived = parentAccount?.isClosed ?? false;
 
     if (isTransfer) {
       if (tx.toAccountId == 'EXTERNAL_IN') {
@@ -210,9 +209,14 @@ class TransactionCard extends ConsumerWidget {
         isTransferToLoan && tx.accountId == currentAccountId;
 
     final VoidCallback handleClone = () {
-      if (isLinkedSourceLeg ||
+      if (isParentAccountArchived) {
+        HapticFeedback.heavyImpact();
+        CustomSnackbars.showError(
+          context,
+          message: 'Records belonging to an archived account cannot be cloned.',
+        );
+      } else if (isLinkedSourceLeg ||
           isLoanRepayment ||
-          isParentLoanSettled ||
           isSourceOfTransferToLoan) {
         HapticFeedback.heavyImpact();
         CustomSnackbars.showError(
@@ -232,9 +236,14 @@ class TransactionCard extends ConsumerWidget {
     };
 
     final VoidCallback handleSplit = () {
-      if (isLinkedSourceLeg ||
+      if (isParentAccountArchived) {
+        HapticFeedback.heavyImpact();
+        CustomSnackbars.showError(
+          context,
+          message: 'Records belonging to an archived account cannot be split.',
+        );
+      } else if (isLinkedSourceLeg ||
           isLoanRepayment ||
-          isParentLoanSettled ||
           isSourceOfTransferToLoan) {
         HapticFeedback.heavyImpact();
         CustomSnackbars.showError(
@@ -275,11 +284,11 @@ class TransactionCard extends ConsumerWidget {
           message:
               'Transfers to Loan accounts must be edited from the Loan side.',
         );
-      } else if (isParentLoanSettled) {
+      } else if (isParentAccountArchived) {
         HapticFeedback.heavyImpact();
         CustomSnackbars.showError(
           context,
-          message: 'Settled loan records cannot be edited.',
+          message: 'Archived account records cannot be edited.',
         );
       } else {
         Navigator.push(
@@ -292,11 +301,11 @@ class TransactionCard extends ConsumerWidget {
     };
 
     final VoidCallback handleDelete = () {
-      if (isParentLoanSettled) {
+      if (isParentAccountArchived) {
         HapticFeedback.heavyImpact();
         CustomSnackbars.showError(
           context,
-          message: 'Settled loan records cannot be deleted.',
+          message: 'Archived account records cannot be deleted.',
         );
       } else {
         ConfirmationBottomSheet.show(

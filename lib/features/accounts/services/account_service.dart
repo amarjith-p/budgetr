@@ -138,14 +138,23 @@ class AccountService {
     });
   }
 
-  // --- SETTLE LOAN ACTION ---
-  Future<bool> settleLoan(String accountId) async {
+  // --- ARCHIVE / UNARCHIVE ACCOUNT ACTION ---
+  Future<bool> toggleArchiveAccount(String accountId, bool isClosed) async {
     try {
       await (_db.update(_db.accounts)..where((a) => a.id.equals(accountId)))
-          .write(const AccountsCompanion(isClosed: Value(true)));
+          .write(AccountsCompanion(
+            isClosed: Value(isClosed),
+            isCreditPayable:
+                isClosed ? const Value(false) : const Value.absent(),
+          ));
       return true;
     } catch (e) {
       return false;
     }
+  }
+
+  // --- SETTLE LOAN ACTION (Convenience alias) ---
+  Future<bool> settleLoan(String accountId) async {
+    return toggleArchiveAccount(accountId, true);
   }
 }

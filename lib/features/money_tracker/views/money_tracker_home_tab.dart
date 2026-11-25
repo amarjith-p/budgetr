@@ -68,8 +68,9 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
             const Center(child: FuturisticLoader(size: 80, label: "LOADING..")),
         error: (e, st) => Center(child: Text('Error: $e')),
         data: (accounts) {
-          // --- VISUAL UI LISTS (Ignores hidden accounts) ---
-          final visibleAccounts = accounts.where((a) => !a.isHidden).toList();
+          // --- VISUAL UI LISTS (Ignores hidden and archived accounts) ---
+          final visibleAccounts =
+              accounts.where((a) => !a.isHidden && !a.isClosed).toList();
           final bankAccounts = visibleAccounts
               .where((a) => a.type != 'Credit Cards' && a.type != 'Loan')
               .toList();
@@ -77,7 +78,7 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
               .where((a) => a.type == 'Credit Cards')
               .toList();
           final loans = visibleAccounts
-              .where((a) => a.type == 'Loan' && !a.isClosed)
+              .where((a) => a.type == 'Loan')
               .toList();
 
           final allBankAccounts = accounts
@@ -93,11 +94,11 @@ class MoneyTrackerHomeTab extends ConsumerWidget {
           double allocatedFunds = 0.0;
 
           final bool hasHiddenInHome = accounts.any(
-            (a) => a.hideBalanceInHome && (!a.isClosed || a.type == 'Loan'),
+            (a) => a.hideBalanceInHome && !a.isClosed,
           );
 
           for (var acc in accounts) {
-            if (acc.isClosed && acc.type != 'Loan') continue;
+            if (acc.isClosed) continue;
             if (acc.hideBalanceInHome) continue;
 
             if (acc.type == 'Credit Cards') {

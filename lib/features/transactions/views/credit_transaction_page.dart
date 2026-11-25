@@ -211,7 +211,9 @@ class CreditTransactionPage extends ConsumerWidget {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: ModernAppBar(
         title: liveAccount.providerName.toUpperCase(),
-        subtitle: liveAccount.name.toUpperCase(),
+        subtitle: liveAccount.isClosed
+            ? '${liveAccount.name.toUpperCase()} (ARCHIVED)'
+            : liveAccount.name.toUpperCase(),
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.pop(context),
         trailingIcon: filterState.isActive
@@ -222,7 +224,9 @@ class CreditTransactionPage extends ConsumerWidget {
           TransactionFilterBottomSheet.show(context, liveAccount.id, txList);
         },
       ),
-      floatingActionButton: ModernSquircleFab(
+      floatingActionButton: liveAccount.isClosed
+          ? null
+          : ModernSquircleFab(
         onPressed: () {
           Navigator.push(
             context,

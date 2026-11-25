@@ -149,16 +149,20 @@ class AccountActionNotifier extends AsyncNotifier<void> {
     await AsyncValue.guard(() => _service.reorderAccounts(updatedAccounts));
   }
 
-  Future<bool> settleLoan(String accountId) async {
+  Future<bool> toggleArchiveAccount(String accountId, bool isClosed) async {
     state = const AsyncLoading();
     try {
-      final success = await _service.settleLoan(accountId);
+      final success = await _service.toggleArchiveAccount(accountId, isClosed);
       state = const AsyncData(null);
       return success;
     } catch (e, st) {
       state = AsyncError(e, st);
       return false;
     }
+  }
+
+  Future<bool> settleLoan(String accountId) async {
+    return toggleArchiveAccount(accountId, true);
   }
 }
 

@@ -11,6 +11,8 @@ class BoxySlidableCard extends StatelessWidget {
   final VoidCallback? onVisibility;
   final VoidCallback? onSplit;
   final VoidCallback? onSettle;
+  final VoidCallback? onArchive;
+  final VoidCallback? onUnarchive;
   final VoidCallback? onDelete;
   final EdgeInsetsGeometry margin;
   final BorderRadius? customBorderRadius;
@@ -25,6 +27,8 @@ class BoxySlidableCard extends StatelessWidget {
     this.onVisibility,
     this.onSplit,
     this.onSettle,
+    this.onArchive,
+    this.onUnarchive,
     this.onDelete,
     this.margin = const EdgeInsets.only(bottom: DesignTokens.spacingMd),
     this.customBorderRadius,
@@ -47,7 +51,9 @@ class BoxySlidableCard extends StatelessWidget {
     int endActionCount =
         (onDelete != null ? 1 : 0) +
         (onSplit != null ? 1 : 0) +
-        (onSettle != null ? 1 : 0);
+        (onSettle != null ? 1 : 0) +
+        (onArchive != null ? 1 : 0) +
+        (onUnarchive != null ? 1 : 0);
     double endExtent = endActionCount * 0.25;
 
     return Padding(
@@ -234,7 +240,7 @@ class BoxySlidableCard extends StatelessWidget {
                 motion: const DrawerMotion(),
                 extentRatio: endExtent,
                 children: [
-                  if (onSettle != null)
+                   if (onSettle != null)
                     CustomSlidableAction(
                       onPressed: (_) => onSettle!(),
                       backgroundColor: Colors.transparent,
@@ -260,6 +266,78 @@ class BoxySlidableCard extends StatelessWidget {
                             SizedBox(height: 4),
                             Text(
                               'Settle',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  if (onArchive != null)
+                    CustomSlidableAction(
+                      onPressed: (_) => onArchive!(),
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.zero,
+                      child: Container(
+                        margin: const EdgeInsets.only(
+                          left: DesignTokens.spacingSm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade800,
+                          borderRadius: activeRadius,
+                          border: Border.all(
+                            color: Colors.amber.shade900.withOpacity(0.5),
+                            width: 1.2,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.archive_outlined),
+                            SizedBox(height: 4),
+                            Text(
+                              'Archive',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  if (onUnarchive != null)
+                    CustomSlidableAction(
+                      onPressed: (_) => onUnarchive!(),
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.zero,
+                      child: Container(
+                        margin: const EdgeInsets.only(
+                          left: DesignTokens.spacingSm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.shade700,
+                          borderRadius: activeRadius,
+                          border: Border.all(
+                            color: Colors.teal.shade900.withOpacity(0.5),
+                            width: 1.2,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.unarchive_outlined),
+                            SizedBox(height: 4),
+                            Text(
+                              'Unarchive',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,

@@ -54,6 +54,8 @@ final netWorthMetricsProvider = Provider<AsyncValue<NetWorthMetrics>>((ref) {
   double totalLoans = 0.0;
 
   for (var acc in accounts) {
+    if (acc.isClosed) continue;
+
     if (acc.type == 'Credit Cards') {
       // Credit card provider naturally returns a negative value when you owe money
       totalCreditCards += ref

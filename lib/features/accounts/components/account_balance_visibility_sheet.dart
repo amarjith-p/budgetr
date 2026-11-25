@@ -114,11 +114,14 @@ class _AccountBalanceVisibilitySheetState
       final metrics = ref.watch(creditCardMetricsProvider(widget.account));
       displayBalance = metrics.totalOutstanding;
       signText = displayBalance < 0 ? '-₹ ' : (displayBalance > 0 ? '+₹ ' : '₹ ');
-      labelText = displayBalance < 0
-          ? 'TOTAL OUTSTANDING'
-          : (displayBalance > 0 ? 'SURPLUS' : 'OUTSTANDING BALANCE');
+      labelText = isSettled
+          ? 'ARCHIVED CARD'
+          : (displayBalance < 0
+              ? 'TOTAL OUTSTANDING'
+              : (displayBalance > 0 ? 'SURPLUS' : 'OUTSTANDING BALANCE'));
     } else {
       signText = displayBalance < 0 ? '-₹ ' : '₹ ';
+      labelText = isSettled ? 'ARCHIVED ACCOUNT' : 'CURRENT BALANCE';
     }
 
     Color balanceColor = theme.colorScheme.onSurface;

@@ -142,7 +142,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     double allocatedFunds = 0.0;
 
     for (var acc in rawAccounts) {
-      if (acc.isClosed && acc.type != 'Loan') continue;
+      if (acc.isClosed) continue;
       if (acc.hideBalanceInDashboard) continue;
 
       if (acc.type == 'Credit Cards') {
@@ -574,8 +574,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                                     ),
                                                     if (rawAccounts.any((a) =>
                                                         a.hideBalanceInDashboard &&
-                                                        (!a.isClosed ||
-                                                            a.type == 'Loan'))) ...[
+                                                        !a.isClosed)) ...[
                                                       const SizedBox(width: 4),
                                                       const Icon(
                                                         Icons.visibility_off_rounded,

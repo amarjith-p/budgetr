@@ -284,7 +284,9 @@ class _CustomBudgetFormSheetState extends ConsumerState<CustomBudgetFormSheet> {
 
   void _showAccountPicker() async {
     _closeCalculatorSafely();
-    final accounts = ref.read(accountsStreamProvider).asData?.value ?? [];
+    final accounts = (ref.read(accountsStreamProvider).asData?.value ?? [])
+        .where((a) => !a.isClosed)
+        .toList();
     
     final items = ['None', ...accounts.map((a) => a.name)];
     

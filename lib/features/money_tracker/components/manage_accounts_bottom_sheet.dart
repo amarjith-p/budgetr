@@ -51,14 +51,15 @@ class _ManageAccountsBottomSheetState
     super.initState();
 
     _draftBanks = widget.allAccounts
-        .where((a) => a.type != 'Credit Cards' && a.type != 'Loan')
+        .where((a) =>
+            a.type != 'Credit Cards' && a.type != 'Loan' && !a.isClosed)
         .toList();
     _draftBanks.sort(
       (a, b) => (a.displayOrder ?? 0).compareTo(b.displayOrder ?? 0),
     );
 
     _draftCards = widget.allAccounts
-        .where((a) => a.type == 'Credit Cards')
+        .where((a) => a.type == 'Credit Cards' && !a.isClosed)
         .toList();
     _draftCards.sort(
       (a, b) => (a.displayOrder ?? 0).compareTo(b.displayOrder ?? 0),

@@ -27,6 +27,8 @@ final selectionModeProvider = StateProvider.autoDispose<bool>((ref) => false);
 final selectedAccountsProvider = StateProvider.autoDispose<Set<String>>(
   (ref) => <String>{},
 );
+final archivedAccountsExpandedProvider =
+    StateProvider.autoDispose<bool>((ref) => false);
 
 class AccountsTab extends ConsumerWidget {
   const AccountsTab({Key? key}) : super(key: key);
@@ -48,6 +50,7 @@ class AccountsTab extends ConsumerWidget {
     final theme = Theme.of(context);
     final isSelectionMode = ref.watch(selectionModeProvider);
     final selectedIds = ref.watch(selectedAccountsProvider);
+    final isArchivedExpanded = ref.watch(archivedAccountsExpandedProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -59,16 +62,17 @@ class AccountsTab extends ConsumerWidget {
         data: (accounts) {
           // --- VISUAL UI LISTS ---
           final creditCards = accounts
-              .where((a) => a.type == 'Credit Cards')
+              .where((a) => a.type == 'Credit Cards' && !a.isClosed)
               .toList();
           final bankAccounts = accounts
-              .where((a) => a.type != 'Credit Cards' && a.type != 'Loan')
+              .where((a) =>
+                  a.type != 'Credit Cards' && a.type != 'Loan' && !a.isClosed)
               .toList();
           final activeLoans = accounts
               .where((a) => a.type == 'Loan' && !a.isClosed)
               .toList();
-          final settledLoans = accounts
-              .where((a) => a.type == 'Loan' && a.isClosed)
+          final archivedAccounts = accounts
+              .where((a) => a.isClosed)
               .toList();
 
           // --- FIX 3: UNIVERSAL MATH STANDARD & BALANCE PRIVACY ---
@@ -88,7 +92,7 @@ class AccountsTab extends ConsumerWidget {
           int hiddenCount = 0;
 
           for (var acc in accounts) {
-            if (acc.isClosed && acc.type != 'Loan') continue;
+            if (acc.isClosed) continue;
 
             final isHiddenInAccounts = acc.hideBalanceInAccounts;
             if (isHiddenInAccounts) hiddenCount++;
@@ -218,22 +222,125 @@ class AccountsTab extends ConsumerWidget {
                   isLoan: true,
                 ),
               ],
-              if (settledLoans.isNotEmpty) ...[
-                _buildSectionHeader(context, 'SETTLED LOANS', 0.0),
-                _buildList(
+              if (archivedAccounts.isNotEmpty) ...[
+                _buildArchivedSectionHeader(
                   context,
                   ref,
-                  settledLoans,
-                  isSelectionMode,
-                  selectedIds,
-                  isLoan: true,
-                  isSettled: true,
+                  archivedAccounts.length,
+                  isArchivedExpanded,
                 ),
+                if (isArchivedExpanded)
+                  _buildList(
+                    context,
+                    ref,
+                    archivedAccounts,
+                    isSelectionMode,
+                    selectedIds,
+                    isSettled: true,
+                  ),
               ],
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildArchivedSectionHeader(
+    BuildContext context,
+    WidgetRef ref,
+    int count,
+    bool isExpanded,
+  ) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DesignTokens.spacingLg,
+          DesignTokens.spacingLg,
+          DesignTokens.spacingLg,
+          DesignTokens.spacingSm,
+        ),
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            ref.read(archivedAccountsExpandedProvider.notifier).state =
+                !isExpanded;
+          },
+          borderRadius: BorderRadius.circular(8.0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withOpacity(
+                isDark ? 0.3 : 0.45,
+              ),
+              borderRadius: BorderRadius.circular(8.0),
+              border: Border.all(
+                color: theme.dividerColor.withOpacity(0.35),
+                width: 1.0,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.archive_outlined,
+                  size: 16,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'ARCHIVED ACCOUNTS',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  isExpanded ? 'Hide' : 'Show',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                AnimatedRotation(
+                  turns: isExpanded ? 0.5 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -327,7 +434,7 @@ class AccountsTab extends ConsumerWidget {
               }
               ref.read(selectedAccountsProvider.notifier).state = newIds;
             } else if (!isSelectionMode) {
-              if (isLoan) {
+              if (acc.type == 'Loan') {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -358,21 +465,40 @@ class AccountsTab extends ConsumerWidget {
             onEdit: (isSelectionMode || isSettled)
                 ? null
                 : () => _openForm(context, existingAccount: acc),
-            onVisibility: isSelectionMode
+            onVisibility: (isSelectionMode || isSettled)
                 ? null
                 : () => AccountBalanceVisibilitySheet.show(context, acc),
-            onSettle: (isSelectionMode || !isLoan || isSettled)
+            onArchive: (isSelectionMode || isSettled)
+                ? null
+                : () {
+                    final bool isAccountLoan = acc.type == 'Loan';
+                    ConfirmationBottomSheet.show(
+                      context,
+                      title: isAccountLoan
+                          ? 'Settle & Archive Loan?'
+                          : 'Archive Account?',
+                      description: isAccountLoan
+                          ? 'This will mark ${acc.name} as settled and archived. It will be removed from your dashboard and fresh transactions, but all historical records and analytics will be preserved. Proceed?'
+                          : 'Are you sure you want to archive ${acc.name}? It will be hidden from new transactions, but all historical records and analytics will be preserved.',
+                      confirmText:
+                          isAccountLoan ? 'SETTLE & ARCHIVE' : 'ARCHIVE',
+                      onConfirm: () => ref
+                          .read(accountActionProvider.notifier)
+                          .toggleArchiveAccount(acc.id, true),
+                    );
+                  },
+            onUnarchive: (isSelectionMode || !isSettled)
                 ? null
                 : () {
                     ConfirmationBottomSheet.show(
                       context,
-                      title: 'Settle Loan?',
+                      title: 'Unarchive Account?',
                       description:
-                          'This will permanently mark the loan as settled, remove it from your dashboard, and lock it to read-only mode. Proceed?',
-                      confirmText: 'SETTLE',
+                          'Restore ${acc.name} to active accounts? It will be available for fresh transactions again.',
+                      confirmText: 'UNARCHIVE',
                       onConfirm: () => ref
                           .read(accountActionProvider.notifier)
-                          .settleLoan(acc.id),
+                          .toggleArchiveAccount(acc.id, false),
                     );
                   },
             onDelete: isSelectionMode

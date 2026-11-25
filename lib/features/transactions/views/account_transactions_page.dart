@@ -41,7 +41,9 @@ class AccountTransactionsPage extends ConsumerWidget {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: ModernAppBar(
         title: liveAccount.providerName.toUpperCase(),
-        subtitle: liveAccount.name.toUpperCase(),
+        subtitle: liveAccount.isClosed
+            ? '${liveAccount.name.toUpperCase()} (ARCHIVED)'
+            : liveAccount.name.toUpperCase(),
         leadingIcon: Icons.arrow_back_rounded,
         onLeadingPressed: () => Navigator.pop(context),
 
@@ -53,7 +55,9 @@ class AccountTransactionsPage extends ConsumerWidget {
           TransactionFilterBottomSheet.show(context, liveAccount.id, txList);
         },
       ),
-      floatingActionButton: ModernSquircleFab(
+      floatingActionButton: liveAccount.isClosed
+          ? null
+          : ModernSquircleFab(
         onPressed: () {
           Navigator.push(
             context,

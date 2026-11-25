@@ -122,11 +122,14 @@ class _PremiumAccountCardState extends ConsumerState<PremiumAccountCard>
           : (rawBalance <= 0 ? 'CLEARED / SURPLUS' : 'TOTAL OUTSTANDING');
     } else if (isCreditCard) {
       signText = rawBalance < 0 ? '-₹ ' : (rawBalance > 0 ? '+₹ ' : '₹ ');
-      labelText = rawBalance < 0
-          ? 'TOTAL OUTSTANDING'
-          : (rawBalance > 0 ? 'SURPLUS' : 'OUTSTANDING BALANCE');
+      labelText = isSettled
+          ? 'ARCHIVED CARD'
+          : (rawBalance < 0
+              ? 'TOTAL OUTSTANDING'
+              : (rawBalance > 0 ? 'SURPLUS' : 'OUTSTANDING BALANCE'));
     } else {
       signText = rawBalance < 0 ? '-₹ ' : '₹ ';
+      labelText = isSettled ? 'ARCHIVED ACCOUNT' : 'CURRENT BALANCE';
     }
 
     return AnimatedBuilder(
