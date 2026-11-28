@@ -14,6 +14,7 @@ import 'features/notifications/providers/notification_provider.dart';
 import 'features/automation/providers/automation_provider.dart';
 
 import 'core/database/database_provider.dart';
+import 'features/category_manager/providers/category_provider.dart';
 import 'features/transactions/views/transaction_form_page.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -55,6 +56,9 @@ class _BudgetrAppState extends ConsumerState<BudgetrApp>
         ref
             .read(smartInboxActionProvider.notifier)
             .requestPermissionsAndListen();
+
+        // Ensure category defaults & orphaned transaction links are healed on launch
+        ref.read(categoryServiceProvider);
 
         // Sync widget on fresh launch
         HomeWidgetSyncService.syncBudget(ref.read(databaseProvider));

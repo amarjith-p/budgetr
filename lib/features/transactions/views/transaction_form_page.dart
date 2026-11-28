@@ -2109,9 +2109,17 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final activeCategories = rawCategories
         .where((c) => c.type == _types[_typeIndex])
         .toList();
-    final selectedCatMatch = rawCategories
-        .where((c) => c.id == _selectedCategoryId)
-        .firstOrNull;
+    final selectedCatMatch =
+        rawCategories.where((c) => c.id == _selectedCategoryId).firstOrNull ??
+        (_historicalCategoryName != null
+            ? activeCategories
+                  .where(
+                    (c) =>
+                        c.name.trim().toLowerCase() ==
+                        _historicalCategoryName!.trim().toLowerCase(),
+                  )
+                  .firstOrNull
+            : null);
     final activeSubCategories = selectedCatMatch?.subCategories ?? [];
 
     final selectedAccMatch = rawAccounts

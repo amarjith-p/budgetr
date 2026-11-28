@@ -22,15 +22,107 @@ class _CategoryManagerPageState extends ConsumerState<CategoryManagerPage> {
   final List<String> _tabs = ['Expense', 'Income'];
 
   void _handleReset(BuildContext context) {
-    ConfirmationBottomSheet.show(
-      context,
-      title: 'Reset to Defaults?',
-      description: 'This will delete all custom categories and restore system defaults. This action cannot be undone.',
-      confirmText: 'RESET',
-      isDestructive: true,
-      onConfirm: () {
-        ref.read(categoryActionProvider.notifier).resetToDefaults();
-      },
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      context: context,
+      shape: DesignTokens.bottomSheetShape,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: theme.dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Restore Categories',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Restores system defaults and automatically re-links any legacy transactions without breaking logged history.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: theme.colorScheme.primary.withOpacity(0.35),
+                  ),
+                ),
+                leading: Icon(
+                  Icons.restore_rounded,
+                  color: theme.colorScheme.primary,
+                ),
+                title: const Text(
+                  'Restore Defaults (Keep Custom)',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                subtitle: const Text(
+                  'Recommended • Keeps all custom categories & links',
+                  style: TextStyle(fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ref
+                      .read(categoryActionProvider.notifier)
+                      .resetToDefaults(keepCustomCategories: true);
+                },
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: theme.dividerColor),
+                ),
+                leading: Icon(
+                  Icons.cleaning_services_rounded,
+                  color: theme.colorScheme.error,
+                ),
+                title: const Text(
+                  'Reset & Clean Unused Custom',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                subtitle: const Text(
+                  'Removes unused custom categories; keeps ones used in transactions',
+                  style: TextStyle(fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ConfirmationBottomSheet.show(
+                    context,
+                    title: 'Reset & Clean Unused?',
+                    description:
+                        'Restores system defaults and removes custom categories that have no logged transactions. Categories in use will be preserved.',
+                    confirmText: 'RESET',
+                    isDestructive: true,
+                    onConfirm: () {
+                      ref
+                          .read(categoryActionProvider.notifier)
+                          .resetToDefaults(keepCustomCategories: false);
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

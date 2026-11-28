@@ -1,15 +1,10 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/database/app_database.dart';
+import '../../../core/database/database_provider.dart';
 import '../../../core/database/services/category_service.dart';
 import '../../../core/models/transaction_category_model.dart';
 
-// 1. Create a provider for the AppDatabase (Dependency Injection)
-final databaseProvider = Provider<AppDatabase>((ref) {
-  return AppDatabase(); 
-});
-
-// 2. Inject the database into the CategoryService
+// 1. Inject the shared database into the CategoryService
 final categoryServiceProvider = Provider<CategoryService>((ref) {
   final db = ref.watch(databaseProvider);
   return CategoryService(db);
@@ -30,9 +25,11 @@ class CategoryActionNotifier extends AsyncNotifier<void> {
     _service = ref.watch(categoryServiceProvider);
   }
 
-  Future<void> resetToDefaults() async {
+  Future<void> resetToDefaults({bool keepCustomCategories = true}) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _service.resetToDefaults());
+    state = await AsyncValue.guard(
+      () => _service.resetToDefaults(keepCustomCategories: keepCustomCategories),
+    );
   }
 
   Future<void> deleteCategory(String id) async {

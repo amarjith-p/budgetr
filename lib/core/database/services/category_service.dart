@@ -374,7 +374,7 @@ class CategoryService {
   };
 
   /// INITIALIZE SERVICE (Run once on startup)
-  /// Checks for data and seeds if empty
+  /// Checks for data, seeds if empty, and heals any orphaned category links
   Future<void> init() async {
     final countExp = _db.transactionCategories.id.count();
     final count =
@@ -387,6 +387,7 @@ class CategoryService {
     if (count == 0) {
       await _seedDefaults();
     }
+    await relinkOrphanedTransactions();
   }
 
   /// Fetches categories - Pure stream, no side effects
@@ -455,12 +456,128 @@ class CategoryService {
     });
   }
 
-  /// FACTORY RESET: Deletes ALL categories and re-seeds defaults
-  Future<void> resetToDefaults() async {
+  /// NON-DESTRUCTIVE RESET: Restores system defaults while preserving existing
+  /// category IDs and logged transaction links.
+  Future<void> resetToDefaults({bool keepCustomCategories = true}) async {
     await _db.transaction(() async {
-      await _db.delete(_db.transactionCategories).go();
-      await _seedDefaults();
+      final existingRows = await _db.select(_db.transactionCategories).get();
+      final Map<String, db.TransactionCategory> existingByKey = {
+        for (final row in existingRows)
+          '${row.name.trim().toLowerCase()}|${row.type.toLowerCase()}': row,
+      };
+
+      final Set<String> defaultKeys = {};
+
+      Future<void> upsertDefaults(
+        Map<String, dynamic> source,
+        String type,
+      ) async {
+        for (final entry in source.entries) {
+          final name = entry.key;
+          final value = entry.value as Map<String, dynamic>;
+          final key = '${name.trim().toLowerCase()}|${type.toLowerCase()}';
+          defaultKeys.add(key);
+
+          final encodedSubs = jsonEncode(value['subs']);
+          final iconCode = value['icon'] as int;
+          final existing = existingByKey[key];
+
+          if (existing != null) {
+            await (_db.update(
+              _db.transactionCategories,
+            )..where((t) => t.id.equals(existing.id))).write(
+              db.TransactionCategoriesCompanion(
+                name: Value(name),
+                type: Value(type),
+                subCategories: Value(encodedSubs),
+                iconCode: Value(iconCode),
+              ),
+            );
+          } else {
+            await _db
+                .into(_db.transactionCategories)
+                .insert(
+                  db.TransactionCategoriesCompanion.insert(
+                    id: _uuid.v4(),
+                    name: name,
+                    type: type,
+                    subCategories: encodedSubs,
+                    iconCode: iconCode,
+                  ),
+                );
+          }
+        }
+      }
+
+      await upsertDefaults(_defaultExpense, 'Expense');
+      await upsertDefaults(_defaultIncome, 'Income');
+
+      if (!keepCustomCategories) {
+        final txs = await (_db.select(
+          _db.transactions,
+        )..where((t) => t.categoryId.isNotNull())).get();
+        final referencedIds = txs
+            .map((t) => t.categoryId)
+            .whereType<String>()
+            .toSet();
+
+        for (final row in existingRows) {
+          final key =
+              '${row.name.trim().toLowerCase()}|${row.type.toLowerCase()}';
+          if (!defaultKeys.contains(key) && !referencedIds.contains(row.id)) {
+            await (_db.delete(
+              _db.transactionCategories,
+            )..where((t) => t.id.equals(row.id))).go();
+          }
+        }
+      }
+
+      await relinkOrphanedTransactions();
     });
+  }
+
+  /// Re-links transactions whose categoryId is missing from TransactionCategories
+  /// by matching their snapshot (categoryName, type) to active categories.
+  Future<int> relinkOrphanedTransactions() async {
+    final categories = await _db.select(_db.transactionCategories).get();
+    if (categories.isEmpty) return 0;
+
+    final validIds = categories.map((c) => c.id).toSet();
+    final Map<String, db.TransactionCategory> byKey = {
+      for (final c in categories)
+        '${c.name.trim().toLowerCase()}|${c.type.toLowerCase()}': c,
+    };
+
+    final txs = await (_db.select(
+      _db.transactions,
+    )..where((t) => t.categoryName.isNotNull())).get();
+
+    int relinked = 0;
+    await _db.batch((batch) {
+      for (final tx in txs) {
+        if (tx.type != 'Expense' && tx.type != 'Income') continue;
+        final hasValidId =
+            tx.categoryId != null && validIds.contains(tx.categoryId);
+        if (hasValidId) continue;
+
+        final catName = tx.categoryName?.trim();
+        if (catName == null || catName.isEmpty) continue;
+
+        final match = byKey['${catName.toLowerCase()}|${tx.type.toLowerCase()}'];
+        if (match != null) {
+          batch.update(
+            _db.transactions,
+            db.TransactionsCompanion(
+              categoryId: Value(match.id),
+              categoryIcon: Value(tx.categoryIcon ?? match.iconCode),
+            ),
+            where: (t) => t.id.equals(tx.id),
+          );
+          relinked++;
+        }
+      }
+    });
+    return relinked;
   }
 
   Future<void> addCategory(
@@ -480,6 +597,7 @@ class CategoryService {
             iconCode: iconCode, // FIXED: Removed Value()
           ),
         );
+    await relinkOrphanedTransactions();
   }
 
   Future<void> updateCategory(TransactionCategoryModel category) async {
