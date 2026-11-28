@@ -4,43 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/design_tokens.dart';
 import '../../../core/components/currency_text.dart';
 import '../../../core/constants/date_time_constants.dart';
 import '../../../core/database/app_database.dart';
 import '../../accounts/providers/account_provider.dart';
-import '../../transactions/providers/transaction_provider.dart';
 import '../../accounts/providers/credit_math_provider.dart';
 
 extension _CreditTrackerAccountExt on Account {
   int get trackBillingDay => billDate ?? 15;
   int get trackDueDay => dueDate ?? 5;
-
-  DateTime getTrackEffectiveDate(TransactionRecord tx) {
-    if (tx.isSpillover) {
-      final bDay = trackBillingDay;
-      DateTime nextBillDate = DateTime(
-        tx.date.year,
-        tx.date.month,
-        bDay,
-        23,
-        59,
-        59,
-      );
-      if (tx.date.day > bDay) {
-        nextBillDate = DateTime(
-          tx.date.year,
-          tx.date.month + 1,
-          bDay,
-          23,
-          59,
-          59,
-        );
-      }
-      return nextBillDate.add(const Duration(days: 1));
-    }
-    return tx.date;
-  }
 }
 
 enum _SheetContext { billed, overdue, unbilled, paid }
@@ -168,7 +140,7 @@ class CreditTrackerWidget extends ConsumerWidget {
                               final amountSign = c.total < -0.01 ? '-₹ ' : '₹ ';
                               final billedSign = c.billed < -0.01
                                   ? '-₹ '
-                                  : '₹ ';
+                                  : (c.billed > 0.01 ? '+₹ ' : '₹ ');
                               final unbilledSign = c.unbilled < -0.01
                                   ? '-₹ '
                                   : '₹ ';
@@ -211,9 +183,16 @@ class CreditTrackerWidget extends ConsumerWidget {
                                 relevantDueDate = c.currentDueDate;
                                 daysDiff = c.daysUntilDue;
 
-                                // --- FIX: Check paid context FIRST before overdue/negative day checks ---
+                                // --- FIX: Check paid & excess credit contexts FIRST before overdue/negative day checks ---
                                 if (sheetContext == _SheetContext.paid) {
-                                  counterText = 'PAID IN FULL';
+                                  counterText = c.billed > 0.01
+                                      ? 'PAID (EXCESS CREDIT)'
+                                      : 'PAID IN FULL';
+                                  counterColor = Colors.green;
+                                  showCounter = true;
+                                } else if (c.billed > 0.01 &&
+                                    sheetContext == _SheetContext.billed) {
+                                  counterText = 'EXCESS / CREDIT';
                                   counterColor = Colors.green;
                                   showCounter = true;
                                 } else if (sheetContext ==
@@ -331,7 +310,9 @@ class CreditTrackerWidget extends ConsumerWidget {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                'BILLED BALANCE',
+                                                c.billed > 0.01
+                                                    ? 'BILLED CREDIT'
+                                                    : 'BILLED BALANCE',
                                                 style: TextStyle(
                                                   fontSize: 8,
                                                   fontWeight: FontWeight.w800,
@@ -350,15 +331,16 @@ class CreditTrackerWidget extends ConsumerWidget {
                                                   amountStyle: TextStyle(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w800,
-                                                    color:
-                                                        c.billed < -0.01 &&
-                                                            sheetContext !=
-                                                                _SheetContext
-                                                                    .unbilled
-                                                        ? themeColor
-                                                        : theme
-                                                              .colorScheme
-                                                              .onSurface,
+                                                    color: c.billed > 0.01
+                                                        ? Colors.green
+                                                        : (c.billed < -0.01 &&
+                                                                  sheetContext !=
+                                                                      _SheetContext
+                                                                          .unbilled
+                                                              ? themeColor
+                                                              : theme
+                                                                    .colorScheme
+                                                                    .onSurface),
                                                   ),
                                                   symbolStyle: TextStyle(
                                                     fontSize: 10,
@@ -626,7 +608,6 @@ class CreditTrackerWidget extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     final accountsAsync = ref.watch(accountsStreamProvider);
-    final transactionsAsync = ref.watch(allTransactionsProvider);
 
     return accountsAsync.when(
       loading: () => const SizedBox(
@@ -638,18 +619,6 @@ class CreditTrackerWidget extends ConsumerWidget {
         child: Center(child: Text('Error loading credit data')),
       ),
       data: (accounts) {
-        return transactionsAsync.when(
-          loading: () => const SizedBox(
-            height: 200,
-            child: Center(
-              child: FuturisticLoader(size: 80, label: "LOADING.."),
-            ),
-          ),
-          error: (e, st) => const SizedBox(
-            height: 200,
-            child: Center(child: Text('Error loading transactions')),
-          ),
-          data: (transactions) {
             final creditAccounts = accounts
                 .where((a) => a.type == 'Credit Cards')
                 .toList();
@@ -749,28 +718,6 @@ class CreditTrackerWidget extends ConsumerWidget {
               globalBilled += billed;
               globalUnbilled += unbilled;
 
-              double historicalNet = 0.0;
-              final accTxs = transactions.where(
-                (t) =>
-                    t.transaction.accountId == acc.id ||
-                    t.transaction.toAccountId == acc.id,
-              );
-              for (var txData in accTxs) {
-                final t = txData.transaction;
-                bool isExpense =
-                    t.type == 'Expense' ||
-                    (t.type == 'Transfer' && t.accountId == acc.id);
-                bool isPayment =
-                    t.type == 'Income' ||
-                    (t.type == 'Transfer' && t.toAccountId == acc.id);
-                double netAmt = isExpense
-                    ? -t.amount
-                    : (isPayment ? t.amount : 0.0);
-                if (!acc.getTrackEffectiveDate(t).isAfter(lastStatementDate)) {
-                  historicalNet += netAmt;
-                }
-              }
-
               statuses.add(
                 _CardStatusData(
                   account: acc,
@@ -782,12 +729,22 @@ class CreditTrackerWidget extends ConsumerWidget {
                   daysUntilDue: daysUntilDue,
                   nextStatementDate: nextStatementDate,
                   nextDueDate: nextDueDate,
-                  historicalNet: historicalNet,
+                  historicalNet: metrics.historicalNet,
                 ),
               );
             }
 
             final totalOutstanding = globalBilled + globalUnbilled;
+
+            double actualBilledDue = 0.0;
+            double billedExcess = 0.0;
+            for (final c in statuses) {
+              if (c.billed < -0.01) {
+                actualBilledDue += c.billed;
+              } else if (c.billed > 0.01) {
+                billedExcess += c.billed;
+              }
+            }
 
             final billedCards = statuses
                 .where((c) => c.billed < -0.01)
@@ -799,8 +756,13 @@ class CreditTrackerWidget extends ConsumerWidget {
                 .where((c) => c.unbilled < -0.01)
                 .toList();
             final paidCards = statuses
-                .where((c) => c.historicalNet < -0.01 && c.billed >= -0.01)
-                .toList();
+                .where(
+                  (c) =>
+                      (c.historicalNet < -0.01 || c.billed > 0.01) &&
+                      c.billed >= -0.01,
+                )
+                .toList()
+              ..sort((a, b) => b.billed.compareTo(a.billed));
 
             return Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -937,25 +899,144 @@ class CreditTrackerWidget extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: CurrencyText(
-                                amount: globalBilled.abs(),
-                                sign: globalBilled < -0.01 ? '-₹ ' : '₹ ',
-                                amountStyle: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: globalBilled < -0.01
-                                      ? theme.colorScheme.error
-                                      : theme.colorScheme.onSurface,
-                                ),
-                                symbolStyle: TextStyle(
-                                  fontSize: 10,
-                                  color: theme.colorScheme.onSurfaceVariant,
+                            if (billedExcess > 0.01 && actualBilledDue < -0.01) ...[
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: CurrencyText(
+                                  amount: actualBilledDue.abs(),
+                                  sign: '-₹ ',
+                                  amountStyle: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: theme.colorScheme.error,
+                                  ),
+                                  symbolStyle: TextStyle(
+                                    fontSize: 10,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 3),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 1.5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          CurrencyText(
+                                            amount: billedExcess,
+                                            sign: '+₹ ',
+                                            amountStyle: const TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.green,
+                                            ),
+                                            symbolStyle: const TextStyle(
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                          const Text(
+                                            ' excess',
+                                            style: TextStyle(
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      'Net ',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    CurrencyText(
+                                      amount: globalBilled.abs(),
+                                      sign: globalBilled < -0.01 ? '-₹ ' : '₹ ',
+                                      amountStyle: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      symbolStyle: TextStyle(
+                                        fontSize: 8,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ] else if (billedExcess > 0.01) ...[
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: CurrencyText(
+                                  amount: billedExcess,
+                                  sign: '+₹ ',
+                                  amountStyle: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.green,
+                                  ),
+                                  symbolStyle: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'EXCESS CREDIT',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.green,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ] else
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: CurrencyText(
+                                  amount: globalBilled.abs(),
+                                  sign: globalBilled < -0.01 ? '-₹ ' : '₹ ',
+                                  amountStyle: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: globalBilled < -0.01
+                                        ? theme.colorScheme.error
+                                        : theme.colorScheme.onSurface,
+                                  ),
+                                  symbolStyle: TextStyle(
+                                    fontSize: 10,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -1043,8 +1124,6 @@ class CreditTrackerWidget extends ConsumerWidget {
                 ],
               ),
             );
-          },
-        );
       },
     );
   }

@@ -38,11 +38,15 @@ class CreditCardMetrics {
   final double unbilled;
   final double billed;
   final double totalOutstanding;
+  final double historicalNet;
+  final DateTime? lastStatementDate;
 
   CreditCardMetrics({
     required this.unbilled,
     required this.billed,
     required this.totalOutstanding,
+    required this.historicalNet,
+    this.lastStatementDate,
   });
 }
 
@@ -58,11 +62,11 @@ final creditCardMetricsProvider = Provider.family<CreditCardMetrics, Account>((
       unbilled: 0,
       billed: 0,
       totalOutstanding: account.balance,
+      historicalNet: 0,
     );
   }
 
   final bDay = account.mathBillingDay;
-  final dDay = account.mathDueDay;
   DateTime oldest = transactions.last.transaction.date;
   DateTime newest = transactions.first.transaction.date;
   DateTime now = DateTime.now();
@@ -111,9 +115,6 @@ final creditCardMetricsProvider = Provider.family<CreditCardMetrics, Account>((
       }
     }
 
-    final catName = t.categoryName ?? txData.category?.name ?? '';
-    bool isRepayment = catName == 'Repayment';
-
     double netAmount = 0;
     if (isExpense) {
       netAmount = -t.amount;
@@ -123,7 +124,9 @@ final creditCardMetricsProvider = Provider.family<CreditCardMetrics, Account>((
 
     DateTime effectiveDate = account.getMathEffectiveDate(t);
     if (lastStatementDate == null || effectiveDate.isAfter(lastStatementDate)) {
-      if (isPayment && isRepayment) {
+      // All payments after statement date reduce billed amount,
+      // regardless of category. Only expenses go to unbilled (currentCycleNet).
+      if (isPayment) {
         paymentsSinceStatement += netAmount;
       } else {
         currentCycleNet += netAmount;
@@ -141,5 +144,7 @@ final creditCardMetricsProvider = Provider.family<CreditCardMetrics, Account>((
     unbilled: unbilled,
     billed: billed,
     totalOutstanding: totalOutstanding,
+    historicalNet: historicalNet,
+    lastStatementDate: lastStatementDate,
   );
 });
